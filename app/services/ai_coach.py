@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.db.models import Match
+from app.db.models import CoachReport, Match
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
 from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
@@ -81,6 +81,48 @@ def prepare_ai_coach_handoff(db: Session) -> dict[str, Any]:
     result["matches_count"] = payload["summary"]["matches_count"]
     result["weaknesses_count"] = len(payload["detected_weaknesses"])
     return result
+
+
+def save_ai_coach_result(db: Session, markdown: str, source_ref: str | None = None) -> CoachReport:
+    content = markdown.strip()
+    if not content:
+        raise ValueError("AI coach result is empty.")
+    if len(content) > 60_000:
+        raise ValueError("AI coach result is too long.")
+    matches = list(db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())))
+    period_start = next((match.played_at for match in matches if match.played_at), None)
+    period_end = next((match.played_at for match in reversed(matches) if match.played_at), None)
+    latest_handoff = latest_ai_handoff()
+    report = CoachReport(
+        period_start=period_start,
+        period_end=period_end,
+        matches_count=len(matches),
+        report_type="ai_coach",
+        source_ref=source_ref or (latest_handoff or {}).get("prompt_path"),
+        report_markdown=content,
+        report_json=json.dumps(
+            {
+                "type": "ai_coach",
+                "provider": (latest_handoff or {}).get("provider", "codex_cli_handoff"),
+                "handoff": latest_handoff,
+            },
+            ensure_ascii=False,
+            default=str,
+        ),
+    )
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+    return report
+
+
+def latest_ai_coach_report(db: Session) -> CoachReport | None:
+    return db.scalar(
+        select(CoachReport)
+        .where(CoachReport.report_type == "ai_coach")
+        .order_by(CoachReport.created_at.desc(), CoachReport.id.desc())
+        .limit(1)
+    )
 
 
 def latest_ai_handoff() -> dict[str, Any] | None:

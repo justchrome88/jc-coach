@@ -16,6 +16,10 @@
   </div>
 </section>
 
+{% if message %}
+<div class="notice">{{ message }}</div>
+{% endif %}
+
 <section class="panel recommendation">
   <div class="panel-head">
     <h2>AI мозг</h2>
@@ -29,10 +33,27 @@
     <div><span>Команда</span><strong>{{ ai_handoff.command }}</strong></div>
   </div>
   <p class="muted">Это безопасный handoff для Codex CLI. Позже сюда же подключим local_llm provider без смены coach-логики.</p>
+  <form action="/coach/ai-result" method="post" class="upload-form stacked">
+    <input type="hidden" name="source_ref" value="{{ ai_handoff.prompt_path }}">
+    <label for="ai_result_markdown">Вставить результат Codex CLI</label>
+    <textarea id="ai_result_markdown" name="ai_result_markdown" rows="8" placeholder="Вставьте сюда AI coach report от Codex CLI"></textarea>
+    <button class="button" type="submit">Сохранить AI report</button>
+  </form>
   {% else %}
   <p>Пока AI handoff не создан. Нажмите кнопку выше, чтобы собрать prompt и JSON payload для Codex CLI.</p>
   {% endif %}
 </section>
+
+{% if ai_report %}
+<section class="panel report">
+  <div class="panel-head">
+    <h2>Последний AI coach report</h2>
+    <span>{{ ai_report.created_at.strftime("%Y-%m-%d %H:%M") }}</span>
+  </div>
+  <p class="muted">Источник: {{ ai_report.source_ref or "manual" }}</p>
+  <article>{{ ai_report.report_markdown }}</article>
+</section>
+{% endif %}
 
 <section class="panel">
   <div class="panel-head">

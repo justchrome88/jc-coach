@@ -10,7 +10,13 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Match
 from app.db.session import get_db
-from app.services.ai_coach import build_ai_coach_payload, latest_ai_handoff, prepare_ai_coach_handoff
+from app.services.ai_coach import (
+    build_ai_coach_payload,
+    latest_ai_coach_report,
+    latest_ai_handoff,
+    prepare_ai_coach_handoff,
+    save_ai_coach_result,
+)
 from app.services.analytics import compare_periods, get_map_stats, get_summary
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.importer import import_csv, import_json
@@ -163,6 +169,33 @@ def latest_ai_coach_handoff_endpoint() -> dict:
     if handoff is None:
         raise HTTPException(status_code=404, detail="No AI coach handoff generated yet")
     return handoff
+
+
+@router.post("/coach/ai/result")
+def save_ai_coach_result_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    report_markdown: str,
+    source_ref: str | None = None,
+) -> dict:
+    try:
+        report = save_ai_coach_result(db, report_markdown, source_ref=source_ref)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "id": report.id, "created_at": report.created_at}
+
+
+@router.get("/coach/ai/result/latest")
+def latest_ai_coach_result_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
+    report = latest_ai_coach_report(db)
+    if report is None:
+        raise HTTPException(status_code=404, detail="No AI coach report saved yet")
+    return {
+        "id": report.id,
+        "matches_count": report.matches_count,
+        "source_ref": report.source_ref,
+        "report_markdown": report.report_markdown,
+        "created_at": report.created_at,
+    }
 
 
 @router.get("/steam/login-url")

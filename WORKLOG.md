@@ -149,3 +149,27 @@ Current limits:
 - Steam OpenID callback verification is scaffold-level and needs hardening before public production.
 - Share-code jobs are queued only; real demo download/sync worker is next.
 - No Steam password is requested or stored.
+
+## AI Coach Result Persistence
+
+Implemented:
+
+- `coach_reports.report_type` and `coach_reports.source_ref`.
+- SQLite upgrade for existing DBs.
+- AI coach result saving through:
+  - `/coach` form;
+  - `POST /api/coach/ai/result`.
+- Latest AI coach result endpoint:
+  - `GET /api/coach/ai/result/latest`.
+- `/coach` displays the latest saved AI coach report.
+
+Current flow:
+
+1. Generate Codex CLI handoff.
+2. Run/paste Codex result manually.
+3. Save the AI report back into the product.
+
+Next:
+
+- Let a local LLM provider write into the same persistence path automatically.
+- Add structured sections to AI result instead of plain markdown only.

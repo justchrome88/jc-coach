@@ -1,6 +1,13 @@
 from types import SimpleNamespace
 
-from app.services.ai_coach import CodexCliHandoffProvider, build_ai_coach_payload
+import pytest
+
+from app.services.ai_coach import (
+    CodexCliHandoffProvider,
+    build_ai_coach_payload,
+    latest_ai_coach_report,
+    save_ai_coach_result,
+)
 from app.services.importer import import_rows
 
 
@@ -37,3 +44,20 @@ def test_codex_handoff_provider_writes_prompt_and_payload(monkeypatch, tmp_path)
     assert "codex exec" in result["command"]
     assert list(tmp_path.glob("*/codex_prompt.md"))
     assert list(tmp_path.glob("*/coach_payload.json"))
+
+
+def test_save_ai_coach_result_persists_ai_report(db, sample_rows):
+    import_rows(db, sample_rows, source="test")
+
+    report = save_ai_coach_result(db, "# AI report\n\nFocus on survival.", source_ref="manual")
+    latest = latest_ai_coach_report(db)
+
+    assert report.report_type == "ai_coach"
+    assert report.source_ref == "manual"
+    assert latest is not None
+    assert latest.id == report.id
+
+
+def test_save_ai_coach_result_rejects_empty_text(db):
+    with pytest.raises(ValueError):
+        save_ai_coach_result(db, "   ")

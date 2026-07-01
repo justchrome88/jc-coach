@@ -59,6 +59,8 @@ class CoachReport(Base):
     period_start: Mapped[datetime | None] = mapped_column(DateTime)
     period_end: Mapped[datetime | None] = mapped_column(DateTime)
     matches_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    report_type: Mapped[str] = mapped_column(String(50), default="rule_based", nullable=False, index=True)
+    source_ref: Mapped[str | None] = mapped_column(String(500))
     report_markdown: Mapped[str] = mapped_column(Text, nullable=False)
     report_json: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)

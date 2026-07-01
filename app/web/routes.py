@@ -13,7 +13,12 @@ from sqlalchemy.orm import Session
 from app.db.models import Match
 from app.db.session import get_db
 from app.main import templates
-from app.services.ai_coach import latest_ai_handoff, prepare_ai_coach_handoff
+from app.services.ai_coach import (
+    latest_ai_coach_report,
+    latest_ai_handoff,
+    prepare_ai_coach_handoff,
+    save_ai_coach_result,
+)
 from app.services.analytics import (
     chart_series,
     compare_periods,
@@ -74,7 +79,7 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
 
 
 @router.get("/coach")
-def coach_page(request: Request, db: Annotated[Session, Depends(get_db)]):
+def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], message: str | None = None):
     matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     summary = get_summary(matches)
     comparison = compare_periods(matches)
@@ -91,11 +96,13 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)]):
     ][:10]
     report = latest_report(db)
     ai_handoff = latest_ai_handoff()
+    ai_report = latest_ai_coach_report(db)
     return templates.TemplateResponse(
         request=request,
         name="coach.html",
         context={
             "request": request,
+            "message": message,
             "focus": focus,
             "structured_mistakes": structured_mistakes[:12],
             "coach_categories": coach_categories,
@@ -104,6 +111,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)]):
             "evaluated_matches": evaluated_matches,
             "report": report,
             "ai_handoff": ai_handoff,
+            "ai_report": ai_report,
         },
     )
 
@@ -332,6 +340,19 @@ def generate_report_page(db: Annotated[Session, Depends(get_db)]):
 @router.post("/coach/ai-handoff")
 def generate_ai_handoff_page(db: Annotated[Session, Depends(get_db)]):
     prepare_ai_coach_handoff(db)
+    return RedirectResponse("/coach", status_code=303)
+
+
+@router.post("/coach/ai-result")
+def save_ai_result_page(
+    db: Annotated[Session, Depends(get_db)],
+    ai_result_markdown: Annotated[str, Form()],
+    source_ref: Annotated[str | None, Form()] = None,
+):
+    try:
+        save_ai_coach_result(db, ai_result_markdown, source_ref=source_ref)
+    except ValueError as exc:
+        return RedirectResponse(f"/coach?message={exc}", status_code=303)
     return RedirectResponse("/coach", status_code=303)
 
 

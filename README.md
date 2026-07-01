@@ -194,6 +194,8 @@ source,external_match_id,demo_file,mode,side_t_rounds_won,side_t_rounds_lost,sid
 - `GET /api/coach/ai/payload`
 - `POST /api/coach/ai/handoff`
 - `GET /api/coach/ai/handoff/latest`
+- `POST /api/coach/ai/result`
+- `GET /api/coach/ai/result/latest`
 - `GET /api/steam/login-url`
 - `GET /api/steam/accounts`
 - `POST /api/steam/import/share-code`
