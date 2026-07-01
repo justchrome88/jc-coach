@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-head">
+  <div>
+    <h1>{{ match.map_name or "Матч" }}</h1>
+    <p>{{ match.played_at.strftime("%Y-%m-%d %H:%M") if match.played_at else "Дата неизвестна" }} · {{ detail.source_label }} · score {{ detail.score }}</p>
+  </div>
+  <div class="actions">
+    <a class="button ghost" href="/matches">Назад к матчам</a>
+    <a class="button" href="/upload">Импорт</a>
+  </div>
+</section>
+
+<section class="metric-grid">
+  <div class="metric"><span>Результат</span><strong>{{ match.result or "n/a" }}</strong></div>
+  <div class="metric"><span>K/D</span><strong>{{ match.kd or "n/a" }}</strong></div>
+  <div class="metric"><span>ADR</span><strong>{{ match.adr or "n/a" }}</strong></div>
+  <div class="metric"><span>KAST</span><strong>{{ match.kast or "n/a" }}%</strong></div>
+</section>
+
+{% if evaluation %}
+<section class="panel recommendation">
+  <div class="panel-head">
+    <h2>Статус тренерской цели</h2>
+    <span class="goal-badge {{ evaluation.status }}">{{ evaluation.status }}</span>
+  </div>
+  <p>{{ evaluation.coach_comment }}</p>
+</section>
+{% endif %}
+
+<section class="layout-two">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Combat</h2>
+      <span>{{ detail.adr_note }}</span>
+    </div>
+    <div class="detail-grid">
+      {% for name, value in detail.combat.items() %}
+      <div><span>{{ name }}</span><strong>{{ value if value is not none else "n/a" }}</strong></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Opening и utility</h2>
+      <span>{{ "DEM файл есть" if detail.has_demo else "без DEM файла" }}</span>
+    </div>
+    <div class="detail-grid">
+      {% for name, value in detail.opening.items() %}
+      <div><span>{{ name }}</span><strong>{{ value if value is not none else "n/a" }}</strong></div>
+      {% endfor %}
+      {% for name, value in detail.utility.items() %}
+      <div><span>{{ name }}</span><strong>{{ value if value is not none else "n/a" }}</strong></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="layout-two">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Стороны</h2>
+      <span>T / CT</span>
+    </div>
+    <table>
+      <thead><tr><th>Сторона</th><th>Раунды выиграны</th><th>Раунды проиграны</th><th>WR</th></tr></thead>
+      <tbody>
+        <tr><td>T</td><td>{{ detail.sides.t.won if detail.sides.t.won is not none else "n/a" }}</td><td>{{ detail.sides.t.lost if detail.sides.t.lost is not none else "n/a" }}</td><td>{{ detail.sides.t.winrate if detail.sides.t.winrate is not none else "n/a" }}</td></tr>
+        <tr><td>CT</td><td>{{ detail.sides.ct.won if detail.sides.ct.won is not none else "n/a" }}</td><td>{{ detail.sides.ct.lost if detail.sides.ct.lost is not none else "n/a" }}</td><td>{{ detail.sides.ct.winrate if detail.sides.ct.winrate is not none else "n/a" }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Источник</h2>
+      <span>{{ match.source }}</span>
+    </div>
+    <div class="detail-list">
+      <div><span>External ID</span><strong>{{ match.external_match_id or "n/a" }}</strong></div>
+      <div><span>Demo file</span><strong>{{ match.demo_file or "n/a" }}</strong></div>
+      <div><span>Создано</span><strong>{{ match.created_at.strftime("%Y-%m-%d %H:%M") if match.created_at else "n/a" }}</strong></div>
+      <div><span>Обновлено</span><strong>{{ match.updated_at.strftime("%Y-%m-%d %H:%M") if match.updated_at else "n/a" }}</strong></div>
+    </div>
+  </div>
+</section>
+{% endblock %}

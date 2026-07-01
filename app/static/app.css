@@ -135,6 +135,13 @@ p { color: var(--muted); line-height: 1.55; }
   margin-bottom: 18px;
 }
 
+.layout-three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
 .upload-grid {
   display: grid;
   grid-template-columns: minmax(0, .9fr) minmax(340px, .8fr);
@@ -259,6 +266,74 @@ p { color: var(--muted); line-height: 1.55; }
   border-color: rgba(154, 166, 178, .35);
 }
 
+.stat-card p {
+  margin-bottom: 14px;
+}
+
+.coverage-grid,
+.mini-metrics,
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.coverage-grid div,
+.mini-metrics div,
+.detail-grid div,
+.detail-list div {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #12161b;
+}
+
+.mini-metrics.stacked,
+.detail-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.coverage-grid span,
+.mini-metrics span,
+.detail-grid span,
+.detail-list span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.coverage-grid strong,
+.mini-metrics strong,
+.detail-grid strong,
+.detail-list strong {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.source-list {
+  display: grid;
+  gap: 10px;
+}
+
+.source-list div {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #12161b;
+}
+
+.source-list span,
+.table-summary,
+.pagination {
+  color: var(--muted);
+}
+
 li { margin-bottom: 8px; color: #d7dee7; line-height: 1.45; }
 
 table {
@@ -280,6 +355,10 @@ th {
   text-transform: uppercase;
 }
 
+th a {
+  color: var(--muted);
+}
+
 .pill {
   display: inline-flex;
   min-width: 54px;
@@ -293,11 +372,40 @@ th {
 .pill.loss, .bad { color: var(--bad); }
 .pill.draw { color: var(--accent-2); }
 
+.source-badge {
+  display: inline-flex;
+  min-width: 52px;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: #12161b;
+  color: #d7dee7;
+  font-size: 12px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.table-link {
+  color: var(--accent);
+  font-weight: 750;
+}
+
 .upload-form, .filters {
   display: flex;
   gap: 12px;
   align-items: end;
   flex-wrap: wrap;
+}
+
+.table-summary,
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 14px 0;
 }
 
 .upload-form.stacked {
@@ -410,10 +518,16 @@ input, select {
   .page { padding: 18px; }
   .metric-grid,
   .layout-two,
+  .layout-three,
   .recommendation-grid,
   .upload-grid,
   .coach-preview-row,
   .server-file {
+    grid-template-columns: 1fr;
+  }
+  .coverage-grid,
+  .mini-metrics,
+  .detail-grid {
     grid-template-columns: 1fr;
   }
   .metric strong { font-size: 26px; }

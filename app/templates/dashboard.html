@@ -22,6 +22,45 @@
   <div class="metric"><span>Entry diff</span><strong>{{ summary.entry_diff }}</strong></div>
 </section>
 
+<section class="layout-three">
+  <div class="panel stat-card">
+    <div class="panel-head">
+      <h2>Качество данных</h2>
+      <span>{{ dashboard_status.data_quality.label }}</span>
+    </div>
+    <div class="coverage-grid">
+      {% for name, value in dashboard_status.data_quality.coverage.items() %}
+      <div><span>{{ name }}</span><strong>{{ value }}%</strong></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="panel stat-card">
+    <div class="panel-head">
+      <h2>ADR профиль</h2>
+      <span>{{ dashboard_status.adr_profile.confidence }}</span>
+    </div>
+    <p>{{ dashboard_status.adr_profile.interpretation }}</p>
+    <div class="mini-metrics">
+      <div><span>Последние 15</span><strong>{{ dashboard_status.adr_profile.recent_average or "n/a" }}</strong></div>
+      <div><span>Предыдущие 15</span><strong>{{ dashboard_status.adr_profile.previous_average or "n/a" }}</strong></div>
+      <div><span>Delta</span><strong class="{{ 'bad' if dashboard_status.adr_profile.delta is not none and dashboard_status.adr_profile.delta < 0 else 'good' }}">{{ dashboard_status.adr_profile.delta if dashboard_status.adr_profile.delta is not none else "n/a" }}</strong></div>
+    </div>
+  </div>
+  <div class="panel stat-card">
+    <div class="panel-head">
+      <h2>Источники</h2>
+      <span>CSV / JSON / DEM</span>
+    </div>
+    <div class="source-list">
+      {% for source in dashboard_status.source_breakdown %}
+      <div><strong>{{ source.source }}</strong><span>{{ source.matches_count }} матч. · WR {{ source.winrate or 0 }}% · ADR {{ source.avg_adr or "n/a" }}</span></div>
+      {% else %}
+      <p>Источники появятся после импорта матчей.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
 {% if recommendation_progress %}
 <section class="panel coach-preview">
   <div class="panel-head">
@@ -51,15 +90,15 @@
   </div>
   <div class="panel stat-note">
     <div class="panel-head">
-      <h2>Как читать статистику</h2>
-      <span>подсказки</span>
+      <h2>Что изменилось</h2>
+      <span>последний блок</span>
     </div>
-    <ul>
-      <li>Winrate показывает результат, но не объясняет причину.</li>
-      <li>ADR и KAST вместе показывают impact без лишнего риска.</li>
-      <li>Entry diff важен для понимания первых контактов.</li>
-      <li>Тренерский раздел связывает эти метрики с конкретной целью.</li>
-    </ul>
+    <div class="mini-metrics stacked">
+      <div><span>Матчи в блоке</span><strong>{{ dashboard_status.session.recent_matches }}</strong></div>
+      <div><span>Winrate</span><strong>{{ dashboard_status.session.recent_winrate or 0 }}%</strong></div>
+      <div><span>ADR</span><strong>{{ dashboard_status.session.recent_avg_adr or "n/a" }}</strong></div>
+      <div><span>KAST</span><strong>{{ dashboard_status.session.recent_avg_kast or "n/a" }}</strong></div>
+    </div>
   </div>
 </section>
 
@@ -112,11 +151,12 @@
     <a href="/matches">Все матчи</a>
   </div>
   <table>
-    <thead><tr><th>Дата</th><th>Карта</th><th>Результат</th><th>Счёт</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th>Цель</th></tr></thead>
+    <thead><tr><th>Дата</th><th>Источник</th><th>Карта</th><th>Результат</th><th>Счёт</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th>Цель</th><th></th></tr></thead>
     <tbody>
       {% for match in recent_matches %}
       <tr>
         <td>{{ match.played_at.strftime("%Y-%m-%d") if match.played_at else "n/a" }}</td>
+        <td><span class="source-badge">{{ match.source }}</span></td>
         <td>{{ match.map_name or "n/a" }}</td>
         <td><span class="pill {{ match.result }}">{{ match.result or "n/a" }}</span></td>
         <td>{{ match.rounds_for or 0 }}:{{ match.rounds_against or 0 }}</td>
@@ -132,9 +172,10 @@
           <span class="goal-dot baseline" title="Baseline или матч до постановки цели">baseline</span>
           {% endif %}
         </td>
+        <td><a class="table-link" href="/matches/{{ match.id }}">Детали</a></td>
       </tr>
       {% else %}
-      <tr><td colspan="9">Матчей пока нет. Начните с импорта CSV, JSON или DEM.</td></tr>
+      <tr><td colspan="11">Матчей пока нет. Начните с импорта CSV, JSON или DEM.</td></tr>
       {% endfor %}
     </tbody>
   </table>

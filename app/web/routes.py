@@ -13,7 +13,14 @@ from sqlalchemy.orm import Session
 from app.db.models import Match
 from app.db.session import get_db
 from app.main import templates
-from app.services.analytics import chart_series, compare_periods, get_map_stats, get_summary
+from app.services.analytics import (
+    chart_series,
+    compare_periods,
+    get_dashboard_status,
+    get_map_stats,
+    get_summary,
+    match_detail,
+)
 from app.services.coach_rules import build_coach_focus
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.importer import import_csv, import_json
@@ -29,6 +36,7 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     summary = get_summary(matches)
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
+    dashboard_status = get_dashboard_status(matches)
     recommendation_progress = get_active_recommendation_progress(db)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
     recent_matches = list(reversed(matches[-10:]))
@@ -40,6 +48,7 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
             "summary": summary,
             "comparison": comparison,
             "map_stats": map_stats,
+            "dashboard_status": dashboard_status,
             "recommendation_progress": recommendation_progress,
             "evaluations_by_match_id": evaluations_by_match_id,
             "recent_matches": recent_matches,
@@ -145,37 +154,96 @@ def matches_page(
     db: Annotated[Session, Depends(get_db)],
     map_name: str | None = None,
     result: str | None = None,
+    source: str | None = None,
+    goal_status: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
+    sort: str = "played_at",
+    direction: str = "desc",
+    page: int = 1,
+    per_page: int = 25,
 ):
     stmt = select(Match)
     if map_name:
         stmt = stmt.where(Match.map_name == map_name)
     if result:
         stmt = stmt.where(Match.result == result)
+    if source:
+        stmt = stmt.where(Match.source == source)
     if date_from:
         stmt = stmt.where(Match.played_at >= _parse_date(date_from))
     if date_to:
         stmt = stmt.where(Match.played_at <= _parse_date(date_to))
-    matches = db.scalars(stmt.order_by(Match.played_at.desc().nulls_last(), Match.id.desc())).all()
+    matches = db.scalars(stmt).all()
     evaluations_by_match_id = get_evaluations_by_match_id(db)
+    if goal_status:
+        matches = [
+            match
+            for match in matches
+            if (evaluations_by_match_id.get(match.id).status if evaluations_by_match_id.get(match.id) else "baseline")
+            == goal_status
+        ]
+    matches = _sort_matches_for_page(matches, sort, direction)
+    per_page = min(max(per_page, 10), 100)
+    page = max(page, 1)
+    total_matches = len(matches)
+    total_pages = max(1, (total_matches + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    offset = (page - 1) * per_page
+    paged_matches = matches[offset : offset + per_page]
     maps = db.scalars(
         select(Match.map_name).where(Match.map_name.is_not(None)).distinct().order_by(Match.map_name)
     ).all()
+    sources = db.scalars(select(Match.source).where(Match.source.is_not(None)).distinct().order_by(Match.source)).all()
     return templates.TemplateResponse(
         request=request,
         name="matches.html",
         context={
             "request": request,
-            "matches": matches,
+            "matches": paged_matches,
             "evaluations_by_match_id": evaluations_by_match_id,
             "maps": maps,
+            "sources": sources,
+            "total_matches": total_matches,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total_pages": total_pages,
+                "has_previous": page > 1,
+                "has_next": page < total_pages,
+                "previous_page": page - 1,
+                "next_page": page + 1,
+            },
             "filters": {
                 "map_name": map_name or "",
                 "result": result or "",
+                "source": source or "",
+                "goal_status": goal_status or "",
                 "date_from": date_from or "",
                 "date_to": date_to or "",
+                "sort": sort,
+                "direction": direction,
+                "per_page": per_page,
             },
+            "sort_links": _sort_links(sort, direction),
+        },
+    )
+
+
+@router.get("/matches/{match_id}")
+def match_detail_page(request: Request, db: Annotated[Session, Depends(get_db)], match_id: int):
+    match = db.get(Match, match_id)
+    if match is None:
+        return RedirectResponse("/matches", status_code=303)
+    evaluations_by_match_id = get_evaluations_by_match_id(db)
+    return templates.TemplateResponse(
+        request=request,
+        name="match_detail.html",
+        context={
+            "request": request,
+            "match": match,
+            "detail": match_detail(match),
+            "evaluation": evaluations_by_match_id.get(match.id),
         },
     )
 
@@ -198,3 +266,27 @@ def generate_report_page(db: Annotated[Session, Depends(get_db)]):
 
 def _parse_date(value: str) -> datetime:
     return datetime.strptime(value, "%Y-%m-%d")
+
+
+def _sort_matches_for_page(matches: list[Match], sort: str, direction: str) -> list[Match]:
+    sort_map = {
+        "played_at": lambda match: match.played_at or match.created_at,
+        "map": lambda match: match.map_name or "",
+        "result": lambda match: match.result or "",
+        "source": lambda match: match.source or "",
+        "adr": lambda match: match.adr if match.adr is not None else -1,
+        "kast": lambda match: match.kast if match.kast is not None else -1,
+        "rating": lambda match: match.rating if match.rating is not None else -1,
+        "kd": lambda match: match.kd if match.kd is not None else -1,
+    }
+    key = sort_map.get(sort, sort_map["played_at"])
+    reverse = direction != "asc"
+    return sorted(matches, key=lambda match: (key(match), match.id or 0), reverse=reverse)
+
+
+def _sort_links(current_sort: str, current_direction: str) -> dict[str, dict[str, str]]:
+    links = {}
+    for field in ("played_at", "map", "result", "source", "kd", "adr", "kast", "rating"):
+        next_direction = "asc" if current_sort == field and current_direction == "desc" else "desc"
+        links[field] = {"sort": field, "direction": next_direction}
+    return links

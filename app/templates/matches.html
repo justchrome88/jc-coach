@@ -22,17 +22,55 @@
       <option value="loss" {% if filters.result == "loss" %}selected{% endif %}>Loss</option>
       <option value="draw" {% if filters.result == "draw" %}selected{% endif %}>Draw</option>
     </select>
+    <select name="source">
+      <option value="">Все источники</option>
+      {% for source in sources %}
+      <option value="{{ source }}" {% if filters.source == source %}selected{% endif %}>{{ source }}</option>
+      {% endfor %}
+    </select>
+    <select name="goal_status">
+      <option value="">Любой статус цели</option>
+      <option value="green" {% if filters.goal_status == "green" %}selected{% endif %}>Green</option>
+      <option value="yellow" {% if filters.goal_status == "yellow" %}selected{% endif %}>Yellow</option>
+      <option value="red" {% if filters.goal_status == "red" %}selected{% endif %}>Red</option>
+      <option value="baseline" {% if filters.goal_status == "baseline" %}selected{% endif %}>Baseline</option>
+    </select>
     <input type="date" name="date_from" value="{{ filters.date_from }}">
     <input type="date" name="date_to" value="{{ filters.date_to }}">
+    <select name="per_page">
+      <option value="25" {% if filters.per_page == 25 %}selected{% endif %}>25 строк</option>
+      <option value="50" {% if filters.per_page == 50 %}selected{% endif %}>50 строк</option>
+      <option value="100" {% if filters.per_page == 100 %}selected{% endif %}>100 строк</option>
+    </select>
+    <input type="hidden" name="sort" value="{{ filters.sort }}">
+    <input type="hidden" name="direction" value="{{ filters.direction }}">
     <button class="button" type="submit">Фильтр</button>
     <a class="button ghost" href="/matches">Сброс</a>
   </form>
+  <div class="table-summary">
+    <span>Найдено: {{ total_matches }}</span>
+    <span>Страница {{ pagination.page }} из {{ pagination.total_pages }}</span>
+  </div>
   <table>
-    <thead><tr><th>Дата</th><th>Карта</th><th>Результат</th><th>Счёт</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th>Entry</th><th>Early</th><th>Utility</th><th>Цель</th></tr></thead>
+    <thead>
+      <tr>
+        <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=played_at&direction={{ sort_links.played_at.direction }}">Дата</a></th>
+        <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=source&direction={{ sort_links.source.direction }}">Источник</a></th>
+        <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=map&direction={{ sort_links.map.direction }}">Карта</a></th>
+        <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=result&direction={{ sort_links.result.direction }}">Результат</a></th>
+        <th>Счёт</th>
+        <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=kd&direction={{ sort_links.kd.direction }}">K/D</a></th>
+        <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=adr&direction={{ sort_links.adr.direction }}">ADR</a></th>
+        <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=kast&direction={{ sort_links.kast.direction }}">KAST</a></th>
+        <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=rating&direction={{ sort_links.rating.direction }}">Rating</a></th>
+        <th>Entry</th><th>Early</th><th>Utility</th><th>Цель</th><th></th>
+      </tr>
+    </thead>
     <tbody>
       {% for match in matches %}
       <tr>
         <td>{{ match.played_at.strftime("%Y-%m-%d") if match.played_at else "n/a" }}</td>
+        <td><span class="source-badge">{{ match.source }}</span></td>
         <td>{{ match.map_name or "n/a" }}</td>
         <td><span class="pill {{ match.result }}">{{ match.result or "n/a" }}</span></td>
         <td>{{ match.rounds_for or 0 }}:{{ match.rounds_against or 0 }}</td>
@@ -51,11 +89,21 @@
           <span class="goal-dot baseline" title="Baseline или матч до постановки цели">baseline</span>
           {% endif %}
         </td>
+        <td><a class="table-link" href="/matches/{{ match.id }}">Детали</a></td>
       </tr>
       {% else %}
-      <tr><td colspan="12">Матчи не найдены. Измените фильтры или импортируйте данные.</td></tr>
+      <tr><td colspan="14">Матчи не найдены. Измените фильтры или импортируйте данные.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  <div class="pagination">
+    {% if pagination.has_previous %}
+    <a class="button ghost" href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort={{ filters.sort }}&direction={{ filters.direction }}&page={{ pagination.previous_page }}">Назад</a>
+    {% endif %}
+    <span>Страница {{ pagination.page }} / {{ pagination.total_pages }}</span>
+    {% if pagination.has_next %}
+    <a class="button ghost" href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort={{ filters.sort }}&direction={{ filters.direction }}&page={{ pagination.next_page }}">Вперед</a>
+    {% endif %}
+  </div>
 </section>
 {% endblock %}

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from app.services.analytics import compare_periods, get_map_stats, get_summary
+from app.services.analytics import compare_periods, get_adr_profile, get_dashboard_status, get_map_stats, get_summary
 from tests.conftest import make_match
 
 
@@ -53,3 +53,30 @@ def test_map_stats_sort_by_winrate(sample_rows):
 
     assert stats[0]["map_name"] == "Mirage"
     assert stats[-1]["map_name"] == "Ancient"
+
+
+def test_dashboard_status_reports_source_and_quality(sample_rows):
+    matches = [make_match(**row, source="demo" if index == 0 else "csv") for index, row in enumerate(sample_rows)]
+
+    status = get_dashboard_status(matches)
+
+    assert status["data_quality"]["coverage"]["ADR"] == 100.0
+    assert status["data_quality"]["label"] == "Высокое"
+    assert {item["source"] for item in status["source_breakdown"]} == {"csv", "demo"}
+    assert status["adr_profile"]["average"] == 74.6
+
+
+def test_adr_profile_tracks_recent_delta():
+    start = datetime(2026, 6, 1)
+    matches = [
+        make_match(external_match_id=f"m-{index}", played_at=start + timedelta(days=index), adr=70 + index)
+        for index in range(30)
+    ]
+
+    profile = get_adr_profile(matches)
+
+    assert profile["coverage"] == 100.0
+    assert profile["confidence"] == "high"
+    assert profile["recent_average"] == 92
+    assert profile["previous_average"] == 77
+    assert profile["delta"] == 15

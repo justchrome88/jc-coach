@@ -41,6 +41,89 @@ def get_summary(matches: Iterable[Match]) -> dict[str, Any]:
     }
 
 
+def get_dashboard_status(matches: Iterable[Match]) -> dict[str, Any]:
+    items = _sort_matches(matches)
+    recent = items[-15:]
+    previous = items[-30:-15] if len(items) > 15 else []
+    return {
+        "source_breakdown": get_source_breakdown(items),
+        "adr_profile": get_adr_profile(items),
+        "data_quality": get_data_quality(items),
+        "session": {
+            "recent_matches": len(recent),
+            "previous_matches": len(previous),
+            "recent_winrate": _percent(sum(1 for match in recent if match.result == "win"), len(recent)),
+            "recent_avg_adr": _avg(recent, "adr"),
+            "recent_avg_kast": _avg(recent, "kast"),
+        },
+    }
+
+
+def get_source_breakdown(matches: Iterable[Match]) -> list[dict[str, Any]]:
+    buckets: dict[str, list[Match]] = defaultdict(list)
+    for match in matches:
+        buckets[match.source or "unknown"].append(match)
+    return [
+        {
+            "source": source,
+            "matches_count": len(items),
+            "avg_adr": _avg(items, "adr"),
+            "avg_kast": _avg(items, "kast"),
+            "winrate": _percent(sum(1 for match in items if match.result == "win"), len(items)),
+        }
+        for source, items in sorted(buckets.items())
+    ]
+
+
+def get_data_quality(matches: Iterable[Match]) -> dict[str, Any]:
+    items = _sort_matches(matches)
+    total = len(items)
+    required_fields = {
+        "result": "result",
+        "score": "rounds_for",
+        "kills": "kills",
+        "deaths": "deaths",
+        "ADR": "adr",
+        "KAST": "kast",
+        "entry": "entry_kills",
+    }
+    coverage = {
+        name: _percent(sum(1 for match in items if getattr(match, attr, None) is not None), total) or 0
+        for name, attr in required_fields.items()
+    }
+    if total == 0:
+        label = "Нет данных"
+    else:
+        average_coverage = sum(coverage.values()) / len(coverage)
+        label = "Высокое" if average_coverage >= 85 else "Среднее" if average_coverage >= 60 else "Низкое"
+    return {"matches_count": total, "coverage": coverage, "label": label}
+
+
+def get_adr_profile(matches: Iterable[Match]) -> dict[str, Any]:
+    items = _sort_matches(matches)
+    with_adr = [match for match in items if match.adr is not None]
+    recent = items[-15:]
+    previous = items[-30:-15] if len(items) > 15 else []
+    best = max(with_adr, key=lambda match: match.adr or 0, default=None)
+    worst = min(with_adr, key=lambda match: match.adr or 0, default=None)
+    coverage = _percent(len(with_adr), len(items)) or 0
+    recent_adr = _avg(recent, "adr")
+    previous_adr = _avg(previous, "adr")
+    confidence = "high" if coverage >= 90 and len(with_adr) >= 10 else "medium" if coverage >= 60 else "low"
+    return {
+        "average": _avg(items, "adr"),
+        "recent_average": recent_adr,
+        "previous_average": previous_adr,
+        "delta": _delta(recent_adr, previous_adr),
+        "coverage": coverage,
+        "confidence": confidence,
+        "best_match": best,
+        "worst_match": worst,
+        "source_breakdown": get_source_breakdown(with_adr),
+        "interpretation": _adr_interpretation(recent_adr or _avg(items, "adr"), confidence),
+    }
+
+
 def compare_periods(matches: Iterable[Match], current_n: int = 15, previous_n: int = 15) -> dict[str, Any]:
     items = _sort_matches(matches)
     current = items[-current_n:]
@@ -208,6 +291,42 @@ def chart_series(matches: Iterable[Match], limit: int = 30) -> dict[str, Any]:
     }
 
 
+def match_detail(match: Match) -> dict[str, Any]:
+    adr_note = _adr_interpretation(match.adr, "single")
+    rounds = (match.rounds_for or 0) + (match.rounds_against or 0)
+    return {
+        "score": f"{match.rounds_for or 0}:{match.rounds_against or 0}",
+        "rounds": rounds or None,
+        "adr_note": adr_note,
+        "source_label": (match.source or "unknown").upper(),
+        "has_demo": bool(match.demo_file),
+        "combat": {
+            "kills": match.kills,
+            "deaths": match.deaths,
+            "assists": match.assists,
+            "kd": match.kd,
+            "adr": match.adr,
+            "kast": match.kast,
+            "rating": match.rating,
+            "headshot_percent": match.headshot_percent,
+        },
+        "opening": {
+            "entry_kills": match.entry_kills,
+            "entry_deaths": match.entry_deaths,
+            "early_deaths": match.early_deaths,
+        },
+        "utility": {
+            "utility_damage": match.utility_damage,
+            "flash_assists": match.flash_assists,
+            "enemies_flashed": match.enemies_flashed,
+        },
+        "sides": {
+            "t": _side_record(match.side_t_rounds_won, match.side_t_rounds_lost),
+            "ct": _side_record(match.side_ct_rounds_won, match.side_ct_rounds_lost),
+        },
+    }
+
+
 def _weakness(title: str, category: str, severity: str, evidence: str) -> dict[str, str]:
     return {"title": title, "category": category, "severity": severity, "evidence": evidence}
 
@@ -251,6 +370,30 @@ def _side_winrate(items: list[Match], won_attr: str, lost_attr: str) -> float | 
     won = _sum(items, won_attr)
     lost = _sum(items, lost_attr)
     return _percent(won, won + lost)
+
+
+def _side_record(won: int | None, lost: int | None) -> dict[str, Any]:
+    won_value = won or 0
+    lost_value = lost or 0
+    return {"won": won, "lost": lost, "winrate": _percent(won_value, won_value + lost_value)}
+
+
+def _adr_interpretation(adr: float | None, confidence: str) -> str:
+    if adr is None:
+        return "ADR недоступен для этого набора данных."
+    if adr >= 90:
+        level = "очень сильный урон"
+    elif adr >= 80:
+        level = "хороший урон"
+    elif adr >= 70:
+        level = "рабочий, но нестабильный урон"
+    else:
+        level = "низкое давление по урону"
+    if confidence == "low":
+        return f"{level}; вывод осторожный, потому что ADR заполнен не во всех матчах."
+    if confidence == "single":
+        return f"{level} в этом матче."
+    return f"{level}; доверие к ADR: {confidence}."
 
 
 def _available_metrics(items: list[Match]) -> list[str]:

@@ -27,3 +27,20 @@ def test_coach_page_renders():
 
     assert response.status_code == 200
     assert "Тренер" in response.text
+
+
+def test_matches_page_supports_filters_and_sorting():
+    with TestClient(app) as client:
+        response = client.get("/matches?sort=adr&direction=desc&per_page=25")
+
+    assert response.status_code == 200
+    assert "Матчи" in response.text
+    assert "Найдено" in response.text
+
+
+def test_missing_match_detail_redirects_to_matches():
+    with TestClient(app, follow_redirects=False) as client:
+        response = client.get("/matches/999999999")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/matches"
