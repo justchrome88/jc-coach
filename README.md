@@ -214,3 +214,9 @@ tests/
 - Превратить AI handoff в полноценный AI coach report с сохранением ответа.
 - Подключить local LLM provider после стабилизации payload.
 - Позже добавить Steam/FACEIT sync только как отдельный этап.
+
+Подробные рабочие планы:
+
+- `docs/NON_STOP_DEVELOPMENT_PROMPTS.md` - набор промтов для длинных автономных сессий разработки.
+- `docs/PRODUCT_EXECUTION_STRATEGY.md` - порядок развития продукта вокруг AI CS2 Coach.
+- `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md` - пошаговый план доведения сложных фич до 100%.
