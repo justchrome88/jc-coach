@@ -2,53 +2,41 @@
 {% block content %}
 <section class="section-head">
   <div>
-    <h1>Dashboard</h1>
-    <p>Последние матчи, форма, карты и главный тренировочный фокус.</p>
+    <h1>Общая статистика</h1>
+    <p>Быстрый обзор формы, стабильности и карт. Тренерские выводы вынесены в отдельный раздел.</p>
   </div>
-  <a class="button" href="/upload">Upload CSV/JSON</a>
+  <div class="actions">
+    <a class="button ghost" href="/coach">Открыть тренера</a>
+    <a class="button" href="/upload">Импорт данных</a>
+  </div>
 </section>
 
 <section class="metric-grid">
-  <div class="metric"><span>Matches</span><strong>{{ summary.matches_count }}</strong></div>
+  <div class="metric"><span>Матчи</span><strong>{{ summary.matches_count }}</strong></div>
   <div class="metric"><span>Winrate</span><strong>{{ summary.winrate or 0 }}%</strong></div>
   <div class="metric"><span>K/D</span><strong>{{ summary.avg_kd or "n/a" }}</strong></div>
   <div class="metric"><span>ADR</span><strong>{{ summary.avg_adr or "n/a" }}</strong></div>
   <div class="metric"><span>KAST</span><strong>{{ summary.avg_kast or "n/a" }}%</strong></div>
   <div class="metric"><span>Rating</span><strong>{{ summary.avg_rating or "n/a" }}</strong></div>
-  <div class="metric"><span>Form</span><strong>{{ summary.form_score or "n/a" }}</strong></div>
+  <div class="metric"><span>Форма</span><strong>{{ summary.form_score or "n/a" }}</strong></div>
   <div class="metric"><span>Entry diff</span><strong>{{ summary.entry_diff }}</strong></div>
 </section>
 
 {% if recommendation_progress %}
-<section class="panel recommendation">
+<section class="panel coach-preview">
   <div class="panel-head">
-    <h2>Active Recommendation</h2>
-    <span>{{ recommendation_progress.recommendation.status }}</span>
+    <h2>Главная цель тренера</h2>
+    <a href="/coach">Все детали</a>
   </div>
-  <div class="recommendation-grid">
+  <div class="coach-preview-row">
     <div>
       <h3>{{ recommendation_progress.recommendation.title }}</h3>
-      <p>{{ recommendation_progress.recommendation.description }}</p>
-      <p class="progress-line">
-        Progress:
-        {{ recommendation_progress.completed_matches }}/{{ recommendation_progress.target_matches }}
-        matches · score {{ recommendation_progress.progress_score }}/100
-      </p>
       <p>{{ recommendation_progress.summary }}</p>
-      <p class="muted">{{ recommendation_progress.last_comment }}</p>
     </div>
-    <div class="goal-counts">
-      <span class="goal-badge green">Green {{ recommendation_progress.counts.green }}</span>
-      <span class="goal-badge yellow">Yellow {{ recommendation_progress.counts.yellow }}</span>
-      <span class="goal-badge red">Red {{ recommendation_progress.counts.red }}</span>
-      <span class="goal-badge gray">Gray {{ recommendation_progress.counts.gray }}</span>
-    </div>
-    <div class="goal-metrics">
-      <div><span>Entry deaths</span><strong>{{ recommendation_progress.baseline.entry_deaths_per_match or "n/a" }} → {{ recommendation_progress.current.entry_deaths_per_match or "n/a" }}</strong></div>
-      <div><span>Early deaths</span><strong>{{ recommendation_progress.baseline.early_deaths_per_match or "n/a" }} → {{ recommendation_progress.current.early_deaths_per_match or "n/a" }}</strong></div>
-      <div><span>KAST</span><strong>{{ recommendation_progress.baseline.kast or "n/a" }} → {{ recommendation_progress.current.kast or "n/a" }}</strong></div>
-      <div><span>ADR</span><strong>{{ recommendation_progress.baseline.adr or "n/a" }} → {{ recommendation_progress.current.adr or "n/a" }}</strong></div>
-    </div>
+    <strong>{{ recommendation_progress.completed_matches }}/{{ recommendation_progress.target_matches }}</strong>
+    <span class="goal-badge green">Green {{ recommendation_progress.counts.green }}</span>
+    <span class="goal-badge yellow">Yellow {{ recommendation_progress.counts.yellow }}</span>
+    <span class="goal-badge red">Red {{ recommendation_progress.counts.red }}</span>
   </div>
 </section>
 {% endif %}
@@ -56,22 +44,21 @@
 <section class="layout-two">
   <div class="panel">
     <div class="panel-head">
-      <h2>Trend</h2>
-      <span>last 30</span>
+      <h2>Динамика</h2>
+      <span>последние 30</span>
     </div>
     <canvas id="trendChart" height="120"></canvas>
   </div>
-  <div class="panel focus">
+  <div class="panel stat-note">
     <div class="panel-head">
-      <h2>Coach Focus</h2>
-      <span>{{ focus.category }}</span>
+      <h2>Как читать статистику</h2>
+      <span>подсказки</span>
     </div>
-    <h3>{{ focus.title }}</h3>
-    <p>{{ focus.evidence }}</p>
     <ul>
-      {% for action in focus.actions %}
-      <li>{{ action }}</li>
-      {% endfor %}
+      <li>Winrate показывает результат, но не объясняет причину.</li>
+      <li>ADR и KAST вместе показывают impact без лишнего риска.</li>
+      <li>Entry diff важен для понимания первых контактов.</li>
+      <li>Тренерский раздел связывает эти метрики с конкретной целью.</li>
     </ul>
   </div>
 </section>
@@ -79,11 +66,11 @@
 <section class="layout-two">
   <div class="panel">
     <div class="panel-head">
-      <h2>Last 15 vs Previous 15</h2>
+      <h2>Последние 15 vs предыдущие 15</h2>
       <span>{{ comparison.trend }}</span>
     </div>
     <table>
-      <thead><tr><th>Metric</th><th>Now</th><th>Before</th><th>Delta</th></tr></thead>
+      <thead><tr><th>Метрика</th><th>Сейчас</th><th>Было</th><th>Изменение</th></tr></thead>
       <tbody>
         {% for metric, item in comparison.deltas.items() %}
         <tr>
@@ -98,11 +85,11 @@
   </div>
   <div class="panel">
     <div class="panel-head">
-      <h2>Maps</h2>
-      <span>best to worst</span>
+      <h2>Карты</h2>
+      <span>от лучших к худшим</span>
     </div>
     <table>
-      <thead><tr><th>Map</th><th>Matches</th><th>WR</th><th>ADR</th></tr></thead>
+      <thead><tr><th>Карта</th><th>Матчи</th><th>WR</th><th>ADR</th></tr></thead>
       <tbody>
         {% for item in map_stats %}
         <tr>
@@ -112,7 +99,7 @@
           <td>{{ item.avg_adr or "n/a" }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="4">Upload matches to see map stats.</td></tr>
+        <tr><td colspan="4">Импортируйте матчи, чтобы увидеть статистику по картам.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -122,10 +109,10 @@
 <section class="panel">
   <div class="panel-head">
     <h2>Recent Matches</h2>
-    <a href="/matches">All matches</a>
+    <a href="/matches">Все матчи</a>
   </div>
   <table>
-    <thead><tr><th>Date</th><th>Map</th><th>Result</th><th>Score</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th>Coach Goal</th></tr></thead>
+    <thead><tr><th>Дата</th><th>Карта</th><th>Результат</th><th>Счёт</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th>Цель</th></tr></thead>
     <tbody>
       {% for match in recent_matches %}
       <tr>
@@ -147,7 +134,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="9">No matches yet.</td></tr>
+      <tr><td colspan="9">Матчей пока нет. Начните с импорта CSV, JSON или DEM.</td></tr>
       {% endfor %}
     </tbody>
   </table>

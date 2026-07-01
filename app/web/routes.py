@@ -29,7 +29,6 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     summary = get_summary(matches)
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
-    focus = build_coach_focus(summary, comparison, map_stats)
     recommendation_progress = get_active_recommendation_progress(db)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
     recent_matches = list(reversed(matches[-10:]))
@@ -41,11 +40,39 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
             "summary": summary,
             "comparison": comparison,
             "map_stats": map_stats,
-            "focus": focus,
             "recommendation_progress": recommendation_progress,
             "evaluations_by_match_id": evaluations_by_match_id,
             "recent_matches": recent_matches,
             "chart_data": chart_series(matches),
+        },
+    )
+
+
+@router.get("/coach")
+def coach_page(request: Request, db: Annotated[Session, Depends(get_db)]):
+    matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
+    summary = get_summary(matches)
+    comparison = compare_periods(matches)
+    map_stats = get_map_stats(matches)
+    focus = build_coach_focus(summary, comparison, map_stats)
+    recommendation_progress = get_active_recommendation_progress(db)
+    evaluations_by_match_id = get_evaluations_by_match_id(db)
+    evaluated_matches = [
+        match
+        for match in reversed(matches)
+        if match.id in evaluations_by_match_id
+    ][:10]
+    report = latest_report(db)
+    return templates.TemplateResponse(
+        request=request,
+        name="coach.html",
+        context={
+            "request": request,
+            "focus": focus,
+            "recommendation_progress": recommendation_progress,
+            "evaluations_by_match_id": evaluations_by_match_id,
+            "evaluated_matches": evaluated_matches,
+            "report": report,
         },
     )
 

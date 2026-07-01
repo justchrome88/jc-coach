@@ -2,33 +2,33 @@
 {% block content %}
 <section class="section-head">
   <div>
-    <h1>Matches</h1>
-    <p>Фильтры по карте, результату и периоду.</p>
+    <h1>Матчи</h1>
+    <p>Единый список импортированных CSV, JSON и DEM матчей. Столбец цели показывает оценку тренера.</p>
   </div>
-  <a class="button" href="/upload">Upload</a>
+  <a class="button" href="/upload">Импорт</a>
 </section>
 
 <section class="panel">
   <form class="filters" method="get" action="/matches">
     <select name="map_name">
-      <option value="">All maps</option>
+      <option value="">Все карты</option>
       {% for map in maps %}
       <option value="{{ map }}" {% if filters.map_name == map %}selected{% endif %}>{{ map }}</option>
       {% endfor %}
     </select>
     <select name="result">
-      <option value="">All results</option>
+      <option value="">Все результаты</option>
       <option value="win" {% if filters.result == "win" %}selected{% endif %}>Win</option>
       <option value="loss" {% if filters.result == "loss" %}selected{% endif %}>Loss</option>
       <option value="draw" {% if filters.result == "draw" %}selected{% endif %}>Draw</option>
     </select>
     <input type="date" name="date_from" value="{{ filters.date_from }}">
     <input type="date" name="date_to" value="{{ filters.date_to }}">
-    <button class="button" type="submit">Filter</button>
-    <a class="button ghost" href="/matches">Reset</a>
+    <button class="button" type="submit">Фильтр</button>
+    <a class="button ghost" href="/matches">Сброс</a>
   </form>
   <table>
-    <thead><tr><th>Date</th><th>Map</th><th>Result</th><th>Score</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th>Entry</th><th>Early</th><th>Utility</th><th>Coach Goal</th></tr></thead>
+    <thead><tr><th>Дата</th><th>Карта</th><th>Результат</th><th>Счёт</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th>Entry</th><th>Early</th><th>Utility</th><th>Цель</th></tr></thead>
     <tbody>
       {% for match in matches %}
       <tr>
@@ -53,7 +53,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="12">No matches found.</td></tr>
+      <tr><td colspan="12">Матчи не найдены. Измените фильтры или импортируйте данные.</td></tr>
       {% endfor %}
     </tbody>
   </table>

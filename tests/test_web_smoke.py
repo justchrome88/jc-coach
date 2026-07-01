@@ -18,4 +18,12 @@ def test_dashboard_renders():
         response = client.get("/")
 
     assert response.status_code == 200
-    assert "Dashboard" in response.text
+    assert "Общая статистика" in response.text
+
+
+def test_coach_page_renders():
+    with TestClient(app) as client:
+        response = client.get("/coach")
+
+    assert response.status_code == 200
+    assert "Тренер" in response.text

@@ -2,22 +2,42 @@
 {% block content %}
 <section class="section-head">
   <div>
-    <h1>Upload</h1>
+    <h1>Импорт данных</h1>
     <p>Загрузите CSV, JSON или официальный CS2 .dem. Повторная загрузка того же файла не создаст дубли.</p>
   </div>
+  <a class="button ghost" href="/matches">Смотреть матчи</a>
 </section>
 
-<section class="panel narrow">
-  {% if message %}
-  <div class="notice">{{ message }}</div>
-  {% endif %}
-  <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
-    <label for="file">CSV/JSON/DEM file</label>
-    <input id="file" name="file" type="file" accept=".csv,.json,.dem" required>
-    <label for="player_identifier">Player name or SteamID for .dem</label>
-    <input id="player_identifier" name="player_identifier" type="text" placeholder="Optional; inferred if empty">
-    <button class="button" type="submit">Import</button>
-  </form>
-  <p class="muted">Sample files: <code>data/sample_matches.csv</code> and <code>data/sample_matches.json</code>. DEM parsing uses <code>demoparser2</code>.</p>
+{% if message %}
+<div class="notice">{{ message }}</div>
+{% endif %}
+
+<section class="upload-grid">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Загрузить файл</h2>
+      <span>CSV / JSON / DEM</span>
+    </div>
+    <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form stacked">
+      <label for="file">Файл матча или демки</label>
+      <input id="file" name="file" type="file" accept=".csv,.json,.dem" required>
+      <label for="player_identifier">Ник или SteamID для DEM</label>
+      <input id="player_identifier" name="player_identifier" type="text" placeholder="Можно оставить пустым">
+      <button class="button" type="submit">Импортировать</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Что выбрать</h2>
+      <span>быстрый старт</span>
+    </div>
+    <div class="steps">
+      <div><strong>CSV</strong><span>Самый стабильный путь для ручной статистики и тестов.</span></div>
+      <div><strong>JSON</strong><span>Удобно для экспорта из скриптов и внешних сервисов.</span></div>
+      <div><strong>DEM</strong><span>Официальная демка CS2. Сейчас парсится best-effort через demoparser2.</span></div>
+    </div>
+    <p class="muted">Sample files: <code>data/sample_matches.csv</code> и <code>data/sample_matches.json</code>.</p>
+  </div>
 </section>
 {% endblock %}

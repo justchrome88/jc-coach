@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-head">
+  <div>
+    <h1>Тренер</h1>
+    <p>Здесь собраны рекомендации, активная цель, прогресс по матчам и последний coach report.</p>
+  </div>
+  <div class="actions">
+    <form action="/report/generate" method="post">
+      <button class="button" type="submit">Сгенерировать отчёт</button>
+    </form>
+    <a class="button ghost" href="/report">Открыть полный отчёт</a>
+  </div>
+</section>
+
+<section class="layout-two">
+  <div class="panel focus">
+    <div class="panel-head">
+      <h2>Главный фокус</h2>
+      <span>{{ focus.category }}</span>
+    </div>
+    <h3>{{ focus.title }}</h3>
+    <p>{{ focus.evidence }}</p>
+    <ul>
+      {% for action in focus.actions %}
+      <li>{{ action }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Последний отчёт</h2>
+      <span>{{ report.created_at.strftime("%Y-%m-%d") if report else "нет" }}</span>
+    </div>
+    {% if report %}
+    <p>Отчёт #{{ report.id }} построен по {{ report.matches_count }} матчам.</p>
+    <a class="button ghost" href="/report">Читать отчёт</a>
+    {% else %}
+    <p>Отчёта пока нет. Сгенерируйте его после импорта матчей.</p>
+    {% endif %}
+  </div>
+</section>
+
+{% if recommendation_progress %}
+<section class="panel recommendation">
+  <div class="panel-head">
+    <h2>Активная тренировочная цель</h2>
+    <span>{{ recommendation_progress.recommendation.status }}</span>
+  </div>
+  <div class="recommendation-grid">
+    <div>
+      <h3>{{ recommendation_progress.recommendation.title }}</h3>
+      <p>{{ recommendation_progress.recommendation.description }}</p>
+      <p class="progress-line">
+        Прогресс:
+        {{ recommendation_progress.completed_matches }}/{{ recommendation_progress.target_matches }}
+        матчей · score {{ recommendation_progress.progress_score }}/100
+      </p>
+      <p>{{ recommendation_progress.summary }}</p>
+      <p class="muted">{{ recommendation_progress.last_comment }}</p>
+    </div>
+    <div class="goal-counts">
+      <span class="goal-badge green">Green {{ recommendation_progress.counts.green }}</span>
+      <span class="goal-badge yellow">Yellow {{ recommendation_progress.counts.yellow }}</span>
+      <span class="goal-badge red">Red {{ recommendation_progress.counts.red }}</span>
+      <span class="goal-badge gray">Gray {{ recommendation_progress.counts.gray }}</span>
+    </div>
+    <div class="goal-metrics">
+      <div><span>Entry deaths</span><strong>{{ recommendation_progress.baseline.entry_deaths_per_match or "n/a" }} → {{ recommendation_progress.current.entry_deaths_per_match or "n/a" }}</strong></div>
+      <div><span>Early deaths</span><strong>{{ recommendation_progress.baseline.early_deaths_per_match or "n/a" }} → {{ recommendation_progress.current.early_deaths_per_match or "n/a" }}</strong></div>
+      <div><span>KAST</span><strong>{{ recommendation_progress.baseline.kast or "n/a" }} → {{ recommendation_progress.current.kast or "n/a" }}</strong></div>
+      <div><span>ADR</span><strong>{{ recommendation_progress.baseline.adr or "n/a" }} → {{ recommendation_progress.current.adr or "n/a" }}</strong></div>
+    </div>
+  </div>
+</section>
+{% else %}
+<section class="panel empty-state">
+  <h2>Активной цели пока нет</h2>
+  <p>Импортируйте хотя бы несколько матчей. Система создаст первую цель автоматически.</p>
+  <a class="button" href="/upload">Импортировать матчи</a>
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Оценка последних матчей по цели</h2>
+    <span>green / yellow / red</span>
+  </div>
+  <table>
+    <thead><tr><th>Дата</th><th>Карта</th><th>Результат</th><th>Entry</th><th>Early</th><th>KAST</th><th>ADR</th><th>Статус</th><th>Комментарий</th></tr></thead>
+    <tbody>
+      {% for match in evaluated_matches %}
+      {% set evaluation = evaluations_by_match_id.get(match.id) %}
+      <tr>
+        <td>{{ match.played_at.strftime("%Y-%m-%d") if match.played_at else "n/a" }}</td>
+        <td>{{ match.map_name or "n/a" }}</td>
+        <td><span class="pill {{ match.result }}">{{ match.result or "n/a" }}</span></td>
+        <td>{{ match.entry_deaths if match.entry_deaths is not none else "n/a" }}</td>
+        <td>{{ match.early_deaths if match.early_deaths is not none else "n/a" }}</td>
+        <td>{{ match.kast if match.kast is not none else "n/a" }}</td>
+        <td>{{ match.adr if match.adr is not none else "n/a" }}</td>
+        <td><span class="goal-dot {{ evaluation.status }}">{{ evaluation.status }}</span></td>
+        <td class="comment-cell">{{ evaluation.coach_comment }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9">Новых матчей после постановки цели пока нет.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

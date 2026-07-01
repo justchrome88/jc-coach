@@ -2,12 +2,15 @@
 {% block content %}
 <section class="section-head">
   <div>
-    <h1>Coach Report</h1>
-    <p>Rule-based отчёт по загруженным матчам.</p>
+    <h1>Полный отчёт</h1>
+    <p>Markdown/HTML отчёт тренера по загруженным матчам и активной цели.</p>
   </div>
-  <form action="/report/generate" method="post">
-    <button class="button" type="submit">Generate new report</button>
-  </form>
+  <div class="actions">
+    <a class="button ghost" href="/coach">К тренеру</a>
+    <form action="/report/generate" method="post">
+      <button class="button" type="submit">Сгенерировать новый</button>
+    </form>
+  </div>
 </section>
 
 <section class="panel report">
@@ -15,7 +18,13 @@
   <div class="report-meta">Report #{{ report.id }} · {{ report.matches_count }} matches · {{ report.created_at.strftime("%Y-%m-%d %H:%M") }}</div>
   <article>{{ report_html | safe }}</article>
   {% else %}
-  <p>No report yet. Generate a report after uploading matches.</p>
+  <div class="empty-state">
+    <h2>Отчёта пока нет</h2>
+    <p>Импортируйте матчи и сгенерируйте первый coach report.</p>
+    <form action="/report/generate" method="post">
+      <button class="button" type="submit">Сгенерировать отчёт</button>
+    </form>
+  </div>
   {% endif %}
 </section>
 {% endblock %}
