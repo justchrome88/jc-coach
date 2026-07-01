@@ -165,19 +165,24 @@ Steam интеграция начата как scaffold:
 - страница `/settings/imports`;
 - share-code job queue;
 - инструкция по Game Authentication Code;
+- сохранение Steam Web API key через `/settings/imports`;
 - сохранение Steam match auth code;
-- ручная постановка `match_history_sync` jobs в очередь.
+- ручная постановка `match_history_sync` jobs в очередь;
+- обработка `match_history_sync` jobs с вызовом `ICSGOPlayers_730/GetNextMatchSharingCode`;
+- сохранение найденных Steam share codes как `steam_history` matches.
 
 Важно:
 
 - Steam пароль не вводится и не хранится.
 - Steam OpenID возвращает SteamID, а доступ к истории матчей требует отдельный Game Authentication Code из Steam Support / CS2.
+- Для вызовов Steam Web API нужен `STEAM_WEB_API_KEY` из Steam Community Developer. Его можно положить в `.env` или сохранить через `/settings/imports`.
 - FACEIT пока пропущен в реализации, но остается обязательным будущим источником.
-- Share-code и match-history jobs пока только ставятся в очередь. Реальный worker загрузки demo/sync будет отдельным этапом.
+- Match-history sync уже получает share codes, если есть Steam Web API key. Реальный worker загрузки DEM по share code и последующий DEM parse будет отдельным этапом.
 
 Полезные ссылки для настройки:
 
 - Steam Support CS2: `https://help.steampowered.com/en/wizard/HelpWithGame/?appid=730`
+- Steam Web API key: `https://steamcommunity.com/dev/apikey`
 - Valve Match History docs: `https://developer.valvesoftware.com/wiki/Counter-Strike%3A_Global_Offensive_Access_Match_History`
 
 ## UI language

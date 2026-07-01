@@ -8,6 +8,9 @@
   <div class="actions">
     <a class="button" href="/auth/steam">{{ t("steam.connect") }}</a>
     <a class="button ghost" href="/upload">Ручной импорт</a>
+    <form action="/settings/imports/run-queued" method="post" class="inline-form">
+      <button class="button ghost" type="submit">{{ t("steam.run_queue") }}</button>
+    </form>
   </div>
 </section>
 
@@ -34,13 +37,34 @@
       </div>
     </div>
     <div>
-      <strong>3. Вставить код здесь</strong>
+      <strong>3. Добавить Steam Web API key</strong>
+      <span>Steam Web API key нужен серверу для вызова `GetNextMatchSharingCode`. Его можно получить на официальной странице Steam Community Developer.</span>
+      <div class="link-row">
+        <a class="table-link" href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noreferrer">Steam Web API key</a>
+        <a class="table-link" href="https://steamcommunity.com/dev" target="_blank" rel="noreferrer">Steam Web API docs</a>
+      </div>
+    </div>
+    <div>
+      <strong>4. Вставить коды здесь</strong>
       <span>После сохранения мы включим sync и поставим задачу в очередь. Следующий слой воркера будет ходить в Steam match history, получать share codes и докачивать демки.</span>
     </div>
   </div>
 </section>
 
 <section class="layout-two">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Steam Web API key</h2>
+      <span>{{ "set" if has_steam_web_api_key else "missing" }}</span>
+    </div>
+    <form action="/settings/imports/steam-web-api-key" method="post" class="upload-form stacked">
+      <label for="steam_web_api_key">Ключ с steamcommunity.com/dev/apikey</label>
+      <input id="steam_web_api_key" name="steam_web_api_key" type="password" placeholder="Вставь Steam Web API key" autocomplete="off">
+      <button class="button" type="submit">Сохранить API key</button>
+    </form>
+    <p class="muted">Ключ хранится в локальной SQLite базе этого проекта. В таблицах и API мы показываем только статус set/missing.</p>
+  </div>
+
   <div class="panel">
     <div class="panel-head">
       <h2>Steam accounts</h2>
@@ -97,9 +121,9 @@
     <h2>Import jobs</h2>
     <span>queued / running / succeeded / failed</span>
   </div>
-  <table>
-    <thead><tr><th>ID</th><th>Provider</th><th>Тип</th><th>Статус</th><th>Создано</th><th>Ошибка</th></tr></thead>
-    <tbody>
+    <table>
+      <thead><tr><th>ID</th><th>Provider</th><th>Тип</th><th>Статус</th><th>Создано</th><th>Результат</th><th>Ошибка</th><th></th></tr></thead>
+      <tbody>
       {% for job in import_jobs %}
       <tr>
         <td>{{ job.id }}</td>
@@ -107,12 +131,20 @@
         <td>{{ job.job_type }}</td>
         <td><span class="source-badge">{{ job.status }}</span></td>
         <td>{{ job.created_at.strftime("%Y-%m-%d %H:%M") if job.created_at else "n/a" }}</td>
+        <td class="comment-cell">{{ job.result_json or "" }}</td>
         <td class="comment-cell">{{ job.error_message or "" }}</td>
+        <td>
+          {% if job.provider == "steam" and job.job_type == "match_history_sync" and job.status in ["queued", "failed"] %}
+          <form action="/settings/imports/jobs/{{ job.id }}/run" method="post" class="inline-form">
+            <button class="button compact ghost" type="submit">Run</button>
+          </form>
+          {% endif %}
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="6">Import jobs пока нет.</td></tr>
+      <tr><td colspan="8">Import jobs пока нет.</td></tr>
       {% endfor %}
-    </tbody>
-  </table>
+      </tbody>
+    </table>
 </section>
 {% endblock %}

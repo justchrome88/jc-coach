@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     public_base_url: str = "http://127.0.0.1:8000"
     steam_realm: str | None = None
     steam_return_path: str = "/auth/steam/callback"
+    steam_web_api_key: str | None = None
+    steam_sync_max_codes: int = 20
     openai_api_key: str | None = None
     demo_player_identifier: str | None = None
 

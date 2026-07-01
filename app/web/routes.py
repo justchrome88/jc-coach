@@ -30,6 +30,7 @@ from app.services.analytics import (
     get_summary,
     match_detail,
 )
+from app.services.app_settings import get_app_setting, set_app_setting
 from app.services.coach_rules import build_coach_focus
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.i18n import normalize_locale
@@ -53,8 +54,10 @@ from app.services.steam_integration import (
     list_import_jobs,
     list_steam_accounts,
     parse_share_code_input,
+    process_queued_steam_jobs,
     queue_match_history_sync,
     steam_login_url,
+    sync_match_history_job,
     update_match_auth_code,
     validate_openid_callback,
 )
@@ -196,6 +199,7 @@ def upload_page(request: Request, message: str | None = None):
 
 @router.get("/settings/imports")
 def import_settings_page(request: Request, db: Annotated[Session, Depends(get_db)], message: str | None = None):
+    steam_web_api_key = get_app_setting(db, "steam_web_api_key")
     return templates.TemplateResponse(
         request=request,
         name="import_settings.html",
@@ -204,6 +208,7 @@ def import_settings_page(request: Request, db: Annotated[Session, Depends(get_db
             "message": message,
             "steam_accounts": list_steam_accounts(db),
             "import_jobs": list_import_jobs(db),
+            "has_steam_web_api_key": bool(steam_web_api_key),
         },
     )
 
@@ -233,6 +238,15 @@ def create_share_code_job(db: Annotated[Session, Depends(get_db)], share_code: A
     return RedirectResponse("/settings/imports?message=Share-code%20import%20job%20queued.", status_code=303)
 
 
+@router.post("/settings/imports/steam-web-api-key")
+def save_steam_web_api_key(db: Annotated[Session, Depends(get_db)], steam_web_api_key: Annotated[str, Form()]):
+    try:
+        set_app_setting(db, "steam_web_api_key", steam_web_api_key)
+    except ValueError as exc:
+        return RedirectResponse(f"/settings/imports?message={quote(str(exc))}", status_code=303)
+    return RedirectResponse("/settings/imports?message=Steam%20Web%20API%20key%20saved.", status_code=303)
+
+
 @router.post("/settings/imports/steam/{steam_account_id}/auth-code")
 def save_steam_auth_code(
     db: Annotated[Session, Depends(get_db)],
@@ -253,6 +267,28 @@ def queue_steam_sync(db: Annotated[Session, Depends(get_db)], steam_account_id: 
     except ValueError as exc:
         return RedirectResponse(f"/settings/imports?message={quote(str(exc))}", status_code=303)
     return RedirectResponse("/settings/imports?message=Steam%20sync%20queued.", status_code=303)
+
+
+@router.post("/settings/imports/jobs/{job_id}/run")
+def run_steam_import_job(db: Annotated[Session, Depends(get_db)], job_id: int):
+    try:
+        result = sync_match_history_job(db, job_id)
+    except ValueError as exc:
+        return RedirectResponse(f"/settings/imports?message={quote(str(exc))}", status_code=303)
+    message = result.get("error") or f"Job {job_id} {result.get('status')}"
+    return RedirectResponse(f"/settings/imports?message={quote(str(message))}", status_code=303)
+
+
+@router.post("/settings/imports/run-queued")
+def run_queued_steam_import_jobs(db: Annotated[Session, Depends(get_db)]):
+    results = process_queued_steam_jobs(db)
+    succeeded = sum(1 for item in results if item.get("status") == "succeeded")
+    failed = sum(1 for item in results if item.get("status") == "failed")
+    message = f"Processed {len(results)} Steam jobs: {succeeded} succeeded, {failed} failed."
+    return RedirectResponse(
+        f"/settings/imports?message={quote(message)}",
+        status_code=303,
+    )
 
 
 @router.post("/upload")

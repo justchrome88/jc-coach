@@ -6,6 +6,7 @@ from app.services.steam_integration import (
     parse_share_code_input,
     queue_match_history_sync,
     steam_login_url,
+    sync_match_history_job,
     update_match_auth_code,
 )
 
@@ -69,6 +70,66 @@ def test_queue_match_history_sync_requires_auth_code(db):
         assert "Game Authentication Code" in str(exc)
     else:
         raise AssertionError("queue_match_history_sync should require match_auth_code")
+
+
+def test_sync_match_history_job_requires_steam_web_api_key(db, monkeypatch):
+    monkeypatch.delenv("STEAM_WEB_API_KEY", raising=False)
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE")
+    job = db.query(ImportJob).filter(ImportJob.job_type == "match_history_sync").one()
+
+    try:
+        result = sync_match_history_job(db, job.id)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["status"] == "failed"
+    assert "STEAM_WEB_API_KEY" in result["error"]
+
+
+def test_sync_match_history_job_stores_share_codes(db, monkeypatch):
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "web-api-key")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    responses = [
+        b'{"result":{"nextcode":"CSGO-abcde-abcde-abcde-abcde-abcde"}}',
+        b'{"result":{"nextcode":"n/a"}}',
+    ]
+
+    class FakeResponse:
+        def __init__(self, body: bytes):
+            self.body = body
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return self.body
+
+    def fake_urlopen(_request, timeout):
+        assert timeout == 30
+        return FakeResponse(responses.pop(0))
+
+    monkeypatch.setattr("app.services.steam_integration.urlopen", fake_urlopen)
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE")
+    job = db.query(ImportJob).filter(ImportJob.job_type == "match_history_sync").one()
+
+    try:
+        result = sync_match_history_job(db, job.id)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["status"] == "succeeded"
+    assert result["result"]["inserted"] == 1
+    assert account.last_share_code == "CSGO-abcde-abcde-abcde-abcde-abcde"
 
 
 def test_parse_share_code_input_accepts_plain_and_url():

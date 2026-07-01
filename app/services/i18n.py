@@ -31,6 +31,7 @@ TRANSLATIONS = {
         "steam.connect": "Подключить Steam",
         "steam.auth_code": "Game Authentication Code",
         "steam.queue_sync": "Поставить sync в очередь",
+        "steam.run_queue": "Обработать очередь",
     },
     "en": {
         "nav.dashboard": "Dashboard",
@@ -59,6 +60,7 @@ TRANSLATIONS = {
         "steam.connect": "Connect Steam",
         "steam.auth_code": "Game Authentication Code",
         "steam.queue_sync": "Queue sync",
+        "steam.run_queue": "Run queue",
     },
 }
 

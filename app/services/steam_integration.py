@@ -4,15 +4,19 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.request import Request, urlopen
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.db.models import ImportJob, SteamAccount, User
+from app.db.models import ImportJob, Match, SteamAccount, User
+from app.services.app_settings import get_app_setting
 
 STEAM_OPENID_ENDPOINT = "https://steamcommunity.com/openid/login"
 STEAM_OPENID_CLAIM_PREFIX = "https://steamcommunity.com/openid/id/"
+STEAM_MATCH_HISTORY_ENDPOINT = "https://api.steampowered.com/ICSGOPlayers_730/GetNextMatchSharingCode/v1"
 
 
 def steam_login_url() -> str:
@@ -120,6 +124,84 @@ def queue_match_history_sync(db: Session, steam_account_id: int) -> ImportJob:
     )
 
 
+def sync_match_history_job(db: Session, job_id: int) -> dict[str, Any]:
+    job = db.get(ImportJob, job_id)
+    if job is None:
+        raise ValueError("Import job was not found.")
+    if job.provider != "steam" or job.job_type != "match_history_sync":
+        raise ValueError("Only steam match_history_sync jobs can be processed here.")
+    account = db.get(SteamAccount, job.steam_account_id) if job.steam_account_id else None
+    if account is None:
+        return _fail_job(db, job, "Steam account was not found.")
+    if not account.match_auth_code:
+        return _fail_job(db, job, "Game Authentication Code is missing.")
+
+    settings = get_settings()
+    steam_web_api_key = settings.steam_web_api_key or get_app_setting(db, "steam_web_api_key")
+    if not steam_web_api_key:
+        return _fail_job(
+            db,
+            job,
+            "STEAM_WEB_API_KEY is missing. Add it to .env to call GetNextMatchSharingCode.",
+        )
+
+    job.status = "running"
+    job.started_at = datetime.now(UTC).replace(tzinfo=None)
+    db.commit()
+
+    try:
+        payload = _json_loads(job.requested_payload_json)
+        known_code = str(payload.get("known_share_code") or account.last_share_code or "0")
+        max_codes = max(1, min(int(settings.steam_sync_max_codes), 100))
+        collected = _collect_match_share_codes(
+            steam_web_api_key=steam_web_api_key,
+            steam_id=account.steam_id,
+            steam_id_key=account.match_auth_code,
+            known_code=known_code,
+            max_codes=max_codes,
+        )
+        inserted = 0
+        duplicates = 0
+        for share_code in collected:
+            was_inserted = _store_steam_share_code_match(db, account, share_code)
+            inserted += 1 if was_inserted else 0
+            duplicates += 0 if was_inserted else 1
+        if collected:
+            account.last_share_code = collected[-1]
+        account.last_sync_at = datetime.now(UTC).replace(tzinfo=None)
+        account.sync_enabled = 1
+        job.status = "succeeded"
+        job.finished_at = datetime.now(UTC).replace(tzinfo=None)
+        job.result_json = json.dumps(
+            {
+                "known_code": known_code,
+                "collected": len(collected),
+                "inserted": inserted,
+                "duplicates": duplicates,
+                "last_share_code": account.last_share_code,
+                "note": "Steam share codes were saved. Demo download/parsing is the next worker layer.",
+            },
+            ensure_ascii=False,
+        )
+        db.commit()
+        db.refresh(job)
+        return _job_result(job)
+    except Exception as exc:
+        return _fail_job(db, job, str(exc))
+
+
+def process_queued_steam_jobs(db: Session, limit: int = 5) -> list[dict[str, Any]]:
+    jobs = db.scalars(
+        select(ImportJob)
+        .where(ImportJob.provider == "steam")
+        .where(ImportJob.job_type == "match_history_sync")
+        .where(ImportJob.status == "queued")
+        .order_by(ImportJob.created_at.asc(), ImportJob.id.asc())
+        .limit(limit)
+    ).all()
+    return [sync_match_history_job(db, job.id) for job in jobs]
+
+
 def mark_job_failed(db: Session, job: ImportJob, message: str) -> ImportJob:
     job.status = "failed"
     job.error_message = message
@@ -150,3 +232,110 @@ def parse_share_code_input(value: str) -> dict[str, Any]:
         if known_values:
             text = known_values[0]
     return {"share_code": text}
+
+
+def _collect_match_share_codes(
+    steam_web_api_key: str,
+    steam_id: str,
+    steam_id_key: str,
+    known_code: str,
+    max_codes: int,
+) -> list[str]:
+    codes: list[str] = []
+    current = known_code
+    seen = {known_code}
+    for _ in range(max_codes):
+        next_code = _get_next_match_sharing_code(
+            steam_web_api_key=steam_web_api_key,
+            steam_id=steam_id,
+            steam_id_key=steam_id_key,
+            known_code=current,
+        )
+        if not next_code or next_code in seen:
+            break
+        codes.append(next_code)
+        seen.add(next_code)
+        current = next_code
+    return codes
+
+
+def _get_next_match_sharing_code(
+    steam_web_api_key: str,
+    steam_id: str,
+    steam_id_key: str,
+    known_code: str,
+) -> str | None:
+    params = {
+        "key": steam_web_api_key,
+        "steamid": steam_id,
+        "steamidkey": steam_id_key,
+        "knowncode": known_code,
+    }
+    request = Request(f"{STEAM_MATCH_HISTORY_ENDPOINT}?{urlencode(params)}", headers={"User-Agent": "jc-coach/0.1"})
+    with urlopen(request, timeout=30) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    result = payload.get("result") if isinstance(payload, dict) else None
+    if not isinstance(result, dict):
+        return None
+    next_code = result.get("nextcode")
+    if not isinstance(next_code, str):
+        return None
+    normalized = next_code.strip()
+    if not normalized or normalized.upper() in {"N/A", "NA", "NONE"}:
+        return None
+    return normalized
+
+
+def _store_steam_share_code_match(db: Session, account: SteamAccount, share_code: str) -> bool:
+    match = Match(
+        source="steam_history",
+        external_match_id=share_code,
+        mode="Valve Matchmaking",
+        raw_json=json.dumps(
+            {
+                "provider": "steam",
+                "steam_account_id": account.id,
+                "steam_id": account.steam_id,
+                "share_code": share_code,
+                "status": "share_code_collected",
+                "next_step": "download_demo_and_parse",
+            },
+            ensure_ascii=False,
+        ),
+    )
+    db.add(match)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return False
+    return True
+
+
+def _fail_job(db: Session, job: ImportJob, message: str) -> dict[str, Any]:
+    job.status = "failed"
+    job.error_message = message
+    job.finished_at = datetime.now(UTC).replace(tzinfo=None)
+    db.commit()
+    db.refresh(job)
+    return _job_result(job)
+
+
+def _job_result(job: ImportJob) -> dict[str, Any]:
+    return {
+        "id": job.id,
+        "status": job.status,
+        "job_type": job.job_type,
+        "result": _json_loads(job.result_json),
+        "error": job.error_message,
+    }
+
+
+def _json_loads(value: str | None) -> dict[str, Any]:
+    if not value:
+        return {}
+    try:
+        data = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}

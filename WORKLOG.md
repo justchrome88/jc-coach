@@ -313,3 +313,44 @@ Verification:
 
 - `ruff check .`
 - `pytest` -> 46 passed, 1 Starlette/httpx deprecation warning.
+
+## Steam Match History Worker And Data Reset
+
+Implemented:
+
+- `AppSetting` table for local product settings.
+- Steam Web API key storage from `/settings/imports`.
+- Steam match-history worker:
+  - processes `match_history_sync` import jobs;
+  - calls `ICSGOPlayers_730/GetNextMatchSharingCode`;
+  - follows the returned share-code chain up to `STEAM_SYNC_MAX_CODES`;
+  - stores collected codes as `source=steam_history` matches;
+  - updates `SteamAccount.last_share_code` and `last_sync_at`;
+  - writes clear failed-job diagnostics when `STEAM_WEB_API_KEY` is missing.
+- Web/API run controls:
+  - `POST /settings/imports/jobs/{job_id}/run`;
+  - `POST /settings/imports/run-queued`;
+  - `POST /api/steam/import/jobs/{job_id}/run`;
+  - `POST /api/steam/import/jobs/run-queued`.
+
+Operational action:
+
+- Backed up the old SQLite DB before cleanup:
+  - `data/cs2_coach.before-steam-sync.20260701140552.db`.
+- Removed old test/manual match data from the active DB:
+  - 34 matches;
+  - 4 recommendation evaluations;
+  - 4 recommendations;
+  - 3 reports.
+- Kept the linked Steam account and import jobs.
+- Ran queued Steam sync once. It failed correctly because no Steam Web API key was present in `.env` or app settings.
+
+Current limits:
+
+- Steam share-code discovery now works once a valid Steam Web API key is saved.
+- Demo download from share code is still the next layer; saved `steam_history` rows are real Steam match references, not parsed performance stats yet.
+
+Verification:
+
+- `ruff check .`
+- `pytest` -> 49 passed, 1 Starlette/httpx deprecation warning.

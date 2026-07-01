@@ -33,7 +33,9 @@ from app.services.steam_integration import (
     list_import_jobs,
     list_steam_accounts,
     parse_share_code_input,
+    process_queued_steam_jobs,
     steam_login_url,
+    sync_match_history_job,
 )
 
 router = APIRouter(prefix="/api")
@@ -278,6 +280,25 @@ def steam_share_code_job_endpoint(db: Annotated[Session, Depends(get_db)], share
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     job = create_steam_import_job(db, None, "share_code_import", payload)
     return {"ok": True, "job_id": job.id, "status": job.status}
+
+
+@router.post("/steam/import/jobs/{job_id}/run")
+def run_steam_import_job_endpoint(db: Annotated[Session, Depends(get_db)], job_id: int) -> dict:
+    try:
+        result = sync_match_history_job(db, job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": result.get("status") == "succeeded", **result}
+
+
+@router.post("/steam/import/jobs/run-queued")
+def run_queued_steam_import_jobs_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
+    results = process_queued_steam_jobs(db)
+    return {
+        "ok": all(item.get("status") == "succeeded" for item in results),
+        "processed": len(results),
+        "results": results,
+    }
 
 
 @router.get("/import/jobs")
