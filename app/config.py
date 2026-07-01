@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     upload_dir: Path = BASE_DIR / "data" / "uploads"
     demo_inbox_dir: Path = BASE_DIR / "data" / "incoming_demos"
     reports_dir: Path = BASE_DIR / "data" / "reports"
+    ai_handoff_dir: Path = BASE_DIR / "data" / "ai_handoffs"
+    ai_provider: str = "codex_cli_handoff"
+    ai_codex_command: str = "codex exec"
+    local_llm_base_url: str | None = None
+    local_llm_model: str | None = None
     openai_api_key: str | None = None
     demo_player_identifier: str | None = None
 
@@ -24,4 +29,5 @@ def get_settings() -> Settings:
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.demo_inbox_dir.mkdir(parents=True, exist_ok=True)
     settings.reports_dir.mkdir(parents=True, exist_ok=True)
+    settings.ai_handoff_dir.mkdir(parents=True, exist_ok=True)
     return settings

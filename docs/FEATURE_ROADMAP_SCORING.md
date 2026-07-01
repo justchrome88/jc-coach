@@ -46,7 +46,8 @@ Excel-ready Russian workbook: `docs/feature_roadmap_scoring_ru.xlsx`.
 | Active training goal | 4 | 55% | One active goal, baseline, target, score | Goal creation UI, custom goals, multiple categories | 8 | High product differentiator | Now |
 | Per-match goal status | 4 | 65% | Green/yellow/red per match | Evidence details modal, filters by status | 7 | High for our coach loop | Now |
 | Coach report | 4 | 55% | Rule-based markdown/html report | Better sections, source confidence, DEM evidence, weekly report | 8 | High product logic: users want "what to do next" | Now |
-| AI coach report | 5 | 0% | Aggregated payload concept only | OpenAI integration, prompt, safeguards, fallback | 8 | High signal from AI-analysis interest | Next |
+| AI coach report | 5 | 20% | Provider abstraction, structured coach payload, Codex CLI handoff, prompt bundle | Save AI result back into UI, local_llm provider, structured mistake evidence | 8 | High signal from AI-analysis interest | Next |
+| AI provider abstraction | 4 | 35% | `codex_cli_handoff`, provider boundary, future `local_llm` config, docs | Local LLM execution, result persistence, provider health checks | 8 | High product logic: keeps AI coach independent from one model vendor | Now |
 | Recommendation lifecycle | 5 | 10% | Active status exists in DB | Complete/pause/extend/archive UI and history | 7 | Medium-high: needed once goals matter | Next |
 | Aim stats | 8 | 10% | HS%, K/D, partial weapon events available | Weapon breakdown, timing metrics, confidence, aim dashboard; see `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md` | 9 | High signal: Leetify/Refrag discussions often center aim | Planned |
 | First duels | 5 | 45% | Entry kills/deaths from first death per round | Side/map context, first contact timing, trade context | 8 | High signal: directly actionable | Next |
@@ -107,6 +108,7 @@ Excel-ready Russian workbook: `docs/feature_roadmap_scoring_ru.xlsx`.
 | DEM-based score/result inference | 45% | Imported demo has map/result/score | Validate side switching across more demos | Match details |
 | DEM-based ADR/KD/KAST/entry | 45% | Real demo contributes to analysis | Better KAST/trade logic, early death timing | Core analytics |
 | Report includes active recommendation | 50% | Coach report reflects current training goal | More detailed progress section | Coach report |
+| AI coach handoff | 35% | Structured JSON payload and Codex CLI prompt are generated from `/coach` | Persist generated AI answer and connect local_llm provider | AI coach report |
 | README / worklog docs | 75% | Project is understandable and reproducible | Keep updated as UX changes | Developer/product docs |
 | Competitor feature matrix | 80% | Gives product direction | Revisit after user testing | Product planning |
 

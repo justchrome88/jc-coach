@@ -78,3 +78,28 @@ Verification performed:
 - `GET /api/import/demo/inbox` lists the file.
 - `/upload` displays the file.
 - Invalid `.dem` returns controlled `422` instead of crashing the app.
+
+## AI Coach Provider Direction
+
+Decision: do not hardwire OpenAI API into the product. The current AI path uses `codex_cli_handoff` because the project owner wants to start with Codex CLI as the human-in-the-loop brain and later move toward a private/local LLM.
+
+Implemented:
+
+- `app/services/ai_coach.py` with provider abstraction.
+- Current provider: `codex_cli_handoff`.
+- Future provider placeholder: `local_llm`.
+- `/coach` button to prepare AI handoff.
+- API endpoints:
+  - `GET /api/coach/ai/payload`;
+  - `POST /api/coach/ai/handoff`;
+  - `GET /api/coach/ai/handoff/latest`.
+- Handoff files are written to `data/ai_handoffs/`:
+  - `coach_payload.json`;
+  - `codex_prompt.md`;
+  - `metadata.json`.
+
+Rationale:
+
+- The app should keep deterministic CS2 facts separate from model reasoning.
+- AI should explain structured evidence, not parse demos or invent stats.
+- A provider boundary lets us later connect Ollama, LM Studio, or another OpenAI-compatible local server without changing dashboard/report/mistake logic.

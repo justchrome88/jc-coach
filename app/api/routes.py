@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Match
 from app.db.session import get_db
+from app.services.ai_coach import build_ai_coach_payload, latest_ai_handoff, prepare_ai_coach_handoff
 from app.services.analytics import compare_periods, get_map_stats, get_summary
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.importer import import_csv, import_json
@@ -137,6 +138,24 @@ def latest_report_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
         "report_markdown": report.report_markdown,
         "created_at": report.created_at,
     }
+
+
+@router.get("/coach/ai/payload")
+def ai_coach_payload_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
+    return build_ai_coach_payload(db)
+
+
+@router.post("/coach/ai/handoff")
+def ai_coach_handoff_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
+    return {"ok": True, **prepare_ai_coach_handoff(db)}
+
+
+@router.get("/coach/ai/handoff/latest")
+def latest_ai_coach_handoff_endpoint() -> dict:
+    handoff = latest_ai_handoff()
+    if handoff is None:
+        raise HTTPException(status_code=404, detail="No AI coach handoff generated yet")
+    return handoff
 
 
 def serialize_match(match: Match) -> dict:

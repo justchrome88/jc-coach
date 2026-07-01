@@ -1,6 +1,6 @@
 # CS2 Personal Coach MVP v0.1
 
-Личный FastAPI-инструмент для загрузки матчей CS2 из CSV/JSON, просмотра аналитики и генерации rule-based coach report.
+Личный FastAPI-инструмент для загрузки матчей CS2 из CSV/JSON/DEM, просмотра аналитики, отслеживания coach-целей и подготовки AI coach handoff.
 
 ## Что входит в MVP
 
@@ -9,15 +9,16 @@
 - Импорт CSV/JSON матчей без падения на неполных колонках.
 - Прямая загрузка официальных CS2 `.dem` файлов через `demoparser2` с best-effort агрегацией игрока.
 - Дедупликация повторно загруженных матчей.
-- Dashboard с метриками, графиком Chart.js, формой последних матчей и Coach Focus.
-- Страница `/matches` с фильтрами по карте, результату и датам.
+- Dashboard с метриками, графиком Chart.js, качеством данных, ADR-профилем, источниками и формой последних матчей.
+- Страница `/matches` с фильтрами по карте, результату, источнику, статусу цели, сортировкой, пагинацией и detail page матча.
 - Аналитика summary, сравнение последних 15 против предыдущих 15, статистика по картам.
 - Rule-based coach report в Markdown и HTML.
 - Минимальный Coach Recommendation Tracking: активная цель, baseline, target и green/yellow/red оценка матчей.
+- AI coach handoff для Codex CLI: приложение собирает structured JSON payload и prompt без привязки к OpenAI API.
 - Sample CSV/JSON.
 - Pytest-тесты ключевой логики.
 
-Не входит: Steam auth, платежи, публичная регистрация, demo viewer, React frontend.
+Не входит: Steam auth, платежи, публичная регистрация, demo viewer, React frontend, автоматический запуск локальной LLM.
 
 ## Локальный запуск
 
@@ -106,6 +107,46 @@ curl http://127.0.0.1:8000/api/reports/latest
 
 Markdown-файлы отчётов сохраняются в `data/reports/`.
 
+## AI Coach: Codex CLI сейчас, local LLM позже
+
+В текущей версии приложение не требует OpenAI API key. AI-слой сделан как заменяемый provider.
+
+Текущий provider:
+
+```text
+AI_PROVIDER=codex_cli_handoff
+```
+
+Он не вызывает внешнее API из web request. Вместо этого `/coach` по кнопке `Подготовить AI handoff` собирает:
+
+- structured JSON payload с фактами по матчам;
+- prompt для Codex CLI;
+- metadata с командой запуска.
+
+Файлы сохраняются в:
+
+```text
+data/ai_handoffs/
+```
+
+API:
+
+```bash
+curl http://127.0.0.1:8000/api/coach/ai/payload
+curl -X POST http://127.0.0.1:8000/api/coach/ai/handoff
+curl http://127.0.0.1:8000/api/coach/ai/handoff/latest
+```
+
+Будущий provider:
+
+```text
+AI_PROVIDER=local_llm
+LOCAL_LLM_BASE_URL=http://127.0.0.1:11434
+LOCAL_LLM_MODEL=your-model
+```
+
+Архитектурно это позволит подключить Ollama/LM Studio/OpenAI-compatible local server без переписывания coach-логики: поменяется только provider, а payload останется тем же.
+
 ## Поддерживаемые CSV поля
 
 Минимально поддерживаются:
@@ -133,6 +174,9 @@ source,external_match_id,demo_file,mode,side_t_rounds_won,side_t_rounds_lost,sid
 - `GET /api/recommendations/active`
 - `POST /api/reports/generate`
 - `GET /api/reports/latest`
+- `GET /api/coach/ai/payload`
+- `POST /api/coach/ai/handoff`
+- `GET /api/coach/ai/handoff/latest`
 
 ## Тесты и линтинг
 
@@ -152,6 +196,7 @@ app/
   services/analytics.py
   services/coach_rules.py
   services/report_generator.py
+  services/ai_coach.py
   services/demo_parser.py
   web/routes.py
   templates/
@@ -164,8 +209,8 @@ tests/
 
 ## Следующие задачи
 
-- Улучшить UI после реального использования.
-- Добавить tracking выполнения рекомендаций тренера.
-- Расширить импорт под конкретный источник данных.
-- Исследовать optional `.dem` parsing через demoparser2 или awpy.
-- Позже добавить Steam login только как отдельный этап.
+- Довести DEM import result/player picker/confidence.
+- Перевести rule-based weaknesses в structured mistake detection.
+- Превратить AI handoff в полноценный AI coach report с сохранением ответа.
+- Подключить local LLM provider после стабилизации payload.
+- Позже добавить Steam/FACEIT sync только как отдельный этап.

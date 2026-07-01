@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Match
 from app.db.session import get_db
 from app.main import templates
+from app.services.ai_coach import latest_ai_handoff, prepare_ai_coach_handoff
 from app.services.analytics import (
     chart_series,
     compare_periods,
@@ -72,6 +73,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)]):
         if match.id in evaluations_by_match_id
     ][:10]
     report = latest_report(db)
+    ai_handoff = latest_ai_handoff()
     return templates.TemplateResponse(
         request=request,
         name="coach.html",
@@ -82,6 +84,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)]):
             "evaluations_by_match_id": evaluations_by_match_id,
             "evaluated_matches": evaluated_matches,
             "report": report,
+            "ai_handoff": ai_handoff,
         },
     )
 
@@ -262,6 +265,12 @@ def report_page(request: Request, db: Annotated[Session, Depends(get_db)]):
 def generate_report_page(db: Annotated[Session, Depends(get_db)]):
     generate_report(db)
     return RedirectResponse("/report", status_code=303)
+
+
+@router.post("/coach/ai-handoff")
+def generate_ai_handoff_page(db: Annotated[Session, Depends(get_db)]):
+    prepare_ai_coach_handoff(db)
+    return RedirectResponse("/coach", status_code=303)
 
 
 def _parse_date(value: str) -> datetime:

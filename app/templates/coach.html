@@ -6,11 +6,32 @@
     <p>Здесь собраны рекомендации, активная цель, прогресс по матчам и последний coach report.</p>
   </div>
   <div class="actions">
+    <form action="/coach/ai-handoff" method="post">
+      <button class="button ghost" type="submit">Подготовить AI handoff</button>
+    </form>
     <form action="/report/generate" method="post">
       <button class="button" type="submit">Сгенерировать отчёт</button>
     </form>
     <a class="button ghost" href="/report">Открыть полный отчёт</a>
   </div>
+</section>
+
+<section class="panel recommendation">
+  <div class="panel-head">
+    <h2>AI мозг</h2>
+    <span>{{ ai_handoff.provider if ai_handoff else "codex_cli_handoff" }}</span>
+  </div>
+  {% if ai_handoff %}
+  <div class="detail-list">
+    <div><span>Статус</span><strong>{{ ai_handoff.status }}</strong></div>
+    <div><span>Prompt</span><strong>{{ ai_handoff.prompt_path }}</strong></div>
+    <div><span>Payload</span><strong>{{ ai_handoff.payload_path }}</strong></div>
+    <div><span>Команда</span><strong>{{ ai_handoff.command }}</strong></div>
+  </div>
+  <p class="muted">Это безопасный handoff для Codex CLI. Позже сюда же подключим local_llm provider без смены coach-логики.</p>
+  {% else %}
+  <p>Пока AI handoff не создан. Нажмите кнопку выше, чтобы собрать prompt и JSON payload для Codex CLI.</p>
+  {% endif %}
 </section>
 
 <section class="layout-two">

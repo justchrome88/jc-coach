@@ -9,6 +9,8 @@ data/*.db
 data/uploads/*
 data/incoming_demos/*
 data/reports/*
+data/ai_handoffs/*
 !data/uploads/.gitkeep
 !data/incoming_demos/.gitkeep
 !data/reports/.gitkeep
+!data/ai_handoffs/.gitkeep
