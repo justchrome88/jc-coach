@@ -2,6 +2,8 @@
 
 This document converts `docs/COMPETITOR_FEATURE_MATRIX.md` into an implementation roadmap.
 
+Excel-ready Russian workbook: `docs/feature_roadmap_scoring_ru.xlsx`.
+
 ## Scoring Rules
 
 - `Difficulty 1-10`: 1 is trivial UI/data work, 10 is infrastructure-heavy or unrealistic for this project stage.
