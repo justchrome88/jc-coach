@@ -48,6 +48,20 @@ def test_import_demo_file_persists_match(monkeypatch, tmp_path, db):
     assert match.utility_damage == 50
 
 
+def test_duplicate_demo_import_removes_extra_copy(monkeypatch, tmp_path, db):
+    demo_path = tmp_path / "match.dem"
+    demo_path.write_bytes(b"HL2DEMO")
+    _install_fake_demoparser(monkeypatch)
+
+    first = import_demo_file(db, demo_path, original_filename="match.dem", player_identifier="me")
+    second = import_demo_file(db, demo_path, original_filename="match.dem", player_identifier="me")
+
+    assert first["imported"] == 1
+    assert second["imported"] == 0
+    assert second["skipped_duplicates"] == 1
+    assert second["stored_path"] == first["stored_path"]
+
+
 def _install_fake_demoparser(monkeypatch):
     module = types.ModuleType("demoparser2")
 
