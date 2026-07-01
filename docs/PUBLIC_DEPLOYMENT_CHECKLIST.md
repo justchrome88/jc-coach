@@ -11,7 +11,7 @@
 - Nginx reverse proxy включен:
   - config: `/etc/nginx/sites-available/jcnodex`;
   - enabled: `/etc/nginx/sites-enabled/jcnodex`;
-  - `server_name jcnodex`;
+  - `server_name jcnodex 192.168.102.129 88.201.150.73`;
   - upload limit: `2048m`.
 - Certbot и nginx plugin уже установлены.
 - `.env` подготовлен под домен:
@@ -21,6 +21,20 @@
   - `AUTH_COOKIE_SECURE=false` до HTTPS.
 - Публичный `/` показывает landing с кнопками входа/регистрации.
 - Рабочие страницы закрыты session auth.
+- Локальная VM резолвит `jcnodex` в `192.168.102.129` через `/etc/hosts`.
+- Sing-box оставлен для внешнего исходящего трафика VM, но добавлено direct-исключение для `88.201.150.73/32`.
+
+## Сетевая схема
+
+- LAN IP VM: `192.168.102.129`.
+- Public router IP для сайта: `88.201.150.73`.
+- Outbound IP самой VM через sing-box: `185.141.217.101`.
+- Локальная проверка сайта с VM:
+  - `curl http://jcnodex/` -> `192.168.102.129`;
+  - `curl http://192.168.102.129/` -> nginx;
+  - `curl https://api.ipify.org` -> `185.141.217.101`.
+
+Важно: если с самой VM `curl http://88.201.150.73/` не открывается, это может быть нормальным при отключенном hairpin NAT на роутере. Внешнюю доступность лучше проверять с устройства вне LAN.
 
 ## Что сделать после проброса портов
 

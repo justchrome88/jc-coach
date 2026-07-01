@@ -410,3 +410,25 @@ Verification:
 - `curl -H 'Host: jcnodex' http://127.0.0.1/` -> landing 200.
 - anonymous `/dashboard` -> 303 `/login`.
 - live registration/login/logout smoke through nginx passed.
+
+## LAN/Public Routing With Sing-box
+
+Adjusted network preparation without breaking Codex outbound connectivity:
+
+- Current LAN IP is `192.168.102.129`.
+- Current VM outbound IP through sing-box remains `185.141.217.101`.
+- Public router IP for the site is treated as `88.201.150.73`.
+- Added local `/etc/hosts` mapping:
+  - `192.168.102.129 jcnodex`.
+- Updated nginx `server_name`:
+  - `jcnodex 192.168.102.129 88.201.150.73`.
+- Added sing-box direct route for:
+  - `88.201.150.73/32`.
+- Kept sing-box `final=proxy`, so normal external traffic still exits through the existing proxy.
+
+Verification:
+
+- `curl https://api.ipify.org` -> `185.141.217.101`.
+- `curl http://jcnodex/` -> `200`, remote `192.168.102.129`.
+- `curl http://192.168.102.129/` -> `200`.
+- `curl http://88.201.150.73/` from the VM currently returns connection refused through direct route; likely router hairpin/forwarding behavior, while local nginx is healthy.
