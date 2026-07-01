@@ -19,6 +19,40 @@
   <div class="metric"><span>Entry diff</span><strong>{{ summary.entry_diff }}</strong></div>
 </section>
 
+{% if recommendation_progress %}
+<section class="panel recommendation">
+  <div class="panel-head">
+    <h2>Active Recommendation</h2>
+    <span>{{ recommendation_progress.recommendation.status }}</span>
+  </div>
+  <div class="recommendation-grid">
+    <div>
+      <h3>{{ recommendation_progress.recommendation.title }}</h3>
+      <p>{{ recommendation_progress.recommendation.description }}</p>
+      <p class="progress-line">
+        Progress:
+        {{ recommendation_progress.completed_matches }}/{{ recommendation_progress.target_matches }}
+        matches · score {{ recommendation_progress.progress_score }}/100
+      </p>
+      <p>{{ recommendation_progress.summary }}</p>
+      <p class="muted">{{ recommendation_progress.last_comment }}</p>
+    </div>
+    <div class="goal-counts">
+      <span class="goal-badge green">Green {{ recommendation_progress.counts.green }}</span>
+      <span class="goal-badge yellow">Yellow {{ recommendation_progress.counts.yellow }}</span>
+      <span class="goal-badge red">Red {{ recommendation_progress.counts.red }}</span>
+      <span class="goal-badge gray">Gray {{ recommendation_progress.counts.gray }}</span>
+    </div>
+    <div class="goal-metrics">
+      <div><span>Entry deaths</span><strong>{{ recommendation_progress.baseline.entry_deaths_per_match or "n/a" }} → {{ recommendation_progress.current.entry_deaths_per_match or "n/a" }}</strong></div>
+      <div><span>Early deaths</span><strong>{{ recommendation_progress.baseline.early_deaths_per_match or "n/a" }} → {{ recommendation_progress.current.early_deaths_per_match or "n/a" }}</strong></div>
+      <div><span>KAST</span><strong>{{ recommendation_progress.baseline.kast or "n/a" }} → {{ recommendation_progress.current.kast or "n/a" }}</strong></div>
+      <div><span>ADR</span><strong>{{ recommendation_progress.baseline.adr or "n/a" }} → {{ recommendation_progress.current.adr or "n/a" }}</strong></div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <section class="layout-two">
   <div class="panel">
     <div class="panel-head">
@@ -91,7 +125,7 @@
     <a href="/matches">All matches</a>
   </div>
   <table>
-    <thead><tr><th>Date</th><th>Map</th><th>Result</th><th>Score</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th></tr></thead>
+    <thead><tr><th>Date</th><th>Map</th><th>Result</th><th>Score</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th>Coach Goal</th></tr></thead>
     <tbody>
       {% for match in recent_matches %}
       <tr>
@@ -103,9 +137,17 @@
         <td>{{ match.adr or "n/a" }}</td>
         <td>{{ match.kast or "n/a" }}</td>
         <td>{{ match.rating or "n/a" }}</td>
+        {% set evaluation = evaluations_by_match_id.get(match.id) %}
+        <td>
+          {% if evaluation %}
+          <span class="goal-dot {{ evaluation.status }}" title="{{ evaluation.coach_comment }}">{{ evaluation.status }}</span>
+          {% else %}
+          <span class="goal-dot baseline" title="Baseline или матч до постановки цели">baseline</span>
+          {% endif %}
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="8">No matches yet.</td></tr>
+      <tr><td colspan="9">No matches yet.</td></tr>
       {% endfor %}
     </tbody>
   </table>

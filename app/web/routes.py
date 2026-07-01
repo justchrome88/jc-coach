@@ -14,6 +14,7 @@ from app.main import templates
 from app.services.analytics import chart_series, compare_periods, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
 from app.services.importer import import_csv, import_json
+from app.services.recommendation_tracking import get_active_recommendation_progress, get_evaluations_by_match_id
 from app.services.report_generator import generate_report, latest_report, markdown_to_html
 
 router = APIRouter()
@@ -26,6 +27,8 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
     focus = build_coach_focus(summary, comparison, map_stats)
+    recommendation_progress = get_active_recommendation_progress(db)
+    evaluations_by_match_id = get_evaluations_by_match_id(db)
     recent_matches = list(reversed(matches[-10:]))
     return templates.TemplateResponse(
         request=request,
@@ -36,6 +39,8 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
             "comparison": comparison,
             "map_stats": map_stats,
             "focus": focus,
+            "recommendation_progress": recommendation_progress,
+            "evaluations_by_match_id": evaluations_by_match_id,
             "recent_matches": recent_matches,
             "chart_data": chart_series(matches),
         },
@@ -81,6 +86,7 @@ def matches_page(
     if date_to:
         stmt = stmt.where(Match.played_at <= _parse_date(date_to))
     matches = db.scalars(stmt.order_by(Match.played_at.desc().nulls_last(), Match.id.desc())).all()
+    evaluations_by_match_id = get_evaluations_by_match_id(db)
     maps = db.scalars(
         select(Match.map_name).where(Match.map_name.is_not(None)).distinct().order_by(Match.map_name)
     ).all()
@@ -90,6 +96,7 @@ def matches_page(
         context={
             "request": request,
             "matches": matches,
+            "evaluations_by_match_id": evaluations_by_match_id,
             "maps": maps,
             "filters": {
                 "map_name": map_name or "",

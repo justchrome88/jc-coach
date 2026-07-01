@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
@@ -32,6 +32,7 @@ class Match(Base):
     headshot_percent: Mapped[float | None] = mapped_column(Float)
     entry_kills: Mapped[int | None] = mapped_column(Integer)
     entry_deaths: Mapped[int | None] = mapped_column(Integer)
+    early_deaths: Mapped[int | None] = mapped_column(Integer)
     flash_assists: Mapped[int | None] = mapped_column(Integer)
     utility_damage: Mapped[int | None] = mapped_column(Integer)
     enemies_flashed: Mapped[int | None] = mapped_column(Integer)
@@ -61,3 +62,51 @@ class CoachReport(Base):
     report_markdown: Mapped[str] = mapped_column(Text, nullable=False)
     report_json: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+
+
+class CoachRecommendation(Base):
+    __tablename__ = "coach_recommendations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str] = mapped_column(String(80), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="active", nullable=False, index=True)
+    priority: Mapped[str] = mapped_column(String(30), default="high", nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime)
+    target_period_matches: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    baseline_period_matches: Mapped[int] = mapped_column(Integer, default=15, nullable=False)
+    start_after_match_id: Mapped[int | None] = mapped_column(Integer)
+    baseline_metrics_json: Mapped[str] = mapped_column(Text, nullable=False)
+    target_metrics_json: Mapped[str] = mapped_column(Text, nullable=False)
+    success_rules_json: Mapped[str] = mapped_column(Text, nullable=False)
+    failure_rules_json: Mapped[str] = mapped_column(Text, nullable=False)
+    baseline_match_ids_json: Mapped[str] = mapped_column(Text, nullable=False)
+    coach_comment: Mapped[str | None] = mapped_column(Text)
+    created_by: Mapped[str] = mapped_column(String(80), default="system", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class MatchRecommendationEvaluation(Base):
+    __tablename__ = "match_recommendation_evaluations"
+    __table_args__ = (
+        UniqueConstraint("recommendation_id", "match_id", name="uq_match_recommendation_evaluation"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    recommendation_id: Mapped[int] = mapped_column(ForeignKey("coach_recommendations.id"), nullable=False, index=True)
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"), nullable=False, index=True)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    evidence_json: Mapped[str] = mapped_column(Text, nullable=False)
+    positive_signals_json: Mapped[str] = mapped_column(Text, nullable=False)
+    negative_signals_json: Mapped[str] = mapped_column(Text, nullable=False)
+    coach_comment: Mapped[str] = mapped_column(Text, nullable=False)

@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.db.models import CoachReport, Match
 from app.services.analytics import compare_periods, detect_weaknesses, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
+from app.services.recommendation_tracking import get_active_recommendation_progress
 
 
 def generate_report(db: Session) -> CoachReport:
@@ -21,6 +22,7 @@ def generate_report(db: Session) -> CoachReport:
     map_stats = get_map_stats(matches)
     weaknesses = detect_weaknesses(summary, comparison, map_stats)
     focus = build_coach_focus(summary, comparison, map_stats)
+    recommendation_progress = get_active_recommendation_progress(db)
     report_payload = {
         "player_profile": {"skill_level": "low-mid", "goal": "improve consistently in CS2"},
         "summary": summary,
@@ -28,6 +30,7 @@ def generate_report(db: Session) -> CoachReport:
         "map_stats": map_stats,
         "detected_weaknesses": weaknesses,
         "coach_focus": focus,
+        "active_recommendation": _serialize_recommendation_progress(recommendation_progress),
         "available_metrics": summary.get("available_metrics", []),
     }
     markdown = render_markdown_report(report_payload)
@@ -57,6 +60,7 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     maps = payload["map_stats"]
     weaknesses = payload["detected_weaknesses"]
     focus = payload["coach_focus"]
+    recommendation = payload.get("active_recommendation")
     best_maps = maps[:3]
     weak_maps = sorted(maps, key=lambda item: item["winrate"] if item["winrate"] is not None else 101)[:3]
     summary_line = (
@@ -122,6 +126,24 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     lines.extend(["", "## Фокус на 7 дней"])
     lines.extend(f"- {action}" for action in focus.get("actions", []))
 
+    if recommendation:
+        lines.extend(
+            [
+                "",
+                "## Активная рекомендация",
+                f"Цель: **{recommendation['title']}**.",
+                (
+                    f"Прогресс: {recommendation['completed_matches']}/{recommendation['target_matches']} матчей, "
+                    f"score {recommendation['progress_score']}/100."
+                ),
+                (
+                    f"Green/yellow/red: {recommendation['counts']['green']}/"
+                    f"{recommendation['counts']['yellow']}/{recommendation['counts']['red']}."
+                ),
+                recommendation["summary"],
+            ]
+        )
+
     lines.extend(
         [
             "",
@@ -185,6 +207,24 @@ def _strengths(summary: dict[str, Any], maps: list[dict[str, Any]]) -> list[str]
     return strengths or [
         "Есть базовая статистика для старта. Следующий шаг - накопить больше матчей и отслеживать динамику."
     ]
+
+
+def _serialize_recommendation_progress(progress: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not progress:
+        return None
+    recommendation = progress["recommendation"]
+    return {
+        "id": recommendation.id,
+        "title": recommendation.title,
+        "status": recommendation.status,
+        "baseline": progress["baseline"],
+        "target": progress["target"],
+        "counts": progress["counts"],
+        "progress_score": progress["progress_score"],
+        "completed_matches": progress["completed_matches"],
+        "target_matches": progress["target_matches"],
+        "summary": progress["summary"],
+    }
 
 
 def _fmt(value: Any, suffix: str = "") -> str:

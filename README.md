@@ -12,6 +12,7 @@
 - Страница `/matches` с фильтрами по карте, результату и датам.
 - Аналитика summary, сравнение последних 15 против предыдущих 15, статистика по картам.
 - Rule-based coach report в Markdown и HTML.
+- Минимальный Coach Recommendation Tracking: активная цель, baseline, target и green/yellow/red оценка матчей.
 - Sample CSV/JSON.
 - Pytest-тесты ключевой логики.
 
@@ -99,6 +100,7 @@ source,external_match_id,demo_file,mode,side_t_rounds_won,side_t_rounds_lost,sid
 - `POST /api/import/csv`
 - `POST /api/import/json`
 - `GET /api/analytics/summary`
+- `GET /api/recommendations/active`
 - `POST /api/reports/generate`
 - `GET /api/reports/latest`
 

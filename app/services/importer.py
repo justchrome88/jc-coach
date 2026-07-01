@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Match
+from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_new_matches
 
 INT_FIELDS = {
     "rounds_for",
@@ -21,6 +22,7 @@ INT_FIELDS = {
     "assists",
     "entry_kills",
     "entry_deaths",
+    "early_deaths",
     "flash_assists",
     "utility_damage",
     "enemies_flashed",
@@ -83,6 +85,8 @@ def import_rows(db: Session, rows: list[dict[str, Any]], source: str = "upload")
             errors += 1
 
     db.commit()
+    ensure_default_recommendation(db)
+    evaluate_new_matches(db)
     return {"imported": imported, "skipped_duplicates": skipped_duplicates, "errors": errors}
 
 
@@ -106,6 +110,8 @@ def normalize_match(row: dict[str, Any], default_source: str = "upload") -> dict
     if normalized.get("kd") is None and normalized.get("kills") is not None and normalized.get("deaths") is not None:
         deaths = normalized["deaths"] or 1
         normalized["kd"] = round(normalized["kills"] / deaths, 2)
+    if normalized.get("early_deaths") is None:
+        normalized["early_deaths"] = normalized.get("entry_deaths")
     normalized["raw_json"] = json.dumps(row, ensure_ascii=False, default=str)
     normalized["external_match_id"] = normalized.get("external_match_id") or _stable_match_id(normalized, row)
     return normalized

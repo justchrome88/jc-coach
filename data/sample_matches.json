@@ -14,6 +14,7 @@
       "rating": 0.86,
       "entry_kills": 1,
       "entry_deaths": 4,
+      "early_deaths": 4,
       "utility_damage": 32,
       "flash_assists": 0
     },
@@ -31,6 +32,7 @@
       "rating": 1.24,
       "entry_kills": 4,
       "entry_deaths": 2,
+      "early_deaths": 2,
       "utility_damage": 110,
       "flash_assists": 2
     }

@@ -28,7 +28,7 @@
     <a class="button ghost" href="/matches">Reset</a>
   </form>
   <table>
-    <thead><tr><th>Date</th><th>Map</th><th>Result</th><th>Score</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th>Entry</th><th>Utility</th></tr></thead>
+    <thead><tr><th>Date</th><th>Map</th><th>Result</th><th>Score</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th>Entry</th><th>Early</th><th>Utility</th><th>Coach Goal</th></tr></thead>
     <tbody>
       {% for match in matches %}
       <tr>
@@ -41,10 +41,19 @@
         <td>{{ match.kast or "n/a" }}</td>
         <td>{{ match.rating or "n/a" }}</td>
         <td>{{ match.entry_kills or 0 }} / {{ match.entry_deaths or 0 }}</td>
+        <td>{{ match.early_deaths if match.early_deaths is not none else "n/a" }}</td>
         <td>{{ match.utility_damage or 0 }}</td>
+        {% set evaluation = evaluations_by_match_id.get(match.id) %}
+        <td>
+          {% if evaluation %}
+          <span class="goal-dot {{ evaluation.status }}" title="{{ evaluation.coach_comment }}">{{ evaluation.status }}</span>
+          {% else %}
+          <span class="goal-dot baseline" title="Baseline или матч до постановки цели">baseline</span>
+          {% endif %}
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="10">No matches found.</td></tr>
+      <tr><td colspan="12">No matches found.</td></tr>
       {% endfor %}
     </tbody>
   </table>

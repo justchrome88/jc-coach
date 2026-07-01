@@ -10,6 +10,9 @@ from app.db.models import Match
 from app.db.session import get_db
 from app.services.analytics import compare_periods, get_map_stats, get_summary
 from app.services.importer import import_csv, import_json
+from app.services.recommendation_tracking import (
+    get_active_recommendation_progress,
+)
 from app.services.report_generator import generate_report, latest_report
 
 router = APIRouter(prefix="/api")
@@ -49,6 +52,26 @@ def analytics_summary(db: Annotated[Session, Depends(get_db)]) -> dict:
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
     return {"summary": summary, "comparison": comparison, "map_stats": map_stats}
+
+
+@router.get("/recommendations/active")
+def active_recommendation(db: Annotated[Session, Depends(get_db)]) -> dict:
+    progress = get_active_recommendation_progress(db)
+    if not progress:
+        raise HTTPException(status_code=404, detail="No active recommendation yet")
+    recommendation = progress["recommendation"]
+    return {
+        "id": recommendation.id,
+        "title": recommendation.title,
+        "status": recommendation.status,
+        "baseline": progress["baseline"],
+        "target": progress["target"],
+        "counts": progress["counts"],
+        "progress_score": progress["progress_score"],
+        "completed_matches": progress["completed_matches"],
+        "target_matches": progress["target_matches"],
+        "summary": progress["summary"],
+    }
 
 
 @router.post("/reports/generate")
@@ -93,6 +116,7 @@ def serialize_match(match: Match) -> dict:
         "headshot_percent": match.headshot_percent,
         "entry_kills": match.entry_kills,
         "entry_deaths": match.entry_deaths,
+        "early_deaths": match.early_deaths,
         "flash_assists": match.flash_assists,
         "utility_damage": match.utility_damage,
         "enemies_flashed": match.enemies_flashed,
