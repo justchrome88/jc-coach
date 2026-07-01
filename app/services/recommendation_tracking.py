@@ -57,10 +57,6 @@ def ensure_default_recommendations(db: Session) -> list[CoachRecommendation]:
     if not matches:
         return []
 
-    baseline_matches = matches[-BASELINE_PERIOD_MATCHES:]
-    baseline_metrics = _aggregate_baseline(baseline_matches)
-    baseline_ids = [match.id for match in baseline_matches]
-    start_after_match_id = max((match.id for match in matches if match.id is not None), default=None)
     existing_system = list(
         db.scalars(
             select(CoachRecommendation)
@@ -74,27 +70,7 @@ def ensure_default_recommendations(db: Session) -> list[CoachRecommendation]:
     for definition in RECOMMENDATION_DEFINITIONS:
         if definition["category"] in existing_categories:
             continue
-        recommendation = CoachRecommendation(
-            title=definition["title"],
-            description=definition["description"],
-            category=definition["category"],
-            status="active",
-            priority=definition["priority"],
-            started_at=datetime.now(UTC).replace(tzinfo=None),
-            target_period_matches=TARGET_PERIOD_MATCHES,
-            baseline_period_matches=len(baseline_matches),
-            start_after_match_id=start_after_match_id,
-            baseline_metrics_json=json.dumps(baseline_metrics, ensure_ascii=False),
-            target_metrics_json=json.dumps(
-                _target_metrics(baseline_metrics, definition["category"]),
-                ensure_ascii=False,
-            ),
-            success_rules_json=json.dumps(_success_rules(definition["category"]), ensure_ascii=False),
-            failure_rules_json=json.dumps(_failure_rules(definition["category"]), ensure_ascii=False),
-            baseline_match_ids_json=json.dumps(baseline_ids),
-            coach_comment=_coach_comment(definition["category"]),
-            created_by="system",
-        )
+        recommendation = _new_system_recommendation(definition, matches)
         db.add(recommendation)
         created.append(recommendation)
 
@@ -223,6 +199,90 @@ def update_recommendation_status(db: Session, recommendation_id: int, status: st
     return recommendation
 
 
+def extend_recommendation_target(
+    db: Session,
+    recommendation_id: int,
+    additional_matches: int = 5,
+) -> CoachRecommendation:
+    recommendation = db.get(CoachRecommendation, recommendation_id)
+    if recommendation is None:
+        raise ValueError("Recommendation not found.")
+    if recommendation.status not in {"active", "paused"}:
+        raise ValueError("Only active or paused recommendations can be extended.")
+    increment = max(1, min(additional_matches, 25))
+    recommendation.target_period_matches = min(recommendation.target_period_matches + increment, 100)
+    recommendation.coach_comment = f"{recommendation.coach_comment or ''} Extended by {increment} matches.".strip()
+    db.commit()
+    db.refresh(recommendation)
+    return recommendation
+
+
+def restart_recommendation_category(db: Session, category: str) -> CoachRecommendation:
+    definition = _definition_for_category(category)
+    matches = _ordered_matches(db)
+    if not matches:
+        raise ValueError("Cannot restart recommendation without matches.")
+    active_items = list(
+        db.scalars(
+            select(CoachRecommendation)
+            .where(CoachRecommendation.category == category)
+            .where(CoachRecommendation.status.in_(("active", "paused")))
+            .order_by(CoachRecommendation.id.asc())
+        ).all()
+    )
+    now = datetime.now(UTC).replace(tzinfo=None)
+    for recommendation in active_items:
+        recommendation.status = "archived"
+        recommendation.ended_at = now
+    new_recommendation = _new_system_recommendation(definition, matches)
+    db.add(new_recommendation)
+    db.commit()
+    db.refresh(new_recommendation)
+    return new_recommendation
+
+
+def list_recommendation_history(db: Session, limit: int = 100) -> list[CoachRecommendation]:
+    ensure_default_recommendations(db)
+    return list(
+        db.scalars(
+            select(CoachRecommendation)
+            .order_by(
+                CoachRecommendation.category.asc(),
+                CoachRecommendation.created_at.desc(),
+                CoachRecommendation.id.desc(),
+            )
+            .limit(max(1, min(limit, 250)))
+        ).all()
+    )
+
+
+def recommendation_category_summary(db: Session) -> list[dict[str, Any]]:
+    progress_by_category = {
+        item["recommendation"].category: item for item in get_all_recommendation_progress(db)
+    }
+    history = list_recommendation_history(db)
+    summary = []
+    for definition in RECOMMENDATION_DEFINITIONS:
+        category = definition["category"]
+        category_history = [item for item in history if item.category == category]
+        active = next((item for item in category_history if item.status == "active"), None)
+        progress = progress_by_category.get(category)
+        summary.append(
+            {
+                "category": category,
+                "title": definition["title"],
+                "active_recommendation_id": active.id if active else None,
+                "active_status": active.status if active else None,
+                "history_count": len(category_history),
+                "latest_started_at": category_history[0].started_at if category_history else None,
+                "progress_score": progress["progress_score"] if progress else None,
+                "completed_matches": progress["completed_matches"] if progress else 0,
+                "target_matches": progress["target_matches"] if progress else TARGET_PERIOD_MATCHES,
+            }
+        )
+    return summary
+
+
 def _progress_for_recommendation(db: Session, recommendation: CoachRecommendation) -> dict[str, Any]:
     evaluations = db.scalars(
         select(MatchRecommendationEvaluation)
@@ -249,6 +309,39 @@ def _progress_for_recommendation(db: Session, recommendation: CoachRecommendatio
         "last_comment": last.coach_comment if last else "Новые матчи после постановки цели ещё не оценивались.",
         "summary": _progress_summary(progress_score, len(target_evaluations)),
     }
+
+
+def _new_system_recommendation(definition: dict[str, str], matches: list[Match]) -> CoachRecommendation:
+    baseline_matches = matches[-BASELINE_PERIOD_MATCHES:]
+    baseline_metrics = _aggregate_baseline(baseline_matches)
+    baseline_ids = [match.id for match in baseline_matches]
+    start_after_match_id = max((match.id for match in matches if match.id is not None), default=None)
+    category = definition["category"]
+    return CoachRecommendation(
+        title=definition["title"],
+        description=definition["description"],
+        category=category,
+        status="active",
+        priority=definition["priority"],
+        started_at=datetime.now(UTC).replace(tzinfo=None),
+        target_period_matches=TARGET_PERIOD_MATCHES,
+        baseline_period_matches=len(baseline_matches),
+        start_after_match_id=start_after_match_id,
+        baseline_metrics_json=json.dumps(baseline_metrics, ensure_ascii=False),
+        target_metrics_json=json.dumps(_target_metrics(baseline_metrics, category), ensure_ascii=False),
+        success_rules_json=json.dumps(_success_rules(category), ensure_ascii=False),
+        failure_rules_json=json.dumps(_failure_rules(category), ensure_ascii=False),
+        baseline_match_ids_json=json.dumps(baseline_ids),
+        coach_comment=_coach_comment(category),
+        created_by="system",
+    )
+
+
+def _definition_for_category(category: str) -> dict[str, str]:
+    definition = next((item for item in RECOMMENDATION_DEFINITIONS if item["category"] == category), None)
+    if definition is None:
+        raise ValueError(f"Unsupported recommendation category: {category}")
+    return definition
 
 
 def _aggregate_baseline(matches: list[Match]) -> dict[str, float | int | None]:

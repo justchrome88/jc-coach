@@ -5,8 +5,12 @@ from app.services.importer import import_rows
 from app.services.recommendation_tracking import (
     ensure_default_recommendation,
     evaluate_new_matches,
+    extend_recommendation_target,
     get_active_recommendation_progress,
     get_all_recommendation_progress,
+    list_recommendation_history,
+    recommendation_category_summary,
+    restart_recommendation_category,
     update_recommendation_status,
 )
 
@@ -88,6 +92,39 @@ def test_update_recommendation_status(db):
 
     assert updated.status == "completed"
     assert updated.ended_at is not None
+
+
+def test_extend_recommendation_target(db):
+    baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
+    import_rows(db, baseline_rows, source="baseline")
+    recommendation = ensure_default_recommendation(db)
+
+    updated = extend_recommendation_target(db, recommendation.id, additional_matches=5)
+
+    assert updated.target_period_matches == 15
+
+
+def test_restart_recommendation_category_archives_current_and_creates_new(db):
+    baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
+    import_rows(db, baseline_rows, source="baseline")
+    original = ensure_default_recommendation(db)
+
+    restarted = restart_recommendation_category(db, "survival")
+    history = list_recommendation_history(db)
+
+    assert restarted.id != original.id
+    assert restarted.status == "active"
+    assert any(item.id == original.id and item.status == "archived" for item in history)
+
+
+def test_recommendation_category_summary(db):
+    baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
+    import_rows(db, baseline_rows, source="baseline")
+
+    summary = recommendation_category_summary(db)
+
+    assert {item["category"] for item in summary} == {"aim", "grenades", "map", "survival"}
+    assert all(item["history_count"] >= 1 for item in summary)
 
 
 def _row(index: int, entry_deaths: int, early_deaths: int, kast: float, adr: float) -> dict:

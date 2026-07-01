@@ -26,8 +26,12 @@ from app.services.demo_parser import DemoParseError, import_demo_file, import_in
 from app.services.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.importer import import_csv, import_json
 from app.services.recommendation_tracking import (
+    extend_recommendation_target,
     get_active_recommendation_progress,
     get_all_recommendation_progress,
+    list_recommendation_history,
+    recommendation_category_summary,
+    restart_recommendation_category,
     update_recommendation_status,
 )
 from app.services.report_generator import generate_report, latest_report
@@ -176,6 +180,29 @@ def all_recommendations(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
     ]
 
 
+@router.get("/recommendations/history")
+def recommendation_history_endpoint(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
+    return [
+        {
+            "id": item.id,
+            "category": item.category,
+            "title": item.title,
+            "status": item.status,
+            "priority": item.priority,
+            "started_at": item.started_at,
+            "ended_at": item.ended_at,
+            "target_period_matches": item.target_period_matches,
+            "baseline_period_matches": item.baseline_period_matches,
+        }
+        for item in list_recommendation_history(db)
+    ]
+
+
+@router.get("/recommendations/categories")
+def recommendation_categories_endpoint(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
+    return recommendation_category_summary(db)
+
+
 @router.post("/recommendations/{recommendation_id}/status")
 def update_recommendation_status_endpoint(
     db: Annotated[Session, Depends(get_db)],
@@ -187,6 +214,32 @@ def update_recommendation_status_endpoint(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "id": recommendation.id, "status": recommendation.status}
+
+
+@router.post("/recommendations/{recommendation_id}/extend")
+def extend_recommendation_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    recommendation_id: int,
+    additional_matches: int = 5,
+) -> dict:
+    try:
+        recommendation = extend_recommendation_target(db, recommendation_id, additional_matches)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "ok": True,
+        "id": recommendation.id,
+        "target_period_matches": recommendation.target_period_matches,
+    }
+
+
+@router.post("/recommendations/categories/{category}/restart")
+def restart_recommendation_category_endpoint(db: Annotated[Session, Depends(get_db)], category: str) -> dict:
+    try:
+        recommendation = restart_recommendation_category(db, category)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "id": recommendation.id, "category": recommendation.category, "status": recommendation.status}
 
 
 @router.post("/reports/generate")

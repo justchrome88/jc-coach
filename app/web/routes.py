@@ -46,9 +46,13 @@ from app.services.mistake_detection import (
     mistakes_by_match_id,
 )
 from app.services.recommendation_tracking import (
+    extend_recommendation_target,
     get_active_recommendation_progress,
     get_all_recommendation_progress,
     get_evaluations_by_match_id,
+    list_recommendation_history,
+    recommendation_category_summary,
+    restart_recommendation_category,
     update_recommendation_status,
 )
 from app.services.report_generator import generate_report, latest_report, markdown_to_html
@@ -260,6 +264,8 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
     ai_report = latest_ai_coach_report(db)
     ai_health = ai_provider_health()
     ai_report_history = [serialize_ai_coach_report(report) for report in list_ai_coach_reports(db, limit=5)]
+    recommendation_history = list_recommendation_history(db, limit=20)
+    recommendation_categories = recommendation_category_summary(db)
     return templates.TemplateResponse(
         request=request,
         name="coach.html",
@@ -278,6 +284,8 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
             "ai_report": ai_report,
             "ai_report_history": ai_report_history,
             "ai_health": ai_health,
+            "recommendation_history": recommendation_history,
+            "recommendation_categories": recommendation_categories,
         },
     )
 
@@ -632,6 +640,28 @@ def update_recommendation_status_page(
 ):
     try:
         update_recommendation_status(db, recommendation_id, status)
+    except ValueError as exc:
+        return RedirectResponse(f"/coach?message={exc}", status_code=303)
+    return RedirectResponse("/coach", status_code=303)
+
+
+@router.post("/coach/recommendations/{recommendation_id}/extend")
+def extend_recommendation_page(
+    db: Annotated[Session, Depends(get_db)],
+    recommendation_id: int,
+    additional_matches: Annotated[int, Form()] = 5,
+):
+    try:
+        extend_recommendation_target(db, recommendation_id, additional_matches)
+    except ValueError as exc:
+        return RedirectResponse(f"/coach?message={exc}", status_code=303)
+    return RedirectResponse("/coach", status_code=303)
+
+
+@router.post("/coach/recommendations/category/{category}/restart")
+def restart_recommendation_category_page(db: Annotated[Session, Depends(get_db)], category: str):
+    try:
+        restart_recommendation_category(db, category)
     except ValueError as exc:
         return RedirectResponse(f"/coach?message={exc}", status_code=303)
     return RedirectResponse("/coach", status_code=303)

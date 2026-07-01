@@ -171,6 +171,13 @@
         <div><span>Red</span><strong>{{ item.counts.red }}</strong></div>
       </div>
       <div class="mini-actions">
+        <form action="/coach/recommendations/{{ item.recommendation.id }}/extend" method="post">
+          <input type="hidden" name="additional_matches" value="5">
+          <button class="button ghost" type="submit">Extend</button>
+        </form>
+        <form action="/coach/recommendations/category/{{ item.recommendation.category }}/restart" method="post">
+          <button class="button ghost" type="submit">Restart</button>
+        </form>
         <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
           <input type="hidden" name="status" value="paused">
           <button class="button ghost" type="submit">Pause</button>
@@ -188,6 +195,52 @@
     {% else %}
     <p>Активные цели появятся после импорта матчей.</p>
     {% endfor %}
+  </div>
+</section>
+
+<section class="layout-two">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Сводка целей</h2>
+      <span>category lifecycle</span>
+    </div>
+    <table>
+      <thead><tr><th>Категория</th><th>Статус</th><th>Score</th><th>Матчи</th><th>История</th></tr></thead>
+      <tbody>
+      {% for item in recommendation_categories %}
+        <tr>
+          <td>{{ item.category }}</td>
+          <td>{{ item.active_status or "none" }}</td>
+          <td>{{ item.progress_score if item.progress_score is not none else "n/a" }}</td>
+          <td>{{ item.completed_matches }}/{{ item.target_matches }}</td>
+          <td>{{ item.history_count }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">Категории появятся после импорта матчей.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <h2>История целей</h2>
+      <span>последние 20</span>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Категория</th><th>Статус</th><th>Target</th></tr></thead>
+      <tbody>
+      {% for item in recommendation_history %}
+        <tr>
+          <td>{{ item.id }}</td>
+          <td>{{ item.category }}</td>
+          <td><span class="source-badge">{{ item.status }}</span></td>
+          <td>{{ item.target_period_matches }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">Истории целей пока нет.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
   </div>
 </section>
 
