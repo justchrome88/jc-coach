@@ -220,7 +220,7 @@ Session auth использует signed cookie через `SessionMiddleware`; 
 - systemd unit: `/etc/systemd/system/jc-coach.service`;
 - nginx site: `/etc/nginx/sites-available/jcnodex`;
 - app listens on `127.0.0.1:8010`;
-- nginx listens on `80` and proxies domain `jcnodex`.
+- nginx listens on `80` and proxies domain `jcnodex.ru`.
 
 Репозиторий содержит копии конфигов:
 

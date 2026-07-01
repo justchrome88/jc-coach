@@ -374,7 +374,7 @@ Implemented:
 - SQLite schema upgrade for existing `users` table.
 - Web auth middleware for protected UI pages.
 - Steam OpenID linking now attaches to the current logged-in user when possible.
-- Nginx reverse proxy installed/configured for `jcnodex`.
+- Nginx reverse proxy installed/configured for `jcnodex.ru`.
 - Systemd service installed/enabled:
   - `jc-coach.service`;
   - app listens on `127.0.0.1:8010`;
@@ -388,18 +388,18 @@ Implemented:
 Operational action:
 
 - `.env` updated locally:
-  - `PUBLIC_BASE_URL=http://jcnodex`;
-  - `STEAM_REALM=http://jcnodex`;
+  - `PUBLIC_BASE_URL=http://jcnodex.ru`;
+  - `STEAM_REALM=http://jcnodex.ru`;
   - `SESSION_SECRET_KEY` generated;
   - `AUTH_COOKIE_SECURE=false` until SSL is issued.
 - Certbot and nginx plugin were already installed.
-- Smoke-tested through nginx with `Host: jcnodex`.
+- Smoke-tested through nginx with `Host: jcnodex.ru`.
 - Removed smoke `@example.test` users after live auth test.
 
 Current limits:
 
 - HTTPS is not issued yet because router port forwarding is not ready.
-- After forwarding ports `80` and `443`, run `certbot --nginx -d jcnodex`, then switch `.env` to `https://jcnodex` and `AUTH_COOKIE_SECURE=true`.
+- After forwarding ports `80` and `443`, run `certbot --nginx -d jcnodex.ru`, then switch `.env` to `https://jcnodex.ru` and `AUTH_COOKIE_SECURE=true`.
 - Registration is open for now; invite/approval flow should be added before a wider public launch.
 
 Verification:
@@ -407,7 +407,7 @@ Verification:
 - `ruff check .`
 - `pytest` -> 53 passed, 1 Starlette/httpx deprecation warning.
 - `nginx -t`.
-- `curl -H 'Host: jcnodex' http://127.0.0.1/` -> landing 200.
+- `curl -H 'Host: jcnodex.ru' http://127.0.0.1/` -> landing 200.
 - anonymous `/dashboard` -> 303 `/login`.
 - live registration/login/logout smoke through nginx passed.
 
@@ -419,9 +419,9 @@ Adjusted network preparation without breaking Codex outbound connectivity:
 - Current VM outbound IP through sing-box remains `185.141.217.101`.
 - Public router IP for the site is treated as `88.201.150.73`.
 - Added local `/etc/hosts` mapping:
-  - `192.168.102.129 jcnodex`.
+  - `192.168.102.129 jcnodex.ru jcnodex`.
 - Updated nginx `server_name`:
-  - `jcnodex 192.168.102.129 88.201.150.73`.
+  - `jcnodex.ru www.jcnodex.ru jcnodex 192.168.102.129 88.201.150.73`.
 - Added sing-box direct route for:
   - `88.201.150.73/32`.
 - Kept sing-box `final=proxy`, so normal external traffic still exits through the existing proxy.
@@ -429,6 +429,6 @@ Adjusted network preparation without breaking Codex outbound connectivity:
 Verification:
 
 - `curl https://api.ipify.org` -> `185.141.217.101`.
-- `curl http://jcnodex/` -> `200`, remote `192.168.102.129`.
+- `curl http://jcnodex.ru/` -> `200`, remote `192.168.102.129`.
 - `curl http://192.168.102.129/` -> `200`.
 - `curl http://88.201.150.73/` from the VM currently returns connection refused through direct route; likely router hairpin/forwarding behavior, while local nginx is healthy.
