@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-head">
+  <div>
+    <h1>Dashboard</h1>
+    <p>Последние матчи, форма, карты и главный тренировочный фокус.</p>
+  </div>
+  <a class="button" href="/upload">Upload CSV/JSON</a>
+</section>
+
+<section class="metric-grid">
+  <div class="metric"><span>Matches</span><strong>{{ summary.matches_count }}</strong></div>
+  <div class="metric"><span>Winrate</span><strong>{{ summary.winrate or 0 }}%</strong></div>
+  <div class="metric"><span>K/D</span><strong>{{ summary.avg_kd or "n/a" }}</strong></div>
+  <div class="metric"><span>ADR</span><strong>{{ summary.avg_adr or "n/a" }}</strong></div>
+  <div class="metric"><span>KAST</span><strong>{{ summary.avg_kast or "n/a" }}%</strong></div>
+  <div class="metric"><span>Rating</span><strong>{{ summary.avg_rating or "n/a" }}</strong></div>
+  <div class="metric"><span>Form</span><strong>{{ summary.form_score or "n/a" }}</strong></div>
+  <div class="metric"><span>Entry diff</span><strong>{{ summary.entry_diff }}</strong></div>
+</section>
+
+<section class="layout-two">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Trend</h2>
+      <span>last 30</span>
+    </div>
+    <canvas id="trendChart" height="120"></canvas>
+  </div>
+  <div class="panel focus">
+    <div class="panel-head">
+      <h2>Coach Focus</h2>
+      <span>{{ focus.category }}</span>
+    </div>
+    <h3>{{ focus.title }}</h3>
+    <p>{{ focus.evidence }}</p>
+    <ul>
+      {% for action in focus.actions %}
+      <li>{{ action }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+<section class="layout-two">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Last 15 vs Previous 15</h2>
+      <span>{{ comparison.trend }}</span>
+    </div>
+    <table>
+      <thead><tr><th>Metric</th><th>Now</th><th>Before</th><th>Delta</th></tr></thead>
+      <tbody>
+        {% for metric, item in comparison.deltas.items() %}
+        <tr>
+          <td>{{ metric }}</td>
+          <td>{{ item.current if item.current is not none else "n/a" }}</td>
+          <td>{{ item.previous if item.previous is not none else "n/a" }}</td>
+          <td class="{{ 'bad' if item.delta is not none and ((metric == 'deaths' and item.delta > 0) or (metric != 'deaths' and item.delta < 0)) else 'good' }}">{{ item.delta if item.delta is not none else "n/a" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Maps</h2>
+      <span>best to worst</span>
+    </div>
+    <table>
+      <thead><tr><th>Map</th><th>Matches</th><th>WR</th><th>ADR</th></tr></thead>
+      <tbody>
+        {% for item in map_stats %}
+        <tr>
+          <td>{{ item.map_name }}</td>
+          <td>{{ item.matches_count }}</td>
+          <td>{{ item.winrate }}%</td>
+          <td>{{ item.avg_adr or "n/a" }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">Upload matches to see map stats.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Recent Matches</h2>
+    <a href="/matches">All matches</a>
+  </div>
+  <table>
+    <thead><tr><th>Date</th><th>Map</th><th>Result</th><th>Score</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th></tr></thead>
+    <tbody>
+      {% for match in recent_matches %}
+      <tr>
+        <td>{{ match.played_at.strftime("%Y-%m-%d") if match.played_at else "n/a" }}</td>
+        <td>{{ match.map_name or "n/a" }}</td>
+        <td><span class="pill {{ match.result }}">{{ match.result or "n/a" }}</span></td>
+        <td>{{ match.rounds_for or 0 }}:{{ match.rounds_against or 0 }}</td>
+        <td>{{ match.kd or "n/a" }}</td>
+        <td>{{ match.adr or "n/a" }}</td>
+        <td>{{ match.kast or "n/a" }}</td>
+        <td>{{ match.rating or "n/a" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8">No matches yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.coachChartData = {{ chart_data | tojson }};
+</script>
+<script src="{{ url_for('static', path='charts.js') }}"></script>
+{% endblock %}

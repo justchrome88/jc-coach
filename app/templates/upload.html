@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-head">
+  <div>
+    <h1>Upload</h1>
+    <p>Загрузите CSV или JSON с матчами. Повторная загрузка того же файла не создаст дубли.</p>
+  </div>
+</section>
+
+<section class="panel narrow">
+  {% if message %}
+  <div class="notice">{{ message }}</div>
+  {% endif %}
+  <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
+    <label for="file">CSV/JSON file</label>
+    <input id="file" name="file" type="file" accept=".csv,.json" required>
+    <button class="button" type="submit">Import</button>
+  </form>
+  <p class="muted">Sample files: <code>data/sample_matches.csv</code> and <code>data/sample_matches.json</code>.</p>
+</section>
+{% endblock %}

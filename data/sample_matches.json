@@ -1,0 +1,38 @@
+{
+  "matches": [
+    {
+      "played_at": "2026-06-01",
+      "map_name": "Mirage",
+      "result": "loss",
+      "rounds_for": 9,
+      "rounds_against": 13,
+      "kills": 16,
+      "deaths": 20,
+      "assists": 4,
+      "adr": 66.5,
+      "kast": 65.0,
+      "rating": 0.86,
+      "entry_kills": 1,
+      "entry_deaths": 4,
+      "utility_damage": 32,
+      "flash_assists": 0
+    },
+    {
+      "played_at": "2026-06-02",
+      "map_name": "Inferno",
+      "result": "win",
+      "rounds_for": 13,
+      "rounds_against": 10,
+      "kills": 23,
+      "deaths": 16,
+      "assists": 6,
+      "adr": 91.2,
+      "kast": 79.0,
+      "rating": 1.24,
+      "entry_kills": 4,
+      "entry_deaths": 2,
+      "utility_damage": 110,
+      "flash_assists": 2
+    }
+  ]
+}

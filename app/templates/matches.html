@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-head">
+  <div>
+    <h1>Matches</h1>
+    <p>Фильтры по карте, результату и периоду.</p>
+  </div>
+  <a class="button" href="/upload">Upload</a>
+</section>
+
+<section class="panel">
+  <form class="filters" method="get" action="/matches">
+    <select name="map_name">
+      <option value="">All maps</option>
+      {% for map in maps %}
+      <option value="{{ map }}" {% if filters.map_name == map %}selected{% endif %}>{{ map }}</option>
+      {% endfor %}
+    </select>
+    <select name="result">
+      <option value="">All results</option>
+      <option value="win" {% if filters.result == "win" %}selected{% endif %}>Win</option>
+      <option value="loss" {% if filters.result == "loss" %}selected{% endif %}>Loss</option>
+      <option value="draw" {% if filters.result == "draw" %}selected{% endif %}>Draw</option>
+    </select>
+    <input type="date" name="date_from" value="{{ filters.date_from }}">
+    <input type="date" name="date_to" value="{{ filters.date_to }}">
+    <button class="button" type="submit">Filter</button>
+    <a class="button ghost" href="/matches">Reset</a>
+  </form>
+  <table>
+    <thead><tr><th>Date</th><th>Map</th><th>Result</th><th>Score</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th>Entry</th><th>Utility</th></tr></thead>
+    <tbody>
+      {% for match in matches %}
+      <tr>
+        <td>{{ match.played_at.strftime("%Y-%m-%d") if match.played_at else "n/a" }}</td>
+        <td>{{ match.map_name or "n/a" }}</td>
+        <td><span class="pill {{ match.result }}">{{ match.result or "n/a" }}</span></td>
+        <td>{{ match.rounds_for or 0 }}:{{ match.rounds_against or 0 }}</td>
+        <td>{{ match.kd or "n/a" }}</td>
+        <td>{{ match.adr or "n/a" }}</td>
+        <td>{{ match.kast or "n/a" }}</td>
+        <td>{{ match.rating or "n/a" }}</td>
+        <td>{{ match.entry_kills or 0 }} / {{ match.entry_deaths or 0 }}</td>
+        <td>{{ match.utility_damage or 0 }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="10">No matches found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
