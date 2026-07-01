@@ -21,6 +21,10 @@ def test_parse_demo_with_fake_demoparser(monkeypatch, tmp_path):
     assert parsed["match"]["entry_kills"] == 1
     assert parsed["match"]["entry_deaths"] == 1
     assert parsed["match"]["adr"] == 33.33
+    assert parsed["parser_confidence"] in {"low", "medium", "high"}
+    assert parsed["event_counts"]["player_death"] == 3
+    assert parsed["metric_confidence"]["adr"] == "high"
+    assert parsed["warnings"]
 
 
 def test_parse_demo_prefers_jc_player_by_default(monkeypatch, tmp_path):
@@ -42,6 +46,8 @@ def test_import_demo_file_persists_match(monkeypatch, tmp_path, db):
     match = db.scalar(select(Match).where(Match.source == "demo"))
 
     assert result["imported"] == 1
+    assert result["parser_confidence"] in {"low", "medium", "high"}
+    assert result["event_counts"]["player_hurt"] == 2
     assert match is not None
     assert match.demo_file.endswith(".dem")
     assert match.kills == 1

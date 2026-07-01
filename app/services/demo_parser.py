@@ -79,6 +79,12 @@ def import_demo_file(
             "match_id": existing.id,
             "player": parsed["player"],
             "stored_path": existing.demo_file,
+            "match": parsed["match"],
+            "available_players": parsed["available_players"],
+            "event_counts": parsed["event_counts"],
+            "metric_confidence": parsed["metric_confidence"],
+            "parser_confidence": parsed["parser_confidence"],
+            "warnings": parsed["warnings"],
             "message": "Demo already imported.",
         }
 
@@ -95,6 +101,12 @@ def import_demo_file(
         "match_id": match.id,
         "player": parsed["player"],
         "stored_path": str(stored_path),
+        "match": parsed["match"],
+        "available_players": parsed["available_players"],
+        "event_counts": parsed["event_counts"],
+        "metric_confidence": parsed["metric_confidence"],
+        "parser_confidence": parsed["parser_confidence"],
+        "warnings": parsed["warnings"],
         "message": parsed["message"],
     }
 
@@ -135,6 +147,14 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
     stats = _player_stats(player, death_events, hurt_events)
     score = _score_for_player(player, player_info, player_team_events, round_end_events)
     rounds_count = _rounds_count(death_events, hurt_events)
+    event_counts = {
+        "player_info": len(_records(player_info)),
+        "player_death": len(_records(death_events)),
+        "player_hurt": len(_records(hurt_events)),
+        "round_end": len(_records(round_end_events)),
+        "player_team": len(_records(player_team_events)),
+        "rounds": rounds_count,
+    }
     adr = round(stats["damage"] / rounds_count, 2) if rounds_count else None
     map_name = _header_value(header, ("map_name", "map", "mapName"))
     played_at = _header_datetime(header) or datetime.fromtimestamp(path.stat().st_mtime, UTC).replace(tzinfo=None)
@@ -169,6 +189,8 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "side_ct_rounds_won": None,
         "side_ct_rounds_lost": None,
     }
+    metric_confidence = _metric_confidence(event_counts, score, stats, adr)
+    warnings = _parser_warnings(metric_confidence)
     return {
         "status": "parsed",
         "parser": "demoparser2",
@@ -176,9 +198,59 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "player": player,
         "match": match,
         "header": _jsonable(header),
+        "event_counts": event_counts,
+        "metric_confidence": metric_confidence,
+        "parser_confidence": _overall_confidence(metric_confidence),
+        "warnings": warnings,
         "available_players": _available_players(player_info, death_events, hurt_events),
-        "message": "Demo imported. Result/side stats are best-effort and may need demo-specific tuning.",
+        "message": "Demo imported with parser confidence metadata.",
     }
+
+
+def _metric_confidence(
+    event_counts: dict[str, int],
+    score: dict[str, Any],
+    stats: dict[str, Any],
+    adr: float | None,
+) -> dict[str, str]:
+    confidence = {
+        "kills_deaths_assists": "high" if event_counts["player_death"] else "low",
+        "adr": "high" if adr is not None and event_counts["player_hurt"] and event_counts["rounds"] else "low",
+        "entry_duels": "medium" if event_counts["player_death"] else "low",
+        "kast": "medium" if stats.get("kast") is not None and event_counts["player_death"] else "low",
+        "utility": "medium" if event_counts["player_hurt"] else "low",
+        "score": "medium" if score.get("rounds_for") is not None and event_counts["round_end"] else "low",
+        "side_stats": "low",
+        "early_deaths": "low",
+    }
+    if event_counts["player_team"] and score.get("rounds_for") is not None:
+        confidence["score"] = "high"
+    return confidence
+
+
+def _overall_confidence(metric_confidence: dict[str, str]) -> str:
+    weights = {"high": 2, "medium": 1, "low": 0}
+    score = sum(weights.get(value, 0) for value in metric_confidence.values())
+    maximum = len(metric_confidence) * 2
+    ratio = score / maximum if maximum else 0
+    if ratio >= 0.72:
+        return "high"
+    if ratio >= 0.42:
+        return "medium"
+    return "low"
+
+
+def _parser_warnings(metric_confidence: dict[str, str]) -> list[str]:
+    warnings = []
+    if metric_confidence.get("score") != "high":
+        warnings.append("Score/result are best-effort until more demos validate side switching.")
+    if metric_confidence.get("early_deaths") == "low":
+        warnings.append("Early deaths currently fall back to entry deaths; true timing is not implemented yet.")
+    if metric_confidence.get("side_stats") == "low":
+        warnings.append("T/CT side stats are not reliable yet.")
+    if metric_confidence.get("utility") != "high":
+        warnings.append("Utility and flash metrics are best-effort because demo event fields vary.")
+    return warnings
 
 
 def _safe_call(func, default):

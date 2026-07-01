@@ -198,3 +198,30 @@ Current limits:
 - Crosshair placement remains `no_data` until parser exposes reliable view/position data.
 - Category lifecycle controls are not implemented yet; system-created goals are active.
 - Per-category thresholds are intentionally simple and should be tuned with real demos.
+
+## DEM Import Confidence And Evidence
+
+Improved official `.dem` import visibility:
+
+- Parser now stores `event_counts`.
+- Parser now stores `metric_confidence`.
+- Parser now stores `parser_confidence`.
+- Parser warnings explain best-effort areas:
+  - score/result;
+  - early deaths timing;
+  - T/CT side stats;
+  - utility/flash fields.
+- Upload page shows a DEM import result panel with:
+  - selected player;
+  - match/map/score/KD/ADR;
+  - parser confidence;
+  - event counts;
+  - metric confidence;
+  - warnings;
+  - link to match detail.
+- Match detail now shows parser evidence from `raw_json`.
+
+Current limits:
+
+- Existing old DEM rows may not have confidence metadata until reimported or reparsed.
+- True early-death timing and side stats still need deeper event/tick parsing.

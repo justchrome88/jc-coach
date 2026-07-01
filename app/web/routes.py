@@ -182,6 +182,7 @@ async def upload_file(
     content = await file.read()
     filename = file.filename or ""
     try:
+        import_result = None
         if filename.lower().endswith(".dem"):
             with NamedTemporaryFile(suffix=".dem", delete=True) as temporary:
                 temporary.write(content)
@@ -192,6 +193,7 @@ async def upload_file(
                     original_filename=filename,
                     player_identifier=player_identifier,
                 )
+                import_result = result
         elif filename.lower().endswith(".json"):
             result = import_json(db, content, source="json")
         else:
@@ -199,10 +201,11 @@ async def upload_file(
         message = f"Imported {result['imported']}, duplicates {result['skipped_duplicates']}, errors {result['errors']}"
     except DemoParseError as exc:
         message = f"Demo parse failed: {exc}"
+        import_result = None
     return templates.TemplateResponse(
         request=request,
         name="upload.html",
-        context={"message": message, "inbox_demos": list_inbox_demos()},
+        context={"message": message, "inbox_demos": list_inbox_demos(), "import_result": import_result},
     )
 
 
@@ -215,13 +218,15 @@ def upload_server_demo(
 ):
     try:
         result = import_inbox_demo(db, filename, player_identifier=player_identifier)
+        import_result = result
         message = f"Imported {result['imported']}, duplicates {result['skipped_duplicates']}, errors {result['errors']}"
     except DemoParseError as exc:
         message = f"Demo parse failed: {exc}"
+        import_result = None
     return templates.TemplateResponse(
         request=request,
         name="upload.html",
-        context={"message": message, "inbox_demos": list_inbox_demos()},
+        context={"message": message, "inbox_demos": list_inbox_demos(), "import_result": import_result},
     )
 
 

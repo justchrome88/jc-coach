@@ -101,6 +101,52 @@
   </div>
 </section>
 
+{% if detail.parser_evidence %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Parser evidence</h2>
+    <span class="status-badge confidence-{{ detail.parser_evidence.confidence }}">{{ detail.parser_evidence.confidence }}</span>
+  </div>
+  <div class="layout-two">
+    <div>
+      <h3>Event counts</h3>
+      <div class="detail-grid">
+        {% for name, value in detail.parser_evidence.event_counts.items() %}
+        <div><span>{{ name }}</span><strong>{{ value }}</strong></div>
+        {% endfor %}
+      </div>
+    </div>
+    <div>
+      <h3>Metric confidence</h3>
+      <div class="detail-grid">
+        {% for name, value in detail.parser_evidence.metric_confidence.items() %}
+        <div><span>{{ name }}</span><strong>{{ value }}</strong></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="layout-two">
+    <div>
+      <h3>Player selection</h3>
+      <div class="detail-list">
+        <div><span>Selected</span><strong>{{ detail.parser_evidence.player.name or detail.parser_evidence.player.steamid or "n/a" }}</strong></div>
+        <div><span>Available players</span><strong>{{ detail.parser_evidence.available_players|length }}</strong></div>
+      </div>
+    </div>
+    <div>
+      <h3>Warnings</h3>
+      <ul>
+        {% for warning in detail.parser_evidence.warnings %}
+        <li>{{ warning }}</li>
+        {% else %}
+        <li>Предупреждений parser confidence нет.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <section class="layout-two">
   <div class="panel">
     <div class="panel-head">

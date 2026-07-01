@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from collections.abc import Iterable
 from typing import Any
@@ -294,12 +295,14 @@ def chart_series(matches: Iterable[Match], limit: int = 30) -> dict[str, Any]:
 def match_detail(match: Match) -> dict[str, Any]:
     adr_note = _adr_interpretation(match.adr, "single")
     rounds = (match.rounds_for or 0) + (match.rounds_against or 0)
+    parser_evidence = _parser_evidence(match)
     return {
         "score": f"{match.rounds_for or 0}:{match.rounds_against or 0}",
         "rounds": rounds or None,
         "adr_note": adr_note,
         "source_label": (match.source or "unknown").upper(),
         "has_demo": bool(match.demo_file),
+        "parser_evidence": parser_evidence,
         "combat": {
             "kills": match.kills,
             "deaths": match.deaths,
@@ -324,6 +327,26 @@ def match_detail(match: Match) -> dict[str, Any]:
             "t": _side_record(match.side_t_rounds_won, match.side_t_rounds_lost),
             "ct": _side_record(match.side_ct_rounds_won, match.side_ct_rounds_lost),
         },
+    }
+
+
+def _parser_evidence(match: Match) -> dict[str, Any] | None:
+    if not match.raw_json:
+        return None
+    try:
+        raw = json.loads(match.raw_json)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(raw, dict) or raw.get("parser") != "demoparser2":
+        return None
+    return {
+        "parser": raw.get("parser"),
+        "confidence": raw.get("parser_confidence", "unknown"),
+        "event_counts": raw.get("event_counts", {}),
+        "metric_confidence": raw.get("metric_confidence", {}),
+        "warnings": raw.get("warnings", []),
+        "player": raw.get("player", {}),
+        "available_players": raw.get("available_players", []),
     }
 
 

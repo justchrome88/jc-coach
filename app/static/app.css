@@ -92,6 +92,10 @@ a { color: inherit; text-decoration: none; }
   flex-wrap: wrap;
 }
 
+.inline-actions {
+  margin-top: 14px;
+}
+
 h1, h2, h3, p { margin-top: 0; }
 h1 { font-size: 34px; margin-bottom: 6px; }
 h2 { font-size: 18px; margin-bottom: 0; }
@@ -235,6 +239,9 @@ p { color: var(--muted); line-height: 1.55; }
 .status-badge.high, .category-card.critical { color: var(--bad); background: rgba(251, 113, 133, .1); }
 .status-badge.medium, .category-card.watch { color: var(--accent-2); background: rgba(250, 204, 21, .1); }
 .status-badge.low, .category-card.ok { color: var(--good); background: rgba(134, 239, 172, .1); }
+.status-badge.confidence-high { color: var(--good); background: rgba(134, 239, 172, .1); }
+.status-badge.confidence-medium { color: var(--accent-2); background: rgba(250, 204, 21, .1); }
+.status-badge.confidence-low { color: var(--bad); background: rgba(251, 113, 133, .1); }
 .category-card.no_data { color: var(--muted); background: rgba(154, 166, 178, .08); }
 
 .goal-metrics {
