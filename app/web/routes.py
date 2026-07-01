@@ -14,6 +14,8 @@ from app.db.models import Match
 from app.db.session import get_db
 from app.main import templates
 from app.services.ai_coach import (
+    ai_provider_health,
+    generate_ai_coach_with_provider,
     latest_ai_coach_report,
     latest_ai_handoff,
     prepare_ai_coach_handoff,
@@ -104,6 +106,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
     report = latest_report(db)
     ai_handoff = latest_ai_handoff()
     ai_report = latest_ai_coach_report(db)
+    ai_health = ai_provider_health()
     return templates.TemplateResponse(
         request=request,
         name="coach.html",
@@ -120,6 +123,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
             "report": report,
             "ai_handoff": ai_handoff,
             "ai_report": ai_report,
+            "ai_health": ai_health,
         },
     )
 
@@ -365,6 +369,15 @@ def save_ai_result_page(
     try:
         save_ai_coach_result(db, ai_result_markdown, source_ref=source_ref)
     except ValueError as exc:
+        return RedirectResponse(f"/coach?message={exc}", status_code=303)
+    return RedirectResponse("/coach", status_code=303)
+
+
+@router.post("/coach/ai-generate")
+def generate_ai_result_with_provider_page(db: Annotated[Session, Depends(get_db)]):
+    try:
+        generate_ai_coach_with_provider(db)
+    except RuntimeError as exc:
         return RedirectResponse(f"/coach?message={exc}", status_code=303)
     return RedirectResponse("/coach", status_code=303)
 

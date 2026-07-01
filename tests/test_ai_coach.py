@@ -1,9 +1,12 @@
+import json
 from types import SimpleNamespace
 
 import pytest
 
 from app.services.ai_coach import (
     CodexCliHandoffProvider,
+    LocalLLMProvider,
+    ai_provider_health,
     build_ai_coach_payload,
     latest_ai_coach_report,
     save_ai_coach_result,
@@ -61,3 +64,51 @@ def test_save_ai_coach_result_persists_ai_report(db, sample_rows):
 def test_save_ai_coach_result_rejects_empty_text(db):
     with pytest.raises(ValueError):
         save_ai_coach_result(db, "   ")
+
+
+def test_local_llm_provider_calls_ollama(monkeypatch):
+    settings = SimpleNamespace(
+        local_llm_base_url="http://127.0.0.1:11434",
+        local_llm_model="test-model",
+        local_llm_timeout_seconds=5,
+    )
+    monkeypatch.setattr("app.services.ai_coach.get_settings", lambda: settings)
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            return json.dumps({"response": "AI report"}).encode()
+
+    def fake_urlopen(request, timeout):
+        assert request.full_url == "http://127.0.0.1:11434/api/generate"
+        assert timeout == 5
+        return FakeResponse()
+
+    monkeypatch.setattr("app.services.ai_coach.urllib.request.urlopen", fake_urlopen)
+
+    result = LocalLLMProvider().generate(
+        {
+            "summary": {"matches_count": 1},
+            "detected_weaknesses": [],
+            "map_stats": [],
+            "period_comparison": {},
+            "coach_focus": {"title": "test"},
+        }
+    )
+
+    assert result == "AI report"
+
+
+def test_ai_provider_health_for_handoff(monkeypatch):
+    settings = SimpleNamespace(ai_provider="codex_cli_handoff")
+    monkeypatch.setattr("app.services.ai_coach.get_settings", lambda: settings)
+
+    health = ai_provider_health()
+
+    assert health["provider"] == "codex_cli_handoff"
+    assert health["status"] == "handoff"

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -23,6 +25,9 @@ class AIProvider(Protocol):
 
     def prepare(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Prepare an AI coach task without requiring a specific model backend."""
+
+    def generate(self, payload: dict[str, Any]) -> str:
+        """Generate an AI coach report when the provider supports direct execution."""
 
 
 @dataclass(frozen=True)
@@ -54,24 +59,44 @@ class CodexCliHandoffProvider:
         (target_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
         return metadata
 
+    def generate(self, payload: dict[str, Any]) -> str:
+        self.prepare(payload)
+        raise RuntimeError("codex_cli_handoff prepares a prompt bundle; paste the Codex result back into the UI.")
+
 
 @dataclass(frozen=True)
-class LocalLLMPlannedProvider:
-    name: str = "local_llm_planned"
+class LocalLLMProvider:
+    name: str = "local_llm"
 
     def prepare(self, payload: dict[str, Any]) -> dict[str, Any]:
         settings = get_settings()
+        configured = bool(settings.local_llm_base_url and settings.local_llm_model)
         return {
             "provider": self.name,
-            "status": "not_configured",
+            "status": "configured" if configured else "not_configured",
             "base_url": settings.local_llm_base_url,
             "model": settings.local_llm_model,
             "payload_preview": {
                 "matches": payload["summary"]["matches_count"],
                 "weaknesses": len(payload["detected_weaknesses"]),
             },
-            "note": "Local LLM provider is planned. Configure LOCAL_LLM_BASE_URL and LOCAL_LLM_MODEL later.",
+            "note": "Configure LOCAL_LLM_BASE_URL and LOCAL_LLM_MODEL to generate directly.",
         }
+
+    def generate(self, payload: dict[str, Any]) -> str:
+        settings = get_settings()
+        if not settings.local_llm_base_url or not settings.local_llm_model:
+            raise RuntimeError("Local LLM is not configured.")
+        prompt = build_ai_coach_prompt(payload)
+        base_url = settings.local_llm_base_url.rstrip("/")
+        if base_url.endswith(":11434") or "ollama" in base_url:
+            return _call_ollama(base_url, settings.local_llm_model, prompt, settings.local_llm_timeout_seconds)
+        return _call_openai_compatible(
+            base_url,
+            settings.local_llm_model,
+            prompt,
+            settings.local_llm_timeout_seconds,
+        )
 
 
 def prepare_ai_coach_handoff(db: Session) -> dict[str, Any]:
@@ -81,6 +106,28 @@ def prepare_ai_coach_handoff(db: Session) -> dict[str, Any]:
     result["matches_count"] = payload["summary"]["matches_count"]
     result["weaknesses_count"] = len(payload["detected_weaknesses"])
     return result
+
+
+def generate_ai_coach_with_provider(db: Session) -> CoachReport:
+    payload = build_ai_coach_payload(db)
+    provider = _provider()
+    content = provider.generate(payload)
+    return save_ai_coach_result(db, content, source_ref=provider.name)
+
+
+def ai_provider_health() -> dict[str, Any]:
+    settings = get_settings()
+    provider = _provider()
+    if isinstance(provider, CodexCliHandoffProvider):
+        return {"provider": provider.name, "status": "handoff", "message": "Codex CLI handoff is available."}
+    if not settings.local_llm_base_url or not settings.local_llm_model:
+        return {"provider": provider.name, "status": "not_configured"}
+    return {
+        "provider": provider.name,
+        "status": "configured",
+        "base_url": settings.local_llm_base_url,
+        "model": settings.local_llm_model,
+    }
 
 
 def save_ai_coach_result(db: Session, markdown: str, source_ref: str | None = None) -> CoachReport:
@@ -198,8 +245,51 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
 def _provider() -> AIProvider:
     provider = get_settings().ai_provider.strip().lower()
     if provider == "local_llm":
-        return LocalLLMPlannedProvider()
+        return LocalLLMProvider()
     return CodexCliHandoffProvider()
+
+
+def _call_ollama(base_url: str, model: str, prompt: str, timeout: int) -> str:
+    payload = {"model": model, "prompt": prompt, "stream": False}
+    response = _post_json(f"{base_url}/api/generate", payload, timeout)
+    content = response.get("response")
+    if not content:
+        raise RuntimeError("Local LLM returned an empty Ollama response.")
+    return str(content).strip()
+
+
+def _call_openai_compatible(base_url: str, model: str, prompt: str, timeout: int) -> str:
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a CS2 AI coach. Return a Russian coach report."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.2,
+    }
+    response = _post_json(f"{base_url}/v1/chat/completions", payload, timeout)
+    choices = response.get("choices") or []
+    if not choices:
+        raise RuntimeError("Local LLM returned no choices.")
+    message = choices[0].get("message") or {}
+    content = message.get("content")
+    if not content:
+        raise RuntimeError("Local LLM returned an empty chat response.")
+    return str(content).strip()
+
+
+def _post_json(url: str, payload: dict[str, Any], timeout: int) -> dict[str, Any]:
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Local LLM request failed: {exc}") from exc
 
 
 def _serialize_match(match: Match) -> dict[str, Any]:

@@ -225,3 +225,27 @@ Current limits:
 
 - Existing old DEM rows may not have confidence metadata until reimported or reparsed.
 - True early-death timing and side stats still need deeper event/tick parsing.
+
+## Local LLM Provider Scaffold
+
+Implemented local LLM execution path behind the same AI provider boundary:
+
+- `AI_PROVIDER=local_llm`.
+- `LOCAL_LLM_BASE_URL`.
+- `LOCAL_LLM_MODEL`.
+- `LOCAL_LLM_TIMEOUT_SECONDS`.
+- Ollama-style request path:
+  - `POST /api/generate`.
+- OpenAI-compatible request path:
+  - `POST /v1/chat/completions`.
+- Provider health endpoint:
+  - `GET /api/coach/ai/provider/health`.
+- Direct generation endpoint:
+  - `POST /api/coach/ai/generate`.
+- `/coach` includes a direct provider generation button.
+
+Current limits:
+
+- No local model is installed/configured by default.
+- Tests mock the HTTP provider; they do not require a real LLM.
+- If `codex_cli_handoff` is active, direct generation returns a controlled error and the handoff flow remains the default.

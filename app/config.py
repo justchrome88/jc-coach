@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     ai_codex_command: str = "codex exec"
     local_llm_base_url: str | None = None
     local_llm_model: str | None = None
+    local_llm_timeout_seconds: int = 90
     public_base_url: str = "http://127.0.0.1:8000"
     steam_realm: str | None = None
     steam_return_path: str = "/auth/steam/callback"

@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 from app.db.models import Match
 from app.db.session import get_db
 from app.services.ai_coach import (
+    ai_provider_health,
     build_ai_coach_payload,
+    generate_ai_coach_with_provider,
     latest_ai_coach_report,
     latest_ai_handoff,
     prepare_ai_coach_handoff,
@@ -191,6 +193,20 @@ def latest_ai_coach_handoff_endpoint() -> dict:
     if handoff is None:
         raise HTTPException(status_code=404, detail="No AI coach handoff generated yet")
     return handoff
+
+
+@router.get("/coach/ai/provider/health")
+def ai_provider_health_endpoint() -> dict:
+    return ai_provider_health()
+
+
+@router.post("/coach/ai/generate")
+def generate_ai_coach_with_provider_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
+    try:
+        report = generate_ai_coach_with_provider(db)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "id": report.id, "created_at": report.created_at, "source_ref": report.source_ref}
 
 
 @router.post("/coach/ai/result")

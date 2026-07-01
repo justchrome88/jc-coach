@@ -148,6 +148,13 @@ LOCAL_LLM_MODEL=your-model
 
 Архитектурно это позволит подключить Ollama/LM Studio/OpenAI-compatible local server без переписывания coach-логики: поменяется только provider, а payload останется тем же.
 
+Текущий scaffold уже поддерживает:
+
+- Ollama-style `POST /api/generate`, если `LOCAL_LLM_BASE_URL` похож на `http://127.0.0.1:11434`;
+- OpenAI-compatible `POST /v1/chat/completions` для LM Studio и похожих серверов;
+- health endpoint;
+- прямую генерацию AI report через provider, когда `AI_PROVIDER=local_llm`.
+
 ## Steam auth and auto import scaffold
 
 Steam интеграция начата как scaffold:
@@ -197,6 +204,8 @@ source,external_match_id,demo_file,mode,side_t_rounds_won,side_t_rounds_lost,sid
 - `GET /api/coach/ai/handoff/latest`
 - `POST /api/coach/ai/result`
 - `GET /api/coach/ai/result/latest`
+- `GET /api/coach/ai/provider/health`
+- `POST /api/coach/ai/generate`
 - `GET /api/steam/login-url`
 - `GET /api/steam/accounts`
 - `POST /api/steam/import/share-code`

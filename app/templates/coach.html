@@ -23,7 +23,12 @@
 <section class="panel recommendation">
   <div class="panel-head">
     <h2>AI мозг</h2>
-    <span>{{ ai_handoff.provider if ai_handoff else "codex_cli_handoff" }}</span>
+    <span>{{ ai_health.provider }} · {{ ai_health.status }}</span>
+  </div>
+  <div class="actions inline-actions">
+    <form action="/coach/ai-generate" method="post">
+      <button class="button ghost" type="submit">Сгенерировать через provider</button>
+    </form>
   </div>
   {% if ai_handoff %}
   <div class="detail-list">
