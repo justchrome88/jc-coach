@@ -4,12 +4,14 @@ __pycache__/
 .ruff_cache/
 *.egg-info/
 *.pyc
+node_modules/
 .env
 data/*.db
 data/uploads/*
 data/incoming_demos/*
 data/reports/*
 data/ai_handoffs/*
+data/steam_bot_credentials/*
 !data/uploads/.gitkeep
 !data/incoming_demos/.gitkeep
 !data/reports/.gitkeep

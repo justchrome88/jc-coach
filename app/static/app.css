@@ -144,6 +144,32 @@ p { color: var(--muted); line-height: 1.55; }
   margin-bottom: 18px;
 }
 
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.stat-grid div {
+  min-height: 78px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.stat-grid strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 26px;
+}
+
+.stat-grid span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .metric, .panel {
   background: var(--panel);
   border: 1px solid var(--line);

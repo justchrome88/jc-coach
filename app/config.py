@@ -23,6 +23,12 @@ class Settings(BaseSettings):
     steam_return_path: str = "/auth/steam/callback"
     steam_web_api_key: str | None = None
     steam_sync_max_codes: int = 20
+    steam_bot_username: str | None = None
+    steam_bot_password: str | None = None
+    steam_bot_shared_secret: str | None = None
+    steam_bot_two_factor_code: str | None = None
+    steam_bot_refresh_token: str | None = None
+    steam_bot_timeout_seconds: int = 45
     session_secret_key: str = "change-me-before-public-release"
     auth_cookie_secure: bool = False
     openai_api_key: str | None = None

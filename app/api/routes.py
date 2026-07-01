@@ -4,11 +4,11 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Match
+from app.db.models import ImportJob, Match
 from app.db.session import get_db
 from app.services.ai_coach import (
     ai_provider_health,
@@ -21,6 +21,7 @@ from app.services.ai_coach import (
 )
 from app.services.analytics import compare_periods, get_map_stats, get_summary
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
+from app.services.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.importer import import_csv, import_json
 from app.services.recommendation_tracking import (
     get_active_recommendation_progress,
@@ -28,17 +29,31 @@ from app.services.recommendation_tracking import (
     update_recommendation_status,
 )
 from app.services.report_generator import generate_report, latest_report
+from app.services.steam_demo_downloader import steam_demo_downloader_configured
 from app.services.steam_integration import (
     create_steam_import_job,
     list_import_jobs,
     list_steam_accounts,
     parse_share_code_input,
     process_queued_steam_jobs,
+    queue_steam_import_all,
+    run_steam_import_all_job,
+    steam_import_overview,
     steam_login_url,
     sync_match_history_job,
 )
 
 router = APIRouter(prefix="/api")
+
+
+def _run_steam_import_all_background(job_id: int) -> None:
+    from app.db.session import SessionLocal
+
+    db = SessionLocal()
+    try:
+        run_steam_import_all_job(db, job_id)
+    finally:
+        db.close()
 
 
 @router.get("/matches")
@@ -301,21 +316,64 @@ def run_queued_steam_import_jobs_endpoint(db: Annotated[Session, Depends(get_db)
     }
 
 
+@router.post("/steam/import/all")
+def import_all_steam_matches_endpoint(
+    background_tasks: BackgroundTasks,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    job = queue_steam_import_all(db)
+    if job.status == "queued":
+        background_tasks.add_task(_run_steam_import_all_background, job.id)
+    return {
+        "ok": True,
+        "job_id": job.id,
+        "status": job.status,
+        "message": "Steam import job started. Poll /api/steam/import/overview for progress.",
+    }
+
+
+@router.get("/steam/import/overview")
+def steam_import_overview_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
+    overview = steam_import_overview(db)
+    current_job = overview.pop("current_job")
+    return {
+        **overview,
+        "current_job": serialize_import_job(current_job) if current_job else None,
+    }
+
+
+@router.get("/steam/demo-downloader/status")
+def steam_demo_downloader_status_endpoint() -> dict:
+    return {"configured": steam_demo_downloader_configured()}
+
+
+@router.get("/storage/demos")
+def demo_storage_report_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
+    return demo_storage_report(db)
+
+
+@router.post("/storage/demos/manifest")
+def write_demo_storage_manifest_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
+    report = write_demo_storage_manifest(db)
+    return {"ok": True, "manifest_path": report["manifest_path"], "totals": report["totals"]}
+
+
 @router.get("/import/jobs")
 def import_jobs_endpoint(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
-    return [
-        {
-            "id": job.id,
-            "provider": job.provider,
-            "job_type": job.job_type,
-            "status": job.status,
-            "created_at": job.created_at,
-            "started_at": job.started_at,
-            "finished_at": job.finished_at,
-            "error_message": job.error_message,
-        }
-        for job in list_import_jobs(db)
-    ]
+    return [serialize_import_job(job) for job in list_import_jobs(db)]
+
+
+def serialize_import_job(job: ImportJob) -> dict:
+    return {
+        "id": job.id,
+        "provider": job.provider,
+        "job_type": job.job_type,
+        "status": job.status,
+        "created_at": job.created_at.isoformat() if job.created_at else None,
+        "started_at": job.started_at.isoformat() if job.started_at else None,
+        "finished_at": job.finished_at.isoformat() if job.finished_at else None,
+        "error_message": job.error_message,
+    }
 
 
 def serialize_match(match: Match) -> dict:

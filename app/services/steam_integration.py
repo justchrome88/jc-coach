@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -17,6 +18,10 @@ from app.services.app_settings import get_app_setting
 STEAM_OPENID_ENDPOINT = "https://steamcommunity.com/openid/login"
 STEAM_OPENID_CLAIM_PREFIX = "https://steamcommunity.com/openid/id/"
 STEAM_MATCH_HISTORY_ENDPOINT = "https://api.steampowered.com/ICSGOPlayers_730/GetNextMatchSharingCode/v1"
+STEAM_SYNC_COOLDOWN_SECONDS = 300
+SHARE_CODE_DICTIONARY = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefhijkmnopqrstuvwxyz23456789"
+SHARE_CODE_PATTERN = re.compile(rf"^(CSGO)?(-?[{SHARE_CODE_DICTIONARY}]{{5}}){{5}}$")
+_BITMASK64 = 2**64 - 1
 
 
 def steam_login_url() -> str:
@@ -97,14 +102,105 @@ def list_import_jobs(db: Session, limit: int = 20) -> list[ImportJob]:
     return list(db.scalars(stmt).all())
 
 
-def update_match_auth_code(db: Session, steam_account_id: int, match_auth_code: str) -> SteamAccount:
+def list_visible_steam_import_jobs(db: Session, limit: int = 20) -> list[ImportJob]:
+    stmt = (
+        select(ImportJob)
+        .where(ImportJob.provider == "steam")
+        .where(ImportJob.job_type.in_(("match_history_sync", "steam_import_all")))
+        .order_by(ImportJob.created_at.desc(), ImportJob.id.desc())
+        .limit(limit)
+    )
+    return list(db.scalars(stmt).all())
+
+
+def current_steam_import_all_job(db: Session) -> ImportJob | None:
+    return db.scalar(
+        select(ImportJob)
+        .where(ImportJob.provider == "steam")
+        .where(ImportJob.job_type == "steam_import_all")
+        .where(ImportJob.status.in_(("queued", "running")))
+        .order_by(ImportJob.created_at.desc(), ImportJob.id.desc())
+    )
+
+
+def queue_steam_import_all(db: Session) -> ImportJob:
+    running = current_steam_import_all_job(db)
+    if running:
+        return running
+    return create_steam_import_job(
+        db,
+        None,
+        "steam_import_all",
+        {"reason": "manual_pull_all", "created_from": "settings_imports"},
+    )
+
+
+def steam_import_overview(db: Session) -> dict[str, Any]:
+    matches = db.scalars(select(Match).where(Match.source == "steam_history")).all()
+    status_counts: dict[str, int] = {}
+    latest_error: str | None = None
+    for match in matches:
+        raw = _json_loads(match.raw_json)
+        status = str(raw.get("status") or "unknown")
+        status_counts[status] = status_counts.get(status, 0) + 1
+        if status == "demo_download_error" and not latest_error:
+            latest_error = str(raw.get("error") or "")
+    accounts = list_steam_accounts(db)
+    current_job = current_steam_import_all_job(db)
+    return {
+        "accounts_count": len(accounts),
+        "steam_history_matches": len(matches),
+        "pending_demo_download": status_counts.get("demo_download_pending", 0),
+        "demo_download_errors": status_counts.get("demo_download_error", 0),
+        "demo_imported": status_counts.get("demo_imported", 0),
+        "latest_error": latest_error,
+        "has_ready_account": any(account.match_auth_code and account.last_share_code for account in accounts),
+        "current_job": current_job,
+    }
+
+
+def clear_steam_demo_download_errors(db: Session) -> dict[str, int]:
+    matches = db.scalars(select(Match).where(Match.source == "steam_history")).all()
+    cleared = 0
+    for match in matches:
+        raw = _json_loads(match.raw_json)
+        if raw.get("status") != "demo_download_error":
+            continue
+        raw.pop("error", None)
+        raw.pop("failed_at", None)
+        raw["status"] = "demo_download_pending"
+        raw["download_method"] = "steam_service_bot_pending"
+        raw["next_step"] = "download_demo_with_steam_service_bot"
+        match.raw_json = json.dumps(raw, ensure_ascii=False, default=str)
+        cleared += 1
+    db.commit()
+    return {"cleared": cleared}
+
+
+def update_match_auth_code(
+    db: Session,
+    steam_account_id: int,
+    match_auth_code: str,
+    latest_share_code: str | None = None,
+) -> SteamAccount:
     account = db.get(SteamAccount, steam_account_id)
     if account is None:
         raise ValueError("Steam account was not found.")
     code = match_auth_code.strip()
     if not code:
         raise ValueError("Game Authentication Code is required.")
+    if code.upper().startswith("CSGO-"):
+        raise ValueError(
+            "This looks like a match share code. Paste the Game Authentication Code from Steam Support instead."
+        )
     account.match_auth_code = code
+    if latest_share_code is not None:
+        share_code = latest_share_code.strip()
+        if not share_code:
+            raise ValueError("Latest match share code is required.")
+        if not share_code.upper().startswith("CSGO-"):
+            raise ValueError("Latest match share code should start with CSGO-.")
+        account.last_share_code = share_code
     account.sync_enabled = 1
     db.commit()
     db.refresh(account)
@@ -211,6 +307,122 @@ def process_queued_steam_jobs(db: Session, limit: int = 5) -> list[dict[str, Any
     return [sync_match_history_job(db, job.id) for job in jobs]
 
 
+def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
+    job = db.get(ImportJob, job_id)
+    if job is None:
+        raise ValueError("Import job was not found.")
+    if job.provider != "steam" or job.job_type != "steam_import_all":
+        raise ValueError("Only steam_import_all jobs can be processed here.")
+    if job.status == "running":
+        return {"id": job.id, "status": job.status, "result": None, "error": None}
+    if job.status == "succeeded":
+        return {"id": job.id, "status": job.status, "result": _json_loads(job.result_json), "error": None}
+
+    job.status = "running"
+    job.started_at = datetime.now(UTC).replace(tzinfo=None)
+    db.commit()
+
+    try:
+        settings = get_settings()
+        accounts = list_steam_accounts(db)
+        sync_results = []
+        for account in accounts:
+            if not account.match_auth_code or not account.last_share_code:
+                sync_results.append(
+                    {
+                        "steam_account_id": account.id,
+                        "status": "skipped",
+                        "error": "Steam account is missing match token or authentication code.",
+                    }
+                )
+                continue
+            if account.last_sync_at and (
+                datetime.now(UTC).replace(tzinfo=None) - account.last_sync_at
+            ).total_seconds() < STEAM_SYNC_COOLDOWN_SECONDS:
+                sync_results.append(
+                    {
+                        "steam_account_id": account.id,
+                        "status": "skipped",
+                        "reason": "recently_synced",
+                        "last_sync_at": account.last_sync_at,
+                    }
+                )
+                continue
+            sync_job = queue_match_history_sync(db, account.id)
+            sync_results.append(sync_match_history_job(db, sync_job.id))
+
+        demo_status = mark_steam_history_demo_download_status(db)
+        from app.services.steam_demo_downloader import download_pending_steam_demos
+
+        demo_download = download_pending_steam_demos(db, limit=max(1, min(int(settings.steam_sync_max_codes), 50)))
+        result = {
+            "accounts": len(accounts),
+            "sync_jobs": sync_results,
+            "demo_status": demo_status,
+            "demo_download": demo_download,
+            "note": (
+                "Steam Web API synced share codes. If the Steam service bot is configured, pending demos are "
+                "downloaded and parsed automatically."
+            ),
+        }
+        job.status = "succeeded"
+        job.finished_at = datetime.now(UTC).replace(tzinfo=None)
+        job.result_json = json.dumps(result, ensure_ascii=False, default=str)
+        db.commit()
+        db.refresh(job)
+        return {"id": job.id, "status": job.status, "result": result, "error": None}
+    except Exception as exc:
+        return _fail_job(db, job, str(exc))
+
+
+def import_all_available_steam_matches(db: Session) -> dict[str, Any]:
+    job = queue_steam_import_all(db)
+    return run_steam_import_all_job(db, job.id)
+
+
+def mark_steam_history_demo_download_status(db: Session) -> dict[str, Any]:
+    matches = db.scalars(select(Match).where(Match.source == "steam_history").order_by(Match.id.asc())).all()
+    decoded = 0
+    pending = 0
+    errors = 0
+    already_has_demo = 0
+    for match in matches:
+        raw = _json_loads(match.raw_json)
+        share_code = str(raw.get("share_code") or match.external_match_id or "").strip()
+        if not share_code:
+            errors += 1
+            raw.update({"status": "demo_download_error", "error": "Steam share code is missing."})
+        else:
+            try:
+                decoded_info = decode_match_share_code(share_code)
+                decoded += 1
+                raw.update({"decoded": decoded_info})
+                if match.demo_file:
+                    already_has_demo += 1
+                    raw.update({"status": "demo_imported", "next_step": None})
+                else:
+                    pending += 1
+                    raw.update(
+                        {
+                            "status": "demo_download_pending",
+                            "download_method": "steam_service_bot_pending",
+                            "next_step": "download_demo_with_steam_service_bot",
+                        }
+                    )
+            except ValueError as exc:
+                errors += 1
+                raw.update({"status": "demo_download_error", "error": str(exc)})
+        match.raw_json = json.dumps(raw, ensure_ascii=False, default=str)
+    db.commit()
+    return {
+        "steam_history_matches": len(matches),
+        "decoded": decoded,
+        "pending_demo_download": pending,
+        "already_has_demo": already_has_demo,
+        "errors": errors,
+    }
+
+
 def mark_job_failed(db: Session, job: ImportJob, message: str) -> ImportJob:
     job.status = "failed"
     job.error_message = message
@@ -241,6 +453,28 @@ def parse_share_code_input(value: str) -> dict[str, Any]:
         if known_values:
             text = known_values[0]
     return {"share_code": text}
+
+
+def decode_match_share_code(code: str) -> dict[str, int]:
+    if not SHARE_CODE_PATTERN.match(code):
+        raise ValueError("Invalid Steam match share code.")
+    payload = re.sub(r"CSGO\-|\-", "", code)[::-1]
+    number = 0
+    for char in payload:
+        number = number * len(SHARE_CODE_DICTIONARY) + SHARE_CODE_DICTIONARY.index(char)
+    number = _swap_share_code_endianness(number)
+    return {
+        "matchid": number & _BITMASK64,
+        "outcomeid": (number >> 64) & _BITMASK64,
+        "token": (number >> 128) & 0xFFFF,
+    }
+
+
+def _swap_share_code_endianness(number: int) -> int:
+    result = 0
+    for offset in range(0, 144, 8):
+        result = (result << 8) + ((number >> offset) & 0xFF)
+    return result
 
 
 def _collect_match_share_codes(

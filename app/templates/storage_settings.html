@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-head">
+  <div>
+    <h1>Хранилище demo</h1>
+    <p>Целевая схема: скачать demo, распарсить все нужные данные, проверить payload и удалить raw .dem. Сейчас удаление выключено, потому что набор метрик еще не утвержден.</p>
+  </div>
+  <div class="actions">
+    <form action="/settings/storage/manifest" method="post" class="inline-form">
+      <button class="button" type="submit">Обновить manifest</button>
+    </form>
+    <a class="button ghost" href="/settings/imports">Steam import</a>
+  </div>
+</section>
+
+{% if message %}
+<div class="notice">{{ message }}</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Политика</h2>
+    <span>{{ storage_report.policy.current_mode }}</span>
+  </div>
+  <div class="steps">
+    <div>
+      <strong>1. Сейчас</strong>
+      <span>Raw .dem остаются на диске. Отчет только считает файлы, связи с матчами и будущих кандидатов на удаление.</span>
+    </div>
+    <div>
+      <strong>2. Перед удалением</strong>
+      <span>Нужно утвердить метрики, сохранить полный parsed payload и пометить матч как verified.</span>
+    </div>
+    <div>
+      <strong>3. Цель</strong>
+      <span>{{ storage_report.policy.target_lifecycle }}</span>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Сводка</h2>
+    <span>{{ storage_report.upload_dir }}</span>
+  </div>
+  <div class="stat-grid">
+    <div><strong>{{ storage_report.totals.gb }} GB</strong><span>занято .dem файлами</span></div>
+    <div><strong>{{ storage_report.totals.files }}</strong><span>demo файлов</span></div>
+    <div><strong>{{ storage_report.totals.referenced_files }}</strong><span>привязано к матчам</span></div>
+    <div><strong>{{ storage_report.totals.future_deletion_candidates }}</strong><span>кандидатов на будущее удаление</span></div>
+  </div>
+  <div class="stat-grid">
+    <div><strong>{{ storage_report.totals.future_reclaimable_mb }} MB</strong><span>можно будет освободить после verified-delete</span></div>
+    <div><strong>{{ storage_report.totals.unreferenced_files }}</strong><span>файлов без связи с матчем</span></div>
+    <div><strong>{{ storage_report.totals.missing_files }}</strong><span>битых ссылок из БД</span></div>
+    <div><strong>{{ storage_report.totals.suspicious_files }}</strong><span>подозрительно маленьких файлов</span></div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Самые большие файлы</h2>
+    <span>top 20</span>
+  </div>
+  <table>
+    <thead><tr><th>Файл</th><th>Размер</th><th>Изменен</th></tr></thead>
+    <tbody>
+    {% for item in storage_report.largest_files %}
+      <tr>
+        <td>{{ item.name }}</td>
+        <td>{{ item.size_mb }} MB</td>
+        <td>{{ item.modified_at[:16].replace("T", " ") }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="3">Demo файлов пока нет.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="layout-two">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Будущие кандидаты на удаление</h2>
+      <span>delete пока выключен</span>
+    </div>
+    <table>
+      <thead><tr><th>Match</th><th>Карта</th><th>Размер</th><th>Причина блокировки</th></tr></thead>
+      <tbody>
+      {% for item in storage_report.future_deletion_candidates[:20] %}
+        <tr>
+          <td>{{ item.match_id }}</td>
+          <td>{{ item.map_name or "n/a" }}</td>
+          <td>{{ item.size_mb }} MB</td>
+          <td class="comment-cell">{{ item.blocked_by }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">Кандидатов пока нет.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Контроль</h2>
+      <span>manifest</span>
+    </div>
+    <p class="muted">Manifest пишется в JSON и не коммитится. Он нужен как контрольная запись перед будущей политикой удаления raw .dem.</p>
+    <div class="detail-grid">
+      <div><span>Manifest path</span><strong>{{ storage_report.manifest_path }}</strong></div>
+      <div><span>Generated</span><strong>{{ storage_report.generated_at[:16].replace("T", " ") }}</strong></div>
+    </div>
+  </div>
+</section>
+
+{% if storage_report.unreferenced_files or storage_report.suspicious_files or storage_report.missing_files %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Проблемные записи</h2>
+    <span>без автодействий</span>
+  </div>
+  <table>
+    <thead><tr><th>Тип</th><th>Файл / Match</th><th>Размер</th></tr></thead>
+    <tbody>
+    {% for item in storage_report.unreferenced_files[:20] %}
+      <tr><td>unreferenced</td><td>{{ item.name }}</td><td>{{ item.size_mb }} MB</td></tr>
+    {% endfor %}
+    {% for item in storage_report.suspicious_files[:20] %}
+      <tr><td>suspicious</td><td>{{ item.name }}</td><td>{{ item.size_mb }} MB</td></tr>
+    {% endfor %}
+    {% for item in storage_report.missing_files[:20] %}
+      <tr><td>missing</td><td>{{ item.match_id }}</td><td>n/a</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

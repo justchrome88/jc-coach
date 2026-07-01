@@ -93,6 +93,16 @@ def test_matches_page_supports_filters_and_sorting():
     assert "Найдено" in response.text
 
 
+def test_storage_settings_page_renders():
+    with TestClient(app) as client:
+        _register_test_user(client)
+        response = client.get("/settings/storage")
+
+    assert response.status_code == 200
+    assert "Хранилище demo" in response.text
+    assert "Целевая схема" in response.text
+
+
 def test_missing_match_detail_redirects_to_matches():
     with TestClient(app, follow_redirects=False) as client:
         _register_test_user(client)

@@ -1,0 +1,17 @@
+{
+  "name": "steam-gc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "fetch-demo-urls.js",
+  "scripts": {
+    "check": "node --check fetch-demo-urls.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "globaloffensive": "^3.3.0",
+    "steam-totp": "^2.1.2",
+    "steam-user": "^5.3.0"
+  }
+}

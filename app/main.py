@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -74,6 +74,10 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/robots.txt", response_class=PlainTextResponse)
+    def robots_txt() -> str:
+        return "User-agent: *\nDisallow: /\n"
+
     from app.web.routes import router as web_router
 
     app.include_router(api_router)
@@ -87,6 +91,7 @@ def _is_public_path(path: str) -> bool:
         or path == "/login"
         or path == "/register"
         or path == "/health"
+        or path == "/robots.txt"
         or path.startswith("/static/")
         or path.startswith("/language/")
         or path.startswith("/api/")

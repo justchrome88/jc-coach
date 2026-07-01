@@ -432,3 +432,137 @@ Verification:
 - `curl http://jcnodex.ru/` -> `200`, remote `192.168.102.129`.
 - `curl http://192.168.102.129/` -> `200`.
 - `curl http://88.201.150.73/` from the VM currently returns connection refused through direct route; likely router hairpin/forwarding behavior, while local nginx is healthy.
+
+## Steam Pull-All MVP
+
+Implemented:
+
+- Server-level Steam Web API key is configured in `.env`; users do not need to create their own API keys.
+- `/settings/imports` was simplified:
+  - removed visible Steam API key input;
+  - removed manual Share-code job block;
+  - keeps only Steam connect, latest match share code, authentication code, and a single "Подгрузить все" action.
+- `POST /settings/imports/pull-all` and `POST /api/steam/import/all`.
+- Pull-all flow:
+  - syncs Steam match history for connected accounts;
+  - stores new `steam_history` share-code matches;
+  - decodes share codes into `matchid`, `outcomeid`, and `token`;
+  - marks matches as `demo_download_pending` when no `.dem` file is attached;
+  - applies a 5-minute cooldown before re-calling Steam history API to avoid `429 Too Many Requests`.
+- Existing live account sync succeeded:
+  - 20 Steam share codes collected;
+  - 20 `steam_history` rows decoded;
+  - 20 rows marked `demo_download_pending`.
+
+Current Steam demo import direction:
+
+- User-facing flow stays Steam OpenID + latest match share code + Game Authentication Code.
+- User Steam password, QR login, Steam Guard approval, and local software are not part of the product flow.
+- Demo URL resolution is implemented through a dedicated service Steam bot account, modeled after the public behavior of Scope/Leetify-like services and the `cs-demo-downloader` open-source architecture.
+- The service bot asks the CS2 Game Coordinator for metadata by share code; `.dem.bz2` is then downloaded from Valve replay hosts and imported through the existing parser.
+- Manual `.dem` upload remains as fallback.
+- Added architecture note: `docs/STEAM_IMPORT_ARCHITECTURE.md`.
+
+Verification:
+
+- `ruff check .`
+- `pytest tests/test_steam_integration.py tests/test_web_smoke.py` -> 23 passed, 1 Starlette/httpx deprecation warning.
+
+## Steam Service Bot Demo Downloader
+
+Implemented:
+
+- Added `tools/steam-gc/fetch-demo-urls.js`:
+  - logs in only a dedicated service Steam bot account;
+  - launches CS2 app `730` in Steam client presence;
+  - calls CS2 Game Coordinator by share code;
+  - returns replay `.dem.bz2` URLs as JSON.
+- Added `app/services/steam_demo_downloader.py`:
+  - selects pending `steam_history` matches;
+  - calls the Node helper in batch;
+  - downloads `.dem.bz2`;
+  - decompresses to `.dem`;
+  - imports through the existing `demoparser2` pipeline;
+  - marks source Steam rows as imported or failed.
+- `POST /settings/imports/pull-all` now runs:
+  - Steam Web API share-code sync;
+  - pending demo status marking;
+  - service-bot demo download when configured.
+- `POST /settings/imports/pull-all` was moved to a background job flow:
+  - the page queues/reuses one active `steam_import_all` job and redirects immediately;
+  - a FastAPI background task runs sync/download/import with its own DB session;
+  - the UI shows current job status and refreshes while the job is queued/running.
+- `POST /api/steam/import/all` now queues the same background job.
+- `GET /api/steam/import/overview` exposes import counters and current job status for polling.
+- Added `GET /api/steam/demo-downloader/status`.
+- Updated `/settings/imports` copy and CTA to “Обновить и скачать демки”.
+- Added `docs/STEAM_IMPORT_ARCHITECTURE.md`.
+- Updated `instructions/03_CODEX_AGENT_RULES.md`:
+  - document significant changes regularly;
+  - do not use user Steam login/QR/password for server-side demo import.
+
+Current runtime state:
+
+- Service bot is configured:
+  - `/api/steam/demo-downloader/status` -> `{"configured": true}`.
+- First bot login required an email Steam Guard code once; a refresh token was saved under `data/steam_bot_credentials/refresh-token`.
+- `tools/steam-gc/fetch-demo-urls.js` now calls `requestFreeLicense([730])` before launching CS2 presence. This fixed a fresh-account issue where CS2 GC ignored `ClientHello`.
+- Live GC test succeeded:
+  - bot logged in;
+  - CS2 app `730` launched;
+  - GC `ClientWelcome` received;
+  - `requestGame(shareCode)` returned a Valve replay URL.
+- Live replay download for existing saved matches currently fails with Valve CDN `HTTP 502`.
+  - The tested match was from May 29, 2026, and current date is July 1, 2026.
+  - Treat this as likely expired/unavailable replay archive, not a GC/auth failure.
+  - The next practical validation needs a fresh match/share code inside Valve's replay retention window.
+- User-facing Steam password/QR flow remains absent.
+- Basic Auth is active at nginx:
+  - no auth -> `401`;
+  - `jc` credentials -> `200`.
+
+Next step:
+
+- Play or provide a fresh CS2 competitive/Premier match share code, then run "Обновить и скачать демки" before Valve replay CDN expires the demo.
+- Later harden the bot account with mobile Steam Guard/shared secret instead of relying on password + saved refresh token.
+
+Verification:
+
+- `cd tools/steam-gc && npm run check`.
+- `ruff check .`.
+- `pytest` -> 59 passed, 1 Starlette/httpx deprecation warning.
+- Helper without bot credentials returns structured JSON error.
+- Helper with bot credentials reaches CS2 GC and returns a replay URL.
+- `systemctl restart jc-coach` -> active.
+- `curl http://127.0.0.1:8010/api/steam/demo-downloader/status` -> configured true.
+
+## Demo Storage Lifecycle
+
+Specification:
+
+- Added `docs/DEMO_STORAGE_TZ.md`.
+- Target lifecycle is now explicit: `download -> parse -> verify parsed payload -> delete raw .dem`.
+- Raw `.dem` files are not deleted yet because final metrics/raw slices are not approved.
+
+Implemented:
+
+- Added `app/services/demo_storage.py`.
+- Added `/settings/storage` page.
+- Added `GET /api/storage/demos`.
+- Added `POST /api/storage/demos/manifest`.
+- Added `docs/FEATURES_RU.md` as the Russian feature list.
+
+Current behavior:
+
+- The storage report is observe-only.
+- It counts `data/uploads` size and files.
+- It classifies demo files as referenced, missing, unreferenced, suspicious.
+- It lists future deletion candidates only when a parsed payload exists and raw `.dem` still exists.
+- Delete policy is hard-disabled in the report until the metric schema is approved.
+- Manifest writes to `data/reports/demo_storage_manifest.json`; `data/` remains untracked.
+
+Runtime note:
+
+- Current server disk is tight: `/` is `ext4` and was observed at 96% usage.
+- `data/uploads` had about 4.5 GB of demo files during implementation.
+- No demo files were deleted or compressed.

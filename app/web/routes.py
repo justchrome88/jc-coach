@@ -6,13 +6,13 @@ from tempfile import NamedTemporaryFile
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Match
-from app.db.session import get_db
+from app.db.session import SessionLocal, get_db
 from app.main import templates
 from app.services.ai_coach import (
     ai_provider_health,
@@ -30,10 +30,11 @@ from app.services.analytics import (
     get_summary,
     match_detail,
 )
-from app.services.app_settings import get_app_setting, set_app_setting
+from app.services.app_settings import set_app_setting
 from app.services.auth import authenticate_user, current_user_from_session, login_user, logout_user, register_user
 from app.services.coach_rules import build_coach_focus
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
+from app.services.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.i18n import normalize_locale
 from app.services.importer import import_csv, import_json
 from app.services.mistake_detection import (
@@ -49,14 +50,18 @@ from app.services.recommendation_tracking import (
     update_recommendation_status,
 )
 from app.services.report_generator import generate_report, latest_report, markdown_to_html
+from app.services.steam_demo_downloader import steam_demo_downloader_configured
 from app.services.steam_integration import (
+    clear_steam_demo_download_errors,
     create_steam_import_job,
     link_steam_account,
-    list_import_jobs,
     list_steam_accounts,
-    parse_share_code_input,
+    list_visible_steam_import_jobs,
     process_queued_steam_jobs,
     queue_match_history_sync,
+    queue_steam_import_all,
+    run_steam_import_all_job,
+    steam_import_overview,
     steam_login_url,
     sync_match_history_job,
     update_match_auth_code,
@@ -64,6 +69,14 @@ from app.services.steam_integration import (
 )
 
 router = APIRouter()
+
+
+def _run_steam_import_all_background(job_id: int) -> None:
+    db = SessionLocal()
+    try:
+        run_steam_import_all_job(db, job_id)
+    finally:
+        db.close()
 
 
 @router.get("/")
@@ -276,7 +289,6 @@ def upload_page(request: Request, message: str | None = None):
 
 @router.get("/settings/imports")
 def import_settings_page(request: Request, db: Annotated[Session, Depends(get_db)], message: str | None = None):
-    steam_web_api_key = get_app_setting(db, "steam_web_api_key")
     return templates.TemplateResponse(
         request=request,
         name="import_settings.html",
@@ -284,10 +296,31 @@ def import_settings_page(request: Request, db: Annotated[Session, Depends(get_db
             "request": request,
             "message": message,
             "steam_accounts": list_steam_accounts(db),
-            "import_jobs": list_import_jobs(db),
-            "has_steam_web_api_key": bool(steam_web_api_key),
+            "import_jobs": list_visible_steam_import_jobs(db),
+            "steam_import_overview": steam_import_overview(db),
+            "steam_demo_downloader_configured": steam_demo_downloader_configured(),
         },
     )
+
+
+@router.get("/settings/storage")
+def storage_settings_page(request: Request, db: Annotated[Session, Depends(get_db)], message: str | None = None):
+    return templates.TemplateResponse(
+        request=request,
+        name="storage_settings.html",
+        context={
+            "request": request,
+            "message": message,
+            "storage_report": demo_storage_report(db),
+        },
+    )
+
+
+@router.post("/settings/storage/manifest")
+def write_storage_manifest(db: Annotated[Session, Depends(get_db)]):
+    report = write_demo_storage_manifest(db)
+    message = f"Manifest updated: {report['manifest_path']}"
+    return RedirectResponse(f"/settings/storage?message={quote(message)}", status_code=303)
 
 
 @router.get("/auth/steam")
@@ -305,16 +338,6 @@ def steam_auth_callback(request: Request, db: Annotated[Session, Depends(get_db)
     return RedirectResponse("/settings/imports?message=Steam%20account%20linked.", status_code=303)
 
 
-@router.post("/settings/imports/share-code")
-def create_share_code_job(db: Annotated[Session, Depends(get_db)], share_code: Annotated[str, Form()]):
-    try:
-        payload = parse_share_code_input(share_code)
-    except ValueError as exc:
-        return RedirectResponse(f"/settings/imports?message={quote(str(exc))}", status_code=303)
-    create_steam_import_job(db, None, "share_code_import", payload)
-    return RedirectResponse("/settings/imports?message=Share-code%20import%20job%20queued.", status_code=303)
-
-
 @router.post("/settings/imports/steam-web-api-key")
 def save_steam_web_api_key(db: Annotated[Session, Depends(get_db)], steam_web_api_key: Annotated[str, Form()]):
     try:
@@ -329,9 +352,10 @@ def save_steam_auth_code(
     db: Annotated[Session, Depends(get_db)],
     steam_account_id: int,
     match_auth_code: Annotated[str, Form()],
+    latest_share_code: Annotated[str, Form()],
 ):
     try:
-        update_match_auth_code(db, steam_account_id, match_auth_code)
+        update_match_auth_code(db, steam_account_id, match_auth_code, latest_share_code)
     except ValueError as exc:
         return RedirectResponse(f"/settings/imports?message={quote(str(exc))}", status_code=303)
     return RedirectResponse("/settings/imports?message=Steam%20match%20history%20sync%20queued.", status_code=303)
@@ -366,6 +390,28 @@ def run_queued_steam_import_jobs(db: Annotated[Session, Depends(get_db)]):
         f"/settings/imports?message={quote(message)}",
         status_code=303,
     )
+
+
+@router.post("/settings/imports/pull-all")
+def pull_all_steam_imports(
+    background_tasks: BackgroundTasks,
+    db: Annotated[Session, Depends(get_db)],
+):
+    job = queue_steam_import_all(db)
+    if job.status in {"queued", "running"}:
+        if job.status == "queued":
+            background_tasks.add_task(_run_steam_import_all_background, job.id)
+        message = f"Steam import job #{job.id} started. This page will show progress."
+    else:
+        message = f"Steam import job #{job.id} is already {job.status}."
+    return RedirectResponse(f"/settings/imports?message={quote(str(message))}", status_code=303)
+
+
+@router.post("/settings/imports/clear-demo-errors")
+def clear_steam_demo_errors(db: Annotated[Session, Depends(get_db)]):
+    result = clear_steam_demo_download_errors(db)
+    message = f"Cleared {result['cleared']} old demo download errors."
+    return RedirectResponse(f"/settings/imports?message={quote(message)}", status_code=303)
 
 
 @router.post("/upload")
