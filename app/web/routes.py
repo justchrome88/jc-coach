@@ -33,6 +33,15 @@ from app.services.mistake_detection import (
 )
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_evaluations_by_match_id
 from app.services.report_generator import generate_report, latest_report, markdown_to_html
+from app.services.steam_integration import (
+    create_steam_import_job,
+    link_steam_account,
+    list_import_jobs,
+    list_steam_accounts,
+    parse_share_code_input,
+    steam_login_url,
+    validate_openid_callback,
+)
 
 router = APIRouter()
 
@@ -106,6 +115,45 @@ def upload_page(request: Request, message: str | None = None):
         name="upload.html",
         context={"message": message, "inbox_demos": list_inbox_demos()},
     )
+
+
+@router.get("/settings/imports")
+def import_settings_page(request: Request, db: Annotated[Session, Depends(get_db)], message: str | None = None):
+    return templates.TemplateResponse(
+        request=request,
+        name="import_settings.html",
+        context={
+            "request": request,
+            "message": message,
+            "steam_accounts": list_steam_accounts(db),
+            "import_jobs": list_import_jobs(db),
+        },
+    )
+
+
+@router.get("/auth/steam")
+def steam_auth_start():
+    return RedirectResponse(steam_login_url(), status_code=303)
+
+
+@router.get("/auth/steam/callback")
+def steam_auth_callback(request: Request, db: Annotated[Session, Depends(get_db)]):
+    steam_id, error = validate_openid_callback(dict(request.query_params))
+    if error:
+        return RedirectResponse(f"/settings/imports?message={error}", status_code=303)
+    link_steam_account(db, steam_id)
+    create_steam_import_job(db, None, "steam_openid_linked", {"steam_id": steam_id})
+    return RedirectResponse("/settings/imports?message=Steam account linked.", status_code=303)
+
+
+@router.post("/settings/imports/share-code")
+def create_share_code_job(db: Annotated[Session, Depends(get_db)], share_code: Annotated[str, Form()]):
+    try:
+        payload = parse_share_code_input(share_code)
+    except ValueError as exc:
+        return RedirectResponse(f"/settings/imports?message={exc}", status_code=303)
+    create_steam_import_job(db, None, "share_code_import", payload)
+    return RedirectResponse("/settings/imports?message=Share-code import job queued.", status_code=303)
 
 
 @router.post("/upload")

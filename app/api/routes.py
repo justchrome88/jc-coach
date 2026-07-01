@@ -18,6 +18,13 @@ from app.services.recommendation_tracking import (
     get_active_recommendation_progress,
 )
 from app.services.report_generator import generate_report, latest_report
+from app.services.steam_integration import (
+    create_steam_import_job,
+    list_import_jobs,
+    list_steam_accounts,
+    parse_share_code_input,
+    steam_login_url,
+)
 
 router = APIRouter(prefix="/api")
 
@@ -156,6 +163,53 @@ def latest_ai_coach_handoff_endpoint() -> dict:
     if handoff is None:
         raise HTTPException(status_code=404, detail="No AI coach handoff generated yet")
     return handoff
+
+
+@router.get("/steam/login-url")
+def steam_login_url_endpoint() -> dict:
+    return {"url": steam_login_url()}
+
+
+@router.get("/steam/accounts")
+def steam_accounts_endpoint(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
+    return [
+        {
+            "id": account.id,
+            "steam_id": account.steam_id,
+            "persona_name": account.persona_name,
+            "sync_enabled": bool(account.sync_enabled),
+            "last_sync_at": account.last_sync_at,
+            "has_match_auth_code": bool(account.match_auth_code),
+        }
+        for account in list_steam_accounts(db)
+    ]
+
+
+@router.post("/steam/import/share-code")
+def steam_share_code_job_endpoint(db: Annotated[Session, Depends(get_db)], share_code: str) -> dict:
+    try:
+        payload = parse_share_code_input(share_code)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    job = create_steam_import_job(db, None, "share_code_import", payload)
+    return {"ok": True, "job_id": job.id, "status": job.status}
+
+
+@router.get("/import/jobs")
+def import_jobs_endpoint(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
+    return [
+        {
+            "id": job.id,
+            "provider": job.provider,
+            "job_type": job.job_type,
+            "status": job.status,
+            "created_at": job.created_at,
+            "started_at": job.started_at,
+            "finished_at": job.finished_at,
+            "error_message": job.error_message,
+        }
+        for job in list_import_jobs(db)
+    ]
 
 
 def serialize_match(match: Match) -> dict:

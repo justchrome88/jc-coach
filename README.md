@@ -36,6 +36,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - Upload: http://127.0.0.1:8000/upload
 - Matches: http://127.0.0.1:8000/matches
 - Report: http://127.0.0.1:8000/report
+- Accounts/imports: http://127.0.0.1:8000/settings/imports
 
 ## Docker запуск
 
@@ -147,6 +148,22 @@ LOCAL_LLM_MODEL=your-model
 
 Архитектурно это позволит подключить Ollama/LM Studio/OpenAI-compatible local server без переписывания coach-логики: поменяется только provider, а payload останется тем же.
 
+## Steam auth and auto import scaffold
+
+Steam интеграция начата как scaffold:
+
+- Steam OpenID login URL;
+- `SteamAccount`;
+- `ImportJob`;
+- страница `/settings/imports`;
+- share-code job queue.
+
+Важно:
+
+- Steam пароль не вводится и не хранится.
+- FACEIT пока пропущен в реализации, но остается обязательным будущим источником.
+- Share-code jobs пока только ставятся в очередь. Реальный worker загрузки demo/sync будет отдельным этапом.
+
 ## Поддерживаемые CSV поля
 
 Минимально поддерживаются:
@@ -177,6 +194,10 @@ source,external_match_id,demo_file,mode,side_t_rounds_won,side_t_rounds_lost,sid
 - `GET /api/coach/ai/payload`
 - `POST /api/coach/ai/handoff`
 - `GET /api/coach/ai/handoff/latest`
+- `GET /api/steam/login-url`
+- `GET /api/steam/accounts`
+- `POST /api/steam/import/share-code`
+- `GET /api/import/jobs`
 
 ## Тесты и линтинг
 

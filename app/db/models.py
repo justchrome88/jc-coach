@@ -110,3 +110,57 @@ class MatchRecommendationEvaluation(Base):
     positive_signals_json: Mapped[str] = mapped_column(Text, nullable=False)
     negative_signals_json: Mapped[str] = mapped_column(Text, nullable=False)
     coach_comment: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    display_name: Mapped[str | None] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class SteamAccount(Base):
+    __tablename__ = "steam_accounts"
+    __table_args__ = (UniqueConstraint("steam_id", name="uq_steam_accounts_steam_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    steam_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    persona_name: Mapped[str | None] = mapped_column(String(120))
+    profile_url: Mapped[str | None] = mapped_column(String(500))
+    avatar_url: Mapped[str | None] = mapped_column(String(500))
+    linked_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime)
+    sync_enabled: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    match_auth_code: Mapped[str | None] = mapped_column(String(255))
+    last_share_code: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class ImportJob(Base):
+    __tablename__ = "import_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    provider: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    job_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="queued", index=True)
+    steam_account_id: Mapped[int | None] = mapped_column(ForeignKey("steam_accounts.id"), index=True)
+    requested_payload_json: Mapped[str | None] = mapped_column(Text)
+    result_json: Mapped[str | None] = mapped_column(Text)
+    error_message: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime)

@@ -103,3 +103,49 @@ Rationale:
 - The app should keep deterministic CS2 facts separate from model reasoning.
 - AI should explain structured evidence, not parse demos or invent stats.
 - A provider boundary lets us later connect Ollama, LM Studio, or another OpenAI-compatible local server without changing dashboard/report/mistake logic.
+
+## Structured Mistake Detection
+
+Implemented deterministic mistake detection as the evidence layer for AI coach:
+
+- Categories: aim, map, crosshair placement, grenades, entry duels, survival, utility, economy.
+- Mistake object includes:
+  - type;
+  - category;
+  - severity;
+  - confidence;
+  - match_id when available;
+  - evidence;
+  - recommendation.
+- `/coach` now shows category scorecards and structured mistakes.
+- Match detail now shows coach breakdown and per-match mistakes.
+- AI coach payload now includes `structured_mistakes` and `coach_categories`.
+
+Current limits:
+
+- Crosshair placement is explicitly `no_data` until parser exposes reliable view/position timeline.
+- Grenade analysis is still best-effort from current utility fields.
+- Economy is planned, not evaluated yet.
+
+## Steam Auth And Import Jobs Scaffold
+
+FACEIT is intentionally skipped in implementation for now, but remains in roadmap as required future support.
+
+Implemented Steam scaffold:
+
+- `User`, `SteamAccount`, and `ImportJob` tables.
+- Steam OpenID login URL generation.
+- Steam callback scaffold that links SteamID.
+- `/settings/imports` page for connected Steam accounts and import jobs.
+- Share-code import job creation.
+- API endpoints:
+  - `GET /api/steam/login-url`;
+  - `GET /api/steam/accounts`;
+  - `POST /api/steam/import/share-code`;
+  - `GET /api/import/jobs`.
+
+Current limits:
+
+- Steam OpenID callback verification is scaffold-level and needs hardening before public production.
+- Share-code jobs are queued only; real demo download/sync worker is next.
+- No Steam password is requested or stored.

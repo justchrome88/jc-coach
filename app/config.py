@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     ai_codex_command: str = "codex exec"
     local_llm_base_url: str | None = None
     local_llm_model: str | None = None
+    public_base_url: str = "http://127.0.0.1:8000"
+    steam_realm: str | None = None
+    steam_return_path: str = "/auth/steam/callback"
     openai_api_key: str | None = None
     demo_player_identifier: str | None = None
 

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-head">
+  <div>
+    <h1>Аккаунты и автоимпорт</h1>
+    <p>Steam подключается через OpenID. Пароль Steam не вводится и не хранится. FACEIT держим в roadmap, но пока не подключаем.</p>
+  </div>
+  <div class="actions">
+    <a class="button" href="/auth/steam">Подключить Steam</a>
+    <a class="button ghost" href="/upload">Ручной импорт</a>
+  </div>
+</section>
+
+{% if message %}
+<div class="notice">{{ message }}</div>
+{% endif %}
+
+<section class="layout-two">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Steam accounts</h2>
+      <span>{{ steam_accounts|length }}</span>
+    </div>
+    <table>
+      <thead><tr><th>SteamID</th><th>Имя</th><th>Sync</th><th>Последний sync</th><th>Auth code</th></tr></thead>
+      <tbody>
+        {% for account in steam_accounts %}
+        <tr>
+          <td>{{ account.steam_id }}</td>
+          <td>{{ account.persona_name or "n/a" }}</td>
+          <td>{{ "on" if account.sync_enabled else "off" }}</td>
+          <td>{{ account.last_sync_at.strftime("%Y-%m-%d %H:%M") if account.last_sync_at else "never" }}</td>
+          <td>{{ "set" if account.match_auth_code else "missing" }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">Steam пока не подключен.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Share-code job</h2>
+      <span>scaffold</span>
+    </div>
+    <form action="/settings/imports/share-code" method="post" class="upload-form stacked">
+      <label for="share_code">Steam share code или ссылка</label>
+      <input id="share_code" name="share_code" type="text" placeholder="CSGO-... или steam://...">
+      <button class="button" type="submit">Создать import job</button>
+    </form>
+    <p class="muted">Сейчас job только ставится в очередь. Реальная загрузка demo будет следующим этапом после проверки Steam flow.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Import jobs</h2>
+    <span>queued / running / succeeded / failed</span>
+  </div>
+  <table>
+    <thead><tr><th>ID</th><th>Provider</th><th>Тип</th><th>Статус</th><th>Создано</th><th>Ошибка</th></tr></thead>
+    <tbody>
+      {% for job in import_jobs %}
+      <tr>
+        <td>{{ job.id }}</td>
+        <td>{{ job.provider }}</td>
+        <td>{{ job.job_type }}</td>
+        <td><span class="source-badge">{{ job.status }}</span></td>
+        <td>{{ job.created_at.strftime("%Y-%m-%d %H:%M") if job.created_at else "n/a" }}</td>
+        <td class="comment-cell">{{ job.error_message or "" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Import jobs пока нет.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
