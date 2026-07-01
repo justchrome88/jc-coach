@@ -28,6 +28,51 @@
 </section>
 {% endif %}
 
+<section class="panel">
+  <div class="panel-head">
+    <h2>Coach breakdown</h2>
+    <span>aim / entry / survival / grenades</span>
+  </div>
+  <div class="category-grid">
+    {% for section in coach_sections %}
+    <div class="category-card {{ section.status }}">
+      <span>{{ section.title }}</span>
+      <strong>{{ section.status }}</strong>
+      <p>{{ section.note }}</p>
+      <div class="mini-list">
+        {% for name, value in section.metrics.items() %}
+        <div><span>{{ name }}</span><strong>{{ value if value is not none else "no data" }}</strong></div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Ошибки матча</h2>
+    <span>structured evidence</span>
+  </div>
+  <table>
+    <thead><tr><th>Категория</th><th>Ошибка</th><th>Severity</th><th>Confidence</th><th>Evidence</th><th>Что делать</th></tr></thead>
+    <tbody>
+      {% for mistake in match_mistakes %}
+      <tr>
+        <td>{{ mistake.category }}</td>
+        <td>{{ mistake.title }}</td>
+        <td><span class="status-badge {{ mistake.severity }}">{{ mistake.severity }}</span></td>
+        <td>{{ mistake.confidence }}</td>
+        <td class="comment-cell">{{ mistake.evidence }}</td>
+        <td class="comment-cell">{{ mistake.recommendation }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">По этому матчу структурных ошибок не найдено или данных недостаточно.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
 <section class="layout-two">
   <div class="panel">
     <div class="panel-head">

@@ -34,6 +34,22 @@
   {% endif %}
 </section>
 
+<section class="panel">
+  <div class="panel-head">
+    <h2>Coach categories</h2>
+    <span>aim / map / grenades / survival</span>
+  </div>
+  <div class="category-grid">
+    {% for item in coach_categories %}
+    <div class="category-card {{ item.status }}">
+      <span>{{ item.label }}</span>
+      <strong>{{ item.score if item.score is not none else "no data" }}</strong>
+      <p>{{ item.top_mistake.title if item.top_mistake else "Критичных проблем не найдено или данных пока нет." }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
 <section class="layout-two">
   <div class="panel focus">
     <div class="panel-head">
@@ -61,6 +77,30 @@
     <p>Отчёта пока нет. Сгенерируйте его после импорта матчей.</p>
     {% endif %}
   </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Структурные ошибки</h2>
+    <span>evidence для AI coach</span>
+  </div>
+  <table>
+    <thead><tr><th>Категория</th><th>Ошибка</th><th>Severity</th><th>Confidence</th><th>Evidence</th><th>Рекомендация</th></tr></thead>
+    <tbody>
+      {% for mistake in structured_mistakes %}
+      <tr>
+        <td>{{ mistake.category }}</td>
+        <td>{{ mistake.title }}</td>
+        <td><span class="status-badge {{ mistake.severity }}">{{ mistake.severity }}</span></td>
+        <td>{{ mistake.confidence }}</td>
+        <td class="comment-cell">{{ mistake.evidence }}</td>
+        <td class="comment-cell">{{ mistake.recommendation }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Структурных ошибок пока не найдено. Нужно больше матчей или более полные DEM данные.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </section>
 
 {% if recommendation_progress %}

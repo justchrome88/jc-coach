@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.db.models import Match
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
+from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
 from app.services.recommendation_tracking import get_active_recommendation_progress
 from app.services.report_generator import _serialize_recommendation_progress
 
@@ -99,6 +100,7 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
     weaknesses = detect_weaknesses(summary, comparison, map_stats)
+    structured_mistakes = detect_structured_mistakes(matches)
     focus = build_coach_focus(summary, comparison, map_stats)
     recommendation_progress = get_active_recommendation_progress(db)
     recent_matches = matches[-10:]
@@ -110,6 +112,8 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
         "period_comparison": comparison,
         "map_stats": map_stats,
         "detected_weaknesses": weaknesses,
+        "structured_mistakes": structured_mistakes,
+        "coach_categories": category_scorecard(structured_mistakes),
         "coach_focus": focus,
         "active_recommendation": _serialize_recommendation_progress(recommendation_progress),
         "recent_matches": [_serialize_match(match) for match in recent_matches],
@@ -134,7 +138,10 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
             "- Если данных мало или confidence низкий, прямо скажи об этом.",
             "- Не делай общий motivational текст. Дай конкретный фокус, причины и действия.",
             "- Главный результат: что игрок должен изменить в следующих 5-10 матчах.",
-            "- Структура ответа: краткий диагноз, 3 главные ошибки, план на неделю, метрики контроля.",
+            "- Разбирай отдельно aim, map, crosshair placement, grenades, entry duels и survival.",
+            "- Если по crosshair placement нет данных, не делай выводы, а отметь data gap.",
+            "- Структура ответа: краткий диагноз, 3 главные ошибки, рекомендации по категориям, "
+            "план на неделю, метрики контроля.",
             "",
             "JSON payload:",
             "```json",

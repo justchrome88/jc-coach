@@ -25,6 +25,12 @@ from app.services.analytics import (
 from app.services.coach_rules import build_coach_focus
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.importer import import_csv, import_json
+from app.services.mistake_detection import (
+    category_scorecard,
+    detect_structured_mistakes,
+    match_coach_sections,
+    mistakes_by_match_id,
+)
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_evaluations_by_match_id
 from app.services.report_generator import generate_report, latest_report, markdown_to_html
 
@@ -65,6 +71,8 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)]):
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
     focus = build_coach_focus(summary, comparison, map_stats)
+    structured_mistakes = detect_structured_mistakes(matches)
+    coach_categories = category_scorecard(structured_mistakes)
     recommendation_progress = get_active_recommendation_progress(db)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
     evaluated_matches = [
@@ -80,6 +88,8 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)]):
         context={
             "request": request,
             "focus": focus,
+            "structured_mistakes": structured_mistakes[:12],
+            "coach_categories": coach_categories,
             "recommendation_progress": recommendation_progress,
             "evaluations_by_match_id": evaluations_by_match_id,
             "evaluated_matches": evaluated_matches,
@@ -239,6 +249,8 @@ def match_detail_page(request: Request, db: Annotated[Session, Depends(get_db)],
     if match is None:
         return RedirectResponse("/matches", status_code=303)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
+    all_matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
+    match_mistakes = mistakes_by_match_id(all_matches).get(match.id, [])
     return templates.TemplateResponse(
         request=request,
         name="match_detail.html",
@@ -247,6 +259,8 @@ def match_detail_page(request: Request, db: Annotated[Session, Depends(get_db)],
             "match": match,
             "detail": match_detail(match),
             "evaluation": evaluations_by_match_id.get(match.id),
+            "match_mistakes": match_mistakes,
+            "coach_sections": match_coach_sections(match, match_mistakes),
         },
     )
 
