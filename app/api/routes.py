@@ -22,6 +22,7 @@ from app.services.demo_parser import DemoParseError, import_demo_file, import_in
 from app.services.importer import import_csv, import_json
 from app.services.recommendation_tracking import (
     get_active_recommendation_progress,
+    get_all_recommendation_progress,
 )
 from app.services.report_generator import generate_report, latest_report
 from app.services.steam_integration import (
@@ -130,6 +131,27 @@ def active_recommendation(db: Annotated[Session, Depends(get_db)]) -> dict:
         "target_matches": progress["target_matches"],
         "summary": progress["summary"],
     }
+
+
+@router.get("/recommendations")
+def all_recommendations(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
+    progress_items = get_all_recommendation_progress(db)
+    return [
+        {
+            "id": item["recommendation"].id,
+            "title": item["recommendation"].title,
+            "category": item["recommendation"].category,
+            "status": item["recommendation"].status,
+            "baseline": item["baseline"],
+            "target": item["target"],
+            "counts": item["counts"],
+            "progress_score": item["progress_score"],
+            "completed_matches": item["completed_matches"],
+            "target_matches": item["target_matches"],
+            "summary": item["summary"],
+        }
+        for item in progress_items
+    ]
 
 
 @router.post("/reports/generate")

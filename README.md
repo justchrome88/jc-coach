@@ -13,7 +13,7 @@
 - Страница `/matches` с фильтрами по карте, результату, источнику, статусу цели, сортировкой, пагинацией и detail page матча.
 - Аналитика summary, сравнение последних 15 против предыдущих 15, статистика по картам.
 - Rule-based coach report в Markdown и HTML.
-- Минимальный Coach Recommendation Tracking: активная цель, baseline, target и green/yellow/red оценка матчей.
+- Coach Recommendation Tracking: active goals по survival, aim, grenades и map, baseline/target и green/yellow/red оценка матчей.
 - AI coach handoff для Codex CLI: приложение собирает structured JSON payload и prompt без привязки к OpenAI API.
 - Sample CSV/JSON.
 - Pytest-тесты ключевой логики.
@@ -189,6 +189,7 @@ source,external_match_id,demo_file,mode,side_t_rounds_won,side_t_rounds_lost,sid
 - `POST /api/import/demo`
 - `GET /api/analytics/summary`
 - `GET /api/recommendations/active`
+- `GET /api/recommendations`
 - `POST /api/reports/generate`
 - `GET /api/reports/latest`
 - `GET /api/coach/ai/payload`

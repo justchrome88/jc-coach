@@ -124,6 +124,30 @@
   </table>
 </section>
 
+<section class="panel">
+  <div class="panel-head">
+    <h2>Активные цели по направлениям</h2>
+    <span>multi-category tracking</span>
+  </div>
+  <div class="category-grid">
+    {% for item in all_recommendation_progress %}
+    <div class="category-card {{ 'critical' if item.progress_score < 40 else 'watch' if item.progress_score < 70 else 'ok' }}">
+      <span>{{ item.recommendation.category }}</span>
+      <strong>{{ item.progress_score }}/100</strong>
+      <p>{{ item.recommendation.title }}</p>
+      <div class="mini-list">
+        <div><span>Матчи</span><strong>{{ item.completed_matches }}/{{ item.target_matches }}</strong></div>
+        <div><span>Green</span><strong>{{ item.counts.green }}</strong></div>
+        <div><span>Yellow</span><strong>{{ item.counts.yellow }}</strong></div>
+        <div><span>Red</span><strong>{{ item.counts.red }}</strong></div>
+      </div>
+    </div>
+    {% else %}
+    <p>Активные цели появятся после импорта матчей.</p>
+    {% endfor %}
+  </div>
+</section>
+
 {% if recommendation_progress %}
 <section class="panel recommendation">
   <div class="panel-head">

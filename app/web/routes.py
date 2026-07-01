@@ -36,7 +36,11 @@ from app.services.mistake_detection import (
     match_coach_sections,
     mistakes_by_match_id,
 )
-from app.services.recommendation_tracking import get_active_recommendation_progress, get_evaluations_by_match_id
+from app.services.recommendation_tracking import (
+    get_active_recommendation_progress,
+    get_all_recommendation_progress,
+    get_evaluations_by_match_id,
+)
 from app.services.report_generator import generate_report, latest_report, markdown_to_html
 from app.services.steam_integration import (
     create_steam_import_job,
@@ -59,6 +63,7 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     map_stats = get_map_stats(matches)
     dashboard_status = get_dashboard_status(matches)
     recommendation_progress = get_active_recommendation_progress(db)
+    all_recommendation_progress = get_all_recommendation_progress(db)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
     recent_matches = list(reversed(matches[-10:]))
     return templates.TemplateResponse(
@@ -71,6 +76,7 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
             "map_stats": map_stats,
             "dashboard_status": dashboard_status,
             "recommendation_progress": recommendation_progress,
+            "all_recommendation_progress": all_recommendation_progress,
             "evaluations_by_match_id": evaluations_by_match_id,
             "recent_matches": recent_matches,
             "chart_data": chart_series(matches),
@@ -88,6 +94,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
     structured_mistakes = detect_structured_mistakes(matches)
     coach_categories = category_scorecard(structured_mistakes)
     recommendation_progress = get_active_recommendation_progress(db)
+    all_recommendation_progress = get_all_recommendation_progress(db)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
     evaluated_matches = [
         match
@@ -107,6 +114,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
             "structured_mistakes": structured_mistakes[:12],
             "coach_categories": coach_categories,
             "recommendation_progress": recommendation_progress,
+            "all_recommendation_progress": all_recommendation_progress,
             "evaluations_by_match_id": evaluations_by_match_id,
             "evaluated_matches": evaluated_matches,
             "report": report,

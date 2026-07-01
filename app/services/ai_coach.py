@@ -14,7 +14,7 @@ from app.db.models import CoachReport, Match
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
 from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
-from app.services.recommendation_tracking import get_active_recommendation_progress
+from app.services.recommendation_tracking import get_active_recommendation_progress, get_all_recommendation_progress
 from app.services.report_generator import _serialize_recommendation_progress
 
 
@@ -145,6 +145,7 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
     structured_mistakes = detect_structured_mistakes(matches)
     focus = build_coach_focus(summary, comparison, map_stats)
     recommendation_progress = get_active_recommendation_progress(db)
+    all_recommendation_progress = get_all_recommendation_progress(db)
     recent_matches = matches[-10:]
     return {
         "product": "CS2 Personal Coach",
@@ -158,6 +159,7 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
         "coach_categories": category_scorecard(structured_mistakes),
         "coach_focus": focus,
         "active_recommendation": _serialize_recommendation_progress(recommendation_progress),
+        "all_recommendations": [_serialize_recommendation_progress(item) for item in all_recommendation_progress],
         "recent_matches": [_serialize_match(match) for match in recent_matches],
         "rules": {
             "do_not_invent_facts": True,

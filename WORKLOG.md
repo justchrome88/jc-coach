@@ -173,3 +173,28 @@ Next:
 
 - Let a local LLM provider write into the same persistence path automatically.
 - Add structured sections to AI result instead of plain markdown only.
+
+## Multi-Category Recommendation Tracking
+
+Implemented a broader recommendation tracker instead of a single survival-only goal.
+
+Active system goals now include:
+
+- `survival`: reduce first/early deaths while keeping KAST/ADR.
+- `aim`: raise stable ADR without losing KAST.
+- `grenades`: increase utility damage and flash assists.
+- `map`: stabilize weak maps through better result/entry/ADR signals.
+
+Compatibility:
+
+- `get_active_recommendation_progress()` still returns the survival recommendation for old UI/API behavior.
+- New `get_all_recommendation_progress()` returns all active category goals.
+- `/coach` now shows multi-category progress cards.
+- AI coach payload includes `all_recommendations`.
+- API endpoint `GET /api/recommendations` returns all category progress items.
+
+Current limits:
+
+- Crosshair placement remains `no_data` until parser exposes reliable view/position data.
+- Category lifecycle controls are not implemented yet; system-created goals are active.
+- Per-category thresholds are intentionally simple and should be tuned with real demos.

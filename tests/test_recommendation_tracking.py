@@ -6,6 +6,7 @@ from app.services.recommendation_tracking import (
     ensure_default_recommendation,
     evaluate_new_matches,
     get_active_recommendation_progress,
+    get_all_recommendation_progress,
 )
 
 
@@ -14,11 +15,14 @@ def test_creates_default_recommendation_with_baseline(db):
     import_rows(db, baseline_rows, source="baseline")
 
     recommendation = db.scalar(select(CoachRecommendation))
+    survival = ensure_default_recommendation(db)
 
     assert recommendation is not None
-    assert recommendation.title == "Снизить первые смерти"
-    assert recommendation.baseline_period_matches == 15
-    assert recommendation.target_period_matches == 10
+    assert survival is not None
+    assert survival.title == "Снизить первые смерти"
+    assert survival.baseline_period_matches == 15
+    assert survival.target_period_matches == 10
+    assert db.query(CoachRecommendation).count() == 4
 
 
 def test_evaluates_new_matches_green_yellow_red(db):
@@ -37,9 +41,14 @@ def test_evaluates_new_matches_green_yellow_red(db):
     )
     evaluate_new_matches(db)
 
+    survival = ensure_default_recommendation(db)
     statuses = [
         evaluation.status
-        for evaluation in db.scalars(select(MatchRecommendationEvaluation).order_by(MatchRecommendationEvaluation.id))
+        for evaluation in db.scalars(
+            select(MatchRecommendationEvaluation)
+            .where(MatchRecommendationEvaluation.recommendation_id == survival.id)
+            .order_by(MatchRecommendationEvaluation.id)
+        )
     ]
 
     assert statuses == ["green", "yellow", "red"]
@@ -55,6 +64,18 @@ def test_progress_summary_counts_statuses(db):
     assert progress["completed_matches"] == 1
     assert progress["counts"]["green"] == 1
     assert progress["last_status"] == "green"
+
+
+def test_all_recommendation_progress_has_categories(db):
+    baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
+    import_rows(db, baseline_rows, source="baseline")
+    import_rows(db, [_row(20, entry_deaths=2, early_deaths=2, kast=76, adr=82)], source="new")
+
+    progress_items = get_all_recommendation_progress(db)
+    categories = {item["recommendation"].category for item in progress_items}
+
+    assert categories == {"aim", "grenades", "map", "survival"}
+    assert all("progress_score" in item for item in progress_items)
 
 
 def _row(index: int, entry_deaths: int, early_deaths: int, kast: float, adr: float) -> dict:
