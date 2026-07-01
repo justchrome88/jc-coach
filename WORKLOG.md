@@ -249,3 +249,27 @@ Current limits:
 - No local model is installed/configured by default.
 - Tests mock the HTTP provider; they do not require a real LLM.
 - If `codex_cli_handoff` is active, direct generation returns a controlled error and the handoff flow remains the default.
+
+## Recommendation Lifecycle Controls
+
+Implemented basic lifecycle controls for category recommendations:
+
+- API:
+  - `POST /api/recommendations/{recommendation_id}/status`.
+- UI controls on `/coach`:
+  - pause;
+  - complete;
+  - archive.
+- Supported statuses:
+  - active;
+  - paused;
+  - completed;
+  - failed;
+  - archived.
+
+Completed/failed/archived recommendations receive `ended_at`.
+
+Important behavior:
+
+- System-created category recommendations are not immediately recreated after being completed/archived.
+- New recommendation creation rules should later become explicit user actions.

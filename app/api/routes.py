@@ -25,6 +25,7 @@ from app.services.importer import import_csv, import_json
 from app.services.recommendation_tracking import (
     get_active_recommendation_progress,
     get_all_recommendation_progress,
+    update_recommendation_status,
 )
 from app.services.report_generator import generate_report, latest_report
 from app.services.steam_integration import (
@@ -154,6 +155,19 @@ def all_recommendations(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
         }
         for item in progress_items
     ]
+
+
+@router.post("/recommendations/{recommendation_id}/status")
+def update_recommendation_status_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    recommendation_id: int,
+    status: str,
+) -> dict:
+    try:
+        recommendation = update_recommendation_status(db, recommendation_id, status)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "id": recommendation.id, "status": recommendation.status}
 
 
 @router.post("/reports/generate")

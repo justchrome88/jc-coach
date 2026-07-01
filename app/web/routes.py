@@ -42,6 +42,7 @@ from app.services.recommendation_tracking import (
     get_active_recommendation_progress,
     get_all_recommendation_progress,
     get_evaluations_by_match_id,
+    update_recommendation_status,
 )
 from app.services.report_generator import generate_report, latest_report, markdown_to_html
 from app.services.steam_integration import (
@@ -378,6 +379,19 @@ def generate_ai_result_with_provider_page(db: Annotated[Session, Depends(get_db)
     try:
         generate_ai_coach_with_provider(db)
     except RuntimeError as exc:
+        return RedirectResponse(f"/coach?message={exc}", status_code=303)
+    return RedirectResponse("/coach", status_code=303)
+
+
+@router.post("/coach/recommendations/{recommendation_id}/status")
+def update_recommendation_status_page(
+    db: Annotated[Session, Depends(get_db)],
+    recommendation_id: int,
+    status: Annotated[str, Form()],
+):
+    try:
+        update_recommendation_status(db, recommendation_id, status)
+    except ValueError as exc:
         return RedirectResponse(f"/coach?message={exc}", status_code=303)
     return RedirectResponse("/coach", status_code=303)
 

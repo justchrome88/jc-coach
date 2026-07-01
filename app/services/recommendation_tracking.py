@@ -61,18 +61,18 @@ def ensure_default_recommendations(db: Session) -> list[CoachRecommendation]:
     baseline_metrics = _aggregate_baseline(baseline_matches)
     baseline_ids = [match.id for match in baseline_matches]
     start_after_match_id = max((match.id for match in matches if match.id is not None), default=None)
-    active = list(
+    existing_system = list(
         db.scalars(
             select(CoachRecommendation)
-            .where(CoachRecommendation.status == "active")
+            .where(CoachRecommendation.created_by == "system")
             .order_by(CoachRecommendation.category.asc(), CoachRecommendation.id.asc())
         ).all()
     )
-    active_categories = {item.category for item in active if item.created_by == "system"}
+    existing_categories = {item.category for item in existing_system}
 
     created = []
     for definition in RECOMMENDATION_DEFINITIONS:
-        if definition["category"] in active_categories:
+        if definition["category"] in existing_categories:
             continue
         recommendation = CoachRecommendation(
             title=definition["title"],
@@ -204,6 +204,23 @@ def get_all_evaluations_by_match_id(db: Session) -> dict[int, list[MatchRecommen
     for evaluation in evaluations:
         grouped.setdefault(evaluation.match_id, []).append(evaluation)
     return grouped
+
+
+def update_recommendation_status(db: Session, recommendation_id: int, status: str) -> CoachRecommendation:
+    allowed = {"active", "paused", "completed", "failed", "archived"}
+    if status not in allowed:
+        raise ValueError(f"Unsupported recommendation status: {status}")
+    recommendation = db.get(CoachRecommendation, recommendation_id)
+    if recommendation is None:
+        raise ValueError("Recommendation not found.")
+    recommendation.status = status
+    if status in {"completed", "failed", "archived"}:
+        recommendation.ended_at = datetime.now(UTC).replace(tzinfo=None)
+    elif status == "active":
+        recommendation.ended_at = None
+    db.commit()
+    db.refresh(recommendation)
+    return recommendation
 
 
 def _progress_for_recommendation(db: Session, recommendation: CoachRecommendation) -> dict[str, Any]:

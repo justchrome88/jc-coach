@@ -7,6 +7,7 @@ from app.services.recommendation_tracking import (
     evaluate_new_matches,
     get_active_recommendation_progress,
     get_all_recommendation_progress,
+    update_recommendation_status,
 )
 
 
@@ -76,6 +77,17 @@ def test_all_recommendation_progress_has_categories(db):
 
     assert categories == {"aim", "grenades", "map", "survival"}
     assert all("progress_score" in item for item in progress_items)
+
+
+def test_update_recommendation_status(db):
+    baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
+    import_rows(db, baseline_rows, source="baseline")
+    recommendation = ensure_default_recommendation(db)
+
+    updated = update_recommendation_status(db, recommendation.id, "completed")
+
+    assert updated.status == "completed"
+    assert updated.ended_at is not None
 
 
 def _row(index: int, entry_deaths: int, early_deaths: int, kast: float, adr: float) -> dict:

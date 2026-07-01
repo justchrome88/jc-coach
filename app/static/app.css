@@ -321,6 +321,19 @@ p { color: var(--muted); line-height: 1.55; }
   margin-top: 4px;
 }
 
+.mini-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.mini-actions .button {
+  min-height: 30px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
 .mini-list div {
   display: flex;
   justify-content: space-between;

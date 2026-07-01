@@ -146,6 +146,20 @@
         <div><span>Yellow</span><strong>{{ item.counts.yellow }}</strong></div>
         <div><span>Red</span><strong>{{ item.counts.red }}</strong></div>
       </div>
+      <div class="mini-actions">
+        <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
+          <input type="hidden" name="status" value="paused">
+          <button class="button ghost" type="submit">Pause</button>
+        </form>
+        <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
+          <input type="hidden" name="status" value="completed">
+          <button class="button ghost" type="submit">Done</button>
+        </form>
+        <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
+          <input type="hidden" name="status" value="archived">
+          <button class="button ghost" type="submit">Archive</button>
+        </form>
+      </div>
     </div>
     {% else %}
     <p>Активные цели появятся после импорта матчей.</p>
