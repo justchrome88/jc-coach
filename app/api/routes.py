@@ -16,8 +16,10 @@ from app.services.ai_coach import (
     generate_ai_coach_with_provider,
     latest_ai_coach_report,
     latest_ai_handoff,
+    list_ai_coach_reports,
     prepare_ai_coach_handoff,
     save_ai_coach_result,
+    serialize_ai_coach_report,
 )
 from app.services.analytics import compare_periods, get_map_stats, get_summary
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
@@ -258,13 +260,12 @@ def latest_ai_coach_result_endpoint(db: Annotated[Session, Depends(get_db)]) -> 
     report = latest_ai_coach_report(db)
     if report is None:
         raise HTTPException(status_code=404, detail="No AI coach report saved yet")
-    return {
-        "id": report.id,
-        "matches_count": report.matches_count,
-        "source_ref": report.source_ref,
-        "report_markdown": report.report_markdown,
-        "created_at": report.created_at,
-    }
+    return serialize_ai_coach_report(report)
+
+
+@router.get("/coach/ai/results")
+def ai_coach_results_endpoint(db: Annotated[Session, Depends(get_db)], limit: int = 10) -> list[dict]:
+    return [serialize_ai_coach_report(report) for report in list_ai_coach_reports(db, limit=max(1, min(limit, 50)))]
 
 
 @router.get("/steam/login-url")

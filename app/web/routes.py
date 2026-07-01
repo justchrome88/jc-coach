@@ -19,8 +19,10 @@ from app.services.ai_coach import (
     generate_ai_coach_with_provider,
     latest_ai_coach_report,
     latest_ai_handoff,
+    list_ai_coach_reports,
     prepare_ai_coach_handoff,
     save_ai_coach_result,
+    serialize_ai_coach_report,
 )
 from app.services.analytics import (
     chart_series,
@@ -257,6 +259,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
     ai_handoff = latest_ai_handoff()
     ai_report = latest_ai_coach_report(db)
     ai_health = ai_provider_health()
+    ai_report_history = [serialize_ai_coach_report(report) for report in list_ai_coach_reports(db, limit=5)]
     return templates.TemplateResponse(
         request=request,
         name="coach.html",
@@ -273,6 +276,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
             "report": report,
             "ai_handoff": ai_handoff,
             "ai_report": ai_report,
+            "ai_report_history": ai_report_history,
             "ai_health": ai_health,
         },
     )

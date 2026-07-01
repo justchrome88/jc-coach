@@ -9,7 +9,9 @@ from app.services.ai_coach import (
     ai_provider_health,
     build_ai_coach_payload,
     latest_ai_coach_report,
+    list_ai_coach_reports,
     save_ai_coach_result,
+    serialize_ai_coach_report,
 )
 from app.services.importer import import_rows
 
@@ -54,11 +56,26 @@ def test_save_ai_coach_result_persists_ai_report(db, sample_rows):
 
     report = save_ai_coach_result(db, "# AI report\n\nFocus on survival.", source_ref="manual")
     latest = latest_ai_coach_report(db)
+    serialized = serialize_ai_coach_report(report)
 
     assert report.report_type == "ai_coach"
     assert report.source_ref == "manual"
     assert latest is not None
     assert latest.id == report.id
+    assert serialized["status"] == "saved"
+    assert serialized["payload_hash"]
+    assert serialized["payload_matches_count"] == 2
+
+
+def test_ai_coach_report_history_is_newest_first(db, sample_rows):
+    import_rows(db, sample_rows, source="test")
+
+    first = save_ai_coach_result(db, "First report", source_ref="manual-1")
+    second = save_ai_coach_result(db, "Second report", source_ref="manual-2")
+
+    reports = list_ai_coach_reports(db)
+
+    assert [report.id for report in reports[:2]] == [second.id, first.id]
 
 
 def test_save_ai_coach_result_rejects_empty_text(db):

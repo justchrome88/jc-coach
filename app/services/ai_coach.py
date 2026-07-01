@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import urllib.error
 import urllib.request
@@ -130,7 +131,12 @@ def ai_provider_health() -> dict[str, Any]:
     }
 
 
-def save_ai_coach_result(db: Session, markdown: str, source_ref: str | None = None) -> CoachReport:
+def save_ai_coach_result(
+    db: Session,
+    markdown: str,
+    source_ref: str | None = None,
+    payload_snapshot: dict[str, Any] | None = None,
+) -> CoachReport:
     content = markdown.strip()
     if not content:
         raise ValueError("AI coach result is empty.")
@@ -140,6 +146,8 @@ def save_ai_coach_result(db: Session, markdown: str, source_ref: str | None = No
     period_start = next((match.played_at for match in matches if match.played_at), None)
     period_end = next((match.played_at for match in reversed(matches) if match.played_at), None)
     latest_handoff = latest_ai_handoff()
+    snapshot = payload_snapshot or build_ai_coach_payload(db)
+    metadata = _ai_report_metadata(content, snapshot, latest_handoff, source_ref)
     report = CoachReport(
         period_start=period_start,
         period_end=period_end,
@@ -147,15 +155,7 @@ def save_ai_coach_result(db: Session, markdown: str, source_ref: str | None = No
         report_type="ai_coach",
         source_ref=source_ref or (latest_handoff or {}).get("prompt_path"),
         report_markdown=content,
-        report_json=json.dumps(
-            {
-                "type": "ai_coach",
-                "provider": (latest_handoff or {}).get("provider", "codex_cli_handoff"),
-                "handoff": latest_handoff,
-            },
-            ensure_ascii=False,
-            default=str,
-        ),
+        report_json=json.dumps(metadata, ensure_ascii=False, default=str),
     )
     db.add(report)
     db.commit()
@@ -170,6 +170,36 @@ def latest_ai_coach_report(db: Session) -> CoachReport | None:
         .order_by(CoachReport.created_at.desc(), CoachReport.id.desc())
         .limit(1)
     )
+
+
+def list_ai_coach_reports(db: Session, limit: int = 10) -> list[CoachReport]:
+    return list(
+        db.scalars(
+            select(CoachReport)
+            .where(CoachReport.report_type == "ai_coach")
+            .order_by(CoachReport.created_at.desc(), CoachReport.id.desc())
+            .limit(limit)
+        ).all()
+    )
+
+
+def serialize_ai_coach_report(report: CoachReport) -> dict[str, Any]:
+    metadata = _json_loads(report.report_json)
+    return {
+        "id": report.id,
+        "matches_count": report.matches_count,
+        "period_start": report.period_start.isoformat() if report.period_start else None,
+        "period_end": report.period_end.isoformat() if report.period_end else None,
+        "source_ref": report.source_ref,
+        "created_at": report.created_at.isoformat() if report.created_at else None,
+        "provider": metadata.get("provider"),
+        "status": metadata.get("status"),
+        "payload_hash": metadata.get("payload_hash"),
+        "payload_matches_count": (metadata.get("payload_summary") or {}).get("matches_count"),
+        "content_chars": metadata.get("content_chars"),
+        "report_markdown": report.report_markdown,
+        "metadata": metadata,
+    }
 
 
 def latest_ai_handoff() -> dict[str, Any] | None:
@@ -276,6 +306,43 @@ def _call_openai_compatible(base_url: str, model: str, prompt: str, timeout: int
     if not content:
         raise RuntimeError("Local LLM returned an empty chat response.")
     return str(content).strip()
+
+
+def _ai_report_metadata(
+    content: str,
+    payload_snapshot: dict[str, Any],
+    latest_handoff: dict[str, Any] | None,
+    source_ref: str | None,
+) -> dict[str, Any]:
+    payload_json = json.dumps(payload_snapshot, ensure_ascii=False, sort_keys=True, default=str)
+    provider = (latest_handoff or {}).get("provider") or _provider().name
+    return {
+        "type": "ai_coach",
+        "status": "saved",
+        "provider": provider,
+        "source_ref": source_ref,
+        "handoff": latest_handoff,
+        "payload_hash": hashlib.sha256(payload_json.encode("utf-8")).hexdigest()[:16],
+        "payload_summary": {
+            "matches_count": (payload_snapshot.get("summary") or {}).get("matches_count"),
+            "structured_mistakes_count": len(payload_snapshot.get("structured_mistakes") or []),
+            "recommendations_count": len(payload_snapshot.get("all_recommendations") or []),
+            "recent_matches_count": len(payload_snapshot.get("recent_matches") or []),
+        },
+        "payload_snapshot": payload_snapshot,
+        "content_chars": len(content),
+        "saved_at": datetime.now(UTC).isoformat(),
+    }
+
+
+def _json_loads(value: str | None) -> dict[str, Any]:
+    if not value:
+        return {}
+    try:
+        loaded = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
 
 
 def _post_json(url: str, payload: dict[str, Any], timeout: int) -> dict[str, Any]:

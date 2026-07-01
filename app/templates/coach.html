@@ -62,6 +62,30 @@
 
 <section class="panel">
   <div class="panel-head">
+    <h2>История AI reports</h2>
+    <span>snapshot persistence</span>
+  </div>
+  <table>
+    <thead><tr><th>ID</th><th>Provider</th><th>Матчи</th><th>Payload</th><th>Создан</th><th>Источник</th></tr></thead>
+    <tbody>
+    {% for item in ai_report_history %}
+      <tr>
+        <td>{{ item.id }}</td>
+        <td>{{ item.provider or "n/a" }}</td>
+        <td>{{ item.matches_count }}</td>
+        <td>{{ item.payload_hash or "n/a" }}</td>
+        <td>{{ item.created_at[:16].replace("T", " ") if item.created_at else "n/a" }}</td>
+        <td class="comment-cell">{{ item.source_ref or "manual" }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6">AI reports пока не сохранены.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
     <h2>Coach categories</h2>
     <span>aim / map / grenades / survival</span>
   </div>
