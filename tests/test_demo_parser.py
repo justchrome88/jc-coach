@@ -25,6 +25,9 @@ def test_parse_demo_with_fake_demoparser(monkeypatch, tmp_path):
     assert parsed["event_counts"]["player_death"] == 3
     assert parsed["metric_confidence"]["adr"] == "high"
     assert parsed["warnings"]
+    assert parsed["aim_summary"]["damage_per_death"] == 100
+    assert parsed["aim_summary"]["multi_kill_rounds"] == 0
+    assert parsed["weapon_breakdown"]["ak47"]["damage"] == 50
 
 
 def test_parse_demo_prefers_jc_player_by_default(monkeypatch, tmp_path):
@@ -94,6 +97,7 @@ def _install_fake_demoparser(monkeypatch):
                         "attacker_name": "me",
                         "user_name": "enemy",
                         "headshot": True,
+                        "weapon": "ak47",
                     },
                     {
                         "total_rounds_played": 1,
@@ -101,6 +105,7 @@ def _install_fake_demoparser(monkeypatch):
                         "attacker_name": "enemy",
                         "user_name": "me",
                         "headshot": False,
+                        "weapon": "m4a1",
                     },
                     {
                         "total_rounds_played": 2,
@@ -108,6 +113,7 @@ def _install_fake_demoparser(monkeypatch):
                         "attacker_name": "JC",
                         "user_name": "enemy",
                         "headshot": False,
+                        "weapon": "ak47",
                     },
                 ]
             if event_name == "player_hurt":

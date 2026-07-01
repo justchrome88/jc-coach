@@ -21,6 +21,7 @@ from app.services.ai_coach import (
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
+from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, get_map_stats, get_summary
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.demo_storage import demo_storage_report, write_demo_storage_manifest
@@ -137,6 +138,12 @@ def analytics_summary(db: Annotated[Session, Depends(get_db)]) -> dict:
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
     return {"summary": summary, "comparison": comparison, "map_stats": map_stats}
+
+
+@router.get("/analytics/aim")
+def analytics_aim_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
+    matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
+    return get_aim_profile(matches)
 
 
 @router.get("/recommendations/active")

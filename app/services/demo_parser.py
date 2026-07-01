@@ -197,6 +197,9 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "file": str(path),
         "player": player,
         "match": match,
+        "aim_summary": stats["aim_summary"],
+        "weapon_breakdown": stats["weapon_breakdown"],
+        "aim_data_gaps": _aim_data_gaps(),
         "header": _jsonable(header),
         "event_counts": event_counts,
         "metric_confidence": metric_confidence,
@@ -336,7 +339,7 @@ def _available_players(player_info, deaths, hurts) -> list[dict[str, Any]]:
     return sorted(by_key.values(), key=lambda item: item.get("activity", 0), reverse=True)
 
 
-def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, int | float | None]:
+def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, Any]:
     player_name = player.get("name")
     player_steamid = player.get("steamid")
     kills = deaths_count = assists = headshots = flash_assists = 0
@@ -344,10 +347,13 @@ def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, int
     round_kill = defaultdict(bool)
     round_death = defaultdict(bool)
     round_assist = defaultdict(bool)
+    kills_by_round: Counter[Any] = Counter()
     first_death_by_round: dict[Any, dict[str, Any]] = {}
+    weapon_breakdown: dict[str, dict[str, Any]] = {}
 
     for row in _records(deaths):
         round_id = _round_id(row)
+        weapon = _weapon(row)
         attacker_match = _matches_player(
             row,
             player_name,
@@ -363,12 +369,16 @@ def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, int
         )
         if attacker_match and not victim_match:
             kills += 1
+            kills_by_round[round_id] += 1
             round_kill[round_id] = True
+            weapon_breakdown.setdefault(weapon, _empty_weapon(weapon))["kills"] += 1
             if bool(row.get("headshot")):
                 headshots += 1
+                weapon_breakdown.setdefault(weapon, _empty_weapon(weapon))["headshots"] += 1
         if victim_match:
             deaths_count += 1
             round_death[round_id] = True
+            weapon_breakdown.setdefault(weapon, _empty_weapon(weapon))["deaths"] += 1
         if assister_match:
             assists += 1
             round_assist[round_id] = True
@@ -388,7 +398,8 @@ def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, int
             continue
         amount = int(float(row.get("dmg_health") or row.get("health_damage") or row.get("damage") or 0))
         damage += max(0, amount)
-        weapon = str(row.get("weapon") or row.get("weapon_name") or "").lower()
+        weapon = _weapon(row)
+        weapon_breakdown.setdefault(weapon, _empty_weapon(weapon))["damage"] += max(0, amount)
         if any(part in weapon for part in ("hegrenade", "inferno", "molotov", "incgrenade", "flashbang", "smoke")):
             utility_damage += max(0, amount)
         if "flash" in weapon:
@@ -401,6 +412,11 @@ def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, int
         1 for round_id in rounds if round_kill[round_id] or round_assist[round_id] or not round_death[round_id]
     )
     kast = round(kast_rounds / len(rounds) * 100, 2) if rounds else None
+    multi_kill_rounds = sum(1 for count in kills_by_round.values() if count >= 2)
+    for weapon_stats in weapon_breakdown.values():
+        weapon_stats["headshot_percent"] = (
+            round(weapon_stats["headshots"] / weapon_stats["kills"] * 100, 2) if weapon_stats["kills"] else None
+        )
     return {
         "kills": kills,
         "deaths": deaths_count,
@@ -413,7 +429,34 @@ def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, int
         "entry_kills": entry_kills,
         "entry_deaths": entry_deaths,
         "kast": kast,
+        "aim_summary": {
+            "damage_per_death": round(damage / deaths_count, 2) if deaths_count else damage,
+            "opening_duel_success": round(entry_kills / (entry_kills + entry_deaths) * 100, 2)
+            if entry_kills + entry_deaths
+            else None,
+            "multi_kill_rounds": multi_kill_rounds,
+        },
+        "weapon_breakdown": weapon_breakdown,
     }
+
+
+def _weapon(row: dict[str, Any]) -> str:
+    weapon = str(row.get("weapon") or row.get("weapon_name") or row.get("attacker_weapon") or "unknown").lower()
+    return weapon or "unknown"
+
+
+def _empty_weapon(weapon: str) -> dict[str, Any]:
+    return {"weapon": weapon, "kills": 0, "headshots": 0, "deaths": 0, "damage": 0, "headshot_percent": None}
+
+
+def _aim_data_gaps() -> list[str]:
+    return [
+        "accuracy requires reliable weapon_fire and hit correlation",
+        "first_bullet_accuracy requires shot timeline",
+        "spray_control requires bullet trajectory data",
+        "ttk requires precise damage/death timing",
+        "crosshair_placement requires view angles and position timeline",
+    ]
 
 
 def _score_for_player(

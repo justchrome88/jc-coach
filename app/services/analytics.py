@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from app.db.models import Match
+from app.services.aim_stats import match_aim_profile
 
 KEY_METRICS = ("winrate", "kd", "adr", "kast", "rating", "entry_diff", "utility_damage", "flash_assists", "deaths")
 
@@ -303,6 +304,7 @@ def match_detail(match: Match) -> dict[str, Any]:
         "source_label": (match.source or "unknown").upper(),
         "has_demo": bool(match.demo_file),
         "parser_evidence": parser_evidence,
+        "aim_profile": match_aim_profile(match),
         "combat": {
             "kills": match.kills,
             "deaths": match.deaths,

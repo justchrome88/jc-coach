@@ -100,6 +100,21 @@
   </div>
 </section>
 
+<section class="panel">
+  <div class="panel-head">
+    <h2>Aim stats</h2>
+    <span>{{ aim_profile.confidence }}</span>
+  </div>
+  <p>{{ aim_profile.interpretation }}</p>
+  <div class="stat-grid">
+    <div><strong>{{ aim_profile.averages.adr or "n/a" }}</strong><span>ADR</span></div>
+    <div><strong>{{ aim_profile.averages.kd or "n/a" }}</strong><span>K/D</span></div>
+    <div><strong>{{ aim_profile.averages.headshot_percent or "n/a" }}%</strong><span>HS%</span></div>
+    <div><strong>{{ aim_profile.averages.opening_duel_success or "n/a" }}%</strong><span>Opening duel success</span></div>
+  </div>
+  <p class="muted">Data gaps: {{ aim_profile.data_gaps|join("; ") }}</p>
+</section>
+
 <section class="layout-two">
   <div class="panel focus">
     <div class="panel-head">

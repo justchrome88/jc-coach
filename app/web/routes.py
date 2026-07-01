@@ -24,6 +24,7 @@ from app.services.ai_coach import (
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
+from app.services.aim_stats import get_aim_profile
 from app.services.analytics import (
     chart_series,
     compare_periods,
@@ -170,6 +171,7 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
     dashboard_status = get_dashboard_status(matches)
+    aim_profile = get_aim_profile(matches)
     recommendation_progress = get_active_recommendation_progress(db)
     all_recommendation_progress = get_all_recommendation_progress(db)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
@@ -183,6 +185,7 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
             "comparison": comparison,
             "map_stats": map_stats,
             "dashboard_status": dashboard_status,
+            "aim_profile": aim_profile,
             "recommendation_progress": recommendation_progress,
             "all_recommendation_progress": all_recommendation_progress,
             "evaluations_by_match_id": evaluations_by_match_id,
@@ -218,6 +221,7 @@ def stats_page(
     summary = get_summary(selected_matches)
     comparison = compare_periods(selected_matches)
     dashboard_status = get_dashboard_status(selected_matches)
+    aim_profile = get_aim_profile(selected_matches)
     map_stats = get_map_stats(selected_matches)
     recent_matches = list(reversed(selected_matches[-12:]))
     return templates.TemplateResponse(
@@ -228,6 +232,7 @@ def stats_page(
             "summary": summary,
             "comparison": comparison,
             "dashboard_status": dashboard_status,
+            "aim_profile": aim_profile,
             "map_stats": map_stats,
             "recent_matches": recent_matches,
             "chart_data": chart_series(selected_matches),
@@ -263,6 +268,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
     ai_handoff = latest_ai_handoff()
     ai_report = latest_ai_coach_report(db)
     ai_health = ai_provider_health()
+    aim_profile = get_aim_profile(matches)
     ai_report_history = [serialize_ai_coach_report(report) for report in list_ai_coach_reports(db, limit=5)]
     recommendation_history = list_recommendation_history(db, limit=20)
     recommendation_categories = recommendation_category_summary(db)
@@ -284,6 +290,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
             "ai_report": ai_report,
             "ai_report_history": ai_report_history,
             "ai_health": ai_health,
+            "aim_profile": aim_profile,
             "recommendation_history": recommendation_history,
             "recommendation_categories": recommendation_categories,
         },

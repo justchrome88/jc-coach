@@ -101,6 +101,34 @@
   </div>
 </section>
 
+<section class="panel">
+  <div class="panel-head">
+    <h2>Aim profile</h2>
+    <span>match-level</span>
+  </div>
+  <div class="stat-grid">
+    <div><strong>{{ detail.aim_profile.adr or "n/a" }}</strong><span>ADR</span></div>
+    <div><strong>{{ detail.aim_profile.headshot_percent or "n/a" }}%</strong><span>HS%</span></div>
+    <div><strong>{{ detail.aim_profile.damage_per_death or "n/a" }}</strong><span>Damage per death</span></div>
+    <div><strong>{{ detail.aim_profile.opening_duel_success or "n/a" }}%</strong><span>Opening duel success</span></div>
+  </div>
+  <table>
+    <thead><tr><th>Оружие</th><th>Kills</th><th>Damage</th><th>HS%</th></tr></thead>
+    <tbody>
+    {% for weapon in detail.aim_profile.top_weapons %}
+      <tr>
+        <td>{{ weapon.weapon }}</td>
+        <td>{{ weapon.kills }}</td>
+        <td>{{ weapon.damage }}</td>
+        <td>{{ weapon.headshot_percent if weapon.headshot_percent is not none else "n/a" }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">Weapon breakdown по этому матчу недоступен.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
 {% if detail.parser_evidence %}
 <section class="panel">
   <div class="panel-head">

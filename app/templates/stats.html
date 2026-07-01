@@ -115,6 +115,36 @@
   </div>
 </section>
 
+<section class="panel">
+  <div class="panel-head">
+    <h2>Aim profile</h2>
+    <span>{{ aim_profile.confidence }}</span>
+  </div>
+  <p>{{ aim_profile.interpretation }}</p>
+  <div class="stat-grid">
+    <div><strong>{{ aim_profile.averages.adr or "n/a" }}</strong><span>ADR</span></div>
+    <div><strong>{{ aim_profile.averages.headshot_percent or "n/a" }}%</strong><span>HS%</span></div>
+    <div><strong>{{ aim_profile.averages.opening_duel_success or "n/a" }}%</strong><span>Opening duel success</span></div>
+    <div><strong>{{ aim_profile.averages.multi_kill_rounds }}</strong><span>Multi-kill rounds</span></div>
+  </div>
+  <table>
+    <thead><tr><th>Оружие</th><th>Kills</th><th>Damage</th><th>HS%</th><th>Matches</th></tr></thead>
+    <tbody>
+    {% for weapon in aim_profile.top_weapons %}
+      <tr>
+        <td>{{ weapon.weapon }}</td>
+        <td>{{ weapon.kills }}</td>
+        <td>{{ weapon.damage }}</td>
+        <td>{{ weapon.headshot_percent if weapon.headshot_percent is not none else "n/a" }}</td>
+        <td>{{ weapon.matches }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5">Weapon breakdown появится после DEM imports с weapon fields.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
 <section class="layout-two">
   <div class="panel">
     <div class="panel-head">

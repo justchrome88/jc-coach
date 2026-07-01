@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.models import CoachReport, Match
+from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
 from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
@@ -229,6 +230,7 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
         "ai_role": "AI coach over structured CS2 analytics, not raw demo parser",
         "summary": summary,
         "dashboard_status": get_dashboard_status(matches),
+        "aim_profile": get_aim_profile(matches),
         "period_comparison": comparison,
         "map_stats": map_stats,
         "detected_weaknesses": weaknesses,
