@@ -70,13 +70,15 @@ def import_demo_file(
         )
     )
     if existing:
+        if stored_path.exists() and str(stored_path) != existing.demo_file:
+            stored_path.unlink()
         return {
             "imported": 0,
             "skipped_duplicates": 1,
             "errors": 0,
             "match_id": existing.id,
             "player": parsed["player"],
-            "stored_path": str(stored_path),
+            "stored_path": existing.demo_file,
             "message": "Demo already imported.",
         }
 
@@ -119,6 +121,8 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         player_info = _safe_call(parser.parse_player_info, default=[])
         death_events = _safe_event(parser, "player_death")
         hurt_events = _safe_event(parser, "player_hurt")
+        round_end_events = _safe_event(parser, "round_end")
+        player_team_events = _safe_event(parser, "player_team")
     except BaseException as exc:
         if isinstance(exc, (KeyboardInterrupt, SystemExit)):
             raise
@@ -129,10 +133,11 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
 
     player = _select_player(death_events, hurt_events, player_info, player_identifier)
     stats = _player_stats(player, death_events, hurt_events)
+    score = _score_for_player(player, player_info, player_team_events, round_end_events)
     rounds_count = _rounds_count(death_events, hurt_events)
     adr = round(stats["damage"] / rounds_count, 2) if rounds_count else None
     map_name = _header_value(header, ("map_name", "map", "mapName"))
-    played_at = _header_datetime(header)
+    played_at = _header_datetime(header) or datetime.fromtimestamp(path.stat().st_mtime, UTC).replace(tzinfo=None)
     external_id = _demo_external_id(path, player, stats)
     match = {
         "source": "demo",
@@ -140,9 +145,9 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "played_at": played_at,
         "map_name": map_name,
         "mode": "demo",
-        "result": None,
-        "rounds_for": None,
-        "rounds_against": None,
+        "result": score["result"],
+        "rounds_for": score["rounds_for"],
+        "rounds_against": score["rounds_against"],
         "kills": stats["kills"],
         "deaths": stats["deaths"],
         "assists": stats["assists"],
@@ -207,7 +212,7 @@ def _store_demo(source_path: Path, original_filename: str | None) -> Path:
     if not safe_name.lower().endswith(".dem"):
         safe_name = f"{safe_name}{suffix}"
     destination = Path(settings.upload_dir) / f"{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}_{digest[:10]}_{safe_name}"
-    shutil.copyfile(source_path, destination)
+    shutil.copy2(source_path, destination)
     return destination
 
 
@@ -223,6 +228,9 @@ def _select_player(deaths, hurts, player_info, identifier: str | None) -> dict[s
             if configured == name or configured == steamid or configured in name:
                 return candidate
         raise DemoParseError(f"Player `{identifier}` was not found in demo. Available: {candidates[:10]}")
+    jc_candidate = next((candidate for candidate in candidates if (candidate.get("name") or "").lower() == "jc"), None)
+    if jc_candidate:
+        return jc_candidate
     return max(candidates, key=lambda item: item.get("activity", 0) or 0)
 
 
@@ -334,6 +342,66 @@ def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, int
         "entry_deaths": entry_deaths,
         "kast": kast,
     }
+
+
+def _score_for_player(
+    player: dict[str, str | None],
+    player_info,
+    player_team_events,
+    round_end_events,
+) -> dict[str, Any]:
+    team_by_round = _player_team_by_round(player, player_info, player_team_events)
+    rounds_for = 0
+    rounds_against = 0
+    for row in _records(round_end_events):
+        winner = row.get("winner")
+        if winner not in ("T", "CT"):
+            continue
+        round_number = int(row.get("round") or row.get("total_rounds_played") or 0)
+        player_side = team_by_round.get(round_number)
+        if player_side is None:
+            continue
+        if player_side == winner:
+            rounds_for += 1
+        else:
+            rounds_against += 1
+    if rounds_for == rounds_against == 0:
+        return {"rounds_for": None, "rounds_against": None, "result": None}
+    result = "win" if rounds_for > rounds_against else "loss" if rounds_for < rounds_against else "draw"
+    return {"rounds_for": rounds_for, "rounds_against": rounds_against, "result": result}
+
+
+def _player_team_by_round(player: dict[str, str | None], player_info, player_team_events) -> dict[int, str]:
+    player_name = player.get("name")
+    player_steamid = player.get("steamid")
+    switches = [
+        row
+        for row in _records(player_team_events)
+        if _matches_player(row, player_name, player_steamid, ("user_name", "user_steamid", "user"))
+    ]
+    rounds = range(1, 80)
+    if switches:
+        first_switch = min(switches, key=lambda row: int(row.get("total_rounds_played") or 0))
+        switch_round = int(first_switch.get("total_rounds_played") or 0)
+        old_team = _team_number_to_side(first_switch.get("oldteam"))
+        new_team = _team_number_to_side(first_switch.get("team"))
+        return {round_number: old_team if round_number <= switch_round else new_team for round_number in rounds}
+
+    team_number = None
+    for row in _records(player_info):
+        if _matches_player(row, player_name, player_steamid, ("name", "steamid")):
+            team_number = row.get("team_number")
+            break
+    side = _team_number_to_side(team_number)
+    return {round_number: side for round_number in rounds}
+
+
+def _team_number_to_side(team_number: Any) -> str:
+    try:
+        number = int(team_number)
+    except (TypeError, ValueError):
+        return "T"
+    return "T" if number == 2 else "CT" if number == 3 else "T"
 
 
 def _matches_player(row: dict[str, Any], player_name: str | None, steamid: str | None, fields: tuple[str, ...]) -> bool:

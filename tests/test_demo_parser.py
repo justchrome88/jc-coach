@@ -20,7 +20,17 @@ def test_parse_demo_with_fake_demoparser(monkeypatch, tmp_path):
     assert parsed["match"]["deaths"] == 1
     assert parsed["match"]["entry_kills"] == 1
     assert parsed["match"]["entry_deaths"] == 1
-    assert parsed["match"]["adr"] == 50
+    assert parsed["match"]["adr"] == 33.33
+
+
+def test_parse_demo_prefers_jc_player_by_default(monkeypatch, tmp_path):
+    demo_path = tmp_path / "match.dem"
+    demo_path.write_bytes(b"HL2DEMO")
+    _install_fake_demoparser(monkeypatch)
+
+    parsed = parse_demo(demo_path)
+
+    assert parsed["player"]["name"] == "JC"
 
 
 def test_import_demo_file_persists_match(monkeypatch, tmp_path, db):
@@ -49,7 +59,11 @@ def _install_fake_demoparser(monkeypatch):
             return {"map_name": "de_mirage"}
 
         def parse_player_info(self):
-            return [{"name": "me", "steamid": "123"}, {"name": "enemy", "steamid": "456"}]
+            return [
+                {"name": "me", "steamid": "123"},
+                {"name": "JC", "steamid": "789"},
+                {"name": "enemy", "steamid": "456"},
+            ]
 
         def parse_event(self, event_name, **kwargs):
             if event_name == "player_death":
@@ -66,6 +80,13 @@ def _install_fake_demoparser(monkeypatch):
                         "tick": 200,
                         "attacker_name": "enemy",
                         "user_name": "me",
+                        "headshot": False,
+                    },
+                    {
+                        "total_rounds_played": 2,
+                        "tick": 300,
+                        "attacker_name": "JC",
+                        "user_name": "enemy",
                         "headshot": False,
                     },
                 ]
