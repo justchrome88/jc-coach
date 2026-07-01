@@ -163,13 +163,40 @@ Steam интеграция начата как scaffold:
 - `SteamAccount`;
 - `ImportJob`;
 - страница `/settings/imports`;
-- share-code job queue.
+- share-code job queue;
+- инструкция по Game Authentication Code;
+- сохранение Steam match auth code;
+- ручная постановка `match_history_sync` jobs в очередь.
 
 Важно:
 
 - Steam пароль не вводится и не хранится.
+- Steam OpenID возвращает SteamID, а доступ к истории матчей требует отдельный Game Authentication Code из Steam Support / CS2.
 - FACEIT пока пропущен в реализации, но остается обязательным будущим источником.
-- Share-code jobs пока только ставятся в очередь. Реальный worker загрузки demo/sync будет отдельным этапом.
+- Share-code и match-history jobs пока только ставятся в очередь. Реальный worker загрузки demo/sync будет отдельным этапом.
+
+Полезные ссылки для настройки:
+
+- Steam Support CS2: `https://help.steampowered.com/en/wizard/HelpWithGame/?appid=730`
+- Valve Match History docs: `https://developer.valvesoftware.com/wiki/Counter-Strike%3A_Global_Offensive_Access_Match_History`
+
+## UI language
+
+Интерфейс русскоязычный по умолчанию. Добавлен curated language switch `RU / EN`:
+
+- язык хранится в cookie `locale`;
+- текущие ключи переводят навигацию и новые системные страницы;
+- это не автоперевод всего текста, а контролируемый словарь в `app/services/i18n.py`, чтобы позднее переводить продукт аккуратно по разделам.
+
+## Общая статистика
+
+Отдельная вкладка `/stats` показывает текущие показатели за выбранный диапазон:
+
+- последние N матчей;
+- диапазон дат;
+- все матчи.
+
+На странице есть core metrics, динамика, сравнение периодов, качество данных, ADR profile, разбивка по источникам, карты и последние матчи. Dashboard `/` остается быстрым обзором, а `/stats` становится рабочей аналитической вкладкой.
 
 ## Поддерживаемые CSV поля
 
@@ -190,6 +217,7 @@ source,external_match_id,demo_file,mode,side_t_rounds_won,side_t_rounds_lost,sid
 ## API
 
 - `GET /health`
+- `GET /stats`
 - `GET /api/matches`
 - `POST /api/import/csv`
 - `POST /api/import/json`

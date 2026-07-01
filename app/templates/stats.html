@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-head">
+  <div>
+    <h1>{{ t("stats.title") }}</h1>
+    <p>{{ t("stats.subtitle") }}</p>
+  </div>
+  <div class="actions">
+    <a class="button ghost" href="/matches">История матчей</a>
+    <a class="button" href="/upload">Добавить матч</a>
+  </div>
+</section>
+
+<section class="panel stats-filter-panel">
+  <div class="panel-head">
+    <h2>{{ t("stats.range") }}</h2>
+    <span>{{ summary.matches_count }} из {{ total_matches }}</span>
+  </div>
+  <form action="/stats" method="get" class="filters stats-filters">
+    <label>
+      Режим
+      <select name="range_type">
+        <option value="last" {{ "selected" if filters.range_type == "last" else "" }}>{{ t("stats.last_matches") }}</option>
+        <option value="dates" {{ "selected" if filters.range_type == "dates" else "" }}>{{ t("stats.date_range") }}</option>
+        <option value="all" {{ "selected" if filters.range_type == "all" else "" }}>{{ t("stats.all") }}</option>
+      </select>
+    </label>
+    <label>
+      Количество игр
+      <input name="matches_count" type="number" min="1" max="500" value="{{ filters.matches_count }}">
+    </label>
+    <label>
+      С даты
+      <input name="date_from" type="date" value="{{ filters.date_from }}">
+    </label>
+    <label>
+      По дату
+      <input name="date_to" type="date" value="{{ filters.date_to }}">
+    </label>
+    <button class="button" type="submit">{{ t("stats.apply") }}</button>
+    <a class="button ghost" href="/stats">{{ t("stats.reset") }}</a>
+  </form>
+</section>
+
+<section class="metric-grid">
+  <div class="metric"><span>Матчи</span><strong>{{ summary.matches_count }}</strong></div>
+  <div class="metric"><span>Winrate</span><strong>{{ summary.winrate or 0 }}%</strong></div>
+  <div class="metric"><span>K/D</span><strong>{{ summary.avg_kd or "n/a" }}</strong></div>
+  <div class="metric"><span>ADR</span><strong>{{ summary.avg_adr or "n/a" }}</strong></div>
+  <div class="metric"><span>KAST</span><strong>{{ summary.avg_kast or "n/a" }}%</strong></div>
+  <div class="metric"><span>Rating</span><strong>{{ summary.avg_rating or "n/a" }}</strong></div>
+  <div class="metric"><span>Форма</span><strong>{{ summary.form_score or "n/a" }}</strong></div>
+  <div class="metric"><span>Entry diff</span><strong>{{ summary.entry_diff }}</strong></div>
+</section>
+
+<section class="layout-two">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>{{ t("stats.trend") }}</h2>
+      <span>до 30 матчей в графике</span>
+    </div>
+    <canvas id="trendChart" height="120"></canvas>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Текущая форма</h2>
+      <span>{{ comparison.trend }}</span>
+    </div>
+    <div class="mini-metrics stacked">
+      <div><span>Раунды</span><strong>{{ summary.rounds_for }}:{{ summary.rounds_against }}</strong></div>
+      <div><span>Разница раундов</span><strong>{{ summary.round_diff }}</strong></div>
+      <div><span>Entry kills / deaths</span><strong>{{ summary.entry_kills }} / {{ summary.entry_deaths }}</strong></div>
+      <div><span>Utility damage</span><strong>{{ summary.avg_utility_damage or "n/a" }}</strong></div>
+      <div><span>Flash assists</span><strong>{{ summary.avg_flash_assists or "n/a" }}</strong></div>
+      <div><span>HS%</span><strong>{{ summary.avg_headshot_percent or "n/a" }}</strong></div>
+    </div>
+  </div>
+</section>
+
+<section class="layout-three">
+  <div class="panel stat-card">
+    <div class="panel-head">
+      <h2>Качество данных</h2>
+      <span>{{ dashboard_status.data_quality.label }}</span>
+    </div>
+    <div class="coverage-grid">
+      {% for name, value in dashboard_status.data_quality.coverage.items() %}
+      <div><span>{{ name }}</span><strong>{{ value }}%</strong></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="panel stat-card">
+    <div class="panel-head">
+      <h2>ADR</h2>
+      <span>{{ dashboard_status.adr_profile.confidence }}</span>
+    </div>
+    <p>{{ dashboard_status.adr_profile.interpretation }}</p>
+    <div class="mini-metrics">
+      <div><span>Лучший матч</span><strong>{{ dashboard_status.adr_profile.best_match.adr if dashboard_status.adr_profile.best_match else "n/a" }}</strong></div>
+      <div><span>Худший матч</span><strong>{{ dashboard_status.adr_profile.worst_match.adr if dashboard_status.adr_profile.worst_match else "n/a" }}</strong></div>
+    </div>
+  </div>
+  <div class="panel stat-card">
+    <div class="panel-head">
+      <h2>{{ t("stats.sources") }}</h2>
+      <span>CSV / JSON / DEM / Steam</span>
+    </div>
+    <div class="source-list">
+      {% for source in dashboard_status.source_breakdown %}
+      <div><strong>{{ source.source }}</strong><span>{{ source.matches_count }} матч. · WR {{ source.winrate or 0 }}% · ADR {{ source.avg_adr or "n/a" }} · KAST {{ source.avg_kast or "n/a" }}</span></div>
+      {% else %}
+      <p>Источники появятся после импорта матчей.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="layout-two">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>{{ t("stats.period") }}</h2>
+      <span>последний блок vs предыдущий</span>
+    </div>
+    <table>
+      <thead><tr><th>Метрика</th><th>Сейчас</th><th>Было</th><th>Изменение</th></tr></thead>
+      <tbody>
+        {% for metric, item in comparison.deltas.items() %}
+        <tr>
+          <td>{{ metric }}</td>
+          <td>{{ item.current if item.current is not none else "n/a" }}</td>
+          <td>{{ item.previous if item.previous is not none else "n/a" }}</td>
+          <td class="{{ 'bad' if item.delta is not none and ((metric == 'deaths' and item.delta > 0) or (metric != 'deaths' and item.delta < 0)) else 'good' }}">{{ item.delta if item.delta is not none else "n/a" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <h2>{{ t("stats.maps") }}</h2>
+      <span>по выбранному диапазону</span>
+    </div>
+    <table>
+      <thead><tr><th>Карта</th><th>Матчи</th><th>WR</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Entry</th></tr></thead>
+      <tbody>
+        {% for item in map_stats %}
+        <tr>
+          <td>{{ item.map_name }}</td>
+          <td>{{ item.matches_count }}</td>
+          <td>{{ item.winrate or 0 }}%</td>
+          <td>{{ item.avg_kd or "n/a" }}</td>
+          <td>{{ item.avg_adr or "n/a" }}</td>
+          <td>{{ item.avg_kast or "n/a" }}</td>
+          <td>{{ item.entry_diff }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">Импортируйте матчи, чтобы увидеть статистику по картам.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>{{ t("stats.recent") }}</h2>
+    <a href="/matches">Все матчи</a>
+  </div>
+  <table>
+    <thead><tr><th>Дата</th><th>Источник</th><th>Карта</th><th>Результат</th><th>Счёт</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th></th></tr></thead>
+    <tbody>
+      {% for match in recent_matches %}
+      <tr>
+        <td>{{ match.played_at.strftime("%Y-%m-%d") if match.played_at else "n/a" }}</td>
+        <td><span class="source-badge">{{ match.source }}</span></td>
+        <td>{{ match.map_name or "n/a" }}</td>
+        <td><span class="pill {{ match.result }}">{{ match.result or "n/a" }}</span></td>
+        <td>{{ match.rounds_for or 0 }}:{{ match.rounds_against or 0 }}</td>
+        <td>{{ match.kd or "n/a" }}</td>
+        <td>{{ match.adr or "n/a" }}</td>
+        <td>{{ match.kast or "n/a" }}</td>
+        <td>{{ match.rating or "n/a" }}</td>
+        <td><a class="table-link" href="/matches/{{ match.id }}">Детали</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="10">Матчей пока нет. Начните с импорта CSV, JSON или DEM.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.coachChartData = {{ chart_data | tojson }};
+</script>
+<script src="{{ url_for('static', path='charts.js') }}"></script>
+{% endblock %}

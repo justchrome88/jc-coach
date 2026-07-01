@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
@@ -31,6 +32,7 @@ from app.services.analytics import (
 )
 from app.services.coach_rules import build_coach_focus
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
+from app.services.i18n import normalize_locale
 from app.services.importer import import_csv, import_json
 from app.services.mistake_detection import (
     category_scorecard,
@@ -51,7 +53,9 @@ from app.services.steam_integration import (
     list_import_jobs,
     list_steam_accounts,
     parse_share_code_input,
+    queue_match_history_sync,
     steam_login_url,
+    update_match_auth_code,
     validate_openid_callback,
 )
 
@@ -83,6 +87,58 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
             "evaluations_by_match_id": evaluations_by_match_id,
             "recent_matches": recent_matches,
             "chart_data": chart_series(matches),
+        },
+    )
+
+
+@router.get("/dashboard")
+def dashboard_alias():
+    return RedirectResponse("/", status_code=303)
+
+
+@router.get("/language/{locale}")
+def set_language(request: Request, locale: str):
+    target_locale = normalize_locale(locale)
+    next_url = request.headers.get("referer") or "/"
+    response = RedirectResponse(next_url, status_code=303)
+    response.set_cookie("locale", target_locale, max_age=60 * 60 * 24 * 365, samesite="lax")
+    return response
+
+
+@router.get("/stats")
+def stats_page(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    range_type: str = "last",
+    matches_count: int = 30,
+    date_from: str | None = None,
+    date_to: str | None = None,
+):
+    all_matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
+    selected_matches = _select_stats_matches(all_matches, range_type, matches_count, date_from, date_to)
+    summary = get_summary(selected_matches)
+    comparison = compare_periods(selected_matches)
+    dashboard_status = get_dashboard_status(selected_matches)
+    map_stats = get_map_stats(selected_matches)
+    recent_matches = list(reversed(selected_matches[-12:]))
+    return templates.TemplateResponse(
+        request=request,
+        name="stats.html",
+        context={
+            "request": request,
+            "summary": summary,
+            "comparison": comparison,
+            "dashboard_status": dashboard_status,
+            "map_stats": map_stats,
+            "recent_matches": recent_matches,
+            "chart_data": chart_series(selected_matches),
+            "filters": {
+                "range_type": range_type if range_type in {"last", "dates", "all"} else "last",
+                "matches_count": min(max(matches_count, 1), 500),
+                "date_from": date_from or "",
+                "date_to": date_to or "",
+            },
+            "total_matches": len(all_matches),
         },
     )
 
@@ -161,10 +217,10 @@ def steam_auth_start():
 def steam_auth_callback(request: Request, db: Annotated[Session, Depends(get_db)]):
     steam_id, error = validate_openid_callback(dict(request.query_params))
     if error:
-        return RedirectResponse(f"/settings/imports?message={error}", status_code=303)
+        return RedirectResponse(f"/settings/imports?message={quote(error)}", status_code=303)
     link_steam_account(db, steam_id)
     create_steam_import_job(db, None, "steam_openid_linked", {"steam_id": steam_id})
-    return RedirectResponse("/settings/imports?message=Steam account linked.", status_code=303)
+    return RedirectResponse("/settings/imports?message=Steam%20account%20linked.", status_code=303)
 
 
 @router.post("/settings/imports/share-code")
@@ -172,9 +228,31 @@ def create_share_code_job(db: Annotated[Session, Depends(get_db)], share_code: A
     try:
         payload = parse_share_code_input(share_code)
     except ValueError as exc:
-        return RedirectResponse(f"/settings/imports?message={exc}", status_code=303)
+        return RedirectResponse(f"/settings/imports?message={quote(str(exc))}", status_code=303)
     create_steam_import_job(db, None, "share_code_import", payload)
-    return RedirectResponse("/settings/imports?message=Share-code import job queued.", status_code=303)
+    return RedirectResponse("/settings/imports?message=Share-code%20import%20job%20queued.", status_code=303)
+
+
+@router.post("/settings/imports/steam/{steam_account_id}/auth-code")
+def save_steam_auth_code(
+    db: Annotated[Session, Depends(get_db)],
+    steam_account_id: int,
+    match_auth_code: Annotated[str, Form()],
+):
+    try:
+        update_match_auth_code(db, steam_account_id, match_auth_code)
+    except ValueError as exc:
+        return RedirectResponse(f"/settings/imports?message={quote(str(exc))}", status_code=303)
+    return RedirectResponse("/settings/imports?message=Steam%20match%20history%20sync%20queued.", status_code=303)
+
+
+@router.post("/settings/imports/steam/{steam_account_id}/sync")
+def queue_steam_sync(db: Annotated[Session, Depends(get_db)], steam_account_id: int):
+    try:
+        queue_match_history_sync(db, steam_account_id)
+    except ValueError as exc:
+        return RedirectResponse(f"/settings/imports?message={quote(str(exc))}", status_code=303)
+    return RedirectResponse("/settings/imports?message=Steam%20sync%20queued.", status_code=303)
 
 
 @router.post("/upload")
@@ -398,6 +476,30 @@ def update_recommendation_status_page(
 
 def _parse_date(value: str) -> datetime:
     return datetime.strptime(value, "%Y-%m-%d")
+
+
+def _select_stats_matches(
+    matches: list[Match],
+    range_type: str,
+    matches_count: int,
+    date_from: str | None,
+    date_to: str | None,
+) -> list[Match]:
+    sorted_matches = sorted(
+        matches,
+        key=lambda match: (match.played_at is None, match.played_at or match.created_at, match.id or 0),
+    )
+    if range_type == "all":
+        return sorted_matches
+    if range_type == "dates":
+        selected = sorted_matches
+        if date_from:
+            selected = [match for match in selected if match.played_at and match.played_at >= _parse_date(date_from)]
+        if date_to:
+            selected = [match for match in selected if match.played_at and match.played_at <= _parse_date(date_to)]
+        return selected
+    safe_count = min(max(matches_count, 1), 500)
+    return sorted_matches[-safe_count:]
 
 
 def _sort_matches_for_page(matches: list[Match], sort: str, direction: str) -> list[Match]:

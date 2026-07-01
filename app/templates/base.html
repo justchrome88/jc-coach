@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="{{ locale or 'ru' }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,12 +11,17 @@
     <header class="topbar">
       <a class="brand" href="/">CS2 Personal Coach</a>
       <nav class="nav">
-        <a href="/">Статистика</a>
-        <a href="/coach">Тренер</a>
-        <a href="/matches">Матчи</a>
-        <a href="/upload">Импорт</a>
-        <a href="/report">Отчёт</a>
-        <a href="/settings/imports">Аккаунты</a>
+        <a href="/">{{ t("nav.dashboard") }}</a>
+        <a href="/stats">{{ t("nav.stats") }}</a>
+        <a href="/coach">{{ t("nav.coach") }}</a>
+        <a href="/matches">{{ t("nav.matches") }}</a>
+        <a href="/upload">{{ t("nav.upload") }}</a>
+        <a href="/report">{{ t("nav.report") }}</a>
+        <a href="/settings/imports">{{ t("nav.accounts") }}</a>
+        <span class="language-switch" aria-label="Language">
+          <a class="{{ 'active' if locale == 'ru' else '' }}" href="/language/ru">{{ t("language.ru") }}</a>
+          <a class="{{ 'active' if locale == 'en' else '' }}" href="/language/en">{{ t("language.en") }}</a>
+        </span>
       </nav>
     </header>
     <main class="page">

@@ -84,6 +84,42 @@ def list_import_jobs(db: Session, limit: int = 20) -> list[ImportJob]:
     return list(db.scalars(stmt).all())
 
 
+def update_match_auth_code(db: Session, steam_account_id: int, match_auth_code: str) -> SteamAccount:
+    account = db.get(SteamAccount, steam_account_id)
+    if account is None:
+        raise ValueError("Steam account was not found.")
+    code = match_auth_code.strip()
+    if not code:
+        raise ValueError("Game Authentication Code is required.")
+    account.match_auth_code = code
+    account.sync_enabled = 1
+    db.commit()
+    db.refresh(account)
+    create_steam_import_job(
+        db,
+        account.id,
+        "match_history_sync",
+        {"steam_id": account.steam_id, "has_match_auth_code": True, "reason": "auth_code_saved"},
+    )
+    return account
+
+
+def queue_match_history_sync(db: Session, steam_account_id: int) -> ImportJob:
+    account = db.get(SteamAccount, steam_account_id)
+    if account is None:
+        raise ValueError("Steam account was not found.")
+    if not account.match_auth_code:
+        raise ValueError("Game Authentication Code is required before sync.")
+    account.sync_enabled = 1
+    db.commit()
+    return create_steam_import_job(
+        db,
+        account.id,
+        "match_history_sync",
+        {"steam_id": account.steam_id, "has_match_auth_code": True, "reason": "manual_queue"},
+    )
+
+
 def mark_job_failed(db: Session, job: ImportJob, message: str) -> ImportJob:
     job.status = "failed"
     job.error_message = message

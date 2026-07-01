@@ -21,6 +21,24 @@ def test_dashboard_renders():
     assert "Общая статистика" in response.text
 
 
+def test_stats_page_renders_with_filters():
+    with TestClient(app) as client:
+        response = client.get("/stats?range_type=last&matches_count=15")
+
+    assert response.status_code == 200
+    assert "Общая статистика" in response.text
+    assert "Количество игр" in response.text
+
+
+def test_language_switch_sets_locale_cookie():
+    with TestClient(app, follow_redirects=False) as client:
+        response = client.get("/language/en", headers={"referer": "/stats"})
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/stats"
+    assert "locale=en" in response.headers["set-cookie"]
+
+
 def test_coach_page_renders():
     with TestClient(app) as client:
         response = client.get("/coach")

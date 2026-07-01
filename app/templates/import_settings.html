@@ -2,11 +2,11 @@
 {% block content %}
 <section class="section-head">
   <div>
-    <h1>Аккаунты и автоимпорт</h1>
+    <h1>{{ t("steam.title") }}</h1>
     <p>Steam подключается через OpenID. Пароль Steam не вводится и не хранится. FACEIT держим в roadmap, но пока не подключаем.</p>
   </div>
   <div class="actions">
-    <a class="button" href="/auth/steam">Подключить Steam</a>
+    <a class="button" href="/auth/steam">{{ t("steam.connect") }}</a>
     <a class="button ghost" href="/upload">Ручной импорт</a>
   </div>
 </section>
@@ -15,6 +15,31 @@
 <div class="notice">{{ message }}</div>
 {% endif %}
 
+<section class="panel">
+  <div class="panel-head">
+    <h2>Как включить автоматическую подгрузку матчей Steam</h2>
+    <span>OpenID + Game Authentication Code</span>
+  </div>
+  <div class="steps">
+    <div>
+      <strong>1. Подключить Steam</strong>
+      <span>Кнопка выше отправит на официальный Steam OpenID. После возврата приложение получит только SteamID, без логина и пароля.</span>
+    </div>
+    <div>
+      <strong>2. Получить Game Authentication Code</strong>
+      <span>Открой Steam Support для CS2, найди раздел доступа к истории матчей / Game Authentication Code и создай код для Counter-Strike 2. Документация Valve описывает этот код как способ дать сервису доступ к истории матчей.</span>
+      <div class="link-row">
+        <a class="table-link" href="https://help.steampowered.com/en/wizard/HelpWithGame/?appid=730" target="_blank" rel="noreferrer">Steam Support CS2</a>
+        <a class="table-link" href="https://developer.valvesoftware.com/wiki/Counter-Strike%3A_Global_Offensive_Access_Match_History" target="_blank" rel="noreferrer">Valve Match History docs</a>
+      </div>
+    </div>
+    <div>
+      <strong>3. Вставить код здесь</strong>
+      <span>После сохранения мы включим sync и поставим задачу в очередь. Следующий слой воркера будет ходить в Steam match history, получать share codes и докачивать демки.</span>
+    </div>
+  </div>
+</section>
+
 <section class="layout-two">
   <div class="panel">
     <div class="panel-head">
@@ -22,7 +47,7 @@
       <span>{{ steam_accounts|length }}</span>
     </div>
     <table>
-      <thead><tr><th>SteamID</th><th>Имя</th><th>Sync</th><th>Последний sync</th><th>Auth code</th></tr></thead>
+      <thead><tr><th>SteamID</th><th>Имя</th><th>Sync</th><th>Последний sync</th><th>Auth code</th><th>Действия</th></tr></thead>
       <tbody>
         {% for account in steam_accounts %}
         <tr>
@@ -31,9 +56,23 @@
           <td>{{ "on" if account.sync_enabled else "off" }}</td>
           <td>{{ account.last_sync_at.strftime("%Y-%m-%d %H:%M") if account.last_sync_at else "never" }}</td>
           <td>{{ "set" if account.match_auth_code else "missing" }}</td>
+          <td>
+            <form action="/settings/imports/steam/{{ account.id }}/sync" method="post" class="inline-form">
+              <button class="button ghost compact" type="submit">Queue sync</button>
+            </form>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="6">
+            <form action="/settings/imports/steam/{{ account.id }}/auth-code" method="post" class="upload-form">
+              <label for="match_auth_code_{{ account.id }}">{{ t("steam.auth_code") }}</label>
+              <input id="match_auth_code_{{ account.id }}" name="match_auth_code" type="password" placeholder="Вставь код из Steam Support" autocomplete="off">
+              <button class="button" type="submit">Сохранить и включить sync</button>
+            </form>
+          </td>
         </tr>
         {% else %}
-        <tr><td colspan="5">Steam пока не подключен.</td></tr>
+        <tr><td colspan="6">Steam пока не подключен.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -49,7 +88,7 @@
       <input id="share_code" name="share_code" type="text" placeholder="CSGO-... или steam://...">
       <button class="button" type="submit">Создать import job</button>
     </form>
-    <p class="muted">Сейчас job только ставится в очередь. Реальная загрузка demo будет следующим этапом после проверки Steam flow.</p>
+    <p class="muted">Если Steam history ещё не подключён, можно вручную добавить share code из CS2: Watch / Your Matches. Сейчас job ставится в очередь, а реальная загрузка demo пойдёт через следующий слой Steam worker.</p>
   </div>
 </section>
 

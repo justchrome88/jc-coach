@@ -1,15 +1,30 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.api.routes import router as api_router
 from app.config import BASE_DIR, get_settings
 from app.db.session import init_db
+from app.services.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, normalize_locale, translate
 
-templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
+
+def _template_context(request: Request) -> dict[str, object]:
+    locale = normalize_locale(request.cookies.get("locale") or request.query_params.get("lang"))
+    return {
+        "locale": locale,
+        "supported_locales": SUPPORTED_LOCALES,
+        "default_locale": DEFAULT_LOCALE,
+        "t": lambda key: translate(locale, key),
+    }
+
+
+templates = Jinja2Templates(
+    directory=str(BASE_DIR / "app" / "templates"),
+    context_processors=[_template_context],
+)
 
 
 @asynccontextmanager

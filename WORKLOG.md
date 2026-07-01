@@ -273,3 +273,43 @@ Important behavior:
 
 - System-created category recommendations are not immediately recreated after being completed/archived.
 - New recommendation creation rules should later become explicit user actions.
+
+## Localized Stats And Steam Setup
+
+Implemented:
+
+- Curated locale service:
+  - default locale `ru`;
+  - supported locales `ru` and `en`;
+  - cookie-based language switch through `/language/{locale}`;
+  - translated navigation and new system labels without broad auto-translation.
+- Dedicated `/stats` page:
+  - last N matches;
+  - date range;
+  - all matches;
+  - core metrics;
+  - trend chart;
+  - period comparison;
+  - data quality;
+  - ADR profile;
+  - source breakdown;
+  - map table;
+  - recent match table.
+- Steam import settings improvements:
+  - Russian onboarding instructions;
+  - links to Steam Support CS2 and Valve Match History docs;
+  - per-account Game Authentication Code form;
+  - match auth code persistence;
+  - `match_history_sync` import job creation;
+  - manual queue sync button.
+
+Current limits:
+
+- Steam jobs are queued but not yet processed by a real worker.
+- Match history fetching and official demo download are the next implementation layer.
+- EN translation currently covers navigation and new system surfaces only; full product copy must be translated section by section.
+
+Verification:
+
+- `ruff check .`
+- `pytest` -> 46 passed, 1 Starlette/httpx deprecation warning.
