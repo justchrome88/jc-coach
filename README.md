@@ -7,6 +7,7 @@
 - FastAPI приложение с Jinja2 UI.
 - SQLite база через SQLAlchemy.
 - Импорт CSV/JSON матчей без падения на неполных колонках.
+- Прямая загрузка официальных CS2 `.dem` файлов через `demoparser2` с best-effort агрегацией игрока.
 - Дедупликация повторно загруженных матчей.
 - Dashboard с метриками, графиком Chart.js, формой последних матчей и Coach Focus.
 - Страница `/matches` с фильтрами по карте, результату и датам.
@@ -43,7 +44,7 @@ docker compose up --build
 
 Приложение будет доступно на http://127.0.0.1:8000/.
 
-## Как загрузить sample CSV
+## Как загрузить sample CSV/JSON/DEM
 
 Через UI:
 
@@ -63,6 +64,16 @@ JSON:
 ```bash
 curl -F "file=@data/sample_matches.json" http://127.0.0.1:8000/api/import/json
 ```
+
+Официальную демку CS2 можно загрузить напрямую:
+
+```bash
+curl -F "file=@/path/to/match.dem" \
+  -F "player_identifier=your_nickname_or_steamid" \
+  http://127.0.0.1:8000/api/import/demo
+```
+
+`player_identifier` опционален. Если его не указать, приложение выберет игрока с наибольшей активностью в kill/damage events. Для стабильного личного использования лучше задать `DEMO_PLAYER_IDENTIFIER` в `.env` или указывать поле при загрузке.
 
 ## Как сгенерировать отчёт
 
@@ -99,6 +110,7 @@ source,external_match_id,demo_file,mode,side_t_rounds_won,side_t_rounds_lost,sid
 - `GET /api/matches`
 - `POST /api/import/csv`
 - `POST /api/import/json`
+- `POST /api/import/demo`
 - `GET /api/analytics/summary`
 - `GET /api/recommendations/active`
 - `POST /api/reports/generate`

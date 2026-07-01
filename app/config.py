@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     upload_dir: Path = BASE_DIR / "data" / "uploads"
     reports_dir: Path = BASE_DIR / "data" / "reports"
     openai_api_key: str | None = None
+    demo_player_identifier: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

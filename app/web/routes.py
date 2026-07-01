@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -13,6 +15,7 @@ from app.db.session import get_db
 from app.main import templates
 from app.services.analytics import chart_series, compare_periods, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
+from app.services.demo_parser import DemoParseError, import_demo_file
 from app.services.importer import import_csv, import_json
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_evaluations_by_match_id
 from app.services.report_generator import generate_report, latest_report, markdown_to_html
@@ -57,13 +60,28 @@ async def upload_file(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
     file: Annotated[UploadFile, File(...)],
+    player_identifier: Annotated[str | None, Form()] = None,
 ):
     content = await file.read()
-    if file.filename and file.filename.lower().endswith(".json"):
-        result = import_json(db, content, source="json")
-    else:
-        result = import_csv(db, content, source="csv")
-    message = f"Imported {result['imported']}, duplicates {result['skipped_duplicates']}, errors {result['errors']}"
+    filename = file.filename or ""
+    try:
+        if filename.lower().endswith(".dem"):
+            with NamedTemporaryFile(suffix=".dem", delete=True) as temporary:
+                temporary.write(content)
+                temporary.flush()
+                result = import_demo_file(
+                    db,
+                    Path(temporary.name),
+                    original_filename=filename,
+                    player_identifier=player_identifier,
+                )
+        elif filename.lower().endswith(".json"):
+            result = import_json(db, content, source="json")
+        else:
+            result = import_csv(db, content, source="csv")
+        message = f"Imported {result['imported']}, duplicates {result['skipped_duplicates']}, errors {result['errors']}"
+    except DemoParseError as exc:
+        message = f"Demo parse failed: {exc}"
     return templates.TemplateResponse(request=request, name="upload.html", context={"message": message})
 
 

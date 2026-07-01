@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -9,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Match
 from app.db.session import get_db
 from app.services.analytics import compare_periods, get_map_stats, get_summary
+from app.services.demo_parser import DemoParseError, import_demo_file
 from app.services.importer import import_csv, import_json
 from app.services.recommendation_tracking import (
     get_active_recommendation_progress,
@@ -42,6 +45,29 @@ async def import_json_endpoint(
         result = import_json(db, await file.read(), source="json")
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, **result}
+
+
+@router.post("/import/demo")
+async def import_demo_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    file: Annotated[UploadFile, File(...)],
+    player_identifier: str | None = None,
+) -> dict:
+    if not file.filename or not file.filename.lower().endswith(".dem"):
+        raise HTTPException(status_code=400, detail="Upload a .dem file")
+    with NamedTemporaryFile(suffix=".dem", delete=True) as temporary:
+        temporary.write(await file.read())
+        temporary.flush()
+        try:
+            result = import_demo_file(
+                db,
+                Path(temporary.name),
+                original_filename=file.filename,
+                player_identifier=player_identifier,
+            )
+        except DemoParseError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"ok": True, **result}
 
 
