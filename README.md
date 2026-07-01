@@ -15,10 +15,13 @@
 - Rule-based coach report в Markdown и HTML.
 - Coach Recommendation Tracking: active goals по survival, aim, grenades и map, baseline/target и green/yellow/red оценка матчей.
 - AI coach handoff для Codex CLI: приложение собирает structured JSON payload и prompt без привязки к OpenAI API.
+- Steam OpenID + Game Authentication Code onboarding.
+- Автоматическая Steam-подгрузка: share-code sync, service bot demo URL resolver, `.dem.bz2` download, parse/import через background job.
+- Demo storage lifecycle control: отчет по raw `.dem`, manifest и кандидаты на будущий verified-delete.
 - Sample CSV/JSON.
 - Pytest-тесты ключевой логики.
 
-Не входит: Steam auth, платежи, публичная регистрация, demo viewer, React frontend, автоматический запуск локальной LLM.
+Не входит: платежи, demo viewer, React frontend, автоматический запуск локальной LLM, удаление raw `.dem` до утверждения финальных метрик.
 
 ## Локальный запуск
 
@@ -37,6 +40,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - Matches: http://127.0.0.1:8000/matches
 - Report: http://127.0.0.1:8000/report
 - Accounts/imports: http://127.0.0.1:8000/settings/imports
+- Demo storage: http://127.0.0.1:8000/settings/storage
 
 ## Docker запуск
 
@@ -155,35 +159,66 @@ LOCAL_LLM_MODEL=your-model
 - health endpoint;
 - прямую генерацию AI report через provider, когда `AI_PROVIDER=local_llm`.
 
-## Steam auth and auto import scaffold
+## Steam import и demo autoload
 
-Steam интеграция начата как scaffold:
+Steam-интеграция работает через безопасное разделение пользовательского Steam и сервисного bot account:
 
-- Steam OpenID login URL;
-- `SteamAccount`;
-- `ImportJob`;
-- страница `/settings/imports`;
-- share-code job queue;
-- инструкция по Game Authentication Code;
-- сохранение Steam Web API key через `/settings/imports`;
-- сохранение Steam match auth code;
-- ручная постановка `match_history_sync` jobs в очередь;
-- обработка `match_history_sync` jobs с вызовом `ICSGOPlayers_730/GetNextMatchSharingCode`;
-- сохранение найденных Steam share codes как `steam_history` matches.
+- пользователь подключает Steam через официальный Steam OpenID;
+- пользователь один раз вводит latest match share code `CSGO-...` и Game Authentication Code из Steam Support;
+- серверный `STEAM_WEB_API_KEY` лежит в `.env`, пользователю не нужно выпускать свой ключ;
+- отдельный service bot обращается к CS2 Game Coordinator по share code и получает replay URL;
+- кнопка `/settings/imports` -> “Обновить и скачать демки” ставит `steam_import_all` job;
+- web request сразу возвращает страницу, а sync/download/import выполняется в FastAPI background task;
+- `.dem.bz2` скачивается с replay host Valve, распаковывается в `.dem` и импортируется через `demoparser2`;
+- прогресс доступен в UI и через `GET /api/steam/import/overview`.
 
 Важно:
 
-- Steam пароль не вводится и не хранится.
-- Steam OpenID возвращает SteamID, а доступ к истории матчей требует отдельный Game Authentication Code из Steam Support / CS2.
-- Для вызовов Steam Web API нужен `STEAM_WEB_API_KEY` из Steam Community Developer. Его можно положить в `.env` или сохранить через `/settings/imports`.
+- Пользовательский Steam пароль, QR, Steam Guard и refresh token не вводятся и не хранятся.
+- Service bot не является аккаунтом пользователя и должен быть отдельным пустым аккаунтом без ценного inventory.
+- Старые replay URL у Valve могут истекать или временно отдавать HTTP 502/404/410.
 - FACEIT пока пропущен в реализации, но остается обязательным будущим источником.
-- Match-history sync уже получает share codes, если есть Steam Web API key. Реальный worker загрузки DEM по share code и последующий DEM parse будет отдельным этапом.
+
+Service bot env:
+
+```text
+STEAM_WEB_API_KEY=...
+STEAM_BOT_REFRESH_TOKEN=...
+```
+
+Альтернативно для первичного входа bot account:
+
+```text
+STEAM_BOT_USERNAME=...
+STEAM_BOT_PASSWORD=...
+STEAM_BOT_SHARED_SECRET=...
+```
+
+`STEAM_BOT_TWO_FACTOR_CODE` допускается только для коротких локальных проверок и не должен использоваться как production automation.
 
 Полезные ссылки для настройки:
 
 - Steam Support CS2: `https://help.steampowered.com/en/wizard/HelpWithGame/?appid=730`
-- Steam Web API key: `https://steamcommunity.com/dev/apikey`
 - Valve Match History docs: `https://developer.valvesoftware.com/wiki/Counter-Strike%3A_Global_Offensive_Access_Match_History`
+
+Подробная архитектура: `docs/STEAM_IMPORT_ARCHITECTURE.md`.
+
+## Demo storage lifecycle
+
+Целевая схема хранения raw demo:
+
+```text
+download -> parse -> verify parsed payload -> delete raw .dem
+```
+
+Сейчас raw `.dem` не удаляются: мы еще не утвердили финальный набор метрик и raw-срезов, которые нужно сохранить перед удалением. Вместо удаления внедрен observe-only слой:
+
+- `/settings/storage` показывает объем `data/uploads`, referenced/unreferenced/missing/suspicious файлы, крупные файлы и будущих кандидатов на удаление;
+- `GET /api/storage/demos` возвращает тот же отчет JSON;
+- `POST /api/storage/demos/manifest` пишет manifest в `data/reports/demo_storage_manifest.json`;
+- manifest и raw demo лежат в `data/` и не коммитятся.
+
+Подробное ТЗ: `docs/DEMO_STORAGE_TZ.md`.
 
 ## UI language
 
@@ -267,6 +302,11 @@ source,external_match_id,demo_file,mode,side_t_rounds_won,side_t_rounds_lost,sid
 - `GET /api/steam/login-url`
 - `GET /api/steam/accounts`
 - `POST /api/steam/import/share-code`
+- `POST /api/steam/import/all`
+- `GET /api/steam/import/overview`
+- `GET /api/steam/demo-downloader/status`
+- `GET /api/storage/demos`
+- `POST /api/storage/demos/manifest`
 - `GET /api/import/jobs`
 
 ## Тесты и линтинг
@@ -300,11 +340,11 @@ tests/
 
 ## Следующие задачи
 
-- Довести DEM import result/player picker/confidence.
-- Перевести rule-based weaknesses в structured mistake detection.
-- Превратить AI handoff в полноценный AI coach report с сохранением ответа.
-- Подключить local LLM provider после стабилизации payload.
-- Позже добавить Steam/FACEIT sync только как отдельный этап.
+- Утвердить полный список метрик/raw-срезов перед включением удаления raw `.dem`.
+- Расширить parser payload: rounds, duels, utility, side stats, timing, positions where reliable.
+- Добавить verified payload статус и только после этого включать raw demo delete policy.
+- Довести Steam worker до production scheduler/retry модели.
+- Добавить FACEIT sync как второй внешний источник.
 
 Подробные рабочие планы:
 

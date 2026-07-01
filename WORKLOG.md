@@ -566,3 +566,27 @@ Runtime note:
 - Current server disk is tight: `/` is `ext4` and was observed at 96% usage.
 - `data/uploads` had about 4.5 GB of demo files during implementation.
 - No demo files were deleted or compressed.
+
+## Documentation And Roadmap Inspection
+
+Scope:
+
+- Reviewed implemented Steam import, background job flow, service bot downloader, storage lifecycle, deployment protection, and docs.
+- Found README and roadmap still partially described Steam import as scaffold.
+
+Updated:
+
+- `README.md` now documents actual Steam import/demo autoload behavior, background job flow, service bot env, storage lifecycle, and current API endpoints.
+- `docs/FEATURES_RU.md` now includes current live storage state and next technical focus.
+- `docs/FEATURE_ROADMAP_SCORING.md` now reflects current implementation percentages for Steam import, auto import, DEM import, AI handoff, and demo storage lifecycle.
+- `docs/feature_roadmap_scoring_ru.xlsx` was updated:
+  - Steam / FACEIT login -> 60%;
+  - Automatic match import -> 75%;
+  - added Demo storage lifecycle;
+  - added Steam service bot demo downloader;
+  - added ImportJob background worker flow;
+  - added Nginx Basic Auth + robots.txt.
+
+Control:
+
+- No `.env`, tokens, refresh tokens, DB files, manifests, `node_modules`, or raw demos are tracked.

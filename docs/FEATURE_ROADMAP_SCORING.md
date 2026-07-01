@@ -37,8 +37,9 @@ Excel-ready Russian workbook: `docs/feature_roadmap_scoring_ru.xlsx`.
 | CSV/JSON import | 2 | 85% | Upload, API, dedupe, missing-column tolerance | Better validation report, import preview, export template | 6 | Medium signal: useful for MVP/manual import | Maintain |
 | Official `.dem` upload | 7 | 45% | Real uploaded demo imports into match list | Parser confidence, player picker, background processing, result screen; see `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md` | 10 | High signal: core of Scope/Leetify-style value | Planned top priority |
 | Server-side demo inbox | 2 | 90% | Bitvise/SFTP inbox, UI import, duplicate handling | Delete/archive buttons, import status history | 7 | High for our current workflow | Keep |
-| Steam / FACEIT login | 5 | 0% | None | Auth, account linking, profile storage | 8 | High signal: Scope/Leetify use it for onboarding | Later, after DEM stability |
-| Automatic match import | 8 | 0% | None | Steam/GC/share-code or FACEIT API flow, background jobs; see `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md` | 9 | High signal: removes manual friction | Planned |
+| Steam / FACEIT login | 5 | 60% | Steam OpenID, SteamAccount, callback, settings UI, Game Authentication Code onboarding. FACEIT remains future. | Harden OpenID verification, profile enrichment, FACEIT auth/linking | 8 | High signal: Scope/Leetify use it for onboarding | Continue after Steam hardening |
+| Automatic match import | 8 | 75% | Steam share-code sync, `steam_import_all` background job, service bot GC resolver, `.dem.bz2` download, `.dem` parse/import, status overview | Production scheduler, retries/backoff, FACEIT support, richer job detail page | 9 | High signal: removes manual friction | Current top product flow |
+| Demo storage lifecycle | 5 | 45% | `/settings/storage`, storage API, manifest, referenced/unreferenced/missing/suspicious classification, future delete candidates | Approve metric schema, add parsed-payload verification status, then enable raw `.dem` delete policy | 8 | High operational value once auto-import scales | Next before raw delete |
 | Map performance | 3 | 50% | Basic map winrate/ADR/KD table | Side stats, map-specific trends, map detail page | 8 | High signal: Scope explicitly promotes map performance | Next |
 | Map-specific coach focus | 4 | 25% | Weak maps detected in report/rules | Dedicated weak-map plan, map drills, tracked goals per map | 8 | High product logic: actionable coaching | Next |
 | Last period comparison | 2 | 80% | Last 15 vs previous 15 comparison | Custom periods, chart deltas, explanation text | 7 | Medium-high: progress framing is common | Maintain/improve |
@@ -92,7 +93,7 @@ Excel-ready Russian workbook: `docs/feature_roadmap_scoring_ru.xlsx`.
 | CSV import | 85% | Fast manual data upload | Import preview and validation details | Match history |
 | JSON import | 80% | Script/export-friendly upload | Schema docs, validation details | Match history |
 | Duplicate protection | 80% | Prevents repeated imports | Better duplicate UI messaging | Match history |
-| Official DEM import | 45% | Real CS2 demo can become match stats | Follow `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md`: result screen, player picker, background jobs, confidence | Scope/Leetify demo analysis |
+| Official DEM import | 65% | Real CS2 demo can become match stats; parser confidence, event counts, metric confidence, warnings and match-detail evidence exist | Player picker before save, deeper side/early timing validation, verified payload status | Scope/Leetify demo analysis |
 | Bitvise/SFTP demo inbox | 90% | User can upload large demos outside browser | Archive/delete UI | Internal usability |
 | Match list page | 100% | See imported games in one place with sorting, pagination and detail links | Future polish: saved views/export | Match history |
 | Match filters | 100% | Filter by map/result/source/date/goal status | Future polish: imported date filter | Match history |
@@ -108,16 +109,19 @@ Excel-ready Russian workbook: `docs/feature_roadmap_scoring_ru.xlsx`.
 | DEM-based score/result inference | 45% | Imported demo has map/result/score | Validate side switching across more demos | Match details |
 | DEM-based ADR/KD/KAST/entry | 45% | Real demo contributes to analysis | Better KAST/trade logic, early death timing | Core analytics |
 | Report includes active recommendation | 50% | Coach report reflects current training goal | More detailed progress section | Coach report |
-| AI coach handoff | 35% | Structured JSON payload and Codex CLI prompt are generated from `/coach` | Persist generated AI answer and connect local_llm provider | AI coach report |
-| README / worklog docs | 75% | Project is understandable and reproducible | Keep updated as UX changes | Developer/product docs |
+| AI coach handoff | 65% | Structured JSON payload and Codex CLI prompt are generated from `/coach`; AI result can be saved and shown back in UI; local_llm scaffold exists | Real local model setup, structured sections, feedback loop | AI coach report |
+| Steam service bot demo downloader | 75% | Dedicated service bot gets CS2 GC demo URLs by share code, downloads `.dem.bz2`, decompresses and imports `.dem` | Stronger bot hardening, retries/backoff, production scheduler | Automatic match import |
+| ImportJob background worker flow | 70% | `steam_import_all` queues/reuses active jobs, web request returns immediately, background task runs sync/download/import, overview shows progress | Durable worker process, retry policy, job detail page | Fast post-match refresh |
+| Demo storage lifecycle control | 45% | `/settings/storage`, `GET /api/storage/demos`, manifest, candidates for future raw `.dem` delete after verified payload | Approve metric schema, add verification status, enable delete policy | Demo storage lifecycle |
+| README / worklog docs | 90% | Project is understandable and reproducible; Steam worker and storage lifecycle are documented | Keep updated as UX changes | Developer/product docs |
 | Competitor feature matrix | 80% | Gives product direction | Revisit after user testing | Product planning |
 
 ## Immediate Build Recommendation
 
-The next best work is not adding many new shiny pages. It is making official `.dem` import trustworthy:
+The next best work is not adding many new shiny pages. It is making parsed demo data trustworthy enough to delete raw `.dem` files after import:
 
-1. Add a demo import result screen showing selected player, score, map, key stats, and parser confidence.
-2. Let the user choose player if auto-detection is wrong.
-3. Add match detail page for one match.
-4. Improve side stats, KAST, early deaths, utility and flash metrics from real demos.
-5. Add evidence panels to the coach page so recommendations are explainable.
+1. Approve the final metric/raw-slice schema needed before raw demo deletion.
+2. Persist verified parsed payload status per imported demo.
+3. Improve side stats, KAST, early deaths, utility, flash and round-level evidence from real demos.
+4. Add production-grade Steam job retries/scheduler.
+5. Only then enable raw `.dem` delete policy for successfully verified imports.

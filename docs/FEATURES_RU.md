@@ -52,9 +52,28 @@
   - `POST /api/storage/demos/manifest`.
 - Manifest пишется в `data/reports/demo_storage_manifest.json` и не коммитится.
 
+Текущее live-состояние на 2026-07-01 после инспекции:
+
+- `.dem` файлов в `data/uploads`: 61.
+- Общий размер raw demo: около 4.18 GB.
+- Уникально привязанных raw demo файлов: 16.
+- Match rows со ссылкой на demo: 32.
+- Будущих кандидатов на удаление после verified payload: 16 файлов.
+- Потенциальная будущая экономия после включения verified-delete: около 3.8 GB.
+- Удаление raw `.dem` выключено.
+
 ## Документация
 
 - `WORKLOG.md` ведет инженерный журнал.
 - `docs/STEAM_IMPORT_ARCHITECTURE.md` описывает Steam import архитектуру.
 - `docs/DEMO_STORAGE_TZ.md` описывает целевой lifecycle raw demo.
 - `docs/FEATURES_RU.md` содержит список внедренных фич.
+- `docs/FEATURE_ROADMAP_SCORING.md` и `docs/feature_roadmap_scoring_ru.xlsx` содержат roadmap/scoring по конкурентным фичам.
+
+## Ближайший технический фокус
+
+- Утвердить набор метрик/raw-срезов, достаточный для повторного анализа без raw `.dem`.
+- Добавить статус `parsed_payload_verified`.
+- Расширить demo parser payload по раундам, дуэлям, utility, side stats, timing и позициям там, где данные надежны.
+- После этого включать raw `.dem` delete policy для успешно проверенных импортов.
+- Довести Steam worker до durable scheduler/retry модели.
