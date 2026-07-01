@@ -201,7 +201,32 @@ Steam интеграция начата как scaffold:
 - диапазон дат;
 - все матчи.
 
-На странице есть core metrics, динамика, сравнение периодов, качество данных, ADR profile, разбивка по источникам, карты и последние матчи. Dashboard `/` остается быстрым обзором, а `/stats` становится рабочей аналитической вкладкой.
+На странице есть core metrics, динамика, сравнение периодов, качество данных, ADR profile, разбивка по источникам, карты и последние матчи. Dashboard `/dashboard` остается быстрым обзором после входа, а `/stats` становится рабочей аналитической вкладкой.
+
+## Auth and public deployment
+
+Публичный входной экран:
+
+- `/` - landing с кнопками входа и регистрации;
+- `/login` - вход;
+- `/register` - регистрация;
+- `/dashboard` - закрытый dashboard после входа;
+- `/logout` - выход.
+
+Session auth использует signed cookie через `SessionMiddleware`; пароль хранится как `pbkdf2_sha256` hash.
+
+На сервере подготовлен production-прокси:
+
+- systemd unit: `/etc/systemd/system/jc-coach.service`;
+- nginx site: `/etc/nginx/sites-available/jcnodex`;
+- app listens on `127.0.0.1:8010`;
+- nginx listens on `80` and proxies domain `jcnodex`.
+
+Репозиторий содержит копии конфигов:
+
+- `deploy/systemd/jc-coach.service`;
+- `deploy/nginx/jcnodex.conf`;
+- `docs/PUBLIC_DEPLOYMENT_CHECKLIST.md`.
 
 ## Поддерживаемые CSV поля
 

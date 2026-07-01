@@ -31,6 +31,7 @@ from app.services.analytics import (
     match_detail,
 )
 from app.services.app_settings import get_app_setting, set_app_setting
+from app.services.auth import authenticate_user, current_user_from_session, login_user, logout_user, register_user
 from app.services.coach_rules import build_coach_focus
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.i18n import normalize_locale
@@ -66,7 +67,85 @@ router = APIRouter()
 
 
 @router.get("/")
+def landing_page(request: Request, db: Annotated[Session, Depends(get_db)]):
+    if current_user_from_session(request, db):
+        return RedirectResponse("/dashboard", status_code=303)
+    return templates.TemplateResponse(request=request, name="landing.html", context={"request": request})
+
+
+@router.get("/login")
+def login_page(request: Request, db: Annotated[Session, Depends(get_db)], message: str | None = None):
+    if current_user_from_session(request, db):
+        return RedirectResponse("/dashboard", status_code=303)
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"request": request, "message": message},
+    )
+
+
+@router.post("/login")
+def login_submit(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    email: Annotated[str, Form()],
+    password: Annotated[str, Form()],
+):
+    user = authenticate_user(db, email, password)
+    if user is None:
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"request": request, "message": "Неверный email или пароль."},
+            status_code=400,
+        )
+    login_user(request, user)
+    return RedirectResponse("/dashboard", status_code=303)
+
+
+@router.get("/register")
+def register_page(request: Request, db: Annotated[Session, Depends(get_db)], message: str | None = None):
+    if current_user_from_session(request, db):
+        return RedirectResponse("/dashboard", status_code=303)
+    return templates.TemplateResponse(
+        request=request,
+        name="register.html",
+        context={"request": request, "message": message},
+    )
+
+
+@router.post("/register")
+def register_submit(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    email: Annotated[str, Form()],
+    password: Annotated[str, Form()],
+    display_name: Annotated[str | None, Form()] = None,
+):
+    try:
+        user = register_user(db, email, password, display_name=display_name)
+    except ValueError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="register.html",
+            context={"request": request, "message": str(exc)},
+            status_code=400,
+        )
+    login_user(request, user)
+    return RedirectResponse("/dashboard", status_code=303)
+
+
+@router.post("/logout")
+def logout_submit(request: Request):
+    logout_user(request)
+    return RedirectResponse("/", status_code=303)
+
+
+@router.get("/dashboard")
 def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     summary = get_summary(matches)
     comparison = compare_periods(matches)
@@ -94,11 +173,6 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     )
 
 
-@router.get("/dashboard")
-def dashboard_alias():
-    return RedirectResponse("/", status_code=303)
-
-
 @router.get("/language/{locale}")
 def set_language(request: Request, locale: str):
     target_locale = normalize_locale(locale)
@@ -117,6 +191,9 @@ def stats_page(
     date_from: str | None = None,
     date_to: str | None = None,
 ):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     all_matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     selected_matches = _select_stats_matches(all_matches, range_type, matches_count, date_from, date_to)
     summary = get_summary(selected_matches)
@@ -512,6 +589,10 @@ def update_recommendation_status_page(
 
 def _parse_date(value: str) -> datetime:
     return datetime.strptime(value, "%Y-%m-%d")
+
+
+def _require_user_redirect(request: Request, db: Session) -> RedirectResponse | None:
+    return None if current_user_from_session(request, db) else RedirectResponse("/login", status_code=303)
 
 
 def _select_stats_matches(

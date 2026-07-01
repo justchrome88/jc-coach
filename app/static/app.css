@@ -46,7 +46,7 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
 }
 
-.nav a, .button, .language-switch a {
+.nav a, .button, .language-switch a, .nav-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -58,6 +58,10 @@ a { color: inherit; text-decoration: none; }
   color: var(--text);
   font-weight: 650;
   cursor: pointer;
+}
+
+.nav-button {
+  font-family: inherit;
 }
 
 .language-switch {
@@ -572,6 +576,57 @@ textarea {
   border: 1px solid rgba(94, 234, 212, .28);
 }
 
+.auth-shell {
+  min-height: calc(100vh - 124px);
+  display: grid;
+  align-items: center;
+}
+
+.landing-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, .55fr);
+  gap: 28px;
+  align-items: center;
+  padding: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.landing-panel h1 {
+  max-width: 820px;
+  font-size: 42px;
+}
+
+.landing-points {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.landing-points div {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #12161b;
+  color: #d7dee7;
+}
+
+.auth-panel {
+  width: min(460px, 100%);
+  margin: 0 auto;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-form input {
+  width: 100%;
+  margin-top: 6px;
+}
+
 .steps {
   display: grid;
   gap: 10px;
@@ -665,6 +720,7 @@ textarea {
   .layout-three,
   .recommendation-grid,
   .upload-grid,
+  .landing-panel,
   .coach-preview-row,
   .server-file {
     grid-template-columns: 1fr;

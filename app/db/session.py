@@ -47,6 +47,17 @@ def _upgrade_sqlite_schema() -> None:
                 )
             if "source_ref" not in report_columns:
                 connection.execute(text("ALTER TABLE coach_reports ADD COLUMN source_ref VARCHAR(500)"))
+    if "users" in inspector.get_table_names():
+        user_columns = {column["name"] for column in inspector.get_columns("users")}
+        with engine.begin() as connection:
+            if "email" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255)"))
+            if "password_hash" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(500)"))
+            if "is_active" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1 NOT NULL"))
+            if "last_login_at" not in user_columns:
+                connection.execute(text("ALTER TABLE users ADD COLUMN last_login_at DATETIME"))
     recommendation_tables = inspector.get_table_names()
     if "coach_recommendations" not in recommendation_tables:
         return

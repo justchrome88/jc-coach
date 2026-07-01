@@ -354,3 +354,59 @@ Verification:
 
 - `ruff check .`
 - `pytest` -> 49 passed, 1 Starlette/httpx deprecation warning.
+
+## Public Landing, Auth, Nginx And Systemd
+
+Implemented:
+
+- Public landing page at `/`.
+- Registration page at `/register`.
+- Login page at `/login`.
+- Logout action at `/logout`.
+- Protected product dashboard at `/dashboard`.
+- Session middleware with signed cookies.
+- Password hashing with `pbkdf2_sha256`.
+- User model fields:
+  - `email`;
+  - `password_hash`;
+  - `is_active`;
+  - `last_login_at`.
+- SQLite schema upgrade for existing `users` table.
+- Web auth middleware for protected UI pages.
+- Steam OpenID linking now attaches to the current logged-in user when possible.
+- Nginx reverse proxy installed/configured for `jcnodex`.
+- Systemd service installed/enabled:
+  - `jc-coach.service`;
+  - app listens on `127.0.0.1:8010`;
+  - nginx serves public port `80`.
+- Deployment config copies:
+  - `deploy/nginx/jcnodex.conf`;
+  - `deploy/systemd/jc-coach.service`.
+- Public deployment checklist:
+  - `docs/PUBLIC_DEPLOYMENT_CHECKLIST.md`.
+
+Operational action:
+
+- `.env` updated locally:
+  - `PUBLIC_BASE_URL=http://jcnodex`;
+  - `STEAM_REALM=http://jcnodex`;
+  - `SESSION_SECRET_KEY` generated;
+  - `AUTH_COOKIE_SECURE=false` until SSL is issued.
+- Certbot and nginx plugin were already installed.
+- Smoke-tested through nginx with `Host: jcnodex`.
+- Removed smoke `@example.test` users after live auth test.
+
+Current limits:
+
+- HTTPS is not issued yet because router port forwarding is not ready.
+- After forwarding ports `80` and `443`, run `certbot --nginx -d jcnodex`, then switch `.env` to `https://jcnodex` and `AUTH_COOKIE_SECURE=true`.
+- Registration is open for now; invite/approval flow should be added before a wider public launch.
+
+Verification:
+
+- `ruff check .`
+- `pytest` -> 53 passed, 1 Starlette/httpx deprecation warning.
+- `nginx -t`.
+- `curl -H 'Host: jcnodex' http://127.0.0.1/` -> landing 200.
+- anonymous `/dashboard` -> 303 `/login`.
+- live registration/login/logout smoke through nginx passed.

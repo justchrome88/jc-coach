@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-shell">
+  <div class="panel auth-panel">
+    <div class="panel-head">
+      <h1>Вход</h1>
+      <a class="table-link" href="/register">Регистрация</a>
+    </div>
+    {% if message %}
+    <div class="notice">{{ message }}</div>
+    {% endif %}
+    <form action="/login" method="post" class="auth-form">
+      <label for="email">Email
+        <input id="email" name="email" type="email" autocomplete="email" required>
+      </label>
+      <label for="password">Пароль
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="button" type="submit">Войти</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from fastapi.testclient import TestClient
 
 from app.db.session import Base
@@ -12,17 +14,50 @@ def test_health_endpoint():
     assert response.json() == {"status": "ok"}
 
 
-def test_dashboard_renders():
+def _register_test_user(client: TestClient) -> None:
+    response = client.post(
+        "/register",
+        data={
+            "display_name": "Test User",
+            "email": f"test-{uuid4().hex}@example.test",
+            "password": "test-password",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/dashboard"
+
+
+def test_landing_renders_for_anonymous_user():
     with TestClient(app) as client:
         Base.metadata.create_all(bind=client.app.state._state.get("engine")) if False else None
         response = client.get("/")
 
     assert response.status_code == 200
+    assert "AI-тренер" in response.text
+    assert "Войти" in response.text
+
+
+def test_dashboard_renders_after_registration():
+    with TestClient(app) as client:
+        _register_test_user(client)
+        response = client.get("/dashboard")
+
+    assert response.status_code == 200
     assert "Общая статистика" in response.text
+
+
+def test_protected_page_redirects_anonymous_user_to_login():
+    with TestClient(app, follow_redirects=False) as client:
+        response = client.get("/dashboard")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
 
 
 def test_stats_page_renders_with_filters():
     with TestClient(app) as client:
+        _register_test_user(client)
         response = client.get("/stats?range_type=last&matches_count=15")
 
     assert response.status_code == 200
@@ -41,6 +76,7 @@ def test_language_switch_sets_locale_cookie():
 
 def test_coach_page_renders():
     with TestClient(app) as client:
+        _register_test_user(client)
         response = client.get("/coach")
 
     assert response.status_code == 200
@@ -49,6 +85,7 @@ def test_coach_page_renders():
 
 def test_matches_page_supports_filters_and_sorting():
     with TestClient(app) as client:
+        _register_test_user(client)
         response = client.get("/matches?sort=adr&direction=desc&per_page=25")
 
     assert response.status_code == 200
@@ -58,6 +95,7 @@ def test_matches_page_supports_filters_and_sorting():
 
 def test_missing_match_detail_redirects_to_matches():
     with TestClient(app, follow_redirects=False) as client:
+        _register_test_user(client)
         response = client.get("/matches/999999999")
 
     assert response.status_code == 303

@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     steam_return_path: str = "/auth/steam/callback"
     steam_web_api_key: str | None = None
     steam_sync_max_codes: int = 20
+    session_secret_key: str = "change-me-before-public-release"
+    auth_cookie_secure: bool = False
     openai_api_key: str | None = None
     demo_player_identifier: str | None = None
 

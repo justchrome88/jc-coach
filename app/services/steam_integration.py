@@ -42,18 +42,27 @@ def extract_steam_id(openid_claimed_id: str | None) -> str | None:
     return steam_id if steam_id.isdigit() else None
 
 
-def link_steam_account(db: Session, steam_id: str, persona_name: str | None = None) -> SteamAccount:
+def link_steam_account(
+    db: Session,
+    steam_id: str,
+    persona_name: str | None = None,
+    user_id: int | None = None,
+) -> SteamAccount:
     account = db.scalar(select(SteamAccount).where(SteamAccount.steam_id == steam_id))
     if account:
         if persona_name:
             account.persona_name = persona_name
+        if user_id:
+            account.user_id = user_id
         db.commit()
         db.refresh(account)
         return account
-    user = User(display_name=persona_name or f"Steam {steam_id[-4:]}")
-    db.add(user)
-    db.flush()
-    account = SteamAccount(user_id=user.id, steam_id=steam_id, persona_name=persona_name, sync_enabled=0)
+    if user_id is None:
+        user = User(display_name=persona_name or f"Steam {steam_id[-4:]}")
+        db.add(user)
+        db.flush()
+        user_id = user.id
+    account = SteamAccount(user_id=user_id, steam_id=steam_id, persona_name=persona_name, sync_enabled=0)
     db.add(account)
     db.commit()
     db.refresh(account)

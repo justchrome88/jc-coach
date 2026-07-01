@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-shell">
+  <div class="landing-panel">
+    <div>
+      <h1>AI-тренер для Counter-Strike 2</h1>
+      <p>Личный кабинет для матчей, статистики, разбора ошибок и рекомендаций тренера. Публичная витрина будет расширяться, но основной продукт открывается после входа.</p>
+      <div class="actions">
+        <a class="button" href="/login">Войти</a>
+        <a class="button ghost" href="/register">Создать аккаунт</a>
+      </div>
+    </div>
+    <div class="landing-points">
+      <div>Steam подключается через официальный OpenID.</div>
+      <div>Матчи и демки остаются в личном кабинете.</div>
+      <div>Русский интерфейс основной, другие языки добавляются через curated-переводы.</div>
+    </div>
+  </div>
+</section>
+{% endblock %}

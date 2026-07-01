@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-shell">
+  <div class="panel auth-panel">
+    <div class="panel-head">
+      <h1>Регистрация</h1>
+      <a class="table-link" href="/login">Войти</a>
+    </div>
+    {% if message %}
+    <div class="notice">{{ message }}</div>
+    {% endif %}
+    <form action="/register" method="post" class="auth-form">
+      <label for="display_name">Имя
+        <input id="display_name" name="display_name" type="text" autocomplete="name" placeholder="Как к тебе обращаться">
+      </label>
+      <label for="email">Email
+        <input id="email" name="email" type="email" autocomplete="email" required>
+      </label>
+      <label for="password">Пароль
+        <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <button class="button" type="submit">Создать аккаунт</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

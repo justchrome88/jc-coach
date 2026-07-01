@@ -11,13 +11,21 @@
     <header class="topbar">
       <a class="brand" href="/">CS2 Personal Coach</a>
       <nav class="nav">
-        <a href="/">{{ t("nav.dashboard") }}</a>
+        {% if current_user %}
+        <a href="/dashboard">{{ t("nav.dashboard") }}</a>
         <a href="/stats">{{ t("nav.stats") }}</a>
         <a href="/coach">{{ t("nav.coach") }}</a>
         <a href="/matches">{{ t("nav.matches") }}</a>
         <a href="/upload">{{ t("nav.upload") }}</a>
         <a href="/report">{{ t("nav.report") }}</a>
         <a href="/settings/imports">{{ t("nav.accounts") }}</a>
+        <form action="/logout" method="post" class="inline-form">
+          <button class="nav-button" type="submit">{{ t("nav.logout") }}</button>
+        </form>
+        {% else %}
+        <a href="/login">{{ t("nav.login") }}</a>
+        <a href="/register">{{ t("nav.register") }}</a>
+        {% endif %}
         <span class="language-switch" aria-label="Language">
           <a class="{{ 'active' if locale == 'ru' else '' }}" href="/language/ru">{{ t("language.ru") }}</a>
           <a class="{{ 'active' if locale == 'en' else '' }}" href="/language/en">{{ t("language.en") }}</a>
