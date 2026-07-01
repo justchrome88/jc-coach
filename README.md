@@ -75,6 +75,24 @@ curl -F "file=@/path/to/match.dem" \
 
 `player_identifier` опционален. Если его не указать, приложение выберет игрока с наибольшей активностью в kill/damage events. Для стабильного личного использования лучше задать `DEMO_PLAYER_IDENTIFIER` в `.env` или указывать поле при загрузке.
 
+Через Bitvise/SFTP на этом сервере можно положить `.dem` в папку:
+
+```text
+/home/jc/cs2-demos
+```
+
+Это ссылка на inbox приложения:
+
+```text
+/opt/jc-coach/data/incoming_demos
+```
+
+После загрузки файла откройте `/upload`, блок `Демки из Bitvise`, и нажмите `Импорт` рядом с нужной демкой. API для этого же сценария:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/import/demo/inbox?filename=match.dem&player_identifier=your_nickname_or_steamid"
+```
+
 ## Как сгенерировать отчёт
 
 Через UI: открыть `/report` и нажать `Generate new report`.

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Match
 from app.db.session import get_db
 from app.services.analytics import compare_periods, get_map_stats, get_summary
-from app.services.demo_parser import DemoParseError, import_demo_file
+from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.importer import import_csv, import_json
 from app.services.recommendation_tracking import (
     get_active_recommendation_progress,
@@ -68,6 +68,24 @@ async def import_demo_endpoint(
             )
         except DemoParseError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"ok": True, **result}
+
+
+@router.get("/import/demo/inbox")
+def list_demo_inbox_endpoint() -> dict:
+    return {"files": list_inbox_demos()}
+
+
+@router.post("/import/demo/inbox")
+def import_demo_from_inbox_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    filename: str,
+    player_identifier: str | None = None,
+) -> dict:
+    try:
+        result = import_inbox_demo(db, filename, player_identifier=player_identifier)
+    except DemoParseError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"ok": True, **result}
 
 

@@ -15,7 +15,7 @@ from app.db.session import get_db
 from app.main import templates
 from app.services.analytics import chart_series, compare_periods, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
-from app.services.demo_parser import DemoParseError, import_demo_file
+from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.importer import import_csv, import_json
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_evaluations_by_match_id
 from app.services.report_generator import generate_report, latest_report, markdown_to_html
@@ -79,7 +79,11 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)]):
 
 @router.get("/upload")
 def upload_page(request: Request, message: str | None = None):
-    return templates.TemplateResponse(request=request, name="upload.html", context={"message": message})
+    return templates.TemplateResponse(
+        request=request,
+        name="upload.html",
+        context={"message": message, "inbox_demos": list_inbox_demos()},
+    )
 
 
 @router.post("/upload")
@@ -109,7 +113,30 @@ async def upload_file(
         message = f"Imported {result['imported']}, duplicates {result['skipped_duplicates']}, errors {result['errors']}"
     except DemoParseError as exc:
         message = f"Demo parse failed: {exc}"
-    return templates.TemplateResponse(request=request, name="upload.html", context={"message": message})
+    return templates.TemplateResponse(
+        request=request,
+        name="upload.html",
+        context={"message": message, "inbox_demos": list_inbox_demos()},
+    )
+
+
+@router.post("/upload/server-demo")
+def upload_server_demo(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    filename: Annotated[str, Form()],
+    player_identifier: Annotated[str | None, Form()] = None,
+):
+    try:
+        result = import_inbox_demo(db, filename, player_identifier=player_identifier)
+        message = f"Imported {result['imported']}, duplicates {result['skipped_duplicates']}, errors {result['errors']}"
+    except DemoParseError as exc:
+        message = f"Demo parse failed: {exc}"
+    return templates.TemplateResponse(
+        request=request,
+        name="upload.html",
+        context={"message": message, "inbox_demos": list_inbox_demos()},
+    )
 
 
 @router.get("/matches")

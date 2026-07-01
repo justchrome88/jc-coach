@@ -353,6 +353,33 @@ input, select {
   line-height: 1.45;
 }
 
+.server-files {
+  display: grid;
+  gap: 10px;
+}
+
+.server-file {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, .55fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #12161b;
+}
+
+.server-file strong,
+.server-file span {
+  display: block;
+}
+
+.server-file span {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
 .empty-state {
   display: grid;
   gap: 10px;
@@ -381,7 +408,14 @@ input, select {
     align-items: stretch;
   }
   .page { padding: 18px; }
-  .metric-grid, .layout-two, .recommendation-grid, .upload-grid, .coach-preview-row { grid-template-columns: 1fr; }
+  .metric-grid,
+  .layout-two,
+  .recommendation-grid,
+  .upload-grid,
+  .coach-preview-row,
+  .server-file {
+    grid-template-columns: 1fr;
+  }
   .metric strong { font-size: 26px; }
   h1 { font-size: 28px; }
 }

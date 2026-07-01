@@ -29,6 +29,32 @@
 
   <div class="panel">
     <div class="panel-head">
+      <h2>Демки из Bitvise</h2>
+      <span>/home/jc/cs2-demos</span>
+    </div>
+    {% if inbox_demos %}
+    <div class="server-files">
+      {% for demo in inbox_demos %}
+      <form action="/upload/server-demo" method="post" class="server-file">
+        <input type="hidden" name="filename" value="{{ demo.name }}">
+        <div>
+          <strong>{{ demo.name }}</strong>
+          <span>{{ demo.size_mb }} MB · {{ demo.modified_at }}</span>
+        </div>
+        <input name="player_identifier" type="text" placeholder="Ник или SteamID">
+        <button class="button" type="submit">Импорт</button>
+      </form>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>Пока нет .dem файлов. В Bitvise откройте папку <code>/home/jc/cs2-demos</code> и положите демку туда.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
       <h2>Что выбрать</h2>
       <span>быстрый старт</span>
     </div>

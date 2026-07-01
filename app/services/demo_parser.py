@@ -20,6 +20,36 @@ class DemoParseError(RuntimeError):
     pass
 
 
+def list_inbox_demos() -> list[dict[str, Any]]:
+    inbox = Path(get_settings().demo_inbox_dir)
+    files = []
+    for path in sorted(inbox.glob("*.dem"), key=lambda item: item.stat().st_mtime, reverse=True):
+        stat = path.stat()
+        files.append(
+            {
+                "name": path.name,
+                "size_bytes": stat.st_size,
+                "size_mb": round(stat.st_size / 1024 / 1024, 2),
+                "modified_at": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
+            }
+        )
+    return files
+
+
+def import_inbox_demo(
+    db: Session,
+    filename: str,
+    player_identifier: str | None = None,
+) -> dict[str, Any]:
+    path = _resolve_inbox_demo(filename)
+    return import_demo_file(
+        db,
+        path,
+        original_filename=path.name,
+        player_identifier=player_identifier,
+    )
+
+
 def import_demo_file(
     db: Session,
     source_path: Path,
@@ -65,6 +95,16 @@ def import_demo_file(
         "stored_path": str(stored_path),
         "message": parsed["message"],
     }
+
+
+def _resolve_inbox_demo(filename: str) -> Path:
+    inbox = Path(get_settings().demo_inbox_dir).resolve()
+    candidate = (inbox / Path(filename).name).resolve()
+    if not candidate.is_file() or candidate.suffix.lower() != ".dem":
+        raise DemoParseError(f"Demo `{filename}` was not found in inbox.")
+    if inbox not in candidate.parents:
+        raise DemoParseError("Invalid demo path.")
+    return candidate
 
 
 def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, Any]:

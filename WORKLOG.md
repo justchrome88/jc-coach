@@ -61,3 +61,20 @@ curl -F "file=@/path/to/match.dem" \
 ```
 
 After the first real demo arrives, test the parser on that file and tune event field mappings if needed.
+
+## Bitvise Demo Inbox
+
+Configured server-side inbox for user `jc`:
+
+```text
+/home/jc/cs2-demos -> /opt/jc-coach/data/incoming_demos
+```
+
+The directory is owned by `jc:jc` and writable through SFTP/Bitvise. The app lists `.dem` files from this inbox on `/upload` and can import them without browser upload.
+
+Verification performed:
+
+- `jc` can create a file through `/home/jc/cs2-demos`.
+- `GET /api/import/demo/inbox` lists the file.
+- `/upload` displays the file.
+- Invalid `.dem` returns controlled `422` instead of crashing the app.

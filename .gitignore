@@ -7,6 +7,8 @@ __pycache__/
 .env
 data/*.db
 data/uploads/*
+data/incoming_demos/*
 data/reports/*
 !data/uploads/.gitkeep
+!data/incoming_demos/.gitkeep
 !data/reports/.gitkeep
