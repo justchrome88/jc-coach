@@ -29,6 +29,8 @@ def test_parse_demo_with_fake_demoparser(monkeypatch, tmp_path):
     assert parsed["match"]["entry_kills"] == 1
     assert parsed["match"]["entry_deaths"] == 1
     assert parsed["match"]["adr"] == 33.33
+    assert parsed["match"]["swing_score"] is not None
+    assert parsed["swing_summary"]["formula"] == "jc_swing_v1"
     assert parsed["parser_confidence"] in {"low", "medium", "high"}
     assert parsed["event_counts"]["player_death"] == 3
     assert parsed["metric_confidence"]["adr"] == "high"
@@ -111,9 +113,11 @@ def _install_fake_demoparser(monkeypatch):
 
         def parse_player_info(self):
             return [
-                {"name": "me", "steamid": "123"},
-                {"name": "JC", "steamid": "789"},
-                {"name": "enemy", "steamid": "456"},
+                {"name": "me", "steamid": "123", "team_number": 2},
+                {"name": "JC", "steamid": "789", "team_number": 2},
+                {"name": "ally", "steamid": "124", "team_number": 2},
+                {"name": "enemy", "steamid": "456", "team_number": 3},
+                {"name": "enemy2", "steamid": "457", "team_number": 3},
             ]
 
         def parse_event(self, event_name, **kwargs):
@@ -123,7 +127,9 @@ def _install_fake_demoparser(monkeypatch):
                         "total_rounds_played": 0,
                         "tick": 100,
                         "attacker_name": "me",
+                        "attacker_steamid": "123",
                         "user_name": "enemy",
+                        "user_steamid": "456",
                         "headshot": True,
                         "weapon": "ak47",
                     },
@@ -131,7 +137,9 @@ def _install_fake_demoparser(monkeypatch):
                         "total_rounds_played": 1,
                         "tick": 200,
                         "attacker_name": "enemy",
+                        "attacker_steamid": "456",
                         "user_name": "me",
+                        "user_steamid": "123",
                         "headshot": False,
                         "weapon": "m4a1",
                     },
@@ -139,7 +147,9 @@ def _install_fake_demoparser(monkeypatch):
                         "total_rounds_played": 2,
                         "tick": 300,
                         "attacker_name": "JC",
+                        "attacker_steamid": "789",
                         "user_name": "enemy",
+                        "user_steamid": "456",
                         "headshot": False,
                         "weapon": "ak47",
                     },
@@ -149,14 +159,18 @@ def _install_fake_demoparser(monkeypatch):
                     {
                         "total_rounds_played": 0,
                         "attacker_name": "me",
+                        "attacker_steamid": "123",
                         "user_name": "enemy",
+                        "user_steamid": "456",
                         "dmg_health": 50,
                         "weapon": "hegrenade",
                     },
                     {
                         "total_rounds_played": 1,
                         "attacker_name": "me",
+                        "attacker_steamid": "123",
                         "user_name": "enemy",
+                        "user_steamid": "456",
                         "dmg_health": 50,
                         "weapon": "ak47",
                     },

@@ -27,6 +27,7 @@
         <div><span>Score</span><strong>{{ import_result.match.rounds_for or 0 }}:{{ import_result.match.rounds_against or 0 }}</strong></div>
         <div><span>K/D</span><strong>{{ import_result.match.kills }}/{{ import_result.match.deaths }}</strong></div>
         <div><span>ADR</span><strong>{{ import_result.match.adr or "n/a" }}</strong></div>
+        <div><span>Swing</span><strong>{{ import_result.match.swing_score if import_result.match.swing_score is not none else "n/a" }}</strong></div>
       </div>
       <div class="actions inline-actions">
         <a class="button" href="/matches/{{ import_result.match_id }}">Открыть матч</a>

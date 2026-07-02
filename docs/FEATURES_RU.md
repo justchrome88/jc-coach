@@ -44,6 +44,8 @@
   - `demo_duels`;
   - `demo_grenade_events`.
 - Deep parser сохраняет раунды, дуэли, урон, weapon_fire/hits, estimated accuracy, grenade events, flash events, bomb events и компактные trajectory summaries.
+- Добавлен `swing_score` / `jc_swing_v1`: оценка вклада игрока в win probability раунда, в процентных пунктах на раунд.
+- `swing_score` сохраняется в `matches.swing_score`, `raw_json.swing_summary` и parsed artifact payload.
 - Страница матча показывает блок `Глубокий парсинг DEM`.
 - Вкладка `/coach` показывает `Готовность DEM-данных`.
 - Ручной импорт `.dem` остается как fallback.
@@ -94,9 +96,16 @@
   - opening duel success;
   - multi-kill rounds;
   - weapon breakdown: kills, headshots, deaths, damage, HS%.
+- Добавлен Swing как отдельный impact-сигнал рядом с ADR/KAST/rating.
 - `GET /api/analytics/aim` возвращает aggregate aim profile.
-- Aim profile показан на `/stats`, `/coach` и странице матча.
+- Aim profile показан на `/stats`, `/coach` и странице матча; Swing показан в dashboard/stats/matches/match detail и API.
 - Accuracy, first bullet accuracy, spray control, TTK и crosshair placement явно помечены как data gaps до появления надежных shot/view/position данных.
+
+## Metrics roadmap
+
+- Отдельная таблица метрик заведена в `docs/metrics_roadmap_scoring_ru.xlsx`.
+- Markdown-версия: `docs/METRICS_ROADMAP_SCORING_RU.md`.
+- Таблица ранжирует CS2 показатели по полезности, сложности внедрения, текущей готовности и приоритету.
 
 ## Demo storage lifecycle
 

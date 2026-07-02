@@ -1,4 +1,4 @@
-const data = window.coachChartData || { labels: [], kd: [], adr: [], kast: [], rating: [] };
+const data = window.coachChartData || { labels: [], kd: [], adr: [], kast: [], rating: [], swing: [] };
 const trendCanvas = document.getElementById("trendChart");
 
 if (trendCanvas) {
@@ -9,6 +9,7 @@ if (trendCanvas) {
       datasets: [
         { label: "K/D", data: data.kd, borderColor: "#5eead4", backgroundColor: "rgba(94,234,212,.12)", tension: 0.28, yAxisID: "y" },
         { label: "Rating", data: data.rating, borderColor: "#facc15", backgroundColor: "rgba(250,204,21,.12)", tension: 0.28, yAxisID: "y" },
+        { label: "Swing", data: data.swing, borderColor: "#a78bfa", backgroundColor: "rgba(167,139,250,.12)", tension: 0.28, yAxisID: "y" },
         { label: "ADR", data: data.adr, borderColor: "#fb7185", backgroundColor: "rgba(251,113,133,.10)", tension: 0.28, yAxisID: "y1" },
         { label: "KAST", data: data.kast, borderColor: "#60a5fa", backgroundColor: "rgba(96,165,250,.10)", tension: 0.28, yAxisID: "y1" },
       ],

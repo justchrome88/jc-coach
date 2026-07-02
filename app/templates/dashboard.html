@@ -18,8 +18,8 @@
   <div class="metric"><span>ADR</span><strong>{{ summary.avg_adr or "n/a" }}</strong></div>
   <div class="metric"><span>KAST</span><strong>{{ summary.avg_kast or "n/a" }}%</strong></div>
   <div class="metric"><span>Rating</span><strong>{{ summary.avg_rating or "n/a" }}</strong></div>
+  <div class="metric"><span>Swing</span><strong>{{ summary.avg_swing_score if summary.avg_swing_score is not none else "n/a" }}</strong></div>
   <div class="metric"><span>Форма</span><strong>{{ summary.form_score or "n/a" }}</strong></div>
-  <div class="metric"><span>Entry diff</span><strong>{{ summary.entry_diff }}</strong></div>
 </section>
 
 <section class="layout-three">
@@ -98,6 +98,7 @@
       <div><span>Winrate</span><strong>{{ dashboard_status.session.recent_winrate or 0 }}%</strong></div>
       <div><span>ADR</span><strong>{{ dashboard_status.session.recent_avg_adr or "n/a" }}</strong></div>
       <div><span>KAST</span><strong>{{ dashboard_status.session.recent_avg_kast or "n/a" }}</strong></div>
+      <div><span>Swing</span><strong>{{ dashboard_status.session.recent_avg_swing_score if dashboard_status.session.recent_avg_swing_score is not none else "n/a" }}</strong></div>
     </div>
   </div>
 </section>

@@ -831,6 +831,7 @@ def _sort_matches_for_page(matches: list[Match], sort: str, direction: str) -> l
         "adr": lambda match: match.adr if match.adr is not None else -1,
         "kast": lambda match: match.kast if match.kast is not None else -1,
         "rating": lambda match: match.rating if match.rating is not None else -1,
+        "swing_score": lambda match: match.swing_score if match.swing_score is not None else -999,
         "kd": lambda match: match.kd if match.kd is not None else -1,
     }
     key = sort_map.get(sort, sort_map["played_at"])
@@ -840,7 +841,7 @@ def _sort_matches_for_page(matches: list[Match], sort: str, direction: str) -> l
 
 def _sort_links(current_sort: str, current_direction: str) -> dict[str, dict[str, str]]:
     links = {}
-    for field in ("played_at", "map", "result", "source", "kd", "adr", "kast", "rating"):
+    for field in ("played_at", "map", "result", "source", "kd", "adr", "kast", "rating", "swing_score"):
         next_direction = "asc" if current_sort == field and current_direction == "desc" else "desc"
         links[field] = {"sort": field, "direction": next_direction}
     return links

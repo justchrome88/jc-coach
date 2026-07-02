@@ -16,6 +16,7 @@
   <div class="metric"><span>K/D</span><strong>{{ match.kd or "n/a" }}</strong></div>
   <div class="metric"><span>ADR</span><strong>{{ match.adr or "n/a" }}</strong></div>
   <div class="metric"><span>KAST</span><strong>{{ match.kast or "n/a" }}%</strong></div>
+  <div class="metric"><span>Swing</span><strong>{{ match.swing_score if match.swing_score is not none else "n/a" }}</strong></div>
 </section>
 
 {% if evaluation %}

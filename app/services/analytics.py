@@ -8,7 +8,18 @@ from typing import Any
 from app.db.models import Match
 from app.services.aim_stats import match_aim_profile
 
-KEY_METRICS = ("winrate", "kd", "adr", "kast", "rating", "entry_diff", "utility_damage", "flash_assists", "deaths")
+KEY_METRICS = (
+    "winrate",
+    "kd",
+    "adr",
+    "kast",
+    "rating",
+    "swing_score",
+    "entry_diff",
+    "utility_damage",
+    "flash_assists",
+    "deaths",
+)
 
 
 def get_summary(matches: Iterable[Match]) -> dict[str, Any]:
@@ -27,6 +38,7 @@ def get_summary(matches: Iterable[Match]) -> dict[str, Any]:
         "avg_adr": _avg(items, "adr"),
         "avg_kast": _avg(items, "kast"),
         "avg_rating": _avg(items, "rating"),
+        "avg_swing_score": _avg(items, "swing_score"),
         "avg_headshot_percent": _avg(items, "headshot_percent"),
         "avg_deaths": _avg(items, "deaths"),
         "avg_utility_damage": _avg(items, "utility_damage"),
@@ -57,6 +69,7 @@ def get_dashboard_status(matches: Iterable[Match]) -> dict[str, Any]:
             "recent_winrate": _percent(sum(1 for match in recent if match.result == "win"), len(recent)),
             "recent_avg_adr": _avg(recent, "adr"),
             "recent_avg_kast": _avg(recent, "kast"),
+            "recent_avg_swing_score": _avg(recent, "swing_score"),
         },
     }
 
@@ -71,6 +84,7 @@ def get_source_breakdown(matches: Iterable[Match]) -> list[dict[str, Any]]:
             "matches_count": len(items),
             "avg_adr": _avg(items, "adr"),
             "avg_kast": _avg(items, "kast"),
+            "avg_swing_score": _avg(items, "swing_score"),
             "winrate": _percent(sum(1 for match in items if match.result == "win"), len(items)),
         }
         for source, items in sorted(buckets.items())
@@ -87,6 +101,7 @@ def get_data_quality(matches: Iterable[Match]) -> dict[str, Any]:
         "deaths": "deaths",
         "ADR": "adr",
         "KAST": "kast",
+        "Swing": "swing_score",
         "entry": "entry_kills",
     }
     coverage = {
@@ -138,6 +153,7 @@ def compare_periods(matches: Iterable[Match], current_n: int = 15, previous_n: i
         "adr": ("avg_adr", ""),
         "kast": ("avg_kast", "pp"),
         "rating": ("avg_rating", ""),
+        "swing_score": ("avg_swing_score", "pp/round"),
         "entry_diff": ("entry_diff", ""),
         "utility_damage": ("avg_utility_damage", ""),
         "flash_assists": ("avg_flash_assists", ""),
@@ -181,6 +197,7 @@ def get_map_stats(matches: Iterable[Match]) -> list[dict[str, Any]]:
                 "avg_adr": summary["avg_adr"],
                 "avg_kast": summary["avg_kast"],
                 "avg_rating": summary["avg_rating"],
+                "avg_swing_score": summary["avg_swing_score"],
                 "entry_diff": summary["entry_diff"],
                 "avg_utility_damage": summary["avg_utility_damage"],
                 "t_round_winrate": _side_winrate(items, "side_t_rounds_won", "side_t_rounds_lost"),
@@ -279,6 +296,7 @@ def calculate_form_score(matches: Iterable[Match]) -> float | None:
         score += min(((match.adr or 0) - 65) * 0.35, 14)
         score += min(((match.kast or 0) - 65) * 0.35, 12)
         score += min(((match.rating or 0) - 0.9) * 24, 12)
+        score += min(max((match.swing_score or 0) * 2.5, -8), 8)
     return round(max(0, min(100, score / len(items))), 1)
 
 
@@ -290,6 +308,7 @@ def chart_series(matches: Iterable[Match], limit: int = 30) -> dict[str, Any]:
         "adr": [match.adr for match in items],
         "kast": [match.kast for match in items],
         "rating": [match.rating for match in items],
+        "swing": [match.swing_score for match in items],
     }
 
 
@@ -313,6 +332,7 @@ def match_detail(match: Match) -> dict[str, Any]:
             "adr": match.adr,
             "kast": match.kast,
             "rating": match.rating,
+            "swing_score": match.swing_score,
             "headshot_percent": match.headshot_percent,
         },
         "opening": {

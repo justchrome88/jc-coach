@@ -29,6 +29,7 @@ class Match(Base):
     adr: Mapped[float | None] = mapped_column(Float)
     kast: Mapped[float | None] = mapped_column(Float)
     rating: Mapped[float | None] = mapped_column(Float)
+    swing_score: Mapped[float | None] = mapped_column(Float)
     headshot_percent: Mapped[float | None] = mapped_column(Float)
     entry_kills: Mapped[int | None] = mapped_column(Integer)
     entry_deaths: Mapped[int | None] = mapped_column(Integer)

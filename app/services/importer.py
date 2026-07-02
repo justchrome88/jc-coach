@@ -33,7 +33,7 @@ INT_FIELDS = {
     "side_ct_rounds_won",
     "side_ct_rounds_lost",
 }
-FLOAT_FIELDS = {"kd", "adr", "kast", "rating", "headshot_percent"}
+FLOAT_FIELDS = {"kd", "adr", "kast", "rating", "swing_score", "headshot_percent"}
 TEXT_FIELDS = {"source", "external_match_id", "demo_file", "map_name", "mode", "result"}
 DATE_FIELDS = {"played_at"}
 SUPPORTED_FIELDS = INT_FIELDS | FLOAT_FIELDS | TEXT_FIELDS | DATE_FIELDS

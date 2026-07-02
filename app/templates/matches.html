@@ -62,6 +62,7 @@
         <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=kd&direction={{ sort_links.kd.direction }}">K/D</a></th>
         <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=adr&direction={{ sort_links.adr.direction }}">ADR</a></th>
         <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=kast&direction={{ sort_links.kast.direction }}">KAST</a></th>
+        <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=swing_score&direction={{ sort_links.swing_score.direction }}">Swing</a></th>
         <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=rating&direction={{ sort_links.rating.direction }}">Rating</a></th>
         <th>Entry</th><th>Early</th><th>Utility</th><th>Цель</th><th></th>
       </tr>
@@ -77,6 +78,7 @@
         <td>{{ match.kd or "n/a" }}</td>
         <td>{{ match.adr or "n/a" }}</td>
         <td>{{ match.kast or "n/a" }}</td>
+        <td>{{ match.swing_score if match.swing_score is not none else "n/a" }}</td>
         <td>{{ match.rating or "n/a" }}</td>
         <td>{{ match.entry_kills or 0 }} / {{ match.entry_deaths or 0 }}</td>
         <td>{{ match.early_deaths if match.early_deaths is not none else "n/a" }}</td>
@@ -92,7 +94,7 @@
         <td><a class="table-link" href="/matches/{{ match.id }}">Детали</a></td>
       </tr>
       {% else %}
-      <tr><td colspan="14">Матчи не найдены. Измените фильтры или импортируйте данные.</td></tr>
+      <tr><td colspan="15">Матчи не найдены. Измените фильтры или импортируйте данные.</td></tr>
       {% endfor %}
     </tbody>
   </table>

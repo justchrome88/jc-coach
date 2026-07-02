@@ -17,6 +17,7 @@
 - ADR;
 - KAST;
 - rating;
+- swing / round swing;
 - headshot %;
 - entry kills;
 - entry deaths;
@@ -52,6 +53,7 @@
 - first kill / first death;
 - trade был/не был;
 - clutch situation;
+- round swing delta;
 - bomb plant/defuse;
 - damage в раунде;
 - utility в раунде.
@@ -106,6 +108,52 @@
 - clutch wins;
 - trade kills;
 - round win contribution.
+- swing score.
+
+#### Swing / Round Swing
+
+Цель: оценить, насколько действия игрока двигали раунд к победе, а не просто увеличивали K/D.
+
+Внешние ориентиры:
+
+- FACEIT Round Swing: изменение win probability от действий игрока, включая урон, utility/flash, bomb actions, trade и экономический контекст.
+- HLTV Rating 3.0 Round Swing: вклад действий в изменение вероятности победы в раунде; учитывает kill impact, damage share, flash assists, trade и экономику.
+
+Наша текущая формула: `jc_swing_v1`.
+
+Что считаем сейчас:
+
+- для каждого раунда строится состояние `own_alive`, `enemy_alive`, `bomb_planted`;
+- перед событием считается estimated win probability;
+- после death/bomb event состояние обновляется и считается новая probability;
+- разница probability считается swing delta;
+- игрок получает credit за:
+  - kill;
+  - death;
+  - assist;
+  - flash перед kill;
+  - damage share по victim;
+  - bomb plant/defuse/explosion;
+- итог `swing_score` = средний вклад в процентных пунктах на раунд.
+
+Где хранится:
+
+- `matches.swing_score`;
+- `raw_json.swing_summary`;
+- `demo_parse_artifacts.payload_json.deep.target_player_summary` в следующих версиях можно расширять под swing breakdown.
+
+Confidence:
+
+- `medium`, если есть player team mapping, `player_death` и `round_end`;
+- `low`, если нет team mapping или round events.
+
+Ограничения:
+
+- это не копия закрытой модели FACEIT/HLTV;
+- пока нет полноценной economy-adjusted модели;
+- нет map-specific probability model;
+- side switching требует дальнейшей валидации;
+- показатель полезен как coach-сигнал, но должен интерпретироваться вместе с ADR/KAST/entry/utility.
 
 ### Survival / Decisions
 

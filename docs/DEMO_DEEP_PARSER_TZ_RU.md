@@ -29,6 +29,7 @@
 - `demo_damage_events`: все события урона из `player_hurt`.
 - `demo_duels`: все смерти/дуэли из `player_death`, включая opening duel, trade kill, distance, HS, smoke/blind flags.
 - `demo_grenade_events`: детонации/старты гранат, flash count, utility damage linkage.
+- `matches.swing_score`: estimated Round Swing игрока в процентных пунктах на раунд.
 
 Дополнительно в artifact payload:
 
@@ -36,6 +37,7 @@
 - агрегированные траектории гранат: start/end tick, start/end position, max Z, sample count;
 - economy/pickup summary;
 - target-player summary для тренера.
+- `swing_summary`: формула, score, total percentage points, top credited events, confidence и data gaps.
 
 ## Что сознательно не сохраняем полностью
 
@@ -89,6 +91,7 @@ Raw `.dem` можно будет удалять только после отде
 - 2026-07-02: расширен parser payload до `PARSER_PAYLOAD_VERSION=2026-07-02.1`.
 - 2026-07-02: добавлен UI для deep parser на странице матча и overview на вкладке тренера.
 - 2026-07-02: выполнен боевой пере-парсинг текущих `.dem` без удаления raw файлов.
+- 2026-07-02: добавлен `jc_swing_v1` и выполнен backfill `swing_score` для 18 валидных DEM-матчей.
 
 ## Боевой прогон 2026-07-02
 
@@ -102,6 +105,7 @@ Raw `.dem` можно будет удалять только после отде
 - `demo_damage_events`: 11445;
 - `demo_duels`: 2701;
 - `demo_grenade_events`: 3247.
+- `matches.swing_score`: заполнен для 18 валидных DEM-матчей.
 
 Пути `.dem`:
 

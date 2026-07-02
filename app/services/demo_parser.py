@@ -176,6 +176,15 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
 
     player = _select_player(death_events, hurt_events, player_info, player_identifier)
     stats = _player_stats(player, death_events, hurt_events)
+    swing_summary = _swing_summary(
+        player,
+        player_info,
+        death_events,
+        hurt_events,
+        blind_events,
+        bomb_events,
+        round_end_events,
+    )
     deep_payload = _deep_parse_payload(
         player=player,
         player_info=player_info,
@@ -229,6 +238,7 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "adr": adr,
         "kast": stats["kast"],
         "rating": None,
+        "swing_score": swing_summary["score"],
         "headshot_percent": round(stats["headshots"] / stats["kills"] * 100, 2) if stats["kills"] else 0,
         "entry_kills": stats["entry_kills"],
         "entry_deaths": stats["entry_deaths"],
@@ -256,6 +266,7 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "match": match,
         "aim_summary": stats["aim_summary"],
         "weapon_breakdown": stats["weapon_breakdown"],
+        "swing_summary": swing_summary,
         "deep": deep_payload,
         "aim_data_gaps": _aim_data_gaps(),
         "header": _jsonable(header),
@@ -287,6 +298,7 @@ def _metric_confidence(
         "bomb_round_context": "high" if event_counts.get("bomb_events") and event_counts.get("round_end") else "medium"
         if event_counts.get("round_end")
         else "low",
+        "swing": "medium" if event_counts.get("player_death") and event_counts.get("round_end") else "low",
         "score": "medium" if score.get("rounds_for") is not None and event_counts["round_end"] else "low",
         "side_stats": "low",
         "early_deaths": "low",
@@ -979,6 +991,206 @@ def _deep_data_gaps(weapon_fire_events, grenade_trajectories) -> list[str]:
     return gaps
 
 
+def _swing_summary(
+    player: dict[str, str | None],
+    player_info,
+    death_events,
+    hurt_events,
+    blind_events,
+    bomb_events: dict[str, Any],
+    round_end_events,
+) -> dict[str, Any]:
+    team = _team_context(player, player_info)
+    rounds = sorted(
+        {_round_number(row) for row in _records(round_end_events)}
+        | {_round_number(row) for row in _records(death_events)}
+    )
+    rounds = [round_number for round_number in rounds if round_number is not None]
+    if not team["target_team_players"] or not team["enemy_players"] or not rounds:
+        return {
+            "score": None,
+            "total_percentage_points": None,
+            "rounds": len(rounds),
+            "events": 0,
+            "confidence": "low",
+            "formula": "jc_swing_v1",
+            "data_gaps": ["player team mapping or round events are missing"],
+        }
+
+    damage_by_round_victim = _damage_share_by_round_victim(hurt_events)
+    flashes_by_round_victim = _flash_by_round_victim(blind_events)
+    events = _swing_events(death_events, bomb_events)
+    total_delta = 0.0
+    credited_events = []
+    for round_number in rounds:
+        state = {
+            "own_alive": len(team["target_team_players"]),
+            "enemy_alive": len(team["enemy_players"]),
+            "bomb_planted": False,
+        }
+        for event in [item for item in events if item["round_number"] == round_number]:
+            before = _round_win_probability(state, team["target_side"])
+            delta = 0.0
+            if event["event_type"] == "death":
+                victim_own = event["victim_key"] in team["target_team_players"]
+                if victim_own:
+                    state["own_alive"] = max(0, state["own_alive"] - 1)
+                else:
+                    state["enemy_alive"] = max(0, state["enemy_alive"] - 1)
+                after = _round_win_probability(state, team["target_side"])
+                round_delta = after - before
+                if event["attacker_key"] == team["target_key"] and not victim_own:
+                    damage_share = damage_by_round_victim.get(
+                        (round_number, event["victim_key"], team["target_key"]),
+                        0,
+                    )
+                    delta += round_delta * (0.7 + min(0.3, damage_share * 0.3))
+                if event["assister_key"] == team["target_key"] and not victim_own:
+                    delta += max(0.0, round_delta) * 0.25
+                if (round_number, event["victim_key"], team["target_key"]) in flashes_by_round_victim:
+                    delta += max(0.0, round_delta) * 0.15
+                if event["victim_key"] == team["target_key"]:
+                    delta += round_delta
+            elif event["event_type"] == "bomb_planted":
+                state["bomb_planted"] = True
+                after = _round_win_probability(state, team["target_side"])
+                if event["player_key"] == team["target_key"]:
+                    delta += after - before
+            elif event["event_type"] in {"bomb_defused", "bomb_exploded"}:
+                after = 1.0 if _bomb_event_helps_target(event["event_type"], team["target_side"]) else 0.0
+                if event["player_key"] == team["target_key"]:
+                    delta += after - before
+            if delta:
+                total_delta += delta
+                credited_events.append(
+                    {
+                        "round_number": round_number,
+                        "tick": event.get("tick"),
+                        "event_type": event["event_type"],
+                        "delta_percentage_points": round(delta * 100, 2),
+                    }
+                )
+
+    score = round(total_delta * 100 / len(rounds), 2) if rounds else None
+    return {
+        "score": score,
+        "total_percentage_points": round(total_delta * 100, 2),
+        "rounds": len(rounds),
+        "events": len(credited_events),
+        "confidence": "medium",
+        "formula": "jc_swing_v1",
+        "description": "Estimated average round win probability contribution in percentage points per round.",
+        "top_events": sorted(credited_events, key=lambda item: abs(item["delta_percentage_points"]), reverse=True)[:20],
+        "data_gaps": [
+            "FACEIT/HLTV model constants are proprietary; this is a transparent approximation.",
+            "Economy and exact map win-probability model are not included yet.",
+        ],
+    }
+
+
+def _team_context(player: dict[str, str | None], player_info) -> dict[str, Any]:
+    target_key = _player_key(player.get("steamid"), player.get("name"))
+    target_team = None
+    players_by_team: dict[int, set[str]] = defaultdict(set)
+    for row in _records(player_info):
+        key = _player_key(row.get("steamid"), row.get("name") or row.get("player_name"))
+        team_number = _int_or_none(row.get("team_number") or row.get("team"))
+        if team_number is None or team_number not in {2, 3}:
+            continue
+        players_by_team[team_number].add(key)
+        if key == target_key:
+            target_team = team_number
+    enemy_team = 3 if target_team == 2 else 2 if target_team == 3 else None
+    return {
+        "target_key": target_key,
+        "target_team": target_team,
+        "target_side": _team_number_to_side(target_team),
+        "target_team_players": players_by_team.get(target_team or 0, set()),
+        "enemy_players": players_by_team.get(enemy_team or 0, set()),
+    }
+
+
+def _damage_share_by_round_victim(hurt_events) -> dict[tuple[int, str, str], float]:
+    totals: Counter[tuple[int, str]] = Counter()
+    by_attacker: Counter[tuple[int, str, str]] = Counter()
+    for row in _records(hurt_events):
+        round_number = _round_number(row)
+        victim_key = _player_key(row.get("user_steamid"), row.get("user_name") or row.get("user"))
+        attacker_key = _player_key(row.get("attacker_steamid"), row.get("attacker_name") or row.get("attacker"))
+        damage = _int_or_zero(row.get("dmg_health") or row.get("health_damage") or row.get("damage"))
+        totals[(round_number, victim_key)] += damage
+        by_attacker[(round_number, victim_key, attacker_key)] += damage
+    shares = {}
+    for key, damage in by_attacker.items():
+        total = totals[(key[0], key[1])]
+        shares[key] = damage / total if total else 0
+    return shares
+
+
+def _flash_by_round_victim(blind_events) -> set[tuple[int, str, str]]:
+    flashes = set()
+    for row in _records(blind_events):
+        round_number = _round_number(row)
+        victim_key = _player_key(row.get("user_steamid"), row.get("user_name") or row.get("user"))
+        attacker_key = _player_key(row.get("attacker_steamid"), row.get("attacker_name") or row.get("attacker"))
+        if _float_or_none(row.get("blind_duration")) and _float_or_none(row.get("blind_duration")) >= 0.5:
+            flashes.add((round_number, victim_key, attacker_key))
+    return flashes
+
+
+def _swing_events(death_events, bomb_events: dict[str, Any]) -> list[dict[str, Any]]:
+    events = []
+    for row in _records(death_events):
+        events.append(
+            {
+                "event_type": "death",
+                "round_number": _round_number(row),
+                "tick": _tick_or_none(row),
+                "attacker_key": _player_key(
+                    row.get("attacker_steamid"),
+                    row.get("attacker_name") or row.get("attacker"),
+                ),
+                "victim_key": _player_key(row.get("user_steamid"), row.get("user_name") or row.get("user")),
+                "assister_key": _player_key(
+                    row.get("assister_steamid"),
+                    row.get("assister_name") or row.get("assister"),
+                ),
+            }
+        )
+    for event_name in ("bomb_planted", "bomb_defused", "bomb_exploded"):
+        for row in _records(bomb_events.get(event_name)):
+            events.append(
+                {
+                    "event_type": event_name,
+                    "round_number": _round_number(row),
+                    "tick": _tick_or_none(row),
+                    "player_key": _player_key(row.get("user_steamid"), row.get("user_name") or row.get("user")),
+                }
+            )
+    return sorted(events, key=lambda item: (item["round_number"], item.get("tick") or 0))
+
+
+def _round_win_probability(state: dict[str, Any], target_side: str | None) -> float:
+    own_alive = max(0, int(state.get("own_alive") or 0))
+    enemy_alive = max(0, int(state.get("enemy_alive") or 0))
+    if own_alive <= 0:
+        return 0.01
+    if enemy_alive <= 0:
+        return 0.99
+    alive_component = own_alive / (own_alive + enemy_alive)
+    advantage = (own_alive - enemy_alive) * 0.055
+    bomb_bonus = 0.0
+    if state.get("bomb_planted"):
+        bomb_bonus = 0.16 if target_side == "T" else -0.16
+    return round(min(0.99, max(0.01, alive_component + advantage + bomb_bonus)), 4)
+
+
+def _bomb_event_helps_target(event_type: str, target_side: str | None) -> bool:
+    return (event_type == "bomb_exploded" and target_side == "T") or (
+        event_type == "bomb_defused" and target_side == "CT"
+    )
+
+
 def _score_for_player(
     player: dict[str, str | None],
     player_info,
@@ -1144,6 +1356,7 @@ def _save_demo_parse_artifacts(db: Session, match: Match, parsed: dict[str, Any]
                     "player": parsed.get("player") or {},
                     "aim_summary": parsed.get("aim_summary") or {},
                     "weapon_breakdown": parsed.get("weapon_breakdown") or {},
+                    "swing_summary": parsed.get("swing_summary") or {},
                     "available_players": parsed.get("available_players") or [],
                     "deep": deep,
                 }

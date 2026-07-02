@@ -376,6 +376,7 @@ def _serialize_match(match: Match) -> dict[str, Any]:
         "adr": match.adr,
         "kast": match.kast,
         "rating": match.rating,
+        "swing_score": match.swing_score,
         "entry_kills": match.entry_kills,
         "entry_deaths": match.entry_deaths,
         "early_deaths": match.early_deaths,

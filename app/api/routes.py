@@ -455,6 +455,7 @@ def serialize_match(match: Match) -> dict:
         "adr": match.adr,
         "kast": match.kast,
         "rating": match.rating,
+        "swing_score": match.swing_score,
         "headshot_percent": match.headshot_percent,
         "entry_kills": match.entry_kills,
         "entry_deaths": match.entry_deaths,

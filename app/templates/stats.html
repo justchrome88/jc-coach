@@ -49,8 +49,8 @@
   <div class="metric"><span>ADR</span><strong>{{ summary.avg_adr or "n/a" }}</strong></div>
   <div class="metric"><span>KAST</span><strong>{{ summary.avg_kast or "n/a" }}%</strong></div>
   <div class="metric"><span>Rating</span><strong>{{ summary.avg_rating or "n/a" }}</strong></div>
+  <div class="metric"><span>Swing</span><strong>{{ summary.avg_swing_score if summary.avg_swing_score is not none else "n/a" }}</strong></div>
   <div class="metric"><span>Форма</span><strong>{{ summary.form_score or "n/a" }}</strong></div>
-  <div class="metric"><span>Entry diff</span><strong>{{ summary.entry_diff }}</strong></div>
 </section>
 
 <section class="layout-two">
@@ -73,6 +73,7 @@
       <div><span>Utility damage</span><strong>{{ summary.avg_utility_damage or "n/a" }}</strong></div>
       <div><span>Flash assists</span><strong>{{ summary.avg_flash_assists or "n/a" }}</strong></div>
       <div><span>HS%</span><strong>{{ summary.avg_headshot_percent or "n/a" }}</strong></div>
+      <div><span>Swing pp/round</span><strong>{{ summary.avg_swing_score if summary.avg_swing_score is not none else "n/a" }}</strong></div>
     </div>
   </div>
 </section>
@@ -197,7 +198,7 @@
     <a href="/matches">Все матчи</a>
   </div>
   <table>
-    <thead><tr><th>Дата</th><th>Источник</th><th>Карта</th><th>Результат</th><th>Счёт</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Rating</th><th></th></tr></thead>
+    <thead><tr><th>Дата</th><th>Источник</th><th>Карта</th><th>Результат</th><th>Счёт</th><th>K/D</th><th>ADR</th><th>KAST</th><th>Swing</th><th>Rating</th><th></th></tr></thead>
     <tbody>
       {% for match in recent_matches %}
       <tr>
@@ -209,11 +210,12 @@
         <td>{{ match.kd or "n/a" }}</td>
         <td>{{ match.adr or "n/a" }}</td>
         <td>{{ match.kast or "n/a" }}</td>
+        <td>{{ match.swing_score if match.swing_score is not none else "n/a" }}</td>
         <td>{{ match.rating or "n/a" }}</td>
         <td><a class="table-link" href="/matches/{{ match.id }}">Детали</a></td>
       </tr>
       {% else %}
-      <tr><td colspan="10">Матчей пока нет. Начните с импорта CSV, JSON или DEM.</td></tr>
+      <tr><td colspan="11">Матчей пока нет. Начните с импорта CSV, JSON или DEM.</td></tr>
       {% endfor %}
     </tbody>
   </table>

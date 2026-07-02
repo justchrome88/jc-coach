@@ -38,6 +38,8 @@ def _upgrade_sqlite_schema() -> None:
     with engine.begin() as connection:
         if "early_deaths" not in columns:
             connection.execute(text("ALTER TABLE matches ADD COLUMN early_deaths INTEGER"))
+        if "swing_score" not in columns:
+            connection.execute(text("ALTER TABLE matches ADD COLUMN swing_score FLOAT"))
     if "coach_reports" in inspector.get_table_names():
         report_columns = {column["name"] for column in inspector.get_columns("coach_reports")}
         with engine.begin() as connection:
