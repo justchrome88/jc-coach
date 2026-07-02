@@ -1,3 +1,7 @@
+# HISTORICAL / STRATEGY MEMO
+
+This document is retained for context. Current product strategy and priority order are governed by `docs/PROJECT_CONTROL.md`, `docs/CURRENT_MILESTONE.md` and `docs/ROADMAP.md`.
+
 # Product Execution Strategy
 
 ## Главный вектор

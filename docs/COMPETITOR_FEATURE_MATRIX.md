@@ -1,3 +1,7 @@
+# HISTORICAL / ADVISORY
+
+This document is retained as competitor research. Current product scope and priorities are governed by `docs/PROJECT_CONTROL.md`, `docs/CURRENT_MILESTONE.md` and `docs/ROADMAP.md`.
+
 # Competitor Feature Matrix
 
 This file tracks features observed in CS2 analytics/training products and estimates implementation difficulty for CS2 Personal Coach.

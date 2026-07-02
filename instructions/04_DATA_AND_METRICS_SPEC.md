@@ -1,3 +1,7 @@
+# HISTORICAL / DEPRECATED
+
+This original metric wishlist is retained for context. Current metric truth is governed by `docs/METRICS.md` and `docs/PROJECT_CONTROL.md`.
+
 # Какие данные вытаскивать из матчей/демок CS2
 
 ## Уровень 1: сухие данные матча

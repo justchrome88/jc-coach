@@ -1,3 +1,7 @@
+# HISTORICAL / DEPRECATED
+
+These old ready-to-paste prompts are retained for context. Do not treat them as active commands when they conflict with `AGENT.md`, `docs/PROJECT_CONTROL.md` or the user's latest request.
+
 # Готовые команды/промпты для Codex
 
 ## Ночная команда для GPT-5.5

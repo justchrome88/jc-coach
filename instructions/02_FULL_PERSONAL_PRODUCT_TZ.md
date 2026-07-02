@@ -1,3 +1,7 @@
+# HISTORICAL / DEPRECATED
+
+This original product TZ is retained for context. Current milestone scope is governed by `docs/PROJECT_CONTROL.md` and `docs/CURRENT_MILESTONE.md`.
+
 # Полное ТЗ: CS2 Personal Coach для личного использования
 
 ## 1. Видение продукта

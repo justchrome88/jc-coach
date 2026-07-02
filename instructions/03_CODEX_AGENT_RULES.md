@@ -1,3 +1,7 @@
+# HISTORICAL / SUPERSEDED
+
+Current agent rules live in `AGENT.md`. This file is retained for context only.
+
 # Правила работы Codex-агента в этом репозитории
 
 ## Главный принцип

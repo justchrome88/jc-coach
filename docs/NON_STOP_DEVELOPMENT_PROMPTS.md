@@ -1,3 +1,7 @@
+# HISTORICAL / PROMPT LIBRARY
+
+This document is retained for context. Do not treat these prompts as active instructions when they conflict with `AGENT.md`, `docs/PROJECT_CONTROL.md` or the user's latest request.
+
 # Non-Stop Development Prompts
 
 Этот файл нужен, чтобы запускать длинные рабочие сессии без потери структуры. Главная цель проекта: построить CS2 coach platform в стиле Scope.gg, но с основным вектором на AI-тренера, который объясняет ошибки, ставит цели и отслеживает прогресс по новым demo.

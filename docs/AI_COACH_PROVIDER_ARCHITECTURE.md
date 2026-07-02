@@ -1,3 +1,7 @@
+# HISTORICAL / PARTIALLY SUPERSEDED
+
+This document is retained for context. Current AI coach truth is governed by `docs/PROJECT_CONTROL.md` and `docs/AI_COACH.md`.
+
 # AI Coach Provider Architecture
 
 ## Решение

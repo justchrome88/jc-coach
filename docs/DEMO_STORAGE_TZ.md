@@ -1,3 +1,7 @@
+> СТАТУС: ВСПОМОГАТЕЛЬНЫЙ / ЧАСТИЧНО АКТУАЛЬНЫЙ / НЕ SOURCE OF TRUTH
+> Канонический источник: `docs/PROJECT_CONTROL.md`, `docs/ARCHITECTURE.md` и `docs/BACKUP_RESTORE.md`.
+> Не использовать этот файл как текущий план реализации, если `PROJECT_CONTROL` явно на него не ссылается.
+
 # ТЗ: жизненный цикл CS2 demo
 
 ## Цель

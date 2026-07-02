@@ -1,3 +1,7 @@
+> СТАТУС: ВСПОМОГАТЕЛЬНЫЙ / ЧАСТИЧНО АКТУАЛЬНЫЙ / НЕ SOURCE OF TRUTH
+> Канонический источник: `docs/PROJECT_CONTROL.md` и `docs/ROADMAP.md`.
+> Не использовать этот файл как текущий план реализации, если `PROJECT_CONTROL` явно на него не ссылается.
+
 # Feature Roadmap Scoring
 
 This document converts `docs/COMPETITOR_FEATURE_MATRIX.md` into an implementation roadmap.

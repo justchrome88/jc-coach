@@ -1,3 +1,7 @@
+# HISTORICAL / DEPRECATED
+
+This recommendation tracking TZ is retained for context. Current recommendation truth is governed by `docs/RECOMMENDATIONS.md`.
+
 # Дополнение к ТЗ: отслеживание выполнения рекомендаций AI-тренера
 
 ## 1. Суть идеи

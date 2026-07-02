@@ -1,3 +1,7 @@
+# HISTORICAL / DEPRECATED
+
+This prompt reference is retained for context. Current AI coach behavior is governed by `docs/AI_COACH.md` and runtime provider code.
+
 # Prompt для AI-тренера CS2
 
 ## System prompt

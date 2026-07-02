@@ -1,3 +1,7 @@
+# HISTORICAL / DEPRECATED
+
+These early notes are retained for context. Current Steam import truth is governed by `docs/STEAM_IMPORT.md`.
+
 # Steam, demo import и ограничения
 
 ## Steam login

@@ -1,3 +1,7 @@
+# HISTORICAL / DEPRECATED
+
+This early roadmap is retained for context. Current roadmap is governed by `docs/ROADMAP.md`.
+
 # Roadmap CS2 Personal Coach
 
 ## День 1 / Ночной прогон

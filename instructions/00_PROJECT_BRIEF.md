@@ -1,3 +1,7 @@
+# HISTORICAL / DEPRECATED
+
+This original instruction is retained for context. Current truth is governed by `docs/PROJECT_CONTROL.md` and `AGENT.md`.
+
 # CS2 Personal Coach — краткое ТЗ проекта
 
 ## Цель

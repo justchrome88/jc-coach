@@ -1,3 +1,7 @@
+# HISTORICAL / DEPRECATED
+
+This agent-division note is retained for context. Current process is governed by `AGENT.md`.
+
 # Как делить задачи между GPT-5.5 и GPT-5.3-Codex-Spark
 
 ## GPT-5.5

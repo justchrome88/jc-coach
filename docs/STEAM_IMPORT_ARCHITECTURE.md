@@ -1,3 +1,7 @@
+> СТАТУС: ВСПОМОГАТЕЛЬНЫЙ / ЧАСТИЧНО АКТУАЛЬНЫЙ / НЕ SOURCE OF TRUTH
+> Канонический источник: `docs/PROJECT_CONTROL.md` и `docs/STEAM_IMPORT.md`.
+> Не использовать этот файл как текущий план реализации, если `PROJECT_CONTROL` явно на него не ссылается.
+
 # Steam Import Architecture
 
 ## Product Goal

@@ -1,3 +1,7 @@
+> СТАТУС: ВСПОМОГАТЕЛЬНЫЙ / ЧАСТИЧНО АКТУАЛЬНЫЙ / НЕ SOURCE OF TRUTH
+> Канонический источник: `docs/PROJECT_CONTROL.md`, `docs/SECURITY.md` и `docs/DEPLOYMENT.md`.
+> Не использовать этот файл как текущий план реализации, если `PROJECT_CONTROL` явно на него не ссылается.
+
 # Public Deployment Checklist
 
 Цель: подготовить `jcnodex.ru` к публичному доступу, Steam Web API key и HTTPS.

@@ -1,4 +1,7 @@
-# CS2 Personal Coach MVP v0.1
+# CS2 Personal Coach
+
+> Canonical status and project-control source of truth: `docs/PROJECT_CONTROL.md`.
+> The old `v0.1` label describes the original MVP lineage; current factual status is tracked in `docs/CURRENT_STATUS.md`.
 
 Личный FastAPI-инструмент для загрузки матчей CS2 из CSV/JSON/DEM, просмотра аналитики, отслеживания coach-целей и подготовки AI coach handoff.
 

@@ -1,3 +1,7 @@
+# HISTORICAL / SUPERSEDED PLAN
+
+This document is retained for context. Current implementation priorities are governed by `docs/PROJECT_CONTROL.md`, `docs/CURRENT_MILESTONE.md` and `docs/ROADMAP.md`.
+
 # План доведения сложных фич до 100%
 
 Этот план описывает пошаговое внедрение и отладку фич, которые нельзя честно закрыть одной UI-правкой. Каждая фича считается готовой на 100%, когда выполнены критерии в блоке `Definition of Done`.

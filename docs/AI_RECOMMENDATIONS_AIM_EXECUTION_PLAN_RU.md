@@ -1,3 +1,7 @@
+# HISTORICAL / COMPLETED PLAN
+
+This document is retained for context. Current recommendation and AI priorities are governed by `docs/PROJECT_CONTROL.md`, `docs/RECOMMENDATIONS.md` and `docs/AI_COACH.md`.
+
 # План доведения AI persistence, multi-category recommendations и aim stats
 
 Дата старта: 2026-07-01.

@@ -1,3 +1,7 @@
+# HISTORICAL / DEPRECATED
+
+This handoff prompt is retained for context. Current truth is governed by `docs/PROJECT_CONTROL.md`.
+
 # Краткая постановка задачи для соседнего чата
 
 Мне нужен набор ТЗ и инструкций для Codex, чтобы быстро начать проект CS2 Personal Coach.

@@ -1,3 +1,7 @@
+# HISTORICAL / DEPRECATED
+
+This original MVP task is retained for context. It is not an active instruction. Current truth is governed by `docs/PROJECT_CONTROL.md` and `AGENT.md`.
+
 # ТЗ для ночной задачи Codex: CS2 Personal Coach MVP v0.1
 
 ## Контекст
