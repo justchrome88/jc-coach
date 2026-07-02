@@ -364,6 +364,8 @@ def _parser_evidence(match: Match) -> dict[str, Any] | None:
     return {
         "parser": raw.get("parser"),
         "confidence": raw.get("parser_confidence", "unknown"),
+        "played_at_source": raw.get("played_at_source", "unknown"),
+        "played_at": raw.get("played_at"),
         "event_counts": raw.get("event_counts", {}),
         "metric_confidence": raw.get("metric_confidence", {}),
         "warnings": raw.get("warnings", []),

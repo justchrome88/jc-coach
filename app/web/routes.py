@@ -49,6 +49,7 @@ from app.services.demo_parser import DemoParseError, import_demo_file, import_in
 from app.services.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.i18n import normalize_locale
 from app.services.importer import import_csv, import_json
+from app.services.match_queries import is_playable_match, playable_match_select
 from app.services.mistake_detection import (
     category_scorecard,
     detect_structured_mistakes,
@@ -70,6 +71,7 @@ from app.services.steam_demo_downloader import steam_demo_downloader_configured
 from app.services.steam_integration import (
     clear_steam_demo_download_errors,
     create_steam_import_job,
+    import_steam_share_code_demo,
     link_steam_account,
     list_steam_accounts,
     list_visible_steam_import_jobs,
@@ -175,7 +177,7 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     auth_redirect = _require_user_redirect(request, db)
     if auth_redirect:
         return auth_redirect
-    matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
+    matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     summary = get_summary(matches)
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
@@ -225,7 +227,7 @@ def stats_page(
     auth_redirect = _require_user_redirect(request, db)
     if auth_redirect:
         return auth_redirect
-    all_matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
+    all_matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     selected_matches = _select_stats_matches(all_matches, range_type, matches_count, date_from, date_to)
     summary = get_summary(selected_matches)
     comparison = compare_periods(selected_matches)
@@ -258,7 +260,7 @@ def stats_page(
 
 @router.get("/coach")
 def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], message: str | None = None):
-    matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
+    matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     summary = get_summary(matches)
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
@@ -388,7 +390,27 @@ def save_steam_auth_code(
         update_match_auth_code(db, steam_account_id, match_auth_code, latest_share_code)
     except ValueError as exc:
         return RedirectResponse(f"/settings/imports?message={quote(str(exc))}", status_code=303)
-    return RedirectResponse("/settings/imports?message=Steam%20match%20history%20sync%20queued.", status_code=303)
+    return RedirectResponse("/settings/imports?message=Steam%20codes%20saved.", status_code=303)
+
+
+@router.post("/settings/imports/steam/{steam_account_id}/share-code")
+def import_steam_share_code(
+    db: Annotated[Session, Depends(get_db)],
+    steam_account_id: int,
+    share_code: Annotated[str, Form()],
+):
+    try:
+        result = import_steam_share_code_demo(db, steam_account_id, share_code)
+    except ValueError as exc:
+        return RedirectResponse(f"/settings/imports?message={quote(str(exc))}", status_code=303)
+    demo_download = result.get("demo_download") or {}
+    if demo_download.get("configured") is False:
+        message = f"Share code saved, but demo bot is not configured: {demo_download.get('message')}"
+    elif demo_download.get("imported"):
+        message = f"Imported demo for {result['share_code']}."
+    else:
+        message = f"Queued demo for {result['share_code']}."
+    return RedirectResponse(f"/settings/imports?message={quote(str(message))}", status_code=303)
 
 
 @router.post("/settings/imports/steam/{steam_account_id}/sync")
@@ -517,7 +539,7 @@ def matches_page(
     page: int = 1,
     per_page: int = 25,
 ):
-    stmt = select(Match)
+    stmt = playable_match_select()
     if map_name:
         stmt = stmt.where(Match.map_name == map_name)
     if result:
@@ -546,9 +568,11 @@ def matches_page(
     offset = (page - 1) * per_page
     paged_matches = matches[offset : offset + per_page]
     maps = db.scalars(
-        select(Match.map_name).where(Match.map_name.is_not(None)).distinct().order_by(Match.map_name)
+        playable_match_select().with_only_columns(Match.map_name).where(Match.map_name.is_not(None)).distinct().order_by(Match.map_name)
     ).all()
-    sources = db.scalars(select(Match.source).where(Match.source.is_not(None)).distinct().order_by(Match.source)).all()
+    sources = db.scalars(
+        playable_match_select().with_only_columns(Match.source).where(Match.source.is_not(None)).distinct().order_by(Match.source)
+    ).all()
     return templates.TemplateResponse(
         request=request,
         name="matches.html",
@@ -587,10 +611,10 @@ def matches_page(
 @router.get("/matches/{match_id}")
 def match_detail_page(request: Request, db: Annotated[Session, Depends(get_db)], match_id: int):
     match = db.get(Match, match_id)
-    if match is None:
+    if match is None or not is_playable_match(match):
         return RedirectResponse("/matches", status_code=303)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
-    all_matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
+    all_matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     match_mistakes = mistakes_by_match_id(all_matches).get(match.id, [])
     return templates.TemplateResponse(
         request=request,

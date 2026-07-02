@@ -283,6 +283,8 @@
     </div>
     <div class="detail-list">
       <div><span>External ID</span><strong>{{ match.external_match_id or "n/a" }}</strong></div>
+      <div><span>Дата матча</span><strong>{{ match.played_at.strftime("%Y-%m-%d %H:%M") if match.played_at else "n/a" }}</strong></div>
+      <div><span>Источник даты</span><strong>{{ detail.parser_evidence.played_at_source if detail.parser_evidence else "manual/import" }}</strong></div>
       <div><span>Demo file</span><strong>{{ match.demo_file or "n/a" }}</strong></div>
       <div><span>Создано</span><strong>{{ match.created_at.strftime("%Y-%m-%d %H:%M") if match.created_at else "n/a" }}</strong></div>
       <div><span>Обновлено</span><strong>{{ match.updated_at.strftime("%Y-%m-%d %H:%M") if match.updated_at else "n/a" }}</strong></div>

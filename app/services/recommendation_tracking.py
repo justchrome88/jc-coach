@@ -9,6 +9,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import CoachRecommendation, Match, MatchRecommendationEvaluation
+from app.services.match_queries import NON_PLAYABLE_MATCH_SOURCES, playable_match_select
 
 DEFAULT_TITLE = "Снизить первые смерти"
 TARGET_PERIOD_MATCHES = 10
@@ -286,7 +287,9 @@ def recommendation_category_summary(db: Session) -> list[dict[str, Any]]:
 def _progress_for_recommendation(db: Session, recommendation: CoachRecommendation) -> dict[str, Any]:
     evaluations = db.scalars(
         select(MatchRecommendationEvaluation)
+        .join(Match, Match.id == MatchRecommendationEvaluation.match_id)
         .where(MatchRecommendationEvaluation.recommendation_id == recommendation.id)
+        .where(Match.source.not_in(NON_PLAYABLE_MATCH_SOURCES))
         .order_by(MatchRecommendationEvaluation.evaluated_at.asc(), MatchRecommendationEvaluation.id.asc())
     ).all()
     target_evaluations = evaluations[: recommendation.target_period_matches]
@@ -676,7 +679,7 @@ def _progress_summary(progress_score: int, matches_count: int) -> str:
 
 
 def _ordered_matches(db: Session) -> list[Match]:
-    return list(db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all())
+    return list(db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all())
 
 
 def _avg(matches: list[Match], attr: str) -> float | None:

@@ -146,6 +146,7 @@ def steam_import_overview(db: Session) -> dict[str, Any]:
         if status == "demo_download_error" and not latest_error:
             latest_error = str(raw.get("error") or "")
     accounts = list_steam_accounts(db)
+    account_states = [_steam_account_import_state(db, account) for account in accounts]
     current_job = current_steam_import_all_job(db)
     return {
         "accounts_count": len(accounts),
@@ -155,6 +156,7 @@ def steam_import_overview(db: Session) -> dict[str, Any]:
         "demo_imported": status_counts.get("demo_imported", 0),
         "latest_error": latest_error,
         "has_ready_account": any(account.match_auth_code and account.last_share_code for account in accounts),
+        "account_states": account_states,
         "current_job": current_job,
     }
 
@@ -201,6 +203,7 @@ def update_match_auth_code(
         if not share_code.upper().startswith("CSGO-"):
             raise ValueError("Latest match share code should start with CSGO-.")
         account.last_share_code = share_code
+        _store_steam_share_code_match(db, account, share_code)
     account.sync_enabled = 1
     db.commit()
     db.refresh(account)
@@ -271,8 +274,6 @@ def sync_match_history_job(db: Session, job_id: int) -> dict[str, Any]:
             was_inserted = _store_steam_share_code_match(db, account, share_code)
             inserted += 1 if was_inserted else 0
             duplicates += 0 if was_inserted else 1
-        if collected:
-            account.last_share_code = collected[-1]
         account.last_sync_at = datetime.now(UTC).replace(tzinfo=None)
         account.sync_enabled = 1
         job.status = "succeeded"
@@ -281,10 +282,14 @@ def sync_match_history_job(db: Session, job_id: int) -> dict[str, Any]:
             {
                 "known_code": known_code,
                 "collected": len(collected),
+                "collected_share_codes": collected,
                 "inserted": inserted,
                 "duplicates": duplicates,
                 "last_share_code": account.last_share_code,
-                "note": "Steam share codes were saved. Demo download/parsing is the next worker layer.",
+                "note": (
+                    "Steam share codes were saved. The account's explicit latest share code was not advanced "
+                    "from GetNextMatchSharingCode results."
+                ),
             },
             ensure_ascii=False,
         )
@@ -326,6 +331,8 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
         settings = get_settings()
         accounts = list_steam_accounts(db)
         sync_results = []
+        fresh_share_codes: list[str] = []
+        latest_played_at = _latest_imported_match_played_at(db)
         for account in accounts:
             if not account.match_auth_code or not account.last_share_code:
                 sync_results.append(
@@ -336,33 +343,45 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
                     }
                 )
                 continue
-            if account.last_sync_at and (
-                datetime.now(UTC).replace(tzinfo=None) - account.last_sync_at
-            ).total_seconds() < STEAM_SYNC_COOLDOWN_SECONDS:
+            saved_share_code = account.last_share_code.strip()
+            try:
+                decode_match_share_code(saved_share_code)
+            except ValueError as exc:
                 sync_results.append(
                     {
                         "steam_account_id": account.id,
                         "status": "skipped",
-                        "reason": "recently_synced",
-                        "last_sync_at": account.last_sync_at,
+                        "error": str(exc),
                     }
                 )
                 continue
+            _store_steam_share_code_match(db, account, saved_share_code)
+            fresh_share_codes.append(saved_share_code)
             sync_job = queue_match_history_sync(db, account.id)
-            sync_results.append(sync_match_history_job(db, sync_job.id))
+            sync_result = sync_match_history_job(db, sync_job.id)
+            sync_results.append(sync_result)
+            result_payload = sync_result.get("result") or {}
+            fresh_share_codes.extend(result_payload.get("collected_share_codes") or [])
+        fresh_share_codes = list(dict.fromkeys(fresh_share_codes))
 
-        demo_status = mark_steam_history_demo_download_status(db)
+        demo_status = mark_steam_history_demo_download_status(db, share_codes=fresh_share_codes)
         from app.services.steam_demo_downloader import download_pending_steam_demos
 
-        demo_download = download_pending_steam_demos(db, limit=max(1, min(int(settings.steam_sync_max_codes), 50)))
+        demo_download = download_pending_steam_demos(
+            db,
+            limit=max(1, min(int(settings.steam_sync_max_codes), 50)),
+            share_codes=fresh_share_codes,
+            min_played_at=latest_played_at,
+        )
         result = {
             "accounts": len(accounts),
             "sync_jobs": sync_results,
             "demo_status": demo_status,
             "demo_download": demo_download,
+            "latest_imported_played_at_before_job": latest_played_at.isoformat() if latest_played_at else None,
             "note": (
-                "Steam Web API synced share codes. If the Steam service bot is configured, pending demos are "
-                "downloaded and parsed automatically."
+                "Synced share codes through Steam Web API, then used Steam GC match_time as the authoritative "
+                "date before downloading demos. Candidates older than the latest imported match are skipped."
             ),
         }
         job.status = "succeeded"
@@ -380,8 +399,45 @@ def import_all_available_steam_matches(db: Session) -> dict[str, Any]:
     return run_steam_import_all_job(db, job.id)
 
 
-def mark_steam_history_demo_download_status(db: Session) -> dict[str, Any]:
-    matches = db.scalars(select(Match).where(Match.source == "steam_history").order_by(Match.id.asc())).all()
+def import_steam_share_code_demo(db: Session, steam_account_id: int, share_code_input: str) -> dict[str, Any]:
+    account = db.get(SteamAccount, steam_account_id)
+    if account is None:
+        raise ValueError("Steam account was not found.")
+    parsed = parse_share_code_input(share_code_input)
+    share_code = str(parsed["share_code"]).strip()
+    decode_match_share_code(share_code)
+    was_inserted = _store_steam_share_code_match(db, account, share_code)
+    account.last_share_code = share_code
+    account.last_sync_at = datetime.now(UTC).replace(tzinfo=None)
+    account.sync_enabled = 1
+    db.commit()
+
+    demo_status = mark_steam_history_demo_download_status(db, share_codes=[share_code])
+    from app.services.steam_demo_downloader import download_pending_steam_demos
+
+    demo_download = download_pending_steam_demos(db, limit=1, share_codes=[share_code])
+    return {
+        "share_code": share_code,
+        "inserted": was_inserted,
+        "demo_status": demo_status,
+        "demo_download": demo_download,
+    }
+
+
+def mark_steam_history_demo_download_status(db: Session, share_codes: list[str] | None = None) -> dict[str, Any]:
+    stmt = select(Match).where(Match.source == "steam_history").order_by(Match.id.desc())
+    if share_codes is not None:
+        normalized_codes = [code.strip() for code in share_codes if code and code.strip()]
+        if not normalized_codes:
+            return {
+                "steam_history_matches": 0,
+                "decoded": 0,
+                "pending_demo_download": 0,
+                "already_has_demo": 0,
+                "errors": 0,
+            }
+        stmt = stmt.where(Match.external_match_id.in_(normalized_codes))
+    matches = db.scalars(stmt).all()
     decoded = 0
     pending = 0
     errors = 0
@@ -553,6 +609,57 @@ def _store_steam_share_code_match(db: Session, account: SteamAccount, share_code
         db.rollback()
         return False
     return True
+
+
+def _latest_imported_match_played_at(db: Session) -> datetime | None:
+    return db.scalar(
+        select(Match.played_at)
+        .where(Match.source != "steam_history")
+        .where(Match.played_at.is_not(None))
+        .order_by(Match.played_at.desc(), Match.id.desc())
+        .limit(1)
+    )
+
+
+def _steam_account_import_state(db: Session, account: SteamAccount) -> dict[str, Any]:
+    share_code = (account.last_share_code or "").strip()
+    match = None
+    raw: dict[str, Any] = {}
+    if share_code:
+        match = db.scalar(
+            select(Match)
+            .where(Match.source == "steam_history")
+            .where(Match.external_match_id == share_code)
+            .order_by(Match.id.desc())
+            .limit(1)
+        )
+        if match:
+            raw = _json_loads(match.raw_json)
+    steam_metadata = raw.get("steam_metadata") if isinstance(raw.get("steam_metadata"), dict) else {}
+    played_at = raw.get("played_at") or steam_metadata.get("played_at")
+    played_at_source = raw.get("played_at_source") or steam_metadata.get("played_at_source")
+    latest_imported = _latest_imported_match_played_at(db)
+    anchor_is_older = False
+    if played_at and latest_imported:
+        try:
+            parsed = datetime.fromisoformat(str(played_at).replace("Z", "+00:00"))
+            if parsed.tzinfo is not None:
+                parsed = parsed.astimezone(UTC).replace(tzinfo=None)
+            anchor_is_older = parsed <= latest_imported
+        except ValueError:
+            anchor_is_older = False
+    return {
+        "steam_account_id": account.id,
+        "steam_id": account.steam_id,
+        "has_match_auth_code": bool(account.match_auth_code),
+        "last_share_code": share_code or None,
+        "last_share_code_status": raw.get("status") if raw else None,
+        "last_share_code_played_at": played_at,
+        "last_share_code_played_at_source": played_at_source,
+        "last_share_code_ignored_reason": raw.get("ignored_reason") if raw else None,
+        "latest_imported_played_at": latest_imported.isoformat() if latest_imported else None,
+        "anchor_is_older_than_latest_imported": anchor_is_older,
+    }
 
 
 def _fail_job(db: Session, job: ImportJob, message: str) -> dict[str, Any]:

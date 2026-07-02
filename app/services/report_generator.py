@@ -12,11 +12,12 @@ from app.config import get_settings
 from app.db.models import CoachReport, Match
 from app.services.analytics import compare_periods, detect_weaknesses, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
+from app.services.match_queries import playable_match_select
 from app.services.recommendation_tracking import get_active_recommendation_progress
 
 
 def generate_report(db: Session) -> CoachReport:
-    matches = list(db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())))
+    matches = list(db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())))
     summary = get_summary(matches)
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)

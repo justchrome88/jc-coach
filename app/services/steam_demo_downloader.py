@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError
@@ -20,6 +21,7 @@ from app.config import BASE_DIR, get_settings
 from app.db.models import Match
 from app.services.demo_parser import DemoParseError, import_demo_file
 from app.services.steam_integration import decode_match_share_code
+from app.services.steam_match_metadata import parse_steam_match_time, steam_gc_metadata_from_item
 
 
 class SteamDemoDownloadError(RuntimeError):
@@ -38,8 +40,10 @@ def download_pending_steam_demos(
     db: Session,
     limit: int = 10,
     player_identifier: str | None = None,
+    share_codes: list[str] | None = None,
+    min_played_at: datetime | None = None,
 ) -> dict[str, Any]:
-    matches = _pending_steam_history_matches(db, limit=limit)
+    matches = _pending_steam_history_matches(db, limit=limit, share_codes=share_codes)
     if not matches:
         return {
             "configured": steam_demo_downloader_configured(),
@@ -64,7 +68,7 @@ def download_pending_steam_demos(
     by_share_code = {item.get("share_code"): item for item in metadata.get("results", []) if item.get("share_code")}
 
     results = []
-    imported = failed = 0
+    imported = failed = skipped = 0
     for match in matches:
         share_code = _share_code_for_match(match)
         item = by_share_code.get(share_code) or {"ok": False, "error": "Steam bot did not return this share code."}
@@ -72,11 +76,31 @@ def download_pending_steam_demos(
             if not item.get("ok"):
                 message = item.get("error") or item.get("code") or "Could not resolve demo URL."
                 raise SteamDemoDownloadError(str(message))
+            steam_metadata = steam_gc_metadata_from_item(item)
+            played_at = parse_steam_match_time(steam_metadata.get("played_at"))
+            if min_played_at and (not played_at or played_at <= min_played_at):
+                skipped += 1
+                _mark_match_download_skipped(
+                    db,
+                    match,
+                    steam_metadata=steam_metadata,
+                    reason="steam_gc_match_time_not_newer_than_latest_imported_match",
+                )
+                results.append(
+                    {
+                        "match_id": match.id,
+                        "share_code": share_code,
+                        "status": "skipped",
+                        "played_at": steam_metadata.get("played_at"),
+                        "reason": "not_newer_than_latest_imported_match",
+                    }
+                )
+                continue
             result = _download_and_import_match(
                 db,
                 match,
                 share_code=share_code,
-                demo_url=str(item["demo_url"]),
+                steam_gc_item=item,
                 player_identifier=player_identifier,
             )
             imported += 1 if result.get("imported") else 0
@@ -91,19 +115,26 @@ def download_pending_steam_demos(
         "processed": len(matches),
         "imported": imported,
         "failed": failed,
+        "skipped": skipped,
         "results": results,
     }
 
 
-def _pending_steam_history_matches(db: Session, limit: int) -> list[Match]:
+def _pending_steam_history_matches(db: Session, limit: int, share_codes: list[str] | None = None) -> list[Match]:
     target_limit = max(1, min(limit, 50))
-    rows = db.scalars(
+    stmt = (
         select(Match)
         .where(Match.source == "steam_history")
         .where(Match.demo_file.is_(None))
-        .order_by(Match.id.asc())
+        .order_by(Match.id.desc())
         .limit(max(target_limit * 5, 25))
-    ).all()
+    )
+    if share_codes is not None:
+        normalized_codes = [code.strip() for code in share_codes if code and code.strip()]
+        if not normalized_codes:
+            return []
+        stmt = stmt.where(Match.external_match_id.in_(normalized_codes))
+    rows = db.scalars(stmt).all()
     matches = [
         match
         for match in rows
@@ -116,10 +147,12 @@ def _download_and_import_match(
     db: Session,
     match: Match,
     share_code: str,
-    demo_url: str,
+    steam_gc_item: dict[str, Any],
     player_identifier: str | None,
 ) -> dict[str, Any]:
     decoded = decode_match_share_code(share_code)
+    demo_url = str(steam_gc_item["demo_url"])
+    steam_metadata = steam_gc_metadata_from_item(steam_gc_item)
     demo_path = _download_demo_file(demo_url, share_code)
     try:
         import_result = import_demo_file(
@@ -127,6 +160,7 @@ def _download_and_import_match(
             demo_path,
             original_filename=f"{share_code}.dem",
             player_identifier=player_identifier,
+            steam_metadata=steam_metadata,
         )
     except DemoParseError as exc:
         raise SteamDemoDownloadError(f"Downloaded demo but parser failed: {exc}") from exc
@@ -140,6 +174,9 @@ def _download_and_import_match(
             "status": "demo_imported",
             "download_method": "steam_service_bot",
             "decoded": decoded,
+            "steam_metadata": steam_metadata,
+            "played_at": steam_metadata.get("played_at"),
+            "played_at_source": steam_metadata.get("played_at_source"),
             "demo_url_host": urlparse(demo_url).netloc,
             "imported_demo_match_id": import_result.get("match_id"),
             "imported_at": datetime.now(UTC).isoformat(),
@@ -154,6 +191,8 @@ def _download_and_import_match(
         "share_code": share_code,
         "status": "imported",
         "demo_match_id": import_result.get("match_id"),
+        "played_at": steam_metadata.get("played_at"),
+        "played_at_source": steam_metadata.get("played_at_source"),
         "imported": import_result.get("imported", 0),
         "duplicate": import_result.get("skipped_duplicates", 0),
     }
@@ -219,6 +258,7 @@ def _download_demo_file(url: str, share_code: str) -> Path:
     try:
         with urlopen(request, timeout=120) as response:
             archive_path.write_bytes(response.read())
+            modified_timestamp = _response_modified_timestamp(response)
     except HTTPError as exc:
         if exc.code in {404, 410, 502}:
             raise SteamDemoDownloadError(
@@ -227,14 +267,52 @@ def _download_demo_file(url: str, share_code: str) -> Path:
         raise
     if archive_path.suffix == ".bz2":
         demo_path.write_bytes(bz2.decompress(archive_path.read_bytes()))
+        if modified_timestamp:
+            os.utime(demo_path, (modified_timestamp, modified_timestamp))
         archive_path.unlink(missing_ok=True)
         return demo_path
+    if modified_timestamp:
+        os.utime(archive_path, (modified_timestamp, modified_timestamp))
     return archive_path
+
+
+def _response_modified_timestamp(response) -> float | None:
+    last_modified = response.headers.get("Last-Modified")
+    if not last_modified:
+        return None
+    try:
+        parsed = parsedate_to_datetime(last_modified)
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.timestamp()
 
 
 def _mark_match_download_error(db: Session, match: Match, message: str) -> None:
     raw = _match_raw(match)
     raw.update({"status": "demo_download_error", "error": message, "failed_at": datetime.now(UTC).isoformat()})
+    match.raw_json = json.dumps(raw, ensure_ascii=False, default=str)
+    db.commit()
+
+
+def _mark_match_download_skipped(
+    db: Session,
+    match: Match,
+    steam_metadata: dict[str, Any],
+    reason: str,
+) -> None:
+    raw = _match_raw(match)
+    raw.update(
+        {
+            "status": "ignored_old_history",
+            "steam_metadata": steam_metadata,
+            "played_at": steam_metadata.get("played_at"),
+            "played_at_source": steam_metadata.get("played_at_source"),
+            "ignored_reason": reason,
+            "next_step": None,
+        }
+    )
     match.raw_json = json.dumps(raw, ensure_ascii=False, default=str)
     db.commit()
 

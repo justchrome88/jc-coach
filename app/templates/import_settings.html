@@ -6,11 +6,10 @@
 <section class="section-head">
   <div>
     <h1>{{ t("steam.title") }}</h1>
-    <p>Твой Steam подключается через OpenID и два кода Steam Support. Отдельный service bot уже настроен на сервере и нужен только для скачивания демок по share code.</p>
+    <p>Твой Steam подключается через OpenID и коды Steam Support. Service bot получает metadata и демки по share code, а дата матча берется из Steam GC.</p>
   </div>
   <div class="actions">
     <a class="button" href="/auth/steam">{{ t("steam.connect") }}</a>
-    <a class="button ghost" href="/upload">Ручной импорт</a>
     <form action="/settings/imports/pull-all" method="post" class="inline-form">
       <button class="button ghost" type="submit" {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}disabled{% endif %}>
         {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}Импорт идет{% elif steam_import_overview.current_job %}Запустить задачу{% else %}Подгрузить все{% endif %}
@@ -40,6 +39,21 @@
   {% if steam_import_overview.latest_error %}
   <p class="muted">Последняя ошибка: {{ steam_import_overview.latest_error }}</p>
   {% endif %}
+  {% for state in steam_import_overview.account_states %}
+    {% if state.last_share_code %}
+      <p class="muted">
+        Cursor: {{ state.last_share_code }}
+        {% if state.last_share_code_played_at %} · дата матча {{ state.last_share_code_played_at }}{% endif %}
+        {% if state.last_share_code_status %} · статус {{ state.last_share_code_status }}{% endif %}
+      </p>
+      {% if state.anchor_is_older_than_latest_imported %}
+      <div class="notice">
+        Сохраненный share code ведет к матчу старее уже импортированных матчей. Автосинхронизация работает,
+        но этот cursor не может привести к свежим играм, пока Valve/Steam Support не даст актуальный latest share code.
+      </div>
+      {% endif %}
+    {% endif %}
+  {% endfor %}
   <div class="actions">
     <form action="/settings/imports/pull-all" method="post" class="inline-form">
       <button class="button" type="submit" {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}disabled{% endif %}>
@@ -51,7 +65,6 @@
       <button class="button ghost" type="submit">Сбросить старые ошибки</button>
     </form>
     {% endif %}
-    <a class="button ghost" href="/upload">Ручной .dem импорт</a>
   </div>
 </section>
 
@@ -75,7 +88,7 @@
     </div>
     <div>
       <strong>3. Дальше нажимать одну кнопку</strong>
-      <span>“Обновить и скачать демки” подтягивает новые share codes и пробует скачать свежие демки. Старые демки Valve может уже не хранить.</span>
+      <span>“Обновить и скачать демки” синхронизирует новые share codes, берет точную дату из Steam GC metadata и скачивает только свежие демки.</span>
     </div>
   </div>
 </section>
@@ -106,11 +119,11 @@
       <tr>
         <td colspan="6">
           <form action="/settings/imports/steam/{{ account.id }}/auth-code" method="post" class="upload-form stacked">
-            <label for="latest_share_code_{{ account.id }}">Код последнего соревновательного матча</label>
+            <label for="latest_share_code_{{ account.id }}">Сохраненный share code матча</label>
             <input id="latest_share_code_{{ account.id }}" name="latest_share_code" type="text" placeholder="CSGO-..." value="{{ account.last_share_code or '' }}" autocomplete="off" required>
             <label for="match_auth_code_{{ account.id }}">Код аутентификации</label>
             <input id="match_auth_code_{{ account.id }}" name="match_auth_code" type="password" placeholder="0000-AAAA-BBBB" autocomplete="off" required>
-            <button class="button" type="submit">Сохранить и включить sync</button>
+            <button class="button" type="submit">Сохранить коды</button>
           </form>
         </td>
       </tr>

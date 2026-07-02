@@ -24,6 +24,7 @@ from app.db.models import (
     Match,
 )
 from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_new_matches
+from app.services.steam_match_metadata import apply_steam_metadata_to_parsed_demo
 
 PARSER_PAYLOAD_VERSION = "2026-07-02.1"
 GRENADE_EVENTS = (
@@ -76,9 +77,12 @@ def import_demo_file(
     source_path: Path,
     original_filename: str | None = None,
     player_identifier: str | None = None,
+    steam_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stored_path = _store_demo(source_path, original_filename)
     parsed = parse_demo(stored_path, player_identifier=player_identifier)
+    if steam_metadata:
+        apply_steam_metadata_to_parsed_demo(parsed, steam_metadata)
     match_data = parsed["match"]
     match_data["demo_file"] = str(stored_path)
     match_data["source"] = "demo"
@@ -91,6 +95,11 @@ def import_demo_file(
         )
     )
     if existing:
+        existing.played_at = match_data["played_at"]
+        existing.raw_json = match_data["raw_json"]
+        existing.demo_file = existing.demo_file or str(stored_path)
+        db.commit()
+        db.refresh(existing)
         _save_demo_parse_artifacts(db, existing, parsed)
         if stored_path.exists() and str(stored_path) != existing.demo_file:
             stored_path.unlink()
@@ -220,7 +229,9 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
     }
     adr = round(stats["damage"] / rounds_count, 2) if rounds_count else None
     map_name = _header_value(header, ("map_name", "map", "mapName"))
-    played_at = _header_datetime(header) or datetime.fromtimestamp(path.stat().st_mtime, UTC).replace(tzinfo=None)
+    header_played_at = _header_datetime(header)
+    played_at_source = "demo_header" if header_played_at else "file_modified_fallback"
+    played_at = header_played_at or datetime.fromtimestamp(path.stat().st_mtime, UTC).replace(tzinfo=None)
     external_id = _demo_external_id(path, player, stats)
     match = {
         "source": "demo",
@@ -262,6 +273,8 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "payload_version": PARSER_PAYLOAD_VERSION,
         "file": str(path),
         "demo_sha1": _file_sha1(path),
+        "played_at": played_at.isoformat() if played_at else None,
+        "played_at_source": played_at_source,
         "player": player,
         "match": match,
         "aim_summary": stats["aim_summary"],

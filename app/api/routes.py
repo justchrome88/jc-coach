@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ImportJob, Match
@@ -26,6 +26,7 @@ from app.services.analytics import compare_periods, get_map_stats, get_summary
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.importer import import_csv, import_json
+from app.services.match_queries import playable_match_select
 from app.services.recommendation_tracking import (
     extend_recommendation_target,
     get_active_recommendation_progress,
@@ -65,7 +66,7 @@ def _run_steam_import_all_background(job_id: int) -> None:
 
 @router.get("/matches")
 def list_matches(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
-    matches = db.scalars(select(Match).order_by(Match.played_at.desc().nulls_last(), Match.id.desc())).all()
+    matches = db.scalars(playable_match_select().order_by(Match.played_at.desc().nulls_last(), Match.id.desc())).all()
     return [serialize_match(match) for match in matches]
 
 
@@ -133,7 +134,7 @@ def import_demo_from_inbox_endpoint(
 
 @router.get("/analytics/summary")
 def analytics_summary(db: Annotated[Session, Depends(get_db)]) -> dict:
-    matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
+    matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     summary = get_summary(matches)
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
@@ -142,7 +143,7 @@ def analytics_summary(db: Annotated[Session, Depends(get_db)]) -> dict:
 
 @router.get("/analytics/aim")
 def analytics_aim_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
-    matches = db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
+    matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     return get_aim_profile(matches)
 
 
@@ -438,11 +439,13 @@ def serialize_import_job(job: ImportJob) -> dict:
 
 
 def serialize_match(match: Match) -> dict:
+    raw = _match_raw(match)
     return {
         "id": match.id,
         "source": match.source,
         "external_match_id": match.external_match_id,
         "played_at": match.played_at.isoformat() if match.played_at else None,
+        "played_at_source": raw.get("played_at_source"),
         "map_name": match.map_name,
         "mode": match.mode,
         "result": match.result,
@@ -466,3 +469,11 @@ def serialize_match(match: Match) -> dict:
         "clutches_won": match.clutches_won,
         "clutches_lost": match.clutches_lost,
     }
+
+
+def _match_raw(match: Match) -> dict:
+    try:
+        raw = json.loads(match.raw_json or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return raw if isinstance(raw, dict) else {}

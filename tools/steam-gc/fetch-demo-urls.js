@@ -38,6 +38,21 @@ function extractDemoUrl(match) {
   return typeof value === 'string' && value.includes('.dem') ? value : null;
 }
 
+function compactMatchMetadata(match) {
+  return {
+    match_id: match && match.matchid,
+    match_time: match && match.matchtime,
+    watchable_match_info: match && match.watchablematchinfo
+      ? {
+          server_ip: match.watchablematchinfo.server_ip,
+          tv_port: match.watchablematchinfo.tv_port,
+          tv_spectators: match.watchablematchinfo.tv_spectators,
+          cl_decryptdata_key_pub: match.watchablematchinfo.cl_decryptdata_key_pub,
+        }
+      : null,
+  };
+}
+
 function logOnDetails() {
   fs.mkdirSync(credentialDir, {recursive: true, mode: 0o700});
   const envToken = process.env.STEAM_BOT_REFRESH_TOKEN || '';
@@ -214,6 +229,7 @@ function logOnDetails() {
           ok: true,
           match_id: match.matchid,
           match_time: match.matchtime,
+          metadata: compactMatchMetadata(match),
           demo_url: url,
         });
         pendingEntry.requestNext();

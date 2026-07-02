@@ -17,6 +17,7 @@ from app.db.models import CoachReport, Match
 from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
+from app.services.match_queries import playable_match_select
 from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_all_recommendation_progress
 from app.services.report_generator import _serialize_recommendation_progress
@@ -143,7 +144,7 @@ def save_ai_coach_result(
         raise ValueError("AI coach result is empty.")
     if len(content) > 60_000:
         raise ValueError("AI coach result is too long.")
-    matches = list(db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())))
+    matches = list(db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())))
     period_start = next((match.played_at for match in matches if match.played_at), None)
     period_end = next((match.played_at for match in reversed(matches) if match.played_at), None)
     latest_handoff = latest_ai_handoff()
@@ -215,7 +216,7 @@ def latest_ai_handoff() -> dict[str, Any] | None:
 
 
 def build_ai_coach_payload(db: Session) -> dict[str, Any]:
-    matches = list(db.scalars(select(Match).order_by(Match.played_at.asc().nulls_last(), Match.id.asc())))
+    matches = list(db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())))
     summary = get_summary(matches)
     comparison = compare_periods(matches)
     map_stats = get_map_stats(matches)
