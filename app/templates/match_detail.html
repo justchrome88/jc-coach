@@ -30,8 +30,8 @@
 
 <section class="panel">
   <div class="panel-head">
-    <h2>Coach breakdown</h2>
-    <span>aim / entry / survival / grenades</span>
+    <h2>Разбор тренера</h2>
+    <span>стрельба / первые дуэли / выживание / гранаты</span>
   </div>
   <div class="category-grid">
     {% for section in coach_sections %}
@@ -123,7 +123,7 @@
         <td>{{ weapon.headshot_percent if weapon.headshot_percent is not none else "n/a" }}</td>
       </tr>
     {% else %}
-      <tr><td colspan="4">Weapon breakdown по этому матчу недоступен.</td></tr>
+          <tr><td colspan="4">Разбор оружия по этому матчу недоступен.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -132,12 +132,12 @@
 {% if detail.parser_evidence %}
 <section class="panel">
   <div class="panel-head">
-    <h2>Parser evidence</h2>
+    <h2>Доказательства парсера</h2>
     <span class="status-badge confidence-{{ detail.parser_evidence.confidence }}">{{ detail.parser_evidence.confidence }}</span>
   </div>
   <div class="layout-two">
     <div>
-      <h3>Event counts</h3>
+      <h3>Счетчики событий</h3>
       <div class="detail-grid">
         {% for name, value in detail.parser_evidence.event_counts.items() %}
         <div><span>{{ name }}</span><strong>{{ value }}</strong></div>
@@ -145,7 +145,7 @@
       </div>
     </div>
     <div>
-      <h3>Metric confidence</h3>
+      <h3>Доверие к метрикам</h3>
       <div class="detail-grid">
         {% for name, value in detail.parser_evidence.metric_confidence.items() %}
         <div><span>{{ name }}</span><strong>{{ value }}</strong></div>
@@ -155,14 +155,14 @@
   </div>
   <div class="layout-two">
     <div>
-      <h3>Player selection</h3>
+      <h3>Выбор игрока</h3>
       <div class="detail-list">
         <div><span>Selected</span><strong>{{ detail.parser_evidence.player.name or detail.parser_evidence.player.steamid or "n/a" }}</strong></div>
         <div><span>Available players</span><strong>{{ detail.parser_evidence.available_players|length }}</strong></div>
       </div>
     </div>
     <div>
-      <h3>Warnings</h3>
+      <h3>Предупреждения</h3>
       <ul>
         {% for warning in detail.parser_evidence.warnings %}
         <li>{{ warning }}</li>
@@ -170,6 +170,92 @@
         <li>Предупреждений parser confidence нет.</li>
         {% endfor %}
       </ul>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if parse_summary.available %}
+<section class="panel">
+  <div class="panel-head">
+    <h2>Глубокий парсинг DEM</h2>
+    <span>{{ parse_summary.artifact.parser_name }} {{ parse_summary.artifact.parser_version or "" }} · {{ parse_summary.artifact.payload_version }}</span>
+  </div>
+  <div class="stat-grid">
+    <div><strong>{{ parse_summary.counts.rounds }}</strong><span>Раунды</span></div>
+    <div><strong>{{ parse_summary.counts.duels }}</strong><span>Дуэли</span></div>
+    <div><strong>{{ parse_summary.counts.grenades }}</strong><span>Гранаты</span></div>
+    <div><strong>{{ parse_summary.counts.weapons }}</strong><span>Оружейные профили</span></div>
+  </div>
+  <div class="layout-two">
+    <div>
+      <h3>{{ parse_summary.target_player.name or parse_summary.target_player.steamid or "Игрок" }}</h3>
+      <div class="detail-grid">
+        <div><span>Раунды</span><strong>{{ parse_summary.target.rounds }}</strong></div>
+        <div><span>K/D</span><strong>{{ parse_summary.target.kills }}/{{ parse_summary.target.deaths }}</strong></div>
+        <div><span>Урон</span><strong>{{ parse_summary.target.damage }}</strong></div>
+        <div><span>Utility damage</span><strong>{{ parse_summary.target.utility_damage }}</strong></div>
+        <div><span>Ослепил врагов</span><strong>{{ parse_summary.target.enemies_flashed }}</strong></div>
+        <div><span>Opening</span><strong>{{ parse_summary.target.opening_kills }}/{{ parse_summary.target.opening_deaths }}</strong></div>
+      </div>
+    </div>
+    <div>
+      <h3>Первые дуэли</h3>
+      <table>
+        <thead><tr><th>Раунд</th><th>Кто убил</th><th>Кого</th><th>Оружие</th></tr></thead>
+        <tbody>
+        {% for duel in parse_summary.first_duels %}
+          <tr>
+            <td>{{ duel.round_number }}</td>
+            <td>{{ duel.attacker_name or "n/a" }}</td>
+            <td>{{ duel.victim_name or "n/a" }}</td>
+            <td>{{ duel.weapon or "n/a" }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4">Первые дуэли не найдены.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="layout-two">
+    <div>
+      <h3>Оружие игрока</h3>
+      <table>
+        <thead><tr><th>Оружие</th><th>Выстрелы</th><th>Попадания</th><th>Точность</th><th>Урон</th></tr></thead>
+        <tbody>
+        {% for weapon in parse_summary.top_weapons %}
+          <tr>
+            <td>{{ weapon.weapon }}</td>
+            <td>{{ weapon.shots }}</td>
+            <td>{{ weapon.hits }}</td>
+            <td>{{ weapon.accuracy if weapon.accuracy is not none else "n/a" }}%</td>
+            <td>{{ weapon.damage }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5">Оружейные данные не найдены.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3>Гранаты</h3>
+      <table>
+        <thead><tr><th>Раунд</th><th>Тип</th><th>Игрок</th><th>Flash</th><th>Урон</th></tr></thead>
+        <tbody>
+        {% for grenade in parse_summary.recent_grenades %}
+          <tr>
+            <td>{{ grenade.round_number }}</td>
+            <td>{{ grenade.grenade_type or grenade.event_type }}</td>
+            <td>{{ grenade.player_name or "n/a" }}</td>
+            <td>{{ grenade.flashed_count }}</td>
+            <td>{{ grenade.damage }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5">Гранатные события не найдены.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 </section>

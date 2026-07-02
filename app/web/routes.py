@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -11,7 +12,15 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Match
+from app.db.models import (
+    DemoDuel,
+    DemoGrenadeEvent,
+    DemoParseArtifact,
+    DemoPlayerRound,
+    DemoRound,
+    DemoWeaponStat,
+    Match,
+)
 from app.db.session import SessionLocal, get_db
 from app.main import templates
 from app.services.ai_coach import (
@@ -272,6 +281,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
     ai_report_history = [serialize_ai_coach_report(report) for report in list_ai_coach_reports(db, limit=5)]
     recommendation_history = list_recommendation_history(db, limit=20)
     recommendation_categories = recommendation_category_summary(db)
+    parse_overview = _demo_parse_overview(db, len(matches))
     return templates.TemplateResponse(
         request=request,
         name="coach.html",
@@ -293,6 +303,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
             "aim_profile": aim_profile,
             "recommendation_history": recommendation_history,
             "recommendation_categories": recommendation_categories,
+            "parse_overview": parse_overview,
         },
     )
 
@@ -588,11 +599,116 @@ def match_detail_page(request: Request, db: Annotated[Session, Depends(get_db)],
             "request": request,
             "match": match,
             "detail": match_detail(match),
+            "parse_summary": _demo_parse_summary(db, match.id),
             "evaluation": evaluations_by_match_id.get(match.id),
             "match_mistakes": match_mistakes,
             "coach_sections": match_coach_sections(match, match_mistakes),
         },
     )
+
+
+def _demo_parse_summary(db: Session, match_id: int) -> dict:
+    artifact = db.scalar(select(DemoParseArtifact).where(DemoParseArtifact.match_id == match_id))
+    if artifact is None:
+        return {"available": False}
+    rounds = db.scalars(select(DemoRound).where(DemoRound.match_id == match_id).order_by(DemoRound.round_number)).all()
+    player_rounds = db.scalars(
+        select(DemoPlayerRound).where(DemoPlayerRound.match_id == match_id).order_by(DemoPlayerRound.round_number)
+    ).all()
+    weapons = db.scalars(
+        select(DemoWeaponStat)
+        .where(DemoWeaponStat.match_id == match_id)
+        .order_by(DemoWeaponStat.kills.desc(), DemoWeaponStat.damage.desc())
+    ).all()
+    duels = db.scalars(select(DemoDuel).where(DemoDuel.match_id == match_id).order_by(DemoDuel.tick.asc())).all()
+    grenades = db.scalars(
+        select(DemoGrenadeEvent)
+        .where(DemoGrenadeEvent.match_id == match_id)
+        .order_by(DemoGrenadeEvent.round_number.asc(), DemoGrenadeEvent.tick.asc())
+    ).all()
+    target_player = _artifact_target_player(artifact)
+    target_weapons = [
+        weapon
+        for weapon in weapons
+        if not target_player
+        or weapon.player_steamid == target_player.get("steamid")
+        or weapon.player_name == target_player.get("name")
+    ][:8]
+    target_rounds = [
+        row
+        for row in player_rounds
+        if not target_player
+        or row.player_steamid == target_player.get("steamid")
+        or row.player_name == target_player.get("name")
+    ]
+    return {
+        "available": True,
+        "artifact": artifact,
+        "target_player": target_player or {},
+        "counts": {
+            "rounds": len(rounds),
+            "player_rounds": len(player_rounds),
+            "duels": len(duels),
+            "grenades": len(grenades),
+            "weapons": len(weapons),
+        },
+        "target": {
+            "rounds": len(target_rounds),
+            "kills": sum(row.kills for row in target_rounds),
+            "deaths": sum(row.deaths for row in target_rounds),
+            "damage": sum(row.damage for row in target_rounds),
+            "utility_damage": sum(row.utility_damage for row in target_rounds),
+            "enemies_flashed": sum(row.enemies_flashed for row in target_rounds),
+            "opening_kills": sum(row.opening_kill for row in target_rounds),
+            "opening_deaths": sum(row.opening_death for row in target_rounds),
+        },
+        "top_weapons": target_weapons,
+        "recent_grenades": grenades[:12],
+        "first_duels": [duel for duel in duels if duel.opening_duel][:8],
+    }
+
+
+def _artifact_target_player(artifact: DemoParseArtifact) -> dict | None:
+    try:
+        payload = json.loads(artifact.payload_json)
+    except (TypeError, ValueError):
+        return None
+    player = payload.get("player") or {}
+    if not player:
+        return None
+    return {"name": player.get("name"), "steamid": str(player.get("steamid")) if player.get("steamid") else None}
+
+
+def _demo_parse_overview(db: Session, total_matches: int) -> dict:
+    artifacts = db.scalars(select(DemoParseArtifact).order_by(DemoParseArtifact.parsed_at.desc())).all()
+    weapons = db.scalars(select(DemoWeaponStat)).all()
+    rounds = db.scalars(select(DemoRound)).all()
+    duels = db.scalars(select(DemoDuel)).all()
+    grenades = db.scalars(select(DemoGrenadeEvent)).all()
+    weapon_buckets: dict[str, dict] = {}
+    for weapon in weapons:
+        item = weapon_buckets.setdefault(
+            weapon.weapon,
+            {"weapon": weapon.weapon, "shots": 0, "hits": 0, "kills": 0, "damage": 0},
+        )
+        item["shots"] += weapon.shots
+        item["hits"] += weapon.hits
+        item["kills"] += weapon.kills
+        item["damage"] += weapon.damage
+    top_weapons = sorted(weapon_buckets.values(), key=lambda item: (item["kills"], item["damage"]), reverse=True)[:8]
+    for item in top_weapons:
+        item["accuracy"] = round(item["hits"] / item["shots"] * 100, 2) if item["shots"] else None
+    return {
+        "matches_total": total_matches,
+        "matches_parsed": len(artifacts),
+        "coverage": round(len(artifacts) / total_matches * 100, 2) if total_matches else 0,
+        "rounds": len(rounds),
+        "duels": len(duels),
+        "grenades": len(grenades),
+        "weapon_profiles": len(weapons),
+        "top_weapons": top_weapons,
+        "latest": artifacts[0] if artifacts else None,
+    }
 
 
 @router.get("/report")

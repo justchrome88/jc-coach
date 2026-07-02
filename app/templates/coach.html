@@ -3,11 +3,11 @@
 <section class="section-head">
   <div>
     <h1>Тренер</h1>
-    <p>Здесь собраны рекомендации, активная цель, прогресс по матчам и последний coach report.</p>
+    <p>Здесь собраны рекомендации, активные цели, прогресс по матчам, AI-отчёты и качество DEM-данных.</p>
   </div>
   <div class="actions">
     <form action="/coach/ai-handoff" method="post">
-      <button class="button ghost" type="submit">Подготовить AI handoff</button>
+      <button class="button ghost" type="submit">Подготовить данные для AI</button>
     </form>
     <form action="/report/generate" method="post">
       <button class="button" type="submit">Сгенерировать отчёт</button>
@@ -22,12 +22,12 @@
 
 <section class="panel recommendation">
   <div class="panel-head">
-    <h2>AI мозг</h2>
+    <h2>AI-тренер</h2>
     <span>{{ ai_health.provider }} · {{ ai_health.status }}</span>
   </div>
   <div class="actions inline-actions">
     <form action="/coach/ai-generate" method="post">
-      <button class="button ghost" type="submit">Сгенерировать через provider</button>
+      <button class="button ghost" type="submit">Сгенерировать через провайдера</button>
     </form>
   </div>
   {% if ai_handoff %}
@@ -37,22 +37,22 @@
     <div><span>Payload</span><strong>{{ ai_handoff.payload_path }}</strong></div>
     <div><span>Команда</span><strong>{{ ai_handoff.command }}</strong></div>
   </div>
-  <p class="muted">Это безопасный handoff для Codex CLI. Позже сюда же подключим local_llm provider без смены coach-логики.</p>
+  <p class="muted">Это безопасный пакет данных для AI. Позже сюда же подключим локального провайдера без смены coach-логики.</p>
   <form action="/coach/ai-result" method="post" class="upload-form stacked">
     <input type="hidden" name="source_ref" value="{{ ai_handoff.prompt_path }}">
-    <label for="ai_result_markdown">Вставить результат Codex CLI</label>
-    <textarea id="ai_result_markdown" name="ai_result_markdown" rows="8" placeholder="Вставьте сюда AI coach report от Codex CLI"></textarea>
-    <button class="button" type="submit">Сохранить AI report</button>
+    <label for="ai_result_markdown">Вставить результат AI</label>
+    <textarea id="ai_result_markdown" name="ai_result_markdown" rows="8" placeholder="Вставьте сюда AI-отчёт тренера"></textarea>
+    <button class="button" type="submit">Сохранить AI-отчёт</button>
   </form>
   {% else %}
-  <p>Пока AI handoff не создан. Нажмите кнопку выше, чтобы собрать prompt и JSON payload для Codex CLI.</p>
+  <p>Пакет данных для AI пока не создан. Нажмите кнопку выше, чтобы собрать prompt и JSON payload.</p>
   {% endif %}
 </section>
 
 {% if ai_report %}
 <section class="panel report">
   <div class="panel-head">
-    <h2>Последний AI coach report</h2>
+    <h2>Последний AI-отчёт тренера</h2>
     <span>{{ ai_report.created_at.strftime("%Y-%m-%d %H:%M") }}</span>
   </div>
   <p class="muted">Источник: {{ ai_report.source_ref or "manual" }}</p>
@@ -62,8 +62,8 @@
 
 <section class="panel">
   <div class="panel-head">
-    <h2>История AI reports</h2>
-    <span>snapshot persistence</span>
+    <h2>История AI-отчётов</h2>
+    <span>сохранённые снимки</span>
   </div>
   <table>
     <thead><tr><th>ID</th><th>Provider</th><th>Матчи</th><th>Payload</th><th>Создан</th><th>Источник</th></tr></thead>
@@ -78,7 +78,7 @@
         <td class="comment-cell">{{ item.source_ref or "manual" }}</td>
       </tr>
     {% else %}
-      <tr><td colspan="6">AI reports пока не сохранены.</td></tr>
+      <tr><td colspan="6">AI-отчёты пока не сохранены.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -86,8 +86,8 @@
 
 <section class="panel">
   <div class="panel-head">
-    <h2>Coach categories</h2>
-    <span>aim / map / grenades / survival</span>
+    <h2>Категории тренера</h2>
+    <span>стрельба / карты / гранаты / выживание</span>
   </div>
   <div class="category-grid">
     {% for item in coach_categories %}
@@ -102,7 +102,7 @@
 
 <section class="panel">
   <div class="panel-head">
-    <h2>Aim stats</h2>
+    <h2>Стрельба и дуэли</h2>
     <span>{{ aim_profile.confidence }}</span>
   </div>
   <p>{{ aim_profile.interpretation }}</p>
@@ -110,9 +110,55 @@
     <div><strong>{{ aim_profile.averages.adr or "n/a" }}</strong><span>ADR</span></div>
     <div><strong>{{ aim_profile.averages.kd or "n/a" }}</strong><span>K/D</span></div>
     <div><strong>{{ aim_profile.averages.headshot_percent or "n/a" }}%</strong><span>HS%</span></div>
-    <div><strong>{{ aim_profile.averages.opening_duel_success or "n/a" }}%</strong><span>Opening duel success</span></div>
+    <div><strong>{{ aim_profile.averages.opening_duel_success or "n/a" }}%</strong><span>Успех первых дуэлей</span></div>
   </div>
-  <p class="muted">Data gaps: {{ aim_profile.data_gaps|join("; ") }}</p>
+  <p class="muted">Пробелы данных: {{ aim_profile.data_gaps|join("; ") }}</p>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Готовность DEM-данных</h2>
+    <span>{{ parse_overview.coverage }}% матчей с глубоким парсингом</span>
+  </div>
+  <div class="stat-grid">
+    <div><strong>{{ parse_overview.matches_parsed }}/{{ parse_overview.matches_total }}</strong><span>Матчи</span></div>
+    <div><strong>{{ parse_overview.rounds }}</strong><span>Раунды</span></div>
+    <div><strong>{{ parse_overview.duels }}</strong><span>Дуэли</span></div>
+    <div><strong>{{ parse_overview.grenades }}</strong><span>Гранаты</span></div>
+  </div>
+  <div class="layout-two">
+    <div>
+      <h3>Последний parsed artifact</h3>
+      {% if parse_overview.latest %}
+      <div class="detail-list">
+        <div><span>Матч</span><strong>#{{ parse_overview.latest.match_id }}</strong></div>
+        <div><span>Парсер</span><strong>{{ parse_overview.latest.parser_name }} {{ parse_overview.latest.parser_version or "" }}</strong></div>
+        <div><span>Версия payload</span><strong>{{ parse_overview.latest.payload_version }}</strong></div>
+        <div><span>Обновлено</span><strong>{{ parse_overview.latest.parsed_at.strftime("%Y-%m-%d %H:%M") if parse_overview.latest.parsed_at else "n/a" }}</strong></div>
+      </div>
+      {% else %}
+      <p>Глубокий парсинг ещё не сохранён. Нужно переобработать DEM-файлы.</p>
+      {% endif %}
+    </div>
+    <div>
+      <h3>Топ оружия по parsed data</h3>
+      <table>
+        <thead><tr><th>Оружие</th><th>Kills</th><th>Урон</th><th>Точность</th></tr></thead>
+        <tbody>
+        {% for weapon in parse_overview.top_weapons %}
+          <tr>
+            <td>{{ weapon.weapon }}</td>
+            <td>{{ weapon.kills }}</td>
+            <td>{{ weapon.damage }}</td>
+            <td>{{ weapon.accuracy if weapon.accuracy is not none else "n/a" }}%</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4">Оружейных данных пока нет.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </section>
 
 <section class="layout-two">
@@ -171,7 +217,7 @@
 <section class="panel">
   <div class="panel-head">
     <h2>Активные цели по направлениям</h2>
-    <span>multi-category tracking</span>
+    <span>отслеживание по категориям</span>
   </div>
   <div class="category-grid">
     {% for item in all_recommendation_progress %}
@@ -188,22 +234,22 @@
       <div class="mini-actions">
         <form action="/coach/recommendations/{{ item.recommendation.id }}/extend" method="post">
           <input type="hidden" name="additional_matches" value="5">
-          <button class="button ghost" type="submit">Extend</button>
+          <button class="button ghost" type="submit">Продлить</button>
         </form>
         <form action="/coach/recommendations/category/{{ item.recommendation.category }}/restart" method="post">
-          <button class="button ghost" type="submit">Restart</button>
+          <button class="button ghost" type="submit">Перезапустить</button>
         </form>
         <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
           <input type="hidden" name="status" value="paused">
-          <button class="button ghost" type="submit">Pause</button>
+          <button class="button ghost" type="submit">Пауза</button>
         </form>
         <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
           <input type="hidden" name="status" value="completed">
-          <button class="button ghost" type="submit">Done</button>
+          <button class="button ghost" type="submit">Готово</button>
         </form>
         <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
           <input type="hidden" name="status" value="archived">
-          <button class="button ghost" type="submit">Archive</button>
+          <button class="button ghost" type="submit">Архив</button>
         </form>
       </div>
     </div>
@@ -217,7 +263,7 @@
   <div class="panel">
     <div class="panel-head">
       <h2>Сводка целей</h2>
-      <span>category lifecycle</span>
+      <span>жизненный цикл категорий</span>
     </div>
     <table>
       <thead><tr><th>Категория</th><th>Статус</th><th>Score</th><th>Матчи</th><th>История</th></tr></thead>

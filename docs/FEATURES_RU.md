@@ -34,8 +34,20 @@
 - `.dem` файлы импортируются через `demoparser2`.
 - В `matches` сохраняются основные match metrics.
 - В `matches.raw_json` сохраняется parsed payload, включая player, header, event counts, confidence и warnings.
-- В parsed payload теперь сохраняются `aim_summary`, `weapon_breakdown` и `aim_data_gaps`.
+- В parsed payload сохраняются `aim_summary`, `weapon_breakdown`, `aim_data_gaps` и `deep` payload.
+- Добавлен deep parser слой:
+  - `demo_parse_artifacts`;
+  - `demo_rounds`;
+  - `demo_player_rounds`;
+  - `demo_weapon_stats`;
+  - `demo_damage_events`;
+  - `demo_duels`;
+  - `demo_grenade_events`.
+- Deep parser сохраняет раунды, дуэли, урон, weapon_fire/hits, estimated accuracy, grenade events, flash events, bomb events и компактные trajectory summaries.
+- Страница матча показывает блок `Глубокий парсинг DEM`.
+- Вкладка `/coach` показывает `Готовность DEM-данных`.
 - Ручной импорт `.dem` остается как fallback.
+- Подробное ТЗ: `docs/DEMO_DEEP_PARSER_TZ_RU.md`.
 
 ## AI coach persistence
 
@@ -122,8 +134,7 @@
 
 ## Ближайший технический фокус
 
-- Утвердить набор метрик/raw-срезов, достаточный для повторного анализа без raw `.dem`.
 - Добавить статус `parsed_payload_verified`.
-- Расширить demo parser payload по раундам, дуэлям, utility, side stats, timing и позициям там, где данные надежны.
+- Расширить side stats и position/view-angle модели там, где данные надежны.
 - После этого включать raw `.dem` delete policy для успешно проверенных импортов.
 - Довести Steam worker до durable scheduler/retry модели.
