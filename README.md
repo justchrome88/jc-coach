@@ -15,6 +15,9 @@
 - Rule-based coach report в Markdown и HTML.
 - Coach Recommendation Tracking: active goals по survival, aim, grenades и map, baseline/target и green/yellow/red оценка матчей.
 - AI coach handoff для Codex CLI: приложение собирает structured JSON payload и prompt без привязки к OpenAI API.
+- AI coach result persistence: сохраненный AI report содержит payload snapshot, provider metadata и payload hash.
+- Multi-category recommendation lifecycle: Extend, Restart, Pause, Done, Archive, category summary и history.
+- Aim stats profile: ADR/KD/HS/opening duel/multi-kill/weapon breakdown без выдуманных accuracy/spray метрик.
 - Steam OpenID + Game Authentication Code onboarding.
 - Автоматическая Steam-подгрузка: share-code sync, service bot demo URL resolver, `.dem.bz2` download, parse/import через background job.
 - Demo storage lifecycle control: отчет по raw `.dem`, manifest и кандидаты на будущий verified-delete.
@@ -297,8 +300,14 @@ source,external_match_id,demo_file,mode,side_t_rounds_won,side_t_rounds_lost,sid
 - `GET /api/coach/ai/handoff/latest`
 - `POST /api/coach/ai/result`
 - `GET /api/coach/ai/result/latest`
+- `GET /api/coach/ai/results`
 - `GET /api/coach/ai/provider/health`
 - `POST /api/coach/ai/generate`
+- `GET /api/analytics/aim`
+- `GET /api/recommendations/history`
+- `GET /api/recommendations/categories`
+- `POST /api/recommendations/{recommendation_id}/extend`
+- `POST /api/recommendations/categories/{category}/restart`
 - `GET /api/steam/login-url`
 - `GET /api/steam/accounts`
 - `POST /api/steam/import/share-code`
@@ -343,6 +352,7 @@ tests/
 - Утвердить полный список метрик/raw-срезов перед включением удаления raw `.dem`.
 - Расширить parser payload: rounds, duels, utility, side stats, timing, positions where reliable.
 - Добавить verified payload статус и только после этого включать raw demo delete policy.
+- Добавить durable worker/scheduler для AI/Steam задач, если FastAPI BackgroundTasks станет недостаточно.
 - Довести Steam worker до production scheduler/retry модели.
 - Добавить FACEIT sync как второй внешний источник.
 

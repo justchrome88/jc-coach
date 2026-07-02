@@ -22,6 +22,11 @@
 7. Все пути, настройки и ключи — через `.env` или config.
 8. Пиши README по фактическому состоянию проекта.
 9. После значимого изменения обновляй `WORKLOG.md` и, если изменился продуктовый/архитектурный подход, отдельный файл в `docs/`.
+10. После изменений Python route/context или Jinja templates перед финальным ответом обязательно:
+    - перезапустить `jc-coach`;
+    - дождаться успешного `/health`, потому что `systemctl is-active` может стать `active` раньше, чем uvicorn принимает соединения;
+    - сделать authenticated live-smoke основных страниц (`/dashboard`, `/stats`, `/coach`, `/matches`, `/settings/imports`, `/settings/storage`, `/upload`, `/report`);
+    - убедиться, что нет `500 Internal Server Error`.
 
 ## Приоритеты
 

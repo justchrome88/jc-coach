@@ -34,7 +34,57 @@
 - `.dem` файлы импортируются через `demoparser2`.
 - В `matches` сохраняются основные match metrics.
 - В `matches.raw_json` сохраняется parsed payload, включая player, header, event counts, confidence и warnings.
+- В parsed payload теперь сохраняются `aim_summary`, `weapon_breakdown` и `aim_data_gaps`.
 - Ручной импорт `.dem` остается как fallback.
+
+## AI coach persistence
+
+- AI report сохраняется в `coach_reports` как `report_type=ai_coach`.
+- В `report_json` сохраняется:
+  - provider;
+  - status;
+  - payload hash;
+  - payload summary;
+  - payload snapshot;
+  - content length;
+  - handoff metadata.
+- `/coach` показывает последний AI report и историю последних AI reports.
+- API:
+  - `GET /api/coach/ai/result/latest`;
+  - `GET /api/coach/ai/results`;
+  - `POST /api/coach/ai/result`;
+  - `POST /api/coach/ai/generate`.
+
+## Multi-category recommendations
+
+- Системные категории: survival, aim, grenades, map.
+- Для каждой цели есть baseline, target, progress score, green/yellow/red/gray оценки матчей.
+- `/coach` показывает:
+  - active category cards;
+  - lifecycle actions: Extend, Restart, Pause, Done, Archive;
+  - сводку категорий;
+  - историю целей.
+- API:
+  - `GET /api/recommendations`;
+  - `GET /api/recommendations/history`;
+  - `GET /api/recommendations/categories`;
+  - `POST /api/recommendations/{id}/status`;
+  - `POST /api/recommendations/{id}/extend`;
+  - `POST /api/recommendations/categories/{category}/restart`.
+
+## Aim stats
+
+- Добавлен честный aim profile без псевдометрик:
+  - ADR;
+  - K/D;
+  - HS%;
+  - damage per death;
+  - opening duel success;
+  - multi-kill rounds;
+  - weapon breakdown: kills, headshots, deaths, damage, HS%.
+- `GET /api/analytics/aim` возвращает aggregate aim profile.
+- Aim profile показан на `/stats`, `/coach` и странице матча.
+- Accuracy, first bullet accuracy, spray control, TTK и crosshair placement явно помечены как data gaps до появления надежных shot/view/position данных.
 
 ## Demo storage lifecycle
 

@@ -113,7 +113,36 @@
 ## Журнал выполнения
 
 - 2026-07-01: создан план, выявлены связанные roadmap пункты.
+- 2026-07-01: AI coach result persistence доведен:
+  - сохраняется snapshot payload;
+  - пишется provider/status/payload hash/content metadata в `coach_reports.report_json`;
+  - добавлен список последних AI reports в `/coach`;
+  - добавлен `GET /api/coach/ai/results`;
+  - тесты покрывают metadata и history.
+- 2026-07-01: multi-category recommendations доведены:
+  - добавлены extend/restart/status actions;
+  - добавлена история и сводка категорий;
+  - добавлены API endpoints history/categories/extend/restart;
+  - UI `/coach` показывает lifecycle summary и history;
+  - тесты покрывают extend/restart/history/category summary.
+- 2026-07-01: aim stats доведены до честного MVP:
+  - parser сохраняет `aim_summary`, `weapon_breakdown`, `aim_data_gaps`;
+  - добавлен `app/services/aim_stats.py`;
+  - добавлен `GET /api/analytics/aim`;
+  - aim profile подключен в `/stats`, `/coach`, match detail и AI payload;
+  - tests покрывают parser payload и aggregate aim profile.
+- 2026-07-01: исправлен runtime rollout:
+  - после изменения templates/context сервис был перезапущен;
+  - live-smoke с authenticated session показал 200 для `/dashboard`, `/stats`, `/coach`, `/matches`, `/settings/imports`, `/settings/storage`, `/upload`, `/report`;
+  - правило restart + authenticated live-smoke добавлено в `instructions/03_CODEX_AGENT_RULES.md`.
 
 ## Что нужно от пользователя
 
-Пока ничего не блокирует работу. Позже потребуется утвердить, какие aim/raw метрики обязательны перед удалением raw `.dem`.
+Пока ничего не блокирует работу.
+
+Перед включением удаления raw `.dem` нужно утвердить обязательный набор raw/aim метрик:
+
+- какие round-level события сохранять;
+- нужен ли per-weapon damage/headshot/death breakdown как обязательный;
+- нужны ли позиции/tick timeline для будущего crosshair/positioning анализа;
+- какие метрики считаются достаточными для статуса `parsed_payload_verified`.

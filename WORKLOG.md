@@ -590,3 +590,44 @@ Updated:
 Control:
 
 - No `.env`, tokens, refresh tokens, DB files, manifests, `node_modules`, or raw demos are tracked.
+
+## AI Persistence, Recommendations Lifecycle, Aim Stats
+
+Implemented:
+
+- AI coach result persistence:
+  - `coach_reports.report_json` now stores provider/status/payload hash/payload summary/payload snapshot/content metadata;
+  - `/coach` shows AI report history;
+  - `GET /api/coach/ai/results` lists saved AI reports.
+- Multi-category recommendations:
+  - added extend target period;
+  - added restart category with archived previous goal and fresh baseline;
+  - added category summary and recommendation history;
+  - added API/UI actions for extend/restart/status.
+- Aim stats:
+  - demo parser now stores `aim_summary`, `weapon_breakdown`, and `aim_data_gaps`;
+  - added `app/services/aim_stats.py`;
+  - added `GET /api/analytics/aim`;
+  - aim profile appears on `/stats`, `/coach`, and match detail;
+  - AI coach payload includes `aim_profile`.
+
+Related roadmap group handled together:
+
+- `AI coach report`, `AI provider abstraction`, `AI coach handoff`.
+- `Active training goal`, `Per-match goal status`, `Recommendation lifecycle`, `Progress tracking`.
+- `Aim stats`, `First duels`, `ADR`, `Crosshair placement coach`, `Mistake detection`.
+
+Runtime fix:
+
+- After Python context + Jinja template changes, the running service served new templates with old route context until restart.
+- `systemctl restart jc-coach` fixed the immediate 500s.
+- Authenticated live-smoke after restart returned `200` for:
+  - `/dashboard`;
+  - `/stats`;
+  - `/coach`;
+  - `/matches`;
+  - `/settings/imports`;
+  - `/settings/storage`;
+  - `/upload`;
+  - `/report`.
+- Added a standing rule to `instructions/03_CODEX_AGENT_RULES.md`: restart + wait for `/health` + authenticated live-smoke after route/context/template changes.

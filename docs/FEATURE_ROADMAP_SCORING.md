@@ -43,15 +43,15 @@ Excel-ready Russian workbook: `docs/feature_roadmap_scoring_ru.xlsx`.
 | Map performance | 3 | 50% | Basic map winrate/ADR/KD table | Side stats, map-specific trends, map detail page | 8 | High signal: Scope explicitly promotes map performance | Next |
 | Map-specific coach focus | 4 | 25% | Weak maps detected in report/rules | Dedicated weak-map plan, map drills, tracked goals per map | 8 | High product logic: actionable coaching | Next |
 | Last period comparison | 2 | 80% | Last 15 vs previous 15 comparison | Custom periods, chart deltas, explanation text | 7 | Medium-high: progress framing is common | Maintain/improve |
-| Progress tracking | 3 | 45% | Trend chart, recommendation progress | Metric-specific trend pages, weekly/monthly views | 8 | High signal: Scope promotes progress | Now |
-| Active training goal | 4 | 55% | One active goal, baseline, target, score | Goal creation UI, custom goals, multiple categories | 8 | High product differentiator | Now |
-| Per-match goal status | 4 | 65% | Green/yellow/red per match | Evidence details modal, filters by status | 7 | High for our coach loop | Now |
+| Progress tracking | 3 | 65% | Trend chart, multi-category recommendation progress, category summary/history | Metric-specific trend pages, weekly/monthly views | 8 | High signal: Scope promotes progress | Now |
+| Active training goal | 4 | 80% | Multi-category active goals, baseline, target, score, extend/restart lifecycle actions | User-created custom goals, tuned thresholds | 8 | High product differentiator | Now |
+| Per-match goal status | 4 | 75% | Green/yellow/red/gray per match and recommendation evidence | Evidence details modal, filters by all category statuses | 7 | High for our coach loop | Now |
 | Coach report | 4 | 55% | Rule-based markdown/html report | Better sections, source confidence, DEM evidence, weekly report | 8 | High product logic: users want "what to do next" | Now |
-| AI coach report | 5 | 20% | Provider abstraction, structured coach payload, Codex CLI handoff, prompt bundle | Save AI result back into UI, local_llm provider, structured mistake evidence | 8 | High signal from AI-analysis interest | Next |
-| AI provider abstraction | 4 | 35% | `codex_cli_handoff`, provider boundary, future `local_llm` config, docs | Local LLM execution, result persistence, provider health checks | 8 | High product logic: keeps AI coach independent from one model vendor | Now |
-| Recommendation lifecycle | 5 | 10% | Active status exists in DB | Complete/pause/extend/archive UI and history | 7 | Medium-high: needed once goals matter | Next |
-| Aim stats | 8 | 10% | HS%, K/D, partial weapon events available | Weapon breakdown, timing metrics, confidence, aim dashboard; see `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md` | 9 | High signal: Leetify/Refrag discussions often center aim | Planned |
-| First duels | 5 | 45% | Entry kills/deaths from first death per round | Side/map context, first contact timing, trade context | 8 | High signal: directly actionable | Next |
+| AI coach report | 5 | 75% | Provider abstraction, structured payload, Codex handoff, local_llm scaffold, saved AI report with payload snapshot/hash/history | Real model setup, structured AI sections, feedback loop/evals | 8 | High signal from AI-analysis interest | Next |
+| AI provider abstraction | 4 | 75% | `codex_cli_handoff`, `local_llm`, health/generate endpoints, persistence metadata | Streaming, provider UI diagnostics, structured JSON output | 8 | High product logic: keeps AI coach independent from one model vendor | Now |
+| Recommendation lifecycle | 5 | 70% | Active/paused/completed/archived, extend, restart, category summary, history UI/API | User-created goals, restart reason/comments, deeper history charts | 7 | Medium-high: needed once goals matter | Next |
+| Aim stats | 8 | 45% | ADR, K/D, HS%, damage per death, opening duel success, multi-kill rounds, weapon breakdown, data gaps | Accuracy/spray/TTK after reliable shot data; dedicated aim dashboard | 9 | High signal: Leetify/Refrag discussions often center aim | Continue after parser payload |
+| First duels | 5 | 55% | Entry kills/deaths and opening duel success in aim profile | Side/map context, first contact timing, trade context | 8 | High signal: directly actionable | Next |
 | Early deaths | 7 | 15% | Fallback to entry deaths | Round-phase death timing from freeze_end/round_start, thresholds | 8 | High for survival coaching | Next |
 | KAST | 7 | 35% | Best-effort kill/assist/survive estimate | Trade detection and proper round participation | 7 | Medium-high: common stat, but less user-requested than ADR/KD | Next |
 | ADR | 4 | 100% | Works from DEM `player_hurt` and CSV/JSON, dashboard ADR profile, coverage/confidence, recent delta, match-level interpretation | Future parser tuning as more DEM samples arrive | 9 | High signal: universal CS stat | Done for current MVP |
@@ -93,7 +93,7 @@ Excel-ready Russian workbook: `docs/feature_roadmap_scoring_ru.xlsx`.
 | CSV import | 85% | Fast manual data upload | Import preview and validation details | Match history |
 | JSON import | 80% | Script/export-friendly upload | Schema docs, validation details | Match history |
 | Duplicate protection | 80% | Prevents repeated imports | Better duplicate UI messaging | Match history |
-| Official DEM import | 65% | Real CS2 demo can become match stats; parser confidence, event counts, metric confidence, warnings and match-detail evidence exist | Player picker before save, deeper side/early timing validation, verified payload status | Scope/Leetify demo analysis |
+| Official DEM import | 70% | Real CS2 demo can become match stats; parser confidence, event counts, metric confidence, warnings, aim_summary, weapon_breakdown and match-detail evidence exist | Player picker before save, deeper side/early timing validation, verified payload status | Scope/Leetify demo analysis |
 | Bitvise/SFTP demo inbox | 90% | User can upload large demos outside browser | Archive/delete UI | Internal usability |
 | Match list page | 100% | See imported games in one place with sorting, pagination and detail links | Future polish: saved views/export | Match history |
 | Match filters | 100% | Filter by map/result/source/date/goal status | Future polish: imported date filter | Match history |
@@ -109,7 +109,8 @@ Excel-ready Russian workbook: `docs/feature_roadmap_scoring_ru.xlsx`.
 | DEM-based score/result inference | 45% | Imported demo has map/result/score | Validate side switching across more demos | Match details |
 | DEM-based ADR/KD/KAST/entry | 45% | Real demo contributes to analysis | Better KAST/trade logic, early death timing | Core analytics |
 | Report includes active recommendation | 50% | Coach report reflects current training goal | More detailed progress section | Coach report |
-| AI coach handoff | 65% | Structured JSON payload and Codex CLI prompt are generated from `/coach`; AI result can be saved and shown back in UI; local_llm scaffold exists | Real local model setup, structured sections, feedback loop | AI coach report |
+| AI coach handoff | 80% | Structured JSON payload and Codex CLI prompt are generated from `/coach`; AI result stores payload snapshot/hash/provider metadata/history; local_llm scaffold exists | Real local model setup, structured sections, feedback loop | AI coach report |
+| Aim profile | 45% | Honest aim profile with ADR/KD/HS/opening success/multi-kill/weapon breakdown and explicit data gaps | Accuracy/spray/TTK/crosshair only after reliable shot/view/position data | Aim stats |
 | Steam service bot demo downloader | 75% | Dedicated service bot gets CS2 GC demo URLs by share code, downloads `.dem.bz2`, decompresses and imports `.dem` | Stronger bot hardening, retries/backoff, production scheduler | Automatic match import |
 | ImportJob background worker flow | 70% | `steam_import_all` queues/reuses active jobs, web request returns immediately, background task runs sync/download/import, overview shows progress | Durable worker process, retry policy, job detail page | Fast post-match refresh |
 | Demo storage lifecycle control | 45% | `/settings/storage`, `GET /api/storage/demos`, manifest, candidates for future raw `.dem` delete after verified payload | Approve metric schema, add verification status, enable delete policy | Demo storage lifecycle |
@@ -122,6 +123,6 @@ The next best work is not adding many new shiny pages. It is making parsed demo 
 
 1. Approve the final metric/raw-slice schema needed before raw demo deletion.
 2. Persist verified parsed payload status per imported demo.
-3. Improve side stats, KAST, early deaths, utility, flash and round-level evidence from real demos.
+3. Improve round-level evidence: side stats, KAST/trade, early deaths, utility, flash and aim timing.
 4. Add production-grade Steam job retries/scheduler.
 5. Only then enable raw `.dem` delete policy for successfully verified imports.
