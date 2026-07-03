@@ -28,6 +28,14 @@ Static check:
 ruff check .
 ```
 
+Migration discipline checks:
+
+```bash
+APP_ENV=test .venv/bin/pytest tests/test_migrations.py -q
+bash -n scripts/migration_status.sh
+bash -n scripts/migration_check_on_copy.sh
+```
+
 Do not run tests by invoking the app against the default runtime `.env` or `data/cs2_coach.db`.
 
 ## Rules
@@ -54,6 +62,7 @@ Do not run tests by invoking the app against the default runtime `.env` or `data
 - AI payload/result persistence.
 - Steam cursor handling and job status without real external jobs.
 - Steam OpenID verification with mocked Steam responses only.
+- Migration status/copy tooling against temp DB or copied DB only.
 
 ## Forbidden During Stage 0
 

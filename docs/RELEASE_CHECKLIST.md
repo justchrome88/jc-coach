@@ -22,6 +22,7 @@ Last updated: 2026-07-03.
 - Strong session secret enforced.
 - Tests isolated from production settings.
 - Backup/restore tested.
+- Migration policy exists and schema changes are tested on a DB copy before production apply.
 - Metrics driving diagnosis have confidence and suppression rules.
 
 ## Public Gate

@@ -102,3 +102,13 @@ Before Security P0, ownership, migrations or parser/Steam hardening:
 2. Run restore verification against `/tmp`.
 3. Confirm the source DB file timestamp/hash did not change during verification.
 4. Record the backup filename in the work summary.
+
+## Required Before Schema Changes
+
+Before any future schema change or migration apply:
+
+1. Run `scripts/backup_runtime.sh`.
+2. Verify restore on a copy with `scripts/restore_runtime.sh --verify-only`.
+3. Run `scripts/migration_status.sh` and record source DB SHA.
+4. Run `scripts/migration_check_on_copy.sh` against a copy.
+5. Do not apply to `data/cs2_coach.db` without explicit operator approval.

@@ -38,7 +38,8 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
 | Recommendations | Partial working loop | Multi-category goals, lifecycle, evaluations and progress exist; recommendations are not yet consistently generated from top verified problem snapshots. |
 | AI coach | Partial | Codex handoff, local LLM scaffold, payload snapshots and saved AI reports exist; output is still free-form and not schema-validated. |
-| Auth/security | Personal/VPS only, Stage 1 + Stage 2 app hardening exist | App-level API auth, CSRF, MVP rate limits, strong secret fail-fast, Steam OpenID verification and enforced single-owner mode exist. Stage 2 is `PASS_WITH_WARNINGS`: this is not full multi-user ownership, and legacy `link_steam_account(..., user_id=None)` remains a later Steam hardening risk. Migration discipline and observability remain blockers for friends/public use. |
+| Auth/security | Personal/VPS only, Stage 1 + Stage 2 app hardening exist | App-level API auth, CSRF, MVP rate limits, strong secret fail-fast, Steam OpenID verification and enforced single-owner mode exist. Stage 2 is `PASS_WITH_WARNINGS`: this is not full multi-user ownership, and legacy `link_steam_account(..., user_id=None)` remains a later Steam hardening risk. Observability remains a blocker for friends/public use. |
+| DB/migrations | Stage 3 scaffold exists, not full Alembic | Migration policy, schema inventory and safe copy-check tooling exist. Alembic baseline and migration ledger are not implemented yet. |
 | Demo storage lifecycle | Observe-only | Storage report and manifest exist. Raw `.dem` deletion is disabled until parsed payload verification is defined and implemented. |
 
 ## 3. Current Milestone
@@ -53,7 +54,7 @@ Current focus:
 2. Подтвердить test isolation и backup/restore до рискованных проверок.
 3. Закрыть Security P0 до friends/public use. Stage 1 covers API auth, CSRF, MVP rate limits, strong secrets and Steam OpenID verification.
 4. Stage 2 Ownership / enforced single-owner boundaries: completed / `PASS_WITH_WARNINGS`.
-5. Следующий этап: Stage 3 Migration discipline.
+5. Stage 3 Migration discipline: completed / `PASS_WITH_WARNINGS` scaffold.
 6. Сделать Steam cursor freshness и состояние worker честными.
 7. Сделать метрики confidence-aware.
 8. Усилить parser confidence.
@@ -77,6 +78,7 @@ Current focus:
 | Testing | `docs/TESTING.md` | Safe verification commands. |
 | Deployment | `docs/DEPLOYMENT.md` | Deployment status and gates. |
 | Backup/restore | `docs/BACKUP_RESTORE.md` | Operational gap/runbook placeholder. |
+| Migrations | `docs/MIGRATIONS.md` | Migration discipline and safe copy-check policy. |
 | Decisions | `docs/DECISIONS.md` | Current decisions. |
 | Changelog | `docs/CHANGELOG.md` | Curated documentation/product changes. |
 | Limitations | `docs/KNOWN_LIMITATIONS.md` | Known non-readiness areas. |

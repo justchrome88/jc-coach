@@ -89,4 +89,22 @@ Warnings:
 
 ## Stage 3 Migration Discipline
 
-Next stage: define and enforce migration discipline before broader state/schema hardening.
+Status: completed / `PASS_WITH_WARNINGS`.
+
+Goal: define and enforce migration discipline before broader state/schema hardening.
+
+DoD:
+
+- Current schema evolution inventory exists.
+- Migration policy is documented in `docs/MIGRATIONS.md`.
+- Safe status/copy-check tooling exists.
+- Production DB is not mutated.
+- Backup-before-migration procedure is documented.
+- Future schema changes have an explicit migration path.
+- Startup schema mutations are documented as legacy.
+- Safe migration/check tests pass.
+
+Warnings:
+
+- Stage 3 scaffold does not implement full Alembic baseline yet.
+- `Base.metadata.create_all()` and `_upgrade_sqlite_schema()` remain legacy compatibility paths.
