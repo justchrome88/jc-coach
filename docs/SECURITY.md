@@ -8,7 +8,9 @@ The app is acceptable only for personal/VPS use under controlled access.
 
 Stage 1 Security P0 added app-level protection for non-health `/api/*`, CSRF for browser POST routes, MVP in-memory rate limits, strong session secret fail-fast outside local/test and Steam OpenID assertion verification.
 
-The product is still not ready for friends/public exposure until ownership/single-user enforcement, migrations/operational visibility and remaining release gates are closed.
+Stage 2 Ownership вводит enforced single-owner boundary: первый активный credentialed/register user считается owner инстанса, а дальнейшая self-registration по умолчанию закрыта.
+
+The product is still not ready for friends/public exposure until migrations/operational visibility and remaining release gates are closed.
 
 ## Blockers For Friends/Public Use
 
@@ -26,6 +28,16 @@ The product is still not ready for friends/public exposure until ownership/singl
 - Rate limiting is in-memory and single-process. It is suitable for personal/VPS hardening, not public-scale abuse protection.
 - API auth is either browser session or configured `API_TOKEN`.
 - Security event logging uses the app logger and records route/action/user context, not secrets.
+
+## Stage 2 Ownership Policy
+
+- Owner policy: `first_active_credentialed_user_is_owner`.
+- Первый активный пользователь с `email` и `password_hash`, созданный через register flow, является владельцем single-user инстанса.
+- После появления owner новая публичная регистрация возвращает ошибку и не создаёт запись в `users`.
+- Session login и session guards принимают только owner. Legacy/non-owner записи не получают доступ к owner state через session.
+- `API_TOKEN` трактуется как owner/operator token для автоматизации и не создаёт пользователей.
+- Steam OpenID callback не создаёт и не линкует Steam account без текущей owner session.
+- Owner session может линковать Steam account только к owner user; callback создаёт только queued metadata job, production Steam/import jobs этим не запускаются.
 
 ## Steam Secret Rules
 

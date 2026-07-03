@@ -26,12 +26,14 @@ os.environ.setdefault("AUTH_COOKIE_SECURE", "false")
 
 # App imports must happen after test env vars are set.
 from app.db.models import Match
-from app.db.session import Base
+from app.db.session import Base, engine
 from app.services.security import rate_limiter
 
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
     rate_limiter.reset()
     yield
     rate_limiter.reset()

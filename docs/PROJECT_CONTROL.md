@@ -38,7 +38,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
 | Recommendations | Partial working loop | Multi-category goals, lifecycle, evaluations and progress exist; recommendations are not yet consistently generated from top verified problem snapshots. |
 | AI coach | Partial | Codex handoff, local LLM scaffold, payload snapshots and saved AI reports exist; output is still free-form and not schema-validated. |
-| Auth/security | Personal/VPS only, Stage 1 app hardening exists | App-level API auth, CSRF, MVP rate limits, strong secret fail-fast and Steam OpenID verification exist. User scoping/single-user enforcement, migrations and observability remain blockers for friends/public use. |
+| Auth/security | Personal/VPS only, Stage 1 + Stage 2 app hardening exist | App-level API auth, CSRF, MVP rate limits, strong secret fail-fast, Steam OpenID verification and enforced single-owner mode exist. Stage 2 is `PASS_WITH_WARNINGS`: this is not full multi-user ownership, and legacy `link_steam_account(..., user_id=None)` remains a later Steam hardening risk. Migration discipline and observability remain blockers for friends/public use. |
 | Demo storage lifecycle | Observe-only | Storage report and manifest exist. Raw `.dem` deletion is disabled until parsed payload verification is defined and implemented. |
 
 ## 3. Current Milestone
@@ -51,13 +51,14 @@ Current focus:
 
 1. Заморозить scope вокруг security, metric truth, parser verification и recommendation planner.
 2. Подтвердить test isolation и backup/restore до рискованных проверок.
-3. Закрыть Security P0 до friends/public use. Stage 1 covers API auth, CSRF, MVP rate limits, strong secrets and Steam OpenID verification; ownership/single-user enforcement remains next.
-4. Явно оформить ownership или single-user mode.
-5. Сделать Steam cursor freshness и состояние worker честными.
-6. Сделать метрики confidence-aware.
-7. Усилить parser confidence.
-8. Генерировать рекомендации из verified problem evidence.
-9. Добавить structured AI output validation.
+3. Закрыть Security P0 до friends/public use. Stage 1 covers API auth, CSRF, MVP rate limits, strong secrets and Steam OpenID verification.
+4. Stage 2 Ownership / enforced single-owner boundaries: completed / `PASS_WITH_WARNINGS`.
+5. Следующий этап: Stage 3 Migration discipline.
+6. Сделать Steam cursor freshness и состояние worker честными.
+7. Сделать метрики confidence-aware.
+8. Усилить parser confidence.
+9. Генерировать рекомендации из verified problem evidence.
+10. Добавить structured AI output validation.
 
 ## 4. Source-of-truth Documents
 
@@ -208,7 +209,7 @@ Use these files as supporting docs under this control file:
 1. Изолировать тесты от production DB/settings.
 2. Задокументировать и проверить backup/restore до рискованных проверок.
 3. Закрыть non-health `/api/*` endpoints auth-ом или явной API token policy.
-4. Добавить user ownership или объявленный/принудительный single-user mode для matches, recommendations, reports, Steam accounts и jobs.
+4. Добавить user ownership или объявленный/принудительный single-user mode для matches, recommendations, reports, Steam accounts и jobs. Stage 2 completed this as enforced single-owner mode / `PASS_WITH_WARNINGS`, not full multi-user ownership.
 5. Добавить CSRF protection или эквивалентное same-site/state-change hardening.
 6. Требовать strong `SESSION_SECRET_KEY` вне local development.
 

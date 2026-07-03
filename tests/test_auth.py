@@ -17,6 +17,6 @@ def test_register_user_rejects_duplicate_email(db):
     try:
         register_user(db, "USER@example.test", "strong-password")
     except ValueError as exc:
-        assert "уже есть" in str(exc)
+        assert "Регистрация закрыта" in str(exc)
     else:
-        raise AssertionError("duplicate email should be rejected")
+        raise AssertionError("second registration should be rejected")

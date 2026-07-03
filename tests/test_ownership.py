@@ -1,0 +1,179 @@
+import re
+
+from fastapi.testclient import TestClient
+
+from app.db.models import ImportJob, SteamAccount, User
+from app.db.session import SessionLocal
+from app.main import app, create_app
+from app.services.auth import current_user_from_session, hash_password, owner_user, register_user
+
+
+def _csrf_from(response) -> str:
+    match = re.search(r'name="csrf_token" value="([^"]+)"', response.text)
+    assert match is not None
+    return match.group(1)
+
+
+def _register_via_web(client: TestClient, email: str = "owner@example.test"):
+    page = client.get("/register")
+    return client.post(
+        "/register",
+        data={
+            "csrf_token": _csrf_from(page),
+            "display_name": "Owner",
+            "email": email,
+            "password": "strong-password",
+        },
+        follow_redirects=False,
+    )
+
+
+def _app_db_count(model) -> int:
+    session = SessionLocal()
+    try:
+        return session.query(model).count()
+    finally:
+        session.close()
+
+
+def _app_db_one(model):
+    session = SessionLocal()
+    try:
+        value = session.query(model).one()
+        session.expunge(value)
+        return value
+    finally:
+        session.close()
+
+
+def test_first_user_registration_works(db):
+    user = register_user(db, "owner@example.test", "strong-password", display_name="Owner")
+
+    assert user.id is not None
+    assert owner_user(db).id == user.id
+
+
+def test_legacy_steam_only_user_does_not_become_owner(db):
+    legacy_user = User(display_name="Steam Legacy", is_active=1)
+    db.add(legacy_user)
+    db.commit()
+
+    user = register_user(db, "owner@example.test", "strong-password", display_name="Owner")
+
+    assert owner_user(db).id == user.id
+    assert user.id != legacy_user.id
+
+
+def test_second_user_registration_blocked_by_default(db):
+    register_user(db, "owner@example.test", "strong-password", display_name="Owner")
+
+    try:
+        register_user(db, "second@example.test", "strong-password", display_name="Second")
+    except ValueError as exc:
+        assert "Регистрация закрыта" in str(exc)
+    else:
+        raise AssertionError("second user registration should be blocked")
+
+
+def test_blocked_second_user_is_not_created_in_db(db):
+    register_user(db, "owner@example.test", "strong-password", display_name="Owner")
+
+    try:
+        register_user(db, "second@example.test", "strong-password", display_name="Second")
+    except ValueError:
+        pass
+
+    assert db.query(User).count() == 1
+
+
+def test_web_first_registration_works_and_second_registration_blocked():
+    with TestClient(app) as client:
+        first = _register_via_web(client, "owner-web@example.test")
+        second = _register_via_web(client, "second-web@example.test")
+
+    assert first.status_code == 303
+    assert first.headers["location"] == "/dashboard"
+    assert second.status_code == 400
+    assert "Регистрация закрыта" in second.text
+
+
+def test_legacy_non_owner_session_cannot_access_owner_state(db):
+    owner = register_user(db, "owner@example.test", "strong-password", display_name="Owner")
+    non_owner = User(
+        email="legacy@example.test",
+        password_hash=hash_password("strong-password"),
+        display_name="Legacy",
+        is_active=1,
+    )
+    db.add(non_owner)
+    db.commit()
+    db.refresh(non_owner)
+
+    assert owner.id != non_owner.id
+    assert owner_user(db).id == owner.id
+
+
+def test_current_user_from_session_rejects_legacy_non_owner(db):
+    owner = register_user(db, "owner@example.test", "strong-password", display_name="Owner")
+    non_owner = User(
+        email="legacy@example.test",
+        password_hash=hash_password("strong-password"),
+        display_name="Legacy",
+        is_active=1,
+    )
+    db.add(non_owner)
+    db.commit()
+    db.refresh(non_owner)
+
+    class FakeRequest:
+        session = {"user_id": non_owner.id}
+
+    assert owner.id != non_owner.id
+    assert current_user_from_session(FakeRequest(), db) is None
+
+
+def test_steam_openid_callback_without_owner_session_does_not_create_uncontrolled_user(db, monkeypatch):
+    with SessionLocal() as session:
+        register_user(session, "owner@example.test", "strong-password", display_name="Owner")
+    monkeypatch.setattr("app.web.routes.validate_openid_callback", lambda _params: ("76561198056634139", None))
+
+    with TestClient(app, follow_redirects=False) as client:
+        response = client.get("/auth/steam/callback?openid.mode=id_res")
+
+    assert response.status_code == 303
+    assert _app_db_count(User) == 1
+    assert _app_db_count(SteamAccount) == 0
+    assert _app_db_count(ImportJob) == 0
+
+
+def test_owner_session_can_link_steam_to_owner(monkeypatch):
+    monkeypatch.setattr("app.web.routes.validate_openid_callback", lambda _params: ("76561198056634139", None))
+
+    with TestClient(app, follow_redirects=False) as client:
+        _register_via_web(client, "owner-steam@example.test")
+        response = client.get("/auth/steam/callback?openid.mode=id_res")
+
+    assert response.status_code == 303
+    account = _app_db_one(SteamAccount)
+    job = _app_db_one(ImportJob)
+    with SessionLocal() as session:
+        owner = owner_user(session)
+        assert owner is not None
+        owner_id = owner.id
+    assert account.user_id == owner_id
+    assert job.steam_account_id == account.id
+
+
+def test_api_token_represents_owner_operator_without_creating_users(monkeypatch):
+    monkeypatch.setenv("API_TOKEN", "owner-token")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        with TestClient(create_app()) as client:
+            response = client.get("/api/matches", headers={"Authorization": "Bearer owner-token"})
+    finally:
+        get_settings.cache_clear()
+
+    assert response.status_code == 200
+    assert _app_db_count(User) == 0

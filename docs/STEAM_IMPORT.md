@@ -21,6 +21,8 @@ Steam import is an alpha path, not production-ready.
 
 Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
 
+Stage 2 ownership hardening requires current owner session for `/auth/steam/callback`. Без owner session callback не создаёт uncontrolled user, `steam_accounts` или `import_jobs`. При owner session Steam account линкуется только к owner user.
+
 ## Known Risks
 
 - Service bot cannot enumerate private user history by itself.
@@ -29,6 +31,7 @@ Stage 1 security hardening verifies Steam OpenID callback assertions through Ste
 - Valve replay URLs can expire or return transient 502/404/410.
 - Durable retry/backoff and scheduler behavior still need hardening.
 - Steam OpenID network verification can fail closed if Steam is unreachable.
+- Low-level helper `link_steam_account(..., user_id=None)` still supports legacy Steam-only user creation for old service paths; public OpenID callback no longer uses this path without owner.
 
 ## Product Rule
 

@@ -20,15 +20,20 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - AI coach handoff through `codex_cli_handoff`.
 - AI report persistence with payload snapshot, provider metadata and payload hash.
 - Steam OpenID onboarding, Game Authentication Code flow, share-code cursor and service bot demo URL resolver.
+- Stage 1 Security P0 hardening: API auth, CSRF/state-change checks, MVP rate limits, strong session secret fail-fast and Steam OpenID verification.
+- Stage 2 Ownership hardening: enforced single-owner mode completed / `PASS_WITH_WARNINGS`.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
 
 - Parser-derived metrics still need explicit confidence and suppression rules.
 - Steam import works as an alpha path, but needs durable scheduling, retries and cursor freshness diagnostics.
+- Stage 2 ownership is single-owner mode, not full multi-user SaaS ownership across all core tables.
+- Legacy `link_steam_account(..., user_id=None)` remains an internal Steam hardening risk, but it is not reachable from public OpenID callback without owner session.
+- Next hardening stage: Stage 3 Migration discipline.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
 - AI output is still free-form and needs schema validation, prompt versioning and validator checks.
-- Auth exists, but API auth, user ownership/single-user enforcement, CSRF/rate limits and strong secret enforcement are not complete.
+- Auth/security is still personal/VPS only; migrations, observability and public/friends release gates are not complete.
 
 ## Not Ready
 

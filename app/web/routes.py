@@ -362,11 +362,15 @@ def steam_auth_start():
 
 @router.get("/auth/steam/callback")
 def steam_auth_callback(request: Request, db: Annotated[Session, Depends(get_db)]):
+    owner = current_user_from_session(request, db)
+    if owner is None:
+        message = "Sign in as the owner before linking Steam."
+        return RedirectResponse(f"/settings/imports?message={quote(message)}", status_code=303)
     steam_id, error = validate_openid_callback(dict(request.query_params))
     if error:
         return RedirectResponse(f"/settings/imports?message={quote(error)}", status_code=303)
-    link_steam_account(db, steam_id)
-    create_steam_import_job(db, None, "steam_openid_linked", {"steam_id": steam_id})
+    account = link_steam_account(db, steam_id, user_id=owner.id)
+    create_steam_import_job(db, account.id, "steam_openid_linked", {"steam_id": steam_id, "owner_user_id": owner.id})
     return RedirectResponse("/settings/imports?message=Steam%20account%20linked.", status_code=303)
 
 

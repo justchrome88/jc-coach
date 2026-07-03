@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.db.models import User
 
 PBKDF2_ITERATIONS = 260_000
+OWNER_POLICY = "first_active_credentialed_user_is_owner"
 
 
 def normalize_email(email: str) -> str:
@@ -44,6 +45,8 @@ def verify_password(password: str, password_hash: str | None) -> bool:
 
 
 def register_user(db: Session, email: str, password: str, display_name: str | None = None) -> User:
+    if owner_user(db) is not None:
+        raise ValueError("Регистрация закрыта: этот инстанс уже привязан к owner user.")
     normalized_email = normalize_email(email)
     if "@" not in normalized_email or "." not in normalized_email:
         raise ValueError("Введите корректный email.")
@@ -68,6 +71,8 @@ def authenticate_user(db: Session, email: str, password: str) -> User | None:
     user = db.scalar(select(User).where(User.email == normalize_email(email)))
     if not user or not user.is_active or not verify_password(password, user.password_hash):
         return None
+    if not is_owner_user(db, user):
+        return None
     user.last_login_at = datetime.now(UTC).replace(tzinfo=None)
     db.commit()
     db.refresh(user)
@@ -89,4 +94,22 @@ def current_user_from_session(request: Request, db: Session) -> User | None:
     user = db.get(User, user_id)
     if not user or not user.is_active:
         return None
+    if not is_owner_user(db, user):
+        return None
     return user
+
+
+def owner_user(db: Session) -> User | None:
+    return db.scalar(
+        select(User)
+        .where(User.is_active == 1)
+        .where(User.email.is_not(None))
+        .where(User.password_hash.is_not(None))
+        .order_by(User.id.asc())
+        .limit(1)
+    )
+
+
+def is_owner_user(db: Session, user: User) -> bool:
+    owner = owner_user(db)
+    return bool(owner and user.id == owner.id)

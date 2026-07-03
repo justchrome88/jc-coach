@@ -68,3 +68,25 @@ Until this milestone closes, do not prioritize:
 - Steam OpenID callback verifies Steam `check_authentication`.
 - Dangerous import/Steam/parser/AI/report job starts are anonymous-blocked and logged.
 - Safe tests pass with `APP_ENV=test .venv/bin/pytest tests -q`.
+
+## Stage 2 Ownership DoD
+
+Status: completed / `PASS_WITH_WARNINGS`.
+
+- Owner policy выбран и задокументирован: `first_active_credentialed_user_is_owner`.
+- Первая регистрация на пустом credentialed-инстансе работает.
+- Вторая self-registration по умолчанию заблокирована и не создаёт запись в БД.
+- Session auth принимает только owner user.
+- Steam OpenID callback без owner session не создаёт uncontrolled second user, Steam account или import job.
+- Owner session линкует Steam account только к owner.
+- Bearer `API_TOKEN` остаётся owner/operator path и не создаёт пользователей.
+- Safe tests проходят только через `APP_ENV=test` и temp DB.
+
+Warnings:
+
+- Это enforced single-owner mode, не полноценный multi-user ownership refactor.
+- Legacy `link_steam_account(..., user_id=None)` остаётся later Steam hardening risk.
+
+## Stage 3 Migration Discipline
+
+Next stage: define and enforce migration discipline before broader state/schema hardening.

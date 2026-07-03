@@ -15,6 +15,9 @@ Last updated: 2026-07-03.
 
 - Stage 1 app-level API auth, CSRF, rate limit, strong secret and Steam OpenID verification checks pass.
 - User ownership or enforced single-user mode verified.
+- Public self-registration is blocked after owner exists.
+- Steam OpenID callback cannot create or link uncontrolled second users.
+- `API_TOKEN` behavior is documented as owner/operator access.
 - CSRF/same-site protections verified.
 - Strong session secret enforced.
 - Tests isolated from production settings.
