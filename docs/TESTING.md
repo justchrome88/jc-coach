@@ -57,6 +57,13 @@ APP_ENV=test .venv/bin/pytest tests/test_steam_cursor_truth.py -q
 APP_ENV=test .venv/bin/pytest tests/test_steam_integration.py tests/test_security.py tests/test_ownership.py tests/test_steam_cursor_truth.py -q
 ```
 
+AI Output Validator checks:
+
+```bash
+APP_ENV=test .venv/bin/pytest tests/test_ai_validator.py -q
+APP_ENV=test .venv/bin/pytest tests/test_metric_truth.py tests/test_ai_validator.py -q
+```
+
 Do not run tests by invoking the app against the default runtime `.env` or `data/cs2_coach.db`.
 
 ## Rules
@@ -83,6 +90,7 @@ Do not run tests by invoking the app against the default runtime `.env` or `data
 - Parser-derived fact confidence and weak-fact suppression.
 - Recommendation lifecycle and evaluation.
 - AI payload/result persistence.
+- AI output validation with mocked provider/output only.
 - Steam cursor handling and job status without real external jobs.
 - Steam OpenID verification with mocked Steam responses only.
 - Migration status/copy tooling against temp DB or copied DB only.

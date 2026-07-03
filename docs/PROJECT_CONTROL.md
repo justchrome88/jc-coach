@@ -38,7 +38,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
 | Recommendations | Partial working loop, Stage 4 read/write split exists | Multi-category goals, lifecycle, evaluations and progress exist. GET/read paths no longer create recommendations/evaluations. Recommendations are not yet consistently generated from top verified problem snapshots. |
 | Metrics | Metric Truth Layer exists, Stage 5 `PASS_WITH_WARNINGS`; parser confidence Stage 6 `PASS_WITH_WARNINGS` | Runtime registry defines source/formula/reliability/usage policy. Parser no longer silently maps early deaths to entry deaths; trade/side/utility facts still need deeper validation before weak metrics can be upgraded. |
-| AI coach | Partial | Codex handoff, local LLM scaffold, payload snapshots and saved AI reports exist; output is still free-form and not schema-validated. |
+| AI coach | Partial, Stage 8 `PASS_WITH_WARNINGS` | Codex handoff, local LLM scaffold, payload snapshots and saved AI reports exist. Structured AI output validator rejects unsupported metric claims and falls back safely; prompt versioning/provider structured mode remain future work. |
 | Auth/security | Personal/VPS only, Stage 1 + Stage 2 app hardening exist | App-level API auth, CSRF, MVP rate limits, strong secret fail-fast, Steam OpenID verification and enforced single-owner mode exist. Stage 2 is `PASS_WITH_WARNINGS`: this is not full multi-user ownership, and legacy `link_steam_account(..., user_id=None)` remains a later Steam hardening risk. Observability remains a blocker for friends/public use. |
 | DB/migrations | Stage 3 scaffold exists, not full Alembic | Migration policy, schema inventory and safe copy-check tooling exist. Alembic baseline and migration ledger are not implemented yet. |
 | Demo storage lifecycle | Observe-only | Storage report and manifest exist. Raw `.dem` deletion is disabled until parsed payload verification is defined and implemented. |
@@ -60,8 +60,8 @@ Current focus:
 7. Stage 5 Metric Truth Layer: completed / `PASS_WITH_WARNINGS`.
 8. Stage 6 Parser facts & confidence hardening: completed / `PASS_WITH_WARNINGS`.
 9. Stage 7 Steam cursor truth: completed / `PASS_WITH_WARNINGS`.
-10. Генерировать рекомендации из verified problem evidence.
-11. Добавить structured AI output validation.
+10. Stage 8 AI Output Validator: completed / `PASS_WITH_WARNINGS`.
+11. Генерировать рекомендации из verified problem evidence.
 
 ## 4. Source-of-truth Documents
 
@@ -159,7 +159,15 @@ For documentation changes:
 
 Default provider is `codex_cli_handoff`: the app builds structured facts and prompt files for a human-in-the-loop Codex flow. `local_llm` exists as a scaffold for Ollama/LM Studio/OpenAI-compatible local servers.
 
-AI must reason over deterministic payloads. It must not parse demos or invent missing stats. Next AI hardening is structured output schema, prompt/version tracking and validator.
+AI must reason over deterministic payloads. It must not parse demos or invent missing stats. Next AI hardening is prompt/version tracking and provider-specific structured response enforcement.
+
+Stage 8 AI validation policy:
+
+- accepted structured output has `summary`, `diagnoses[]`, `recommendations[]`, `warnings[]`, `evidence[]`, `confidence`;
+- unknown metric ids are rejected;
+- suppressed/unavailable Metric Truth ids cannot support diagnosis/recommendation claims;
+- approximate/warn metrics require caveats;
+- invalid or free-form output is replaced by safe fallback Markdown before persistence/display.
 
 ### Steam Import
 

@@ -22,7 +22,7 @@ Goal: make the personal product honest, secure enough for controlled use, and co
 8. Усилить parser confidence для early deaths, KAST/trade, side switching и utility attribution.
 9. Описать diagnosis registry из verified problems.
 10. Собрать recommendation planner из top verified problem snapshots.
-11. Добавить structured AI output schema, validator и prompt/version tracking.
+11. Добавить structured AI output schema, validator и prompt/version tracking. Stage 8: schema/validator completed / `PASS_WITH_WARNINGS`; prompt/version tracking remains.
 12. Сделать dashboard/coach UI с приоритетом next action и primary recommendation.
 
 ## Frozen Scope
@@ -203,3 +203,29 @@ Warnings:
 - This is not a durable scheduler, retry ledger or production worker hardening.
 - Outcome names describe share-code collection, not guaranteed demo parser completion.
 - Service bot demo download and parser import remain separate explicit steps.
+
+## Stage 8 AI Output Validator
+
+Status: completed / `PASS_WITH_WARNINGS`.
+
+Goal: prevent AI coach output from accepting/displaying confident unsupported claims without schema changes or live AI calls.
+
+DoD:
+
+- AI output validation inventory exists.
+- Structured output schema/policy exists for `summary`, `diagnoses[]`, `recommendations[]`, `warnings[]`, `evidence[]`, `confidence`.
+- Validator checks required structure and Metric Truth Layer usage policy.
+- Unknown metric ids are rejected.
+- Suppressed/unavailable metrics cannot support hard diagnosis/recommendation claims.
+- Approximate/warn metrics require caveats.
+- Invalid or free-form AI output gets safe fallback Markdown before persistence/display.
+- Tests use mocked outputs only.
+- No schema changes, migrations or production DB mutation.
+- No live AI calls or production Steam/import/parser jobs.
+- Safe tests pass.
+
+Warnings:
+
+- Provider-specific structured response mode is not implemented.
+- Prompt/version tracking remains future work.
+- This is not recommendation planner, ProblemSnapshot or UI redesign.

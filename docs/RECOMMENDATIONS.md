@@ -12,6 +12,8 @@ Stage 5 adds Metric Truth Layer. Recommendation scoring can consume only metrics
 
 Stage 6 keeps parser-derived weak facts out of hard recommendation claims. `early_deaths` may be present only when parser timing anchors exist, and it remains warning-only.
 
+Stage 8 AI Output Validator applies the same Metric Truth constraints to structured AI recommendations: suppressed/unavailable metrics cannot support recommendation claims, and approximate/warn metrics require caveats.
+
 The remaining product gap is planning. The system must choose one primary active recommendation from the top verified problem snapshot instead of diluting focus across loosely related category goals.
 
 ## Canonical Loop
@@ -25,6 +27,7 @@ verified problem -> evidence -> primary recommendation -> next matches -> evalua
 - Do not create a primary recommendation from unreliable metrics.
 - Do not use `low` or `unavailable` metrics for hard recommendation decisions.
 - Use `approximate` metrics only with warning semantics unless a later parser-confidence stage upgrades them.
+- AI-generated recommendation output must pass validator checks before it is accepted as confident coach advice.
 - Keep secondary category goals only when they support the main focus.
 - Preserve the baseline used to create a goal.
 - Separate read-only recommendation summaries from write/evaluation side effects.

@@ -72,6 +72,7 @@ Usage decision:
 - Recommendation evaluation consumes Metric Truth Layer for hard-signal checks.
 - Survival recommendations no longer treat `early_deaths` as a hard success/failure signal.
 - AI payload includes selected metric definitions and suppressed metric lists.
+- Stage 8 AI Output Validator rejects unknown/suppressed/unavailable metric ids in structured AI output and requires caveats for approximate/warn metrics.
 - Diagnosis registry is still future work; existing rule-based diagnosis remains partial and must not be treated as final planner logic.
 
 ## Next Work
@@ -79,4 +80,4 @@ Usage decision:
 - Parser hardening for KAST/trade, traded deaths, side switching and utility attribution.
 - Diagnosis registry from verified problems.
 - Recommendation planner that chooses one primary recommendation from verified evidence.
-- AI output schema/validator that rejects unsupported metric claims.
+- Prompt/version tracking and deeper AI/provider structured response hardening after Stage 8 validator.

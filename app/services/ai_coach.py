@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.models import CoachReport, Match
+from app.services.ai_validator import render_ai_output_markdown, validate_ai_coach_output
 from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
@@ -140,17 +141,28 @@ def save_ai_coach_result(
     source_ref: str | None = None,
     payload_snapshot: dict[str, Any] | None = None,
 ) -> CoachReport:
-    content = markdown.strip()
-    if not content:
+    raw_content = markdown.strip()
+    if not raw_content:
         raise ValueError("AI coach result is empty.")
-    if len(content) > 60_000:
+    if len(raw_content) > 60_000:
         raise ValueError("AI coach result is too long.")
+    validation = validate_ai_coach_output(raw_content)
+    content = (
+        render_ai_output_markdown(validation.output)
+        if validation.valid and validation.output is not None
+        else validation.fallback_markdown
+    )
+    if content is None:
+        raise ValueError("AI coach validation did not produce content.")
     matches = list(db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())))
     period_start = next((match.played_at for match in matches if match.played_at), None)
     period_end = next((match.played_at for match in reversed(matches) if match.played_at), None)
     latest_handoff = latest_ai_handoff()
     snapshot = payload_snapshot or build_ai_coach_payload(db)
     metadata = _ai_report_metadata(content, snapshot, latest_handoff, source_ref)
+    metadata["ai_validation"] = validation.to_dict()
+    if validation.valid and validation.output is not None:
+        metadata["ai_structured_output"] = validation.output
     report = CoachReport(
         period_start=period_start,
         period_end=period_end,
@@ -282,12 +294,16 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
             "- Не выдумывай факты, которых нет в JSON.",
             "- Если данных мало или confidence низкий, прямо скажи об этом.",
             "- Используй metric_truth: suppressed metrics нельзя превращать в уверенный диагноз или рекомендацию.",
+            "- Верни строго JSON по схеме: summary, diagnoses[], recommendations[], warnings[], "
+            "evidence[], confidence.",
+            "- В diagnoses указывай category, severity, claim, evidence_metric_ids[], confidence, caveats[].",
+            "- В recommendations указывай category, action, rationale, target_metric_ids[], confidence, caveats[].",
+            "- Для approximate/warn metrics обязательно добавляй caveats; suppressed/unavailable metrics "
+            "не используй как evidence.",
             "- Не делай общий motivational текст. Дай конкретный фокус, причины и действия.",
             "- Главный результат: что игрок должен изменить в следующих 5-10 матчах.",
             "- Разбирай отдельно aim, map, crosshair placement, grenades, entry duels и survival.",
             "- Если по crosshair placement нет данных, не делай выводы, а отметь data gap.",
-            "- Структура ответа: краткий диагноз, 3 главные ошибки, рекомендации по категориям, "
-            "план на неделю, метрики контроля.",
             "",
             "JSON payload:",
             "```json",

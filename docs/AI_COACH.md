@@ -8,9 +8,11 @@ The default provider is `codex_cli_handoff`. The application creates determinist
 
 `local_llm` exists as a scaffold for Ollama, LM Studio or OpenAI-compatible local servers. AI result persistence exists.
 
-Stage 5 payloads include `metric_truth`: selected metric definitions plus metrics suppressed for diagnosis/recommendation. This is metadata only; AI output is still free-form and not schema-validated.
+Stage 5 payloads include `metric_truth`: selected metric definitions plus metrics suppressed for diagnosis/recommendation.
 
 Stage 6 parser payloads add clearer warnings for early-death timing, KAST trade component, traded deaths, side stats and utility/flash confidence. AI must treat those warnings as constraints, not as coachable facts by themselves.
+
+Stage 8 adds AI Output Validator without schema changes and without live AI calls. Structured AI output is validated before persistence/display; invalid or free-form output is replaced by safe fallback Markdown and validation metadata is stored in `coach_reports.report_json`.
 
 ## Rules
 
@@ -20,15 +22,49 @@ Stage 6 parser payloads add clearer warnings for early-death timing, KAST trade 
 - AI must not turn `suppressed` Metric Truth entries into confident diagnosis or recommendations.
 - AI must present `warn` metrics as approximate/contextual, not as fully trusted facts.
 - AI recommendations are subordinate to verified metrics and the recommendation planner.
+- AI output must follow the Stage 8 schema: `summary`, `diagnoses[]`, `recommendations[]`, `warnings[]`, `evidence[]`, `confidence`.
+- Unknown metric ids are rejected.
+- Suppressed or unavailable metrics cannot support diagnosis/recommendation claims.
+- Approximate/warn metrics require explicit `caveats`.
+
+## Output Schema
+
+Accepted structured output:
+
+```text
+summary: string
+diagnoses[]:
+  category: string
+  severity: string
+  claim: string
+  evidence_metric_ids[]: string
+  confidence: low | medium | high
+  caveats[]: string
+recommendations[]:
+  category: string
+  action: string
+  rationale: string
+  target_metric_ids[]: string
+  confidence: low | medium | high
+  caveats[]: string
+warnings[]: string
+evidence[]:
+  metric_id: string
+  value: optional
+  caveats[]: string
+confidence: low | medium | high
+```
+
+Free-form Markdown is no longer accepted as confident coach advice. It is stored only as validator fallback content that says the AI output was rejected.
 
 ## Gaps
 
-- Free-form Markdown output is not enough for product automation.
-- Structured output schema is needed.
-- Validator is needed.
 - Prompt and payload version tracking must be explicit.
-- Validator must reject unsupported metric claims after schema work exists.
+- Provider-specific structured response enforcement is still shallow; current prompt asks for JSON, and validator rejects invalid output after generation/paste.
+- Validation metadata is stored inside existing `coach_reports.report_json`; there is no separate structured AI output table.
 
 ## Next Work
 
-Create schema-validated AI output with fields for diagnosis, evidence, recommendation, confidence, warnings and next-match evaluation plan.
+- Prompt and payload version tracking.
+- Richer provider-specific structured response mode.
+- Recommendation planner integration after verified problem snapshots exist.
