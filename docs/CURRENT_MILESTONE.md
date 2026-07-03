@@ -13,8 +13,8 @@ Goal: make the personal product honest, secure enough for controlled use, and co
 ## Sub-phases
 
 1. Заморозить scope вокруг security, metric truth, parser verification и recommendation planner.
-2. Изолировать тесты от production DB/settings.
-3. Задокументировать и проверить backup/restore до рискованных проверок.
+2. Изолировать тесты от production DB/settings. Stage 0: guard and safe pytest command are required before broad test runs.
+3. Задокументировать и проверить backup/restore до рискованных проверок. Stage 0: backup script and restore-on-copy verification are required before Security P0 work.
 4. Закрыть Security P0: API auth, CSRF/state-change hardening, strong secrets.
 5. Добавить user ownership или объявленный/принудительный single-user mode для sensitive resources.
 6. Сделать Steam cursor truth видимой: freshness, stale cursor warnings, retry/backoff status.
@@ -47,3 +47,13 @@ Until this milestone closes, do not prioritize:
 - Recommendations are created from verified problem evidence.
 - AI output is schema-validated or clearly marked unvalidated.
 - Tests run without using production DB/settings.
+
+## Stage 0 Safety Foundation DoD
+
+- `git status --short` baseline is understandable before code hardening.
+- Docs baseline is not mixed with Security P0/ownership/metric/parser/AI feature work.
+- `data/cs2_coach.db` backup can be created by `scripts/backup_runtime.sh`.
+- Restore is verified only on a copy by `scripts/restore_runtime.sh --verify-only`.
+- `APP_ENV=test .venv/bin/pytest tests -q` is the safe test command.
+- `APP_ENV=test` with production `DATABASE_URL` fails fast.
+- Import, Steam and parser jobs are not used for Stage 0 validation.

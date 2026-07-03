@@ -6,6 +6,7 @@ __pycache__/
 *.pyc
 node_modules/
 .env
+backups/
 data/*.db
 data/uploads/*
 data/incoming_demos/*

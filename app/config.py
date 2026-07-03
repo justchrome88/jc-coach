@@ -1,13 +1,16 @@
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import unquote
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+PRODUCTION_DB_PATH = (BASE_DIR / "data" / "cs2_coach.db").resolve()
 
 
 class Settings(BaseSettings):
     app_name: str = "CS2 Personal Coach"
+    app_env: str = "local"
     database_url: str = f"sqlite:///{BASE_DIR / 'data' / 'cs2_coach.db'}"
     upload_dir: Path = BASE_DIR / "data" / "uploads"
     demo_inbox_dir: Path = BASE_DIR / "data" / "incoming_demos"
@@ -40,8 +43,37 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     settings = Settings()
+    _assert_safe_test_settings(settings)
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.demo_inbox_dir.mkdir(parents=True, exist_ok=True)
     settings.reports_dir.mkdir(parents=True, exist_ok=True)
     settings.ai_handoff_dir.mkdir(parents=True, exist_ok=True)
     return settings
+
+
+def _assert_safe_test_settings(settings: Settings) -> None:
+    if settings.app_env.strip().lower() != "test":
+        return
+    db_path = _sqlite_database_path(settings.database_url)
+    if db_path is None:
+        return
+    if db_path == PRODUCTION_DB_PATH:
+        raise RuntimeError(
+            "Unsafe test configuration: APP_ENV=test cannot use the production database "
+            f"at {PRODUCTION_DB_PATH}."
+        )
+
+
+def _sqlite_database_path(database_url: str) -> Path | None:
+    if database_url == "sqlite:///:memory:":
+        return None
+    if not database_url.startswith("sqlite:///"):
+        return None
+    if database_url.startswith("sqlite:////"):
+        raw_path = "/" + database_url.removeprefix("sqlite:////")
+    else:
+        raw_path = database_url.removeprefix("sqlite:///")
+    raw_path = unquote(raw_path)
+    if not raw_path:
+        return None
+    return Path(raw_path).resolve()

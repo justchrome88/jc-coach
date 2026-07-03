@@ -1,9 +1,30 @@
+# ruff: noqa: E402, I001
+
+import os
+import tempfile
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+TEST_RUNTIME_ROOT = Path(tempfile.gettempdir()) / f"jc-coach-pytest-{os.getpid()}"
+TEST_DB_PATH = TEST_RUNTIME_ROOT / "cs2_coach_test.db"
+
+if TEST_DB_PATH.exists():
+    TEST_DB_PATH.unlink()
+
+os.environ["APP_ENV"] = "test"
+os.environ.setdefault("DATABASE_URL", f"sqlite:///{TEST_DB_PATH}")
+os.environ.setdefault("UPLOAD_DIR", str(TEST_RUNTIME_ROOT / "uploads"))
+os.environ.setdefault("DEMO_INBOX_DIR", str(TEST_RUNTIME_ROOT / "incoming_demos"))
+os.environ.setdefault("REPORTS_DIR", str(TEST_RUNTIME_ROOT / "reports"))
+os.environ.setdefault("AI_HANDOFF_DIR", str(TEST_RUNTIME_ROOT / "ai_handoffs"))
+os.environ.setdefault("SESSION_SECRET_KEY", "pytest-only-session-secret")
+os.environ.setdefault("AUTH_COOKIE_SECURE", "false")
+
+# App imports must happen after test env vars are set.
 from app.db.models import Match
 from app.db.session import Base
 
