@@ -45,7 +45,7 @@ Usage decision:
 | `kast` | `approximate` | K/A/survive/trade participation. | Warning metric for diagnosis/recommendation/AI. | Trade component не fully reliable. |
 | `hltv_rating` | `approximate` | Source-provided rating. | Warning metric. | Это не локально проверенная HLTV 2.0 formula. |
 | `entry_kills`, `entry_deaths` | `medium` | Parser/source opening duel facts. | Allowed for diagnosis/recommendation, AI warns. | Зависит от event order и target player. |
-| `early_deaths` | `approximate` | `Match.early_deaths` when explicitly available. | Warning metric; not hard scoring. | Исторически мог fallback-иться в `entry_deaths`; нельзя считать точным таймингом смерти. |
+| `early_deaths` | `approximate` | Deaths inside parser early-round timing window when `round_freeze_end` or `round_start` anchors are available. | Warning metric; not hard scoring. | Если timing anchors отсутствуют, значение не заполняется; fallback в `entry_deaths` запрещён. |
 | `trade_kills` | `low` | Parser death-event order. | Suppressed from hard diagnosis/recommendation. | Trade window/team-side inference needs parser hardening. |
 | `traded_deaths` | `unavailable` | Не хранится как reliable match metric. | Suppressed. | Нельзя делать выводы о traded/untraded death rate. |
 | `utility_damage` | `medium` | Grenade damage attribution. | Allowed, AI warns. | Зависит от parser utility weapon/damage support. |
@@ -64,7 +64,7 @@ Usage decision:
 - Unknown metric id returns safe `unavailable` behavior.
 - Low/unavailable metrics are suppressed from hard diagnosis/recommendation.
 - Approximate metrics can be displayed and passed to AI only with warning semantics.
-- `early_deaths` must not fallback to `entry_deaths` for hard recommendation scoring.
+- `early_deaths` must not fallback to `entry_deaths`; parser can fill it only when timing anchors exist.
 - Side split metrics must not drive diagnosis/recommendation until parser confidence improves.
 
 ## Current Integration
@@ -76,7 +76,7 @@ Usage decision:
 
 ## Next Work
 
-- Parser hardening for early deaths, KAST/trade, traded deaths, side switching and utility attribution.
+- Parser hardening for KAST/trade, traded deaths, side switching and utility attribution.
 - Diagnosis registry from verified problems.
 - Recommendation planner that chooses one primary recommendation from verified evidence.
 - AI output schema/validator that rejects unsupported metric claims.

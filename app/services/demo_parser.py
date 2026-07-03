@@ -27,6 +27,7 @@ from app.services.recommendation_tracking import ensure_default_recommendation, 
 from app.services.steam_match_metadata import apply_steam_metadata_to_parsed_demo
 
 PARSER_PAYLOAD_VERSION = "2026-07-02.1"
+EARLY_DEATH_WINDOW_TICKS = 64 * 30
 GRENADE_EVENTS = (
     "flashbang_detonate",
     "smokegrenade_detonate",
@@ -185,6 +186,7 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
 
     player = _select_player(death_events, hurt_events, player_info, player_identifier)
     stats = _player_stats(player, death_events, hurt_events)
+    early_deaths = _early_deaths_from_timing(player, death_events, round_start_events, round_freeze_end_events)
     swing_summary = _swing_summary(
         player,
         player_info,
@@ -253,7 +255,7 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "headshot_percent": round(stats["headshots"] / stats["kills"] * 100, 2) if stats["kills"] else 0,
         "entry_kills": stats["entry_kills"],
         "entry_deaths": stats["entry_deaths"],
-        "early_deaths": stats["entry_deaths"],
+        "early_deaths": early_deaths,
         "flash_assists": stats["flash_assists"],
         "utility_damage": stats["utility_damage"],
         "enemies_flashed": stats["enemies_flashed"],
@@ -264,7 +266,7 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "side_ct_rounds_won": None,
         "side_ct_rounds_lost": None,
     }
-    metric_confidence = _metric_confidence(event_counts, score, stats, adr)
+    metric_confidence = _metric_confidence(event_counts, score, stats, adr, early_deaths)
     warnings = _parser_warnings(metric_confidence)
     return {
         "status": "parsed",
@@ -297,13 +299,18 @@ def _metric_confidence(
     score: dict[str, Any],
     stats: dict[str, Any],
     adr: float | None,
+    early_deaths: int | None,
 ) -> dict[str, str]:
     confidence = {
         "kills_deaths_assists": "high" if event_counts["player_death"] else "low",
         "adr": "high" if adr is not None and event_counts["player_hurt"] and event_counts["rounds"] else "low",
         "entry_duels": "medium" if event_counts["player_death"] else "low",
         "kast": "medium" if stats.get("kast") is not None and event_counts["player_death"] else "low",
+        "kast_trade_component": "low",
+        "trade_kills": "low" if event_counts["player_death"] else "unavailable",
+        "traded_deaths": "unavailable",
         "utility": "medium" if event_counts["player_hurt"] else "low",
+        "flash": "medium" if event_counts.get("player_blind") else "low",
         "weapon_accuracy": "medium" if event_counts.get("weapon_fire") and event_counts.get("player_hurt") else "low",
         "grenades": "high" if event_counts.get("grenade_events") and event_counts.get("player_blind") else "medium"
         if event_counts.get("grenade_events")
@@ -314,7 +321,7 @@ def _metric_confidence(
         "swing": "medium" if event_counts.get("player_death") and event_counts.get("round_end") else "low",
         "score": "medium" if score.get("rounds_for") is not None and event_counts["round_end"] else "low",
         "side_stats": "low",
-        "early_deaths": "low",
+        "early_deaths": "medium" if early_deaths is not None else "low",
     }
     if event_counts["player_team"] and score.get("rounds_for") is not None:
         confidence["score"] = "high"
@@ -338,10 +345,14 @@ def _parser_warnings(metric_confidence: dict[str, str]) -> list[str]:
     if metric_confidence.get("score") != "high":
         warnings.append("Score/result are best-effort until more demos validate side switching.")
     if metric_confidence.get("early_deaths") == "low":
-        warnings.append("Early deaths currently fall back to entry deaths; true timing is not implemented yet.")
+        warnings.append("Early deaths are unavailable unless round timing anchors are parsed.")
+    if metric_confidence.get("kast_trade_component") == "low":
+        warnings.append("KAST trade component is incomplete; KAST is best-effort.")
+    if metric_confidence.get("traded_deaths") == "unavailable":
+        warnings.append("Traded/untraded death facts are not available yet.")
     if metric_confidence.get("side_stats") == "low":
         warnings.append("T/CT side stats are not reliable yet.")
-    if metric_confidence.get("utility") != "high":
+    if metric_confidence.get("utility") != "high" or metric_confidence.get("flash") != "high":
         warnings.append("Utility and flash metrics are best-effort because demo event fields vary.")
     if metric_confidence.get("weapon_accuracy") != "medium":
         warnings.append("Weapon accuracy requires both weapon_fire and damage events.")
@@ -587,6 +598,40 @@ def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, Any
         },
         "weapon_breakdown": weapon_breakdown,
     }
+
+
+def _early_deaths_from_timing(
+    player: dict[str, str | None],
+    death_events,
+    round_start_events,
+    round_freeze_end_events,
+) -> int | None:
+    anchors = _round_anchor_ticks(round_freeze_end_events) or _round_anchor_ticks(round_start_events)
+    if not anchors:
+        return None
+    player_name = player.get("name")
+    player_steamid = player.get("steamid")
+    early_deaths = 0
+    for row in _records(death_events):
+        if not _matches_player(row, player_name, player_steamid, ("user_name", "user_steamid", "user")):
+            continue
+        tick = _tick_or_none(row)
+        anchor = anchors.get(_round_number(row))
+        if tick is None or anchor is None:
+            continue
+        if anchor <= tick <= anchor + EARLY_DEATH_WINDOW_TICKS:
+            early_deaths += 1
+    return early_deaths
+
+
+def _round_anchor_ticks(events) -> dict[int, int]:
+    anchors = {}
+    for row in _records(events):
+        tick = _tick_or_none(row)
+        if tick is None:
+            continue
+        anchors.setdefault(_round_number(row), tick)
+    return anchors
 
 
 def _weapon(row: dict[str, Any]) -> str:

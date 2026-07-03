@@ -10,6 +10,8 @@ The default provider is `codex_cli_handoff`. The application creates determinist
 
 Stage 5 payloads include `metric_truth`: selected metric definitions plus metrics suppressed for diagnosis/recommendation. This is metadata only; AI output is still free-form and not schema-validated.
 
+Stage 6 parser payloads add clearer warnings for early-death timing, KAST trade component, traded deaths, side stats and utility/flash confidence. AI must treat those warnings as constraints, not as coachable facts by themselves.
+
 ## Rules
 
 - AI consumes structured facts; it does not parse demos.

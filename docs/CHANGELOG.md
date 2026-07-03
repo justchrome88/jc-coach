@@ -6,6 +6,7 @@ For chronological engineering detail, see `WORKLOG.md`.
 
 ## 2026-07-03
 
+- Added Stage 6 parser fact confidence hardening: early deaths no longer silently fall back to entry deaths, parser warnings are clearer, and parser confidence tests were added.
 - Added Stage 5 Metric Truth Layer: runtime metric registry, reliability/usage policy, tests, AI payload metadata and recommendation hard-signal suppression for weak metrics.
 - Added Stage 4 recommendation read/write split: GET/read helpers no longer create recommendations or evaluations, while POST actions remain explicit mutations.
 - Added Stage 3 migration discipline scaffold: schema inventory, migration policy, copy-check scripts and migration safety tests.

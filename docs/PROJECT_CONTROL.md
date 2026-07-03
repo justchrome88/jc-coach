@@ -37,7 +37,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | Dashboard/matches/stats | Working MVP | Good for personal use; coach-first hierarchy can improve later. |
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
 | Recommendations | Partial working loop, Stage 4 read/write split exists | Multi-category goals, lifecycle, evaluations and progress exist. GET/read paths no longer create recommendations/evaluations. Recommendations are not yet consistently generated from top verified problem snapshots. |
-| Metrics | Metric Truth Layer exists, Stage 5 `PASS_WITH_WARNINGS` | Runtime registry defines source/formula/reliability/usage policy. Parser facts still need hardening before weak metrics can be upgraded. |
+| Metrics | Metric Truth Layer exists, Stage 5 `PASS_WITH_WARNINGS`; parser confidence Stage 6 `PASS_WITH_WARNINGS` | Runtime registry defines source/formula/reliability/usage policy. Parser no longer silently maps early deaths to entry deaths; trade/side/utility facts still need deeper validation before weak metrics can be upgraded. |
 | AI coach | Partial | Codex handoff, local LLM scaffold, payload snapshots and saved AI reports exist; output is still free-form and not schema-validated. |
 | Auth/security | Personal/VPS only, Stage 1 + Stage 2 app hardening exist | App-level API auth, CSRF, MVP rate limits, strong secret fail-fast, Steam OpenID verification and enforced single-owner mode exist. Stage 2 is `PASS_WITH_WARNINGS`: this is not full multi-user ownership, and legacy `link_steam_account(..., user_id=None)` remains a later Steam hardening risk. Observability remains a blocker for friends/public use. |
 | DB/migrations | Stage 3 scaffold exists, not full Alembic | Migration policy, schema inventory and safe copy-check tooling exist. Alembic baseline and migration ledger are not implemented yet. |
@@ -58,8 +58,8 @@ Current focus:
 5. Stage 3 Migration discipline: completed / `PASS_WITH_WARNINGS` scaffold.
 6. Stage 4 Recommendation read/write split: completed / `PASS_WITH_WARNINGS`.
 7. Stage 5 Metric Truth Layer: completed / `PASS_WITH_WARNINGS`.
-8. Сделать Steam cursor freshness и состояние worker честными.
-9. Усилить parser confidence.
+8. Stage 6 Parser facts & confidence hardening: completed / `PASS_WITH_WARNINGS`.
+9. Сделать Steam cursor freshness и состояние worker честными.
 10. Генерировать рекомендации из verified problem evidence.
 11. Добавить structured AI output validation.
 

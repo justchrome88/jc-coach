@@ -154,3 +154,27 @@ Warnings:
 - This is not parser hardening.
 - This is not diagnosis registry or recommendation planner.
 - Existing rule-based diagnosis still has hardcoded thresholds and needs later registry/planner work.
+
+## Stage 6 Parser Facts & Confidence Hardening
+
+Status: completed / `PASS_WITH_WARNINGS`.
+
+Goal: improve honesty of parser-derived facts and confidence propagation without schema changes or production parser jobs.
+
+DoD:
+
+- Parser facts inventory exists.
+- `early_deaths` no longer silently falls back to `entry_deaths`.
+- `early_deaths` is filled only from existing timing anchors and remains approximate/warning-only.
+- Trade/KAST component, traded deaths, side split and utility/flash limitations are explicit in parser confidence metadata and docs.
+- Metric Truth Layer remains conservative; no weak metric was falsely upgraded.
+- No schema changes or migrations.
+- No production parser/Steam/import jobs.
+- Safe tests pass.
+
+Warnings:
+
+- This is not full trade graph implementation.
+- Side split/team inference remains low confidence.
+- `traded_deaths` / `untraded_deaths` remain unavailable.
+- Recommendation planner and AI validator remain future work.

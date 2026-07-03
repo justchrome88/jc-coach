@@ -13,8 +13,8 @@ This roadmap is subordinate to `docs/PROJECT_CONTROL.md`. Older roadmap and scor
 - Migration discipline scaffold and copy-check process.
 - Recommendation read/write split.
 - Metric Truth Layer.
-- Steam cursor freshness и worker hardening.
 - Parser confidence.
+- Steam cursor freshness и worker hardening.
 - Recommendation planner из verified problems.
 - Structured AI output validation.
 - Coach-first UI hierarchy.

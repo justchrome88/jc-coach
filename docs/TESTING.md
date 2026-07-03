@@ -43,6 +43,13 @@ APP_ENV=test .venv/bin/pytest tests/test_metric_truth.py -q
 APP_ENV=test .venv/bin/pytest tests/test_recommendation_read_write_split.py tests/test_metric_truth.py -q
 ```
 
+Parser facts confidence checks:
+
+```bash
+APP_ENV=test .venv/bin/pytest tests/test_parser_facts_confidence.py -q
+APP_ENV=test .venv/bin/pytest tests/test_metric_truth.py tests/test_parser_facts_confidence.py -q
+```
+
 Do not run tests by invoking the app against the default runtime `.env` or `data/cs2_coach.db`.
 
 ## Rules
@@ -66,6 +73,7 @@ Do not run tests by invoking the app against the default runtime `.env` or `data
 - Import tolerance and dedupe.
 - Analytics and metric confidence.
 - Metric Truth Layer reliability/suppression policy.
+- Parser-derived fact confidence and weak-fact suppression.
 - Recommendation lifecycle and evaluation.
 - AI payload/result persistence.
 - Steam cursor handling and job status without real external jobs.

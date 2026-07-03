@@ -25,17 +25,19 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 3 Migration discipline scaffold completed / `PASS_WITH_WARNINGS`: migration policy, schema inventory and safe copy-check tooling.
 - Stage 4 Recommendation read/write split completed / `PASS_WITH_WARNINGS`: GET/read paths no longer create recommendations/evaluations.
 - Stage 5 Metric Truth Layer completed / `PASS_WITH_WARNINGS`: metric registry, reliability/usage policy, tests and AI/recommendation metadata exist without schema changes.
+- Stage 6 Parser facts & confidence hardening completed / `PASS_WITH_WARNINGS`: parser no longer silently maps `early_deaths` to `entry_deaths`, and parser confidence warnings are clearer.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
 
-- Parser-derived metric confidence is now documented in Metric Truth Layer, but parser facts still need hardening before upgrading weak metrics.
+- Parser-derived metric confidence is documented and partially hardened, but trade/KAST side/utility facts still need deeper validation before upgrading weak metrics.
 - Steam import works as an alpha path, but needs durable scheduling, retries and cursor freshness diagnostics.
 - Stage 2 ownership is single-owner mode, not full multi-user SaaS ownership across all core tables.
 - Legacy `link_steam_account(..., user_id=None)` remains an internal Steam hardening risk, but it is not reachable from public OpenID callback without owner session.
 - Stage 3 migration discipline is scaffold-level, not a full Alembic baseline or production migration ledger.
 - Stage 4 split removes read side effects, but it is not a primary recommendation planner.
 - Stage 5 is not parser hardening, diagnosis registry or recommendation planner.
+- Stage 6 is not Steam cursor truth, AI validator, recommendation planner or UI redesign.
 - Next hardening stage after Stage 3 review should stay within the ordered milestone scope.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
 - AI output is still free-form and needs schema validation, prompt versioning and validator checks.
