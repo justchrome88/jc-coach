@@ -6,6 +6,7 @@ For chronological engineering detail, see `WORKLOG.md`.
 
 ## 2026-07-03
 
+- Added Stage 9 Coach-first UI: `/coach` now leads with current tracked recommendation, next-match action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status without schema changes or live external jobs.
 - Added Stage 8 AI Output Validator: structured output schema checks, Metric Truth claim validation, safe fallback for invalid AI output and mocked validator tests without live AI calls.
 - Added Stage 7 Steam cursor truth: explicit cursor source/advance/outcome semantics, `knowncode=0` initial-sentinel handling and mocked cursor tests without live Steam jobs.
 - Added Stage 6 parser fact confidence hardening: early deaths no longer silently fall back to entry deaths, parser warnings are clearer, and parser confidence tests were added.

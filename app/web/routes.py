@@ -50,6 +50,7 @@ from app.services.demo_storage import demo_storage_report, write_demo_storage_ma
 from app.services.i18n import normalize_locale
 from app.services.importer import import_csv, import_json
 from app.services.match_queries import is_playable_match, playable_match_select
+from app.services.metric_truth import metric_definition, metric_warning, usage_decision
 from app.services.mistake_detection import (
     category_scorecard,
     detect_structured_mistakes,
@@ -284,6 +285,12 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
     recommendation_history = list_recommendation_history(db, limit=20)
     recommendation_categories = recommendation_category_summary(db)
     parse_overview = _demo_parse_overview(db, len(matches))
+    coach_ui = _coach_first_view_model(
+        matches=matches,
+        recommendation_progress=recommendation_progress,
+        evaluations_by_match_id=evaluations_by_match_id,
+        ai_report=ai_report,
+    )
     return templates.TemplateResponse(
         request=request,
         name="coach.html",
@@ -306,6 +313,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
             "recommendation_history": recommendation_history,
             "recommendation_categories": recommendation_categories,
             "parse_overview": parse_overview,
+            "coach_ui": coach_ui,
         },
     )
 
@@ -737,6 +745,211 @@ def _demo_parse_overview(db: Session, total_matches: int) -> dict:
         "top_weapons": top_weapons,
         "latest": artifacts[0] if artifacts else None,
     }
+
+
+def _coach_first_view_model(
+    matches: list[Match],
+    recommendation_progress: dict | None,
+    evaluations_by_match_id: dict[int, object],
+    ai_report,
+) -> dict:
+    latest_match = matches[-1] if matches else None
+    latest_evaluation = evaluations_by_match_id.get(latest_match.id) if latest_match and latest_match.id else None
+    current = _current_recommendation_card(recommendation_progress)
+    return {
+        "current": current,
+        "latest_match": _latest_match_summary(latest_match, latest_evaluation),
+        "ai_validation": _ai_validation_status(ai_report),
+        "weak_metric_notes": _weak_metric_notes(),
+    }
+
+
+def _current_recommendation_card(recommendation_progress: dict | None) -> dict:
+    if not recommendation_progress:
+        return {
+            "available": False,
+            "next_action": "Импортируйте матчи и создайте tracked recommendation через явный write path.",
+            "evidence": [],
+            "last_evaluation": None,
+        }
+    recommendation = recommendation_progress["recommendation"]
+    category = recommendation.category
+    metrics = _recommendation_metric_ids(category)
+    evaluations = recommendation_progress.get("evaluations") or []
+    last_evaluation = evaluations[-1] if evaluations else None
+    return {
+        "available": True,
+        "label": "Current tracked recommendation",
+        "not_planner_label": "Это текущая отслеживаемая цель, не verified top problem.",
+        "category": category,
+        "title": recommendation.title,
+        "description": recommendation.description,
+        "status": recommendation.status,
+        "progress_score": recommendation_progress["progress_score"],
+        "completed_matches": recommendation_progress["completed_matches"],
+        "target_matches": recommendation_progress["target_matches"],
+        "counts": recommendation_progress["counts"],
+        "summary": recommendation_progress["summary"],
+        "next_action": _next_match_action(category),
+        "success_rule": _first_json_item(recommendation.success_rules_json),
+        "failure_rule": _first_json_item(recommendation.failure_rules_json),
+        "last_comment": recommendation_progress["last_comment"],
+        "last_evaluation": _evaluation_summary(last_evaluation),
+        "evidence": [
+            _metric_evidence_item(
+                metric_id,
+                recommendation_progress.get("baseline") or {},
+                recommendation_progress.get("current") or {},
+                recommendation_progress.get("target") or {},
+            )
+            for metric_id in metrics
+        ],
+    }
+
+
+def _recommendation_metric_ids(category: str) -> list[str]:
+    if category == "aim":
+        return ["adr", "kast", "headshot_rate", "entry_kills"]
+    if category == "grenades":
+        return ["utility_damage", "flash_assists", "grenade_rating"]
+    if category == "map":
+        return ["result", "entry_deaths", "adr", "side_split_metrics"]
+    return ["entry_deaths", "early_deaths", "kast", "adr"]
+
+
+def _metric_evidence_item(metric_id: str, baseline: dict, current: dict, target: dict) -> dict:
+    definition = metric_definition(metric_id)
+    value_key = _metric_value_key(metric_id)
+    warning = metric_warning(metric_id, "recommendation")
+    return {
+        "metric_id": definition.metric_id,
+        "name": definition.display_name,
+        "reliability": definition.reliability,
+        "decision": usage_decision(definition.metric_id, "recommendation"),
+        "baseline": baseline.get(value_key),
+        "current": current.get(value_key),
+        "target": target.get(value_key) or target.get(definition.metric_id),
+        "warning": warning,
+    }
+
+
+def _metric_value_key(metric_id: str) -> str:
+    mapping = {
+        "kd_ratio": "kd",
+        "entry_deaths": "entry_deaths_per_match",
+        "early_deaths": "early_deaths_per_match",
+        "result": "winrate",
+        "headshot_rate": "headshot_percent",
+    }
+    return mapping.get(metric_id, metric_id)
+
+
+def _next_match_action(category: str) -> str:
+    actions = {
+        "aim": "В следующем матче держите ADR не ниже baseline и не просаживайте KAST.",
+        "grenades": "В следующем матче заранее выберите 2-3 повторяемые гранаты для opening/retake.",
+        "map": "В следующем матче играйте карту с понятным планом и избегайте раннего развала раунда.",
+        "survival": "В следующем матче первые 20 секунд играйте на размен и не отдавайте первый контакт без поддержки.",
+    }
+    return actions.get(
+        category,
+        "В следующем матче выполните текущую tracked recommendation и проверьте оценку после импорта.",
+    )
+
+
+def _evaluation_summary(evaluation) -> dict | None:
+    if evaluation is None:
+        return None
+    return {
+        "status": evaluation.status,
+        "score": evaluation.score,
+        "comment": evaluation.coach_comment,
+        "evaluated_at": evaluation.evaluated_at,
+    }
+
+
+def _latest_match_summary(match: Match | None, evaluation) -> dict:
+    if match is None:
+        return {"available": False, "message": "Матчей пока нет. Импортируйте CSV, JSON или DEM."}
+    return {
+        "available": True,
+        "date": match.played_at,
+        "map_name": match.map_name or "n/a",
+        "result": match.result or "n/a",
+        "score": f"{match.rounds_for or 0}:{match.rounds_against or 0}",
+        "adr": match.adr,
+        "kast": match.kast,
+        "entry_deaths": match.entry_deaths,
+        "evaluation": _evaluation_summary(evaluation),
+    }
+
+
+def _ai_validation_status(ai_report) -> dict:
+    if ai_report is None:
+        return {
+            "available": False,
+            "label": "AI-отчёта пока нет",
+            "detail": "AI не запускается на page render; подготовьте handoff или сохраните результат вручную.",
+            "status_class": "gray",
+        }
+    metadata = _json_loads(ai_report.report_json)
+    validation = metadata.get("ai_validation") if isinstance(metadata.get("ai_validation"), dict) else None
+    if validation is None:
+        return {
+            "available": True,
+            "label": "Validation status unknown",
+            "detail": "Отчёт сохранён до Stage 8 или без validation metadata.",
+            "status_class": "yellow",
+        }
+    if validation.get("valid") is True:
+        return {
+            "available": True,
+            "label": "Valid structured AI report",
+            "detail": "Структура и Metric Truth usage прошли validator.",
+            "status_class": "green",
+        }
+    return {
+        "available": True,
+        "label": "Fallback AI report",
+        "detail": "Исходный AI output отклонён validator; показан safe fallback.",
+        "status_class": "red",
+    }
+
+
+def _weak_metric_notes() -> list[dict[str, str]]:
+    return [
+        _weak_metric_note("early_deaths", "recommendation"),
+        _weak_metric_note("trade_kills", "recommendation"),
+        _weak_metric_note("side_split_metrics", "recommendation"),
+        _weak_metric_note("traded_deaths", "recommendation"),
+    ]
+
+
+def _weak_metric_note(metric_id: str, usage: str) -> dict[str, str]:
+    definition = metric_definition(metric_id)
+    return {
+        "metric_id": definition.metric_id,
+        "name": definition.display_name,
+        "reliability": definition.reliability,
+        "decision": usage_decision(definition.metric_id, usage),
+        "warning": metric_warning(definition.metric_id, usage) or "Allowed for current usage.",
+    }
+
+
+def _first_json_item(raw_json: str | None) -> str | None:
+    items = _json_loads(raw_json)
+    if isinstance(items, list) and items:
+        return str(items[0])
+    return None
+
+
+def _json_loads(value: str | None):
+    if not value:
+        return {}
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError):
+        return {}
 
 
 @router.get("/report")

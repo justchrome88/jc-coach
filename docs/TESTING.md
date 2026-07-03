@@ -64,6 +64,13 @@ APP_ENV=test .venv/bin/pytest tests/test_ai_validator.py -q
 APP_ENV=test .venv/bin/pytest tests/test_metric_truth.py tests/test_ai_validator.py -q
 ```
 
+Coach-first UI checks:
+
+```bash
+APP_ENV=test .venv/bin/pytest tests/test_coach_first_ui.py -q
+APP_ENV=test .venv/bin/pytest tests/test_recommendation_read_write_split.py tests/test_ai_validator.py tests/test_coach_first_ui.py -q
+```
+
 Do not run tests by invoking the app against the default runtime `.env` or `data/cs2_coach.db`.
 
 ## Rules
@@ -91,6 +98,7 @@ Do not run tests by invoking the app against the default runtime `.env` or `data
 - Recommendation lifecycle and evaluation.
 - AI payload/result persistence.
 - AI output validation with mocked provider/output only.
+- Coach-first UI rendering and GET/read no-mutation behavior.
 - Steam cursor handling and job status without real external jobs.
 - Steam OpenID verification with mocked Steam responses only.
 - Migration status/copy tooling against temp DB or copied DB only.

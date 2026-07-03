@@ -3,7 +3,7 @@
 <section class="section-head">
   <div>
     <h1>Тренер</h1>
-    <p>Здесь собраны рекомендации, активные цели, прогресс по матчам, AI-отчёты и качество DEM-данных.</p>
+    <p>Текущая отслеживаемая цель, действие на следующий матч, прогресс и ограничения данных.</p>
   </div>
   <div class="actions">
     <form action="/coach/ai-handoff" method="post">
@@ -21,6 +21,139 @@
 {% if message %}
 <div class="notice">{{ message }}</div>
 {% endif %}
+
+<section class="panel recommendation coach-first-hero">
+  <div class="panel-head">
+    <h2>Current tracked recommendation</h2>
+    <span>{{ coach_ui.current.status if coach_ui.current.available else "empty" }}</span>
+  </div>
+  {% if coach_ui.current.available %}
+  <div class="coach-first-grid">
+    <div>
+      <span class="source-badge">{{ coach_ui.current.category }}</span>
+      <h3>{{ coach_ui.current.title }}</h3>
+      <p>{{ coach_ui.current.description }}</p>
+      <p class="muted">{{ coach_ui.current.not_planner_label }}</p>
+      <div class="next-action">
+        <span>Следующий матч</span>
+        <strong>{{ coach_ui.current.next_action }}</strong>
+      </div>
+      <p class="progress-line">
+        {{ coach_ui.current.completed_matches }}/{{ coach_ui.current.target_matches }}
+        матчей · score {{ coach_ui.current.progress_score }}/100
+      </p>
+      <p>{{ coach_ui.current.summary }}</p>
+    </div>
+    <div class="goal-counts">
+      <span class="goal-badge green">Green {{ coach_ui.current.counts.green }}</span>
+      <span class="goal-badge yellow">Yellow {{ coach_ui.current.counts.yellow }}</span>
+      <span class="goal-badge red">Red {{ coach_ui.current.counts.red }}</span>
+      <span class="goal-badge gray">Gray {{ coach_ui.current.counts.gray }}</span>
+    </div>
+    <div class="detail-list">
+      <div><span>Success rule</span><strong>{{ coach_ui.current.success_rule or "n/a" }}</strong></div>
+      <div><span>Failure rule</span><strong>{{ coach_ui.current.failure_rule or "n/a" }}</strong></div>
+      <div>
+        <span>Last evaluation</span>
+        {% if coach_ui.current.last_evaluation %}
+        <strong>{{ coach_ui.current.last_evaluation.status }} · {{ coach_ui.current.last_evaluation.score }}/100</strong>
+        {% else %}
+        <strong>Новых матчей после постановки цели ещё нет.</strong>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <h3>Нет отслеживаемой рекомендации</h3>
+    <p>{{ coach_ui.current.next_action }}</p>
+    <a class="button" href="/upload">Импортировать матчи</a>
+  </div>
+  {% endif %}
+</section>
+
+<section class="layout-three coach-first-support">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Evidence / confidence</h2>
+      <span>Metric Truth</span>
+    </div>
+    {% if coach_ui.current.available %}
+    <div class="evidence-list">
+      {% for item in coach_ui.current.evidence %}
+      <div>
+        <div class="evidence-title">
+          <strong>{{ item.name }}</strong>
+          <span class="status-badge confidence-{{ 'high' if item.reliability in ['trusted', 'medium'] else 'medium' if item.reliability == 'approximate' else 'low' }}">{{ item.reliability }}</span>
+        </div>
+        <p>{{ item.metric_id }} · {{ item.decision }}</p>
+        <div class="mini-list">
+          <div><span>Baseline</span><strong>{{ item.baseline if item.baseline is not none else "n/a" }}</strong></div>
+          <div><span>Current</span><strong>{{ item.current if item.current is not none else "n/a" }}</strong></div>
+          <div><span>Target</span><strong>{{ item.target if item.target is not none else "n/a" }}</strong></div>
+        </div>
+        {% if item.warning %}
+        <p class="warning-text">{{ item.warning }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p>Evidence появится после создания tracked recommendation.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Последний матч</h2>
+      <span>coach summary</span>
+    </div>
+    {% if coach_ui.latest_match.available %}
+    <div class="detail-list">
+      <div><span>Матч</span><strong>{{ coach_ui.latest_match.date.strftime("%Y-%m-%d") if coach_ui.latest_match.date else "n/a" }} · {{ coach_ui.latest_match.map_name }}</strong></div>
+      <div><span>Результат</span><strong>{{ coach_ui.latest_match.result }} · {{ coach_ui.latest_match.score }}</strong></div>
+      <div><span>ADR / KAST</span><strong>{{ coach_ui.latest_match.adr if coach_ui.latest_match.adr is not none else "n/a" }} / {{ coach_ui.latest_match.kast if coach_ui.latest_match.kast is not none else "n/a" }}</strong></div>
+      <div><span>Entry deaths</span><strong>{{ coach_ui.latest_match.entry_deaths if coach_ui.latest_match.entry_deaths is not none else "n/a" }}</strong></div>
+      <div>
+        <span>Оценка цели</span>
+        {% if coach_ui.latest_match.evaluation %}
+        <strong>{{ coach_ui.latest_match.evaluation.status }} · {{ coach_ui.latest_match.evaluation.comment }}</strong>
+        {% else %}
+        <strong>Для этого матча ещё нет оценки текущей цели.</strong>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <p>{{ coach_ui.latest_match.message }}</p>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>AI validation</h2>
+      <span><span class="goal-dot {{ coach_ui.ai_validation.status_class }}">{{ coach_ui.ai_validation.status_class }}</span></span>
+    </div>
+    <h3>{{ coach_ui.ai_validation.label }}</h3>
+    <p>{{ coach_ui.ai_validation.detail }}</p>
+    <p class="muted">AI не запускается при открытии страницы. Handoff/generate/save остаются явными действиями.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Metric Truth warnings</h2>
+    <span>weak facts are not hard claims</span>
+  </div>
+  <div class="category-grid">
+    {% for item in coach_ui.weak_metric_notes %}
+    <div class="category-card {{ 'critical' if item.decision == 'suppressed' else 'watch' }}">
+      <span>{{ item.metric_id }}</span>
+      <strong>{{ item.reliability }}</strong>
+      <p>{{ item.warning }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
 
 <section class="panel recommendation">
   <div class="panel-head">

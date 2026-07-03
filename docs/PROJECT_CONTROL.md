@@ -34,7 +34,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | Deep DEM parser | Working foundation | Normalized parser tables and `swing_score` exist; raw `.dem` is still retained. |
 | Steam import | Working alpha path, Stage 7 `PASS_WITH_WARNINGS` | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor source/advance/outcome semantics are explicit and tested with mocked paths; durable scheduler/ledger and live retry operations still need later hardening. |
 | FACEIT import | Future | Do not implement before Steam/security/parser hardening unless explicitly reprioritized. |
-| Dashboard/matches/stats | Working MVP | Good for personal use; coach-first hierarchy can improve later. |
+| Dashboard/matches/stats | Working MVP; Stage 9 coach-first `/coach` completed / `PASS_WITH_WARNINGS` | `/coach` now surfaces current tracked recommendation, next action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status. This is presentation over existing state, not recommendation planner. |
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
 | Recommendations | Partial working loop, Stage 4 read/write split exists | Multi-category goals, lifecycle, evaluations and progress exist. GET/read paths no longer create recommendations/evaluations. Recommendations are not yet consistently generated from top verified problem snapshots. |
 | Metrics | Metric Truth Layer exists, Stage 5 `PASS_WITH_WARNINGS`; parser confidence Stage 6 `PASS_WITH_WARNINGS` | Runtime registry defines source/formula/reliability/usage policy. Parser no longer silently maps early deaths to entry deaths; trade/side/utility facts still need deeper validation before weak metrics can be upgraded. |
@@ -61,7 +61,8 @@ Current focus:
 8. Stage 6 Parser facts & confidence hardening: completed / `PASS_WITH_WARNINGS`.
 9. Stage 7 Steam cursor truth: completed / `PASS_WITH_WARNINGS`.
 10. Stage 8 AI Output Validator: completed / `PASS_WITH_WARNINGS`.
-11. Генерировать рекомендации из verified problem evidence.
+11. Stage 9 Coach-first UI: completed / `PASS_WITH_WARNINGS`.
+12. Генерировать рекомендации из verified problem evidence.
 
 ## 4. Source-of-truth Documents
 

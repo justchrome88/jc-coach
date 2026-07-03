@@ -28,6 +28,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 6 Parser facts & confidence hardening completed / `PASS_WITH_WARNINGS`: parser no longer silently maps `early_deaths` to `entry_deaths`, and parser confidence warnings are clearer.
 - Stage 7 Steam cursor truth completed / `PASS_WITH_WARNINGS`: cursor source, `knowncode=0` initial sentinel, advance/no-advance rules and no-new/duplicate/error outcomes are explicit and covered by mocked tests.
 - Stage 8 AI Output Validator completed / `PASS_WITH_WARNINGS`: structured AI output schema, Metric Truth validation, safe fallback and mocked tests exist without schema changes or live AI calls.
+- Stage 9 Coach-first UI completed / `PASS_WITH_WARNINGS`: `/coach` now presents current tracked recommendation, next-match action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status without schema changes or live jobs.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
@@ -41,6 +42,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 5 is not parser hardening, diagnosis registry or recommendation planner.
 - Stage 7 is not a production scheduler, durable Steam sync ledger, recommendation planner or UI redesign.
 - Stage 8 is not provider-specific structured response mode, prompt versioning, recommendation planner, ProblemSnapshot or UI redesign.
+- Stage 9 is UI presentation over existing persisted state/services, not recommendation planner, ProblemSnapshot or engine work.
 - Next hardening stage should stay within the ordered milestone scope.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
 - AI output validation exists, but prompt versioning and provider-specific structured response enforcement remain future work.

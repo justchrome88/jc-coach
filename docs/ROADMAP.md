@@ -16,8 +16,8 @@ This roadmap is subordinate to `docs/PROJECT_CONTROL.md`. Older roadmap and scor
 - Parser confidence.
 - Steam cursor truth completed / `PASS_WITH_WARNINGS`; durable worker/retry ledger remains.
 - AI output validator completed / `PASS_WITH_WARNINGS`; prompt/version tracking remains.
+- Coach-first `/coach` UI completed / `PASS_WITH_WARNINGS`; planner remains separate.
 - Recommendation planner из verified problems.
-- Coach-first UI hierarchy.
 
 ## Next
 

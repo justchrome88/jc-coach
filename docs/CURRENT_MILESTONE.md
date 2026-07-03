@@ -23,7 +23,7 @@ Goal: make the personal product honest, secure enough for controlled use, and co
 9. Описать diagnosis registry из verified problems.
 10. Собрать recommendation planner из top verified problem snapshots.
 11. Добавить structured AI output schema, validator и prompt/version tracking. Stage 8: schema/validator completed / `PASS_WITH_WARNINGS`; prompt/version tracking remains.
-12. Сделать dashboard/coach UI с приоритетом next action и primary recommendation.
+12. Сделать dashboard/coach UI с приоритетом next action и primary recommendation. Stage 9: `/coach` coach-first presentation completed / `PASS_WITH_WARNINGS`.
 
 ## Frozen Scope
 
@@ -229,3 +229,27 @@ Warnings:
 - Provider-specific structured response mode is not implemented.
 - Prompt/version tracking remains future work.
 - This is not recommendation planner, ProblemSnapshot or UI redesign.
+
+## Stage 9 Coach-first UI
+
+Status: completed / `PASS_WITH_WARNINGS`.
+
+Goal: make `/coach` action-first over existing persisted state/services.
+
+DoD:
+
+- `/coach` shows current tracked recommendation first.
+- UI labels it honestly as current tracked recommendation, not verified top problem.
+- Next-match action, progress, last evaluation and latest match summary are visible when available.
+- Metric Truth reliability/warnings are surfaced for weak/approximate/unavailable facts.
+- AI validation/fallback status is visible when an AI report exists.
+- Safe empty states exist.
+- GET `/coach` does not create recommendations/evaluations or run hidden jobs.
+- No schema changes, migrations, planner, ProblemSnapshot, parser/Steam/AI engine work or live external jobs.
+- Safe tests pass.
+
+Warnings:
+
+- This is not recommendation planner.
+- Current recommendation still comes from existing active recommendation ordering/defaults.
+- Coach-first UI does not make friends/public readiness claims.
