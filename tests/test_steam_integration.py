@@ -279,7 +279,7 @@ def test_sync_match_history_job_stores_share_codes(db, monkeypatch):
     assert result["status"] == "succeeded"
     assert result["result"]["inserted"] == 1
     assert result["result"]["collected_share_codes"] == ["CSGO-abcde-abcde-abcde-abcde-abcde"]
-    assert account.last_share_code is None
+    assert account.last_share_code == "CSGO-abcde-abcde-abcde-abcde-abcde"
 
 
 def test_steam_history_rows_are_not_playable_matches(db):

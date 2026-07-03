@@ -32,7 +32,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | CSV/JSON import | Working MVP | Dedupe and missing-column tolerance exist. |
 | Manual official `.dem` import | Working, partial confidence | `demoparser2` import works; parsed evidence exists; some metrics remain best-effort. |
 | Deep DEM parser | Working foundation | Normalized parser tables and `swing_score` exist; raw `.dem` is still retained. |
-| Steam import | Working alpha path, not production-ready | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor freshness and retries still need hardening. |
+| Steam import | Working alpha path, Stage 7 `PASS_WITH_WARNINGS` | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor source/advance/outcome semantics are explicit and tested with mocked paths; durable scheduler/ledger and live retry operations still need later hardening. |
 | FACEIT import | Future | Do not implement before Steam/security/parser hardening unless explicitly reprioritized. |
 | Dashboard/matches/stats | Working MVP | Good for personal use; coach-first hierarchy can improve later. |
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
@@ -59,7 +59,7 @@ Current focus:
 6. Stage 4 Recommendation read/write split: completed / `PASS_WITH_WARNINGS`.
 7. Stage 5 Metric Truth Layer: completed / `PASS_WITH_WARNINGS`.
 8. Stage 6 Parser facts & confidence hardening: completed / `PASS_WITH_WARNINGS`.
-9. Сделать Steam cursor freshness и состояние worker честными.
+9. Stage 7 Steam cursor truth: completed / `PASS_WITH_WARNINGS`.
 10. Генерировать рекомендации из verified problem evidence.
 11. Добавить structured AI output validation.
 
@@ -172,6 +172,15 @@ Accepted flow:
 5. The app downloads `.dem.bz2`, decompresses to `.dem`, imports through parser, and stores Steam GC `match_time` as authoritative `played_at`.
 
 Service bot cannot enumerate private user history by itself. The app must diagnose stale cursors and must not convert the UX into manual share-code input for every match.
+
+Stage 7 cursor truth policy:
+
+- `SteamAccount.last_share_code` is the current saved cursor source of truth.
+- A job payload `known_share_code` may override the saved cursor for that job only.
+- `knowncode=0` is allowed only as an explicit initial sentinel when no saved cursor exists.
+- A match-history sync advances `last_share_code` only after Steam collection and local share-code persistence complete successfully.
+- Failed Steam/API/import persistence paths do not advance the cursor.
+- No-new, duplicate and error outcomes are represented in `ImportJob.result_json`.
 
 ### Demo Storage
 

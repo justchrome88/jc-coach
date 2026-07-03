@@ -26,19 +26,20 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 4 Recommendation read/write split completed / `PASS_WITH_WARNINGS`: GET/read paths no longer create recommendations/evaluations.
 - Stage 5 Metric Truth Layer completed / `PASS_WITH_WARNINGS`: metric registry, reliability/usage policy, tests and AI/recommendation metadata exist without schema changes.
 - Stage 6 Parser facts & confidence hardening completed / `PASS_WITH_WARNINGS`: parser no longer silently maps `early_deaths` to `entry_deaths`, and parser confidence warnings are clearer.
+- Stage 7 Steam cursor truth completed / `PASS_WITH_WARNINGS`: cursor source, `knowncode=0` initial sentinel, advance/no-advance rules and no-new/duplicate/error outcomes are explicit and covered by mocked tests.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
 
 - Parser-derived metric confidence is documented and partially hardened, but trade/KAST side/utility facts still need deeper validation before upgrading weak metrics.
-- Steam import works as an alpha path, but needs durable scheduling, retries and cursor freshness diagnostics.
+- Steam import works as an alpha path with deterministic cursor semantics, but still needs durable scheduling, retry/backoff operations and a richer sync ledger before production/friends use.
 - Stage 2 ownership is single-owner mode, not full multi-user SaaS ownership across all core tables.
 - Legacy `link_steam_account(..., user_id=None)` remains an internal Steam hardening risk, but it is not reachable from public OpenID callback without owner session.
 - Stage 3 migration discipline is scaffold-level, not a full Alembic baseline or production migration ledger.
 - Stage 4 split removes read side effects, but it is not a primary recommendation planner.
 - Stage 5 is not parser hardening, diagnosis registry or recommendation planner.
-- Stage 6 is not Steam cursor truth, AI validator, recommendation planner or UI redesign.
-- Next hardening stage after Stage 3 review should stay within the ordered milestone scope.
+- Stage 7 is not a production scheduler, durable Steam sync ledger, AI validator, recommendation planner or UI redesign.
+- Next hardening stage should stay within the ordered milestone scope.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
 - AI output is still free-form and needs schema validation, prompt versioning and validator checks.
 - Auth/security is still personal/VPS only; observability and public/friends release gates are not complete.

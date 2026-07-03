@@ -50,6 +50,13 @@ APP_ENV=test .venv/bin/pytest tests/test_parser_facts_confidence.py -q
 APP_ENV=test .venv/bin/pytest tests/test_metric_truth.py tests/test_parser_facts_confidence.py -q
 ```
 
+Steam cursor truth checks:
+
+```bash
+APP_ENV=test .venv/bin/pytest tests/test_steam_cursor_truth.py -q
+APP_ENV=test .venv/bin/pytest tests/test_steam_integration.py tests/test_security.py tests/test_ownership.py tests/test_steam_cursor_truth.py -q
+```
+
 Do not run tests by invoking the app against the default runtime `.env` or `data/cs2_coach.db`.
 
 ## Rules

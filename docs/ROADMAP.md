@@ -14,7 +14,7 @@ This roadmap is subordinate to `docs/PROJECT_CONTROL.md`. Older roadmap and scor
 - Recommendation read/write split.
 - Metric Truth Layer.
 - Parser confidence.
-- Steam cursor freshness и worker hardening.
+- Steam cursor truth completed / `PASS_WITH_WARNINGS`; durable worker/retry ledger remains.
 - Recommendation planner из verified problems.
 - Structured AI output validation.
 - Coach-first UI hierarchy.

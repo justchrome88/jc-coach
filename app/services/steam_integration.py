@@ -19,6 +19,11 @@ STEAM_OPENID_ENDPOINT = "https://steamcommunity.com/openid/login"
 STEAM_OPENID_CLAIM_PREFIX = "https://steamcommunity.com/openid/id/"
 STEAM_MATCH_HISTORY_ENDPOINT = "https://api.steampowered.com/ICSGOPlayers_730/GetNextMatchSharingCode/v1"
 STEAM_SYNC_COOLDOWN_SECONDS = 300
+STEAM_INITIAL_CURSOR_SENTINEL = "0"
+STEAM_SYNC_SUCCESS_NEW_MATCH_IMPORTED = "SUCCESS_NEW_MATCH_IMPORTED"
+STEAM_SYNC_SUCCESS_NO_NEW_MATCHES = "SUCCESS_NO_NEW_MATCHES"
+STEAM_SYNC_DUPLICATE_ALREADY_IMPORTED = "DUPLICATE_ALREADY_IMPORTED"
+STEAM_SYNC_STEAM_TEMPORARY_ERROR = "STEAM_TEMPORARY_ERROR"
 SHARE_CODE_DICTIONARY = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefhijkmnopqrstuvwxyz23456789"
 SHARE_CODE_PATTERN = re.compile(rf"^(CSGO)?(-?[{SHARE_CODE_DICTIONARY}]{{5}}){{5}}$")
 _BITMASK64 = 2**64 - 1
@@ -259,7 +264,8 @@ def sync_match_history_job(db: Session, job_id: int) -> dict[str, Any]:
 
     try:
         payload = _json_loads(job.requested_payload_json)
-        known_code = str(payload.get("known_share_code") or account.last_share_code or "0")
+        cursor = steam_cursor_source(account, payload.get("known_share_code"))
+        known_code = cursor["known_code"]
         max_codes = max(1, min(int(settings.steam_sync_max_codes), 100))
         collected = _collect_match_share_codes(
             steam_web_api_key=steam_web_api_key,
@@ -274,21 +280,26 @@ def sync_match_history_job(db: Session, job_id: int) -> dict[str, Any]:
             was_inserted = _store_steam_share_code_match(db, account, share_code)
             inserted += 1 if was_inserted else 0
             duplicates += 0 if was_inserted else 1
+        cursor_advanced = advance_steam_cursor_after_success(account, collected)
         account.last_sync_at = datetime.now(UTC).replace(tzinfo=None)
         account.sync_enabled = 1
         job.status = "succeeded"
         job.finished_at = datetime.now(UTC).replace(tzinfo=None)
         job.result_json = json.dumps(
             {
+                "sync_outcome": classify_steam_sync_outcome(collected, inserted, duplicates),
                 "known_code": known_code,
+                "cursor_source": cursor["source"],
+                "knowncode_zero_is_initial_sentinel": cursor["initial_sentinel"],
                 "collected": len(collected),
                 "collected_share_codes": collected,
                 "inserted": inserted,
                 "duplicates": duplicates,
+                "cursor_advanced": cursor_advanced,
                 "last_share_code": account.last_share_code,
                 "note": (
-                    "Steam share codes were saved. The account's explicit latest share code was not advanced "
-                    "from GetNextMatchSharingCode results."
+                    "Steam share codes were saved. The account cursor advances only after the Steam API call "
+                    "and local share-code persistence complete successfully."
                 ),
             },
             ensure_ascii=False,
@@ -297,7 +308,7 @@ def sync_match_history_job(db: Session, job_id: int) -> dict[str, Any]:
         db.refresh(job)
         return _job_result(job)
     except Exception as exc:
-        return _fail_job(db, job, str(exc))
+        return _fail_job(db, job, str(exc), sync_outcome=STEAM_SYNC_STEAM_TEMPORARY_ERROR)
 
 
 def process_queued_steam_jobs(db: Session, limit: int = 5) -> list[dict[str, Any]]:
@@ -581,6 +592,39 @@ def _collect_match_share_codes(
     return codes
 
 
+def steam_cursor_source(account: SteamAccount, requested_known_code: Any = None) -> dict[str, Any]:
+    requested = str(requested_known_code or "").strip()
+    if requested:
+        return {"known_code": requested, "source": "job_requested_payload", "initial_sentinel": False}
+    saved = str(account.last_share_code or "").strip()
+    if saved:
+        return {"known_code": saved, "source": "steam_account.last_share_code", "initial_sentinel": False}
+    return {
+        "known_code": STEAM_INITIAL_CURSOR_SENTINEL,
+        "source": "initial_sentinel_no_saved_cursor",
+        "initial_sentinel": True,
+    }
+
+
+def advance_steam_cursor_after_success(account: SteamAccount, collected_share_codes: list[str]) -> bool:
+    normalized = [code.strip() for code in collected_share_codes if code and code.strip()]
+    if not normalized:
+        return False
+    latest_collected = normalized[-1]
+    if account.last_share_code == latest_collected:
+        return False
+    account.last_share_code = latest_collected
+    return True
+
+
+def classify_steam_sync_outcome(collected_share_codes: list[str], inserted: int, duplicates: int) -> str:
+    if not collected_share_codes:
+        return STEAM_SYNC_SUCCESS_NO_NEW_MATCHES
+    if duplicates == len(collected_share_codes) and inserted == 0:
+        return STEAM_SYNC_DUPLICATE_ALREADY_IMPORTED
+    return STEAM_SYNC_SUCCESS_NEW_MATCH_IMPORTED
+
+
 def _get_next_match_sharing_code(
     steam_web_api_key: str,
     steam_id: str,
@@ -685,10 +729,12 @@ def _steam_account_import_state(db: Session, account: SteamAccount) -> dict[str,
     }
 
 
-def _fail_job(db: Session, job: ImportJob, message: str) -> dict[str, Any]:
+def _fail_job(db: Session, job: ImportJob, message: str, sync_outcome: str | None = None) -> dict[str, Any]:
     job.status = "failed"
     job.error_message = message
     job.finished_at = datetime.now(UTC).replace(tzinfo=None)
+    if sync_outcome:
+        job.result_json = json.dumps({"sync_outcome": sync_outcome}, ensure_ascii=False)
     db.commit()
     db.refresh(job)
     return _job_result(job)

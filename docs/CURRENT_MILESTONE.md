@@ -17,7 +17,7 @@ Goal: make the personal product honest, secure enough for controlled use, and co
 3. Задокументировать и проверить backup/restore до рискованных проверок. Stage 0: backup script and restore-on-copy verification are required before Security P0 work.
 4. Закрыть Security P0: API auth, CSRF/state-change hardening, strong secrets.
 5. Добавить user ownership или объявленный/принудительный single-user mode для sensitive resources.
-6. Сделать Steam cursor truth видимой: freshness, stale cursor warnings, retry/backoff status.
+6. Сделать Steam cursor truth видимой: freshness, stale cursor warnings, retry/backoff status. Stage 7: cursor source/advance/outcome semantics completed / `PASS_WITH_WARNINGS`.
 7. Создать metric truth layer: formula, source, confidence и suppression rule по каждой метрике.
 8. Усилить parser confidence для early deaths, KAST/trade, side switching и utility attribution.
 9. Описать diagnosis registry из verified problems.
@@ -178,3 +178,28 @@ Warnings:
 - Side split/team inference remains low confidence.
 - `traded_deaths` / `untraded_deaths` remain unavailable.
 - Recommendation planner and AI validator remain future work.
+
+## Stage 7 Steam Cursor Truth
+
+Status: completed / `PASS_WITH_WARNINGS`.
+
+Goal: make Steam match-history cursor behavior deterministic and honest without live Steam calls, production jobs, production DB mutation or schema changes.
+
+DoD:
+
+- Steam cursor inventory exists.
+- `steam_accounts.last_share_code` is documented as the saved cursor source of truth.
+- Job payload `known_share_code` is a one-job override.
+- `knowncode=0` is explicit initial sentinel only when no saved cursor exists.
+- Cursor advances only after successful Steam collection and local share-code persistence.
+- Failed Steam/API/local persistence paths do not advance cursor.
+- No-new, duplicate and error outcomes are documented and tested with mocked paths.
+- No schema changes or migrations.
+- No live Steam calls or production Steam/import/parser jobs.
+- Safe tests pass.
+
+Warnings:
+
+- This is not a durable scheduler, retry ledger or production worker hardening.
+- Outcome names describe share-code collection, not guaranteed demo parser completion.
+- Service bot demo download and parser import remain separate explicit steps.
