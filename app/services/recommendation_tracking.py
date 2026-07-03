@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import CoachRecommendation, Match, MatchRecommendationEvaluation
 from app.services.match_queries import NON_PLAYABLE_MATCH_SOURCES, playable_match_select
+from app.services.metric_truth import is_metric_allowed_for_hard_claim, metric_warning
 
 DEFAULT_TITLE = "Снизить первые смерти"
 TARGET_PERIOD_MATCHES = 10
@@ -403,7 +404,11 @@ def _target_metrics(baseline: dict[str, float | int | None], category: str) -> d
         targets.update(
             {
                 "entry_deaths_per_match": f"<={round(entry * 0.85, 2)}" if entry is not None else "need data",
-                "early_deaths_per_match": f"<={round(early * 0.9, 2)}" if early is not None else "need data",
+                "early_deaths_per_match": (
+                    "warning: approximate metric, not used for hard scoring"
+                    if early is not None
+                    else "need data"
+                ),
             }
         )
     elif category == "aim":
@@ -419,7 +424,7 @@ def _target_metrics(baseline: dict[str, float | int | None], category: str) -> d
 
 def _success_rules(category: str) -> list[str]:
     rules = {
-        "survival": ["entry deaths ниже baseline", "early deaths ниже baseline", "KAST не ниже baseline"],
+        "survival": ["entry deaths ниже baseline", "KAST не ниже baseline", "early deaths только как warning metric"],
         "aim": ["ADR не ниже baseline", "KAST не ниже baseline"],
         "grenades": ["utility damage не ниже baseline", "flash assists не ниже baseline"],
         "map": ["матч выигран или entry deaths ниже baseline", "ADR не просел критично"],
@@ -429,7 +434,11 @@ def _success_rules(category: str) -> list[str]:
 
 def _failure_rules(category: str) -> list[str]:
     rules = {
-        "survival": ["entry deaths выше baseline", "early deaths выше baseline", "KAST ниже baseline"],
+        "survival": [
+            "entry deaths выше baseline",
+            "KAST ниже baseline",
+            "early deaths не является hard failure metric",
+        ],
         "aim": ["ADR сильно ниже baseline", "KAST ниже baseline"],
         "grenades": ["utility damage ниже baseline", "flash assists ниже baseline"],
         "map": ["матч проигран и entry deaths выше baseline", "ADR сильно ниже baseline"],
@@ -447,16 +456,22 @@ def _coach_comment(category: str) -> str:
     return comments.get(category, "Следующие матчи оцениваются против baseline.")
 
 
-def _match_evidence(match: Match) -> dict[str, float | int | str | None]:
+def _match_evidence(match: Match) -> dict[str, Any]:
+    warnings = [
+        warning
+        for metric_id in ("early_deaths", "kast", "flash_assists", "utility_damage")
+        if (warning := metric_warning(metric_id, "recommendation")) is not None
+    ]
     return {
         "result": match.result,
         "entry_deaths": match.entry_deaths,
-        "early_deaths": match.early_deaths if match.early_deaths is not None else match.entry_deaths,
+        "early_deaths": match.early_deaths,
         "kast": match.kast,
         "adr": match.adr,
         "kd": match.kd,
         "utility_damage": match.utility_damage,
         "flash_assists": match.flash_assists,
+        "metric_truth_warnings": warnings,
     }
 
 
@@ -604,6 +619,9 @@ def _compare_lower(
     negative: list[str],
     missing: list[str],
 ) -> None:
+    if not is_metric_allowed_for_hard_claim(evidence_key, "recommendation"):
+        missing.append(f"{evidence_key}:metric_truth_warning")
+        return
     value = evidence.get(evidence_key)
     baseline_value = baseline.get(baseline_key)
     if value is None or baseline_value is None:
@@ -626,6 +644,9 @@ def _compare_higher(
     negative: list[str],
     missing: list[str],
 ) -> None:
+    if not is_metric_allowed_for_hard_claim(evidence_key, "recommendation"):
+        missing.append(f"{evidence_key}:metric_truth_warning")
+        return
     value = evidence.get(evidence_key)
     baseline_value = baseline.get(baseline_key)
     if value is None or baseline_value is None:
@@ -646,6 +667,9 @@ def _compare_adr(
     target_multiplier: float = 0.9,
     failure_multiplier: float = 0.85,
 ) -> None:
+    if not is_metric_allowed_for_hard_claim("adr", "recommendation"):
+        missing.append("adr:metric_truth_warning")
+        return
     adr = evidence.get("adr")
     baseline_adr = baseline.get("adr")
     if adr is None or baseline_adr is None:
@@ -696,8 +720,6 @@ def _avg(matches: list[Match], attr: str) -> float | None:
     values = []
     for match in matches:
         value = getattr(match, attr)
-        if attr == "early_deaths" and value is None:
-            value = match.entry_deaths
         if value is not None:
             values.append(value)
     return round(sum(values) / len(values), 2) if values else None

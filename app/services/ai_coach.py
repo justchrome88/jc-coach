@@ -18,6 +18,7 @@ from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
 from app.services.match_queries import playable_match_select
+from app.services.metric_truth import metric_truth_payload, suppressed_metrics_for_usage
 from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_all_recommendation_progress
 from app.services.report_generator import _serialize_recommendation_progress
@@ -238,6 +239,26 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
         "structured_mistakes": structured_mistakes,
         "coach_categories": category_scorecard(structured_mistakes),
         "coach_focus": focus,
+        "metric_truth": {
+            "definitions": metric_truth_payload(
+                (
+                    "adr",
+                    "kast",
+                    "kd_ratio",
+                    "entry_deaths",
+                    "early_deaths",
+                    "trade_kills",
+                    "traded_deaths",
+                    "utility_damage",
+                    "flash_assists",
+                    "side_split_metrics",
+                    "aim_rating",
+                    "grenade_rating",
+                )
+            ),
+            "suppressed_for_diagnosis": suppressed_metrics_for_usage("diagnosis"),
+            "suppressed_for_recommendation": suppressed_metrics_for_usage("recommendation"),
+        },
         "active_recommendation": _serialize_recommendation_progress(recommendation_progress),
         "all_recommendations": [_serialize_recommendation_progress(item) for item in all_recommendation_progress],
         "recent_matches": [_serialize_match(match) for match in recent_matches],
@@ -260,6 +281,7 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
             "Жесткие правила:",
             "- Не выдумывай факты, которых нет в JSON.",
             "- Если данных мало или confidence низкий, прямо скажи об этом.",
+            "- Используй metric_truth: suppressed metrics нельзя превращать в уверенный диагноз или рекомендацию.",
             "- Не делай общий motivational текст. Дай конкретный фокус, причины и действия.",
             "- Главный результат: что игрок должен изменить в следующих 5-10 матчах.",
             "- Разбирай отдельно aim, map, crosshair placement, grenades, entry duels и survival.",

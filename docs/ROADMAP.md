@@ -11,8 +11,10 @@ This roadmap is subordinate to `docs/PROJECT_CONTROL.md`. Older roadmap and scor
 - Security P0 для personal/friends alpha.
 - Ownership/single-user mode.
 - Migration discipline scaffold and copy-check process.
+- Recommendation read/write split.
+- Metric Truth Layer.
 - Steam cursor freshness и worker hardening.
-- Metric truth и parser confidence.
+- Parser confidence.
 - Recommendation planner из verified problems.
 - Structured AI output validation.
 - Coach-first UI hierarchy.

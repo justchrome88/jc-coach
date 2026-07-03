@@ -6,6 +6,7 @@ For chronological engineering detail, see `WORKLOG.md`.
 
 ## 2026-07-03
 
+- Added Stage 5 Metric Truth Layer: runtime metric registry, reliability/usage policy, tests, AI payload metadata and recommendation hard-signal suppression for weak metrics.
 - Added Stage 4 recommendation read/write split: GET/read helpers no longer create recommendations or evaluations, while POST actions remain explicit mutations.
 - Added Stage 3 migration discipline scaffold: schema inventory, migration policy, copy-check scripts and migration safety tests.
 - Added Stage 2 ownership hardening: first credentialed owner policy, blocked second self-registration, owner-only session boundary and Steam OpenID callback owner linking.

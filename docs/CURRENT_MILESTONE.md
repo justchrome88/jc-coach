@@ -130,3 +130,27 @@ Warnings:
 - This is not recommendation planner.
 - Existing multi-category defaults remain until planner work.
 - Import/parser ingestion still explicitly initializes/evaluates recommendations after writing matches.
+
+## Stage 5 Metric Truth Layer
+
+Status: completed / `PASS_WITH_WARNINGS`.
+
+Goal: classify runtime metrics by source/formula/reliability/limitations and prevent weak metrics from being treated as fully trusted.
+
+DoD:
+
+- Metric truth inventory exists.
+- Runtime metric registry exists in `app/services/metric_truth.py`.
+- Core metrics define source, formula, reliability, limitations and usage policy.
+- Unknown metrics return safe `unavailable` behavior.
+- Low/unavailable metrics are suppressed from hard diagnosis/recommendation.
+- `early_deaths` is warning-only for hard recommendation scoring and no longer falls back to `entry_deaths` there.
+- AI payload includes metric truth metadata.
+- No schema changes or migrations.
+- Safe tests pass.
+
+Warnings:
+
+- This is not parser hardening.
+- This is not diagnosis registry or recommendation planner.
+- Existing rule-based diagnosis still has hardcoded thresholds and needs later registry/planner work.
