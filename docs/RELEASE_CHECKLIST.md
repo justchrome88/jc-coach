@@ -13,7 +13,7 @@ Last updated: 2026-07-03.
 
 ## Friends Alpha Gate
 
-- Security blockers in `docs/SECURITY.md` closed.
+- Stage 1 app-level API auth, CSRF, rate limit, strong secret and Steam OpenID verification checks pass.
 - User ownership or enforced single-user mode verified.
 - CSRF/same-site protections verified.
 - Strong session secret enforced.
@@ -28,4 +28,3 @@ Last updated: 2026-07-03.
 - Abuse/rate limit behavior verified.
 - Data retention policy exists.
 - Legal/privacy posture reviewed.
-

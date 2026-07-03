@@ -8,6 +8,7 @@
   <div class="actions">
     <a class="button ghost" href="/coach">К тренеру</a>
     <form action="/report/generate" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="button" type="submit">Сгенерировать новый</button>
     </form>
   </div>
@@ -22,6 +23,7 @@
     <h2>Отчёта пока нет</h2>
     <p>Импортируйте матчи и сгенерируйте первый coach report.</p>
     <form action="/report/generate" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="button" type="submit">Сгенерировать отчёт</button>
     </form>
   </div>

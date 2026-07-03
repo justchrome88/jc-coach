@@ -73,6 +73,7 @@
       <span>CSV / JSON / DEM</span>
     </div>
     <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form stacked">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label for="file">Файл матча или демки</label>
       <input id="file" name="file" type="file" accept=".csv,.json,.dem" required>
       <label for="player_identifier">Ник или SteamID для DEM</label>
@@ -90,6 +91,7 @@
     <div class="server-files">
       {% for demo in inbox_demos %}
       <form action="/upload/server-demo" method="post" class="server-file">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="filename" value="{{ demo.name }}">
         <div>
           <strong>{{ demo.name }}</strong>

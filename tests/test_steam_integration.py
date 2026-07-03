@@ -25,6 +25,7 @@ from app.services.steam_integration import (
     steam_login_url,
     sync_match_history_job,
     update_match_auth_code,
+    validate_openid_callback,
 )
 from app.services.steam_match_metadata import parse_steam_match_time, steam_gc_metadata_from_item
 
@@ -47,6 +48,59 @@ def test_steam_login_url_contains_openid_fields(monkeypatch):
 def test_extract_steam_id_from_claimed_id():
     assert extract_steam_id("https://steamcommunity.com/openid/id/76561198056634139") == "76561198056634139"
     assert extract_steam_id("https://example.com/not-steam/1") is None
+
+
+def test_validate_openid_callback_requires_positive_steam_assertion(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return b"ns:http://specs.openid.net/auth/2.0\nis_valid:true\n"
+
+    def fake_urlopen(request, timeout):
+        assert timeout == 10
+        assert "openid.mode=check_authentication" in request.full_url
+        return FakeResponse()
+
+    monkeypatch.setattr("app.services.steam_integration.urlopen", fake_urlopen)
+
+    steam_id, error = validate_openid_callback(
+        {
+            "openid.mode": "id_res",
+            "openid.claimed_id": "https://steamcommunity.com/openid/id/76561198056634139",
+        }
+    )
+
+    assert steam_id == "76561198056634139"
+    assert error is None
+
+
+def test_validate_openid_callback_rejects_negative_steam_assertion(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return b"ns:http://specs.openid.net/auth/2.0\nis_valid:false\n"
+
+    monkeypatch.setattr("app.services.steam_integration.urlopen", lambda *_args, **_kwargs: FakeResponse())
+
+    steam_id, error = validate_openid_callback(
+        {
+            "openid.mode": "id_res",
+            "openid.claimed_id": "https://steamcommunity.com/openid/id/76561198056634139",
+        }
+    )
+
+    assert steam_id is None
+    assert error == "Steam OpenID verification failed."
 
 
 def test_link_steam_account_is_idempotent(db):

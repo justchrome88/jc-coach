@@ -495,7 +495,30 @@ def validate_openid_callback(query_params: dict[str, str]) -> tuple[str | None, 
     steam_id = extract_steam_id(query_params.get("openid.claimed_id"))
     if not steam_id:
         return None, "SteamID was not found in OpenID callback."
+    if not _verify_openid_assertion(query_params):
+        return None, "Steam OpenID verification failed."
     return steam_id, None
+
+
+def _verify_openid_assertion(query_params: dict[str, str]) -> bool:
+    params = dict(query_params)
+    params["openid.mode"] = "check_authentication"
+    request = Request(
+        f"{STEAM_OPENID_ENDPOINT}?{urlencode(params)}",
+        headers={"User-Agent": "jc-coach/0.1"},
+    )
+    try:
+        with urlopen(request, timeout=10) as response:
+            body = response.read().decode("utf-8", errors="replace")
+    except Exception:
+        return False
+    values = {}
+    for line in body.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        values[key.strip()] = value.strip()
+    return values.get("is_valid") == "true"
 
 
 def parse_share_code_input(value: str) -> dict[str, Any]:

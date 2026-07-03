@@ -19,6 +19,8 @@ Canonical supporting docs:
 
 Steam import is an alpha path, not production-ready.
 
+Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
+
 ## Known Risks
 
 - Service bot cannot enumerate private user history by itself.
@@ -26,8 +28,8 @@ Steam import is an alpha path, not production-ready.
 - Stale cursor can point behind already imported history.
 - Valve replay URLs can expire or return transient 502/404/410.
 - Durable retry/backoff and scheduler behavior still need hardening.
+- Steam OpenID network verification can fail closed if Steam is unreachable.
 
 ## Product Rule
 
 Do not turn Steam import into manual share-code entry for every match. The target UX is one-time onboarding plus background sync with clear cursor freshness diagnostics.
-

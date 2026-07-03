@@ -7,9 +7,11 @@
   </div>
   <div class="actions">
     <form action="/coach/ai-handoff" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="button ghost" type="submit">Подготовить данные для AI</button>
     </form>
     <form action="/report/generate" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="button" type="submit">Сгенерировать отчёт</button>
     </form>
     <a class="button ghost" href="/report">Открыть полный отчёт</a>
@@ -27,6 +29,7 @@
   </div>
   <div class="actions inline-actions">
     <form action="/coach/ai-generate" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="button ghost" type="submit">Сгенерировать через провайдера</button>
     </form>
   </div>
@@ -39,6 +42,7 @@
   </div>
   <p class="muted">Это безопасный пакет данных для AI. Позже сюда же подключим локального провайдера без смены coach-логики.</p>
   <form action="/coach/ai-result" method="post" class="upload-form stacked">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="source_ref" value="{{ ai_handoff.prompt_path }}">
     <label for="ai_result_markdown">Вставить результат AI</label>
     <textarea id="ai_result_markdown" name="ai_result_markdown" rows="8" placeholder="Вставьте сюда AI-отчёт тренера"></textarea>
@@ -233,21 +237,26 @@
       </div>
       <div class="mini-actions">
         <form action="/coach/recommendations/{{ item.recommendation.id }}/extend" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="additional_matches" value="5">
           <button class="button ghost" type="submit">Продлить</button>
         </form>
         <form action="/coach/recommendations/category/{{ item.recommendation.category }}/restart" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button class="button ghost" type="submit">Перезапустить</button>
         </form>
         <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="status" value="paused">
           <button class="button ghost" type="submit">Пауза</button>
         </form>
         <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="status" value="completed">
           <button class="button ghost" type="submit">Готово</button>
         </form>
         <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="status" value="archived">
           <button class="button ghost" type="submit">Архив</button>
         </form>

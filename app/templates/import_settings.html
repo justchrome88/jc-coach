@@ -11,6 +11,7 @@
   <div class="actions">
     <a class="button" href="/auth/steam">{{ t("steam.connect") }}</a>
     <form action="/settings/imports/pull-all" method="post" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="button ghost" type="submit" {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}disabled{% endif %}>
         {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}Импорт идет{% elif steam_import_overview.current_job %}Запустить задачу{% else %}Подгрузить все{% endif %}
       </button>
@@ -56,12 +57,14 @@
   {% endfor %}
   <div class="actions">
     <form action="/settings/imports/pull-all" method="post" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="button" type="submit" {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}disabled{% endif %}>
         {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}Импорт идет{% elif steam_import_overview.current_job %}Запустить задачу{% else %}Обновить и скачать демки{% endif %}
       </button>
     </form>
     {% if steam_import_overview.demo_download_errors %}
     <form action="/settings/imports/clear-demo-errors" method="post" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="button ghost" type="submit">Сбросить старые ошибки</button>
     </form>
     {% endif %}
@@ -110,6 +113,7 @@
         <td>{{ "set" if account.match_auth_code and account.last_share_code else "missing" }}</td>
         <td>
           <form action="/settings/imports/pull-all" method="post" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button class="button ghost compact" type="submit" {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}disabled{% endif %}>
               {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}Идет{% else %}Обновить{% endif %}
             </button>
@@ -119,6 +123,7 @@
       <tr>
         <td colspan="6">
           <form action="/settings/imports/steam/{{ account.id }}/auth-code" method="post" class="upload-form stacked">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <label for="latest_share_code_{{ account.id }}">Сохраненный share code матча</label>
             <input id="latest_share_code_{{ account.id }}" name="latest_share_code" type="text" placeholder="CSGO-..." value="{{ account.last_share_code or '' }}" autocomplete="off" required>
             <label for="match_auth_code_{{ account.id }}">Код аутентификации</label>
@@ -152,6 +157,7 @@
         <td>
           {% if job.provider == "steam" and job.job_type == "match_history_sync" and job.status in ["queued", "failed"] %}
           <form action="/settings/imports/jobs/{{ job.id }}/run" method="post" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button class="button compact ghost" type="submit">Run</button>
           </form>
           {% endif %}

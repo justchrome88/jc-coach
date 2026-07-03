@@ -7,6 +7,7 @@
   </div>
   <div class="actions">
     <form action="/settings/storage/manifest" method="post" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="button" type="submit">Обновить manifest</button>
     </form>
     <a class="button ghost" href="/settings/imports">Steam import</a>

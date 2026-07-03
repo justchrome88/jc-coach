@@ -6,6 +6,7 @@ For chronological engineering detail, see `WORKLOG.md`.
 
 ## 2026-07-03
 
+- Added Stage 1 Security P0 hardening: protected API, CSRF checks, MVP rate limits, strong secret fail-fast and Steam OpenID assertion verification.
 - Added Hardening Stage 0 safety foundation: backup/restore scripts, test DB isolation guard and safe testing docs.
 - Consolidated documentation under `docs/PROJECT_CONTROL.md`.
 - Added canonical current-status, milestone, roadmap and domain docs.

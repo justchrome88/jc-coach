@@ -38,7 +38,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
 | Recommendations | Partial working loop | Multi-category goals, lifecycle, evaluations and progress exist; recommendations are not yet consistently generated from top verified problem snapshots. |
 | AI coach | Partial | Codex handoff, local LLM scaffold, payload snapshots and saved AI reports exist; output is still free-form and not schema-validated. |
-| Auth/security | Personal/VPS only | Web auth and nginx Basic Auth exist, but app-level API auth, user scoping, CSRF/rate limits and migrations are blockers for friends/public use. |
+| Auth/security | Personal/VPS only, Stage 1 app hardening exists | App-level API auth, CSRF, MVP rate limits, strong secret fail-fast and Steam OpenID verification exist. User scoping/single-user enforcement, migrations and observability remain blockers for friends/public use. |
 | Demo storage lifecycle | Observe-only | Storage report and manifest exist. Raw `.dem` deletion is disabled until parsed payload verification is defined and implemented. |
 
 ## 3. Current Milestone
@@ -51,7 +51,7 @@ Current focus:
 
 1. Заморозить scope вокруг security, metric truth, parser verification и recommendation planner.
 2. Подтвердить test isolation и backup/restore до рискованных проверок.
-3. Закрыть Security P0 до friends/public use.
+3. Закрыть Security P0 до friends/public use. Stage 1 covers API auth, CSRF, MVP rate limits, strong secrets and Steam OpenID verification; ownership/single-user enforcement remains next.
 4. Явно оформить ownership или single-user mode.
 5. Сделать Steam cursor freshness и состояние worker честными.
 6. Сделать метрики confidence-aware.

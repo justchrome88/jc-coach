@@ -1,9 +1,16 @@
+import re
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 from app.db.session import Base
 from app.main import app
+
+
+def _csrf_from(response) -> str:
+    match = re.search(r'name="csrf_token" value="([^"]+)"', response.text)
+    assert match is not None
+    return match.group(1)
 
 
 def test_health_endpoint():
@@ -15,9 +22,11 @@ def test_health_endpoint():
 
 
 def _register_test_user(client: TestClient) -> None:
+    page = client.get("/register")
     response = client.post(
         "/register",
         data={
+            "csrf_token": _csrf_from(page),
             "display_name": "Test User",
             "email": f"test-{uuid4().hex}@example.test",
             "password": "test-password",
@@ -53,6 +62,46 @@ def test_protected_page_redirects_anonymous_user_to_login():
 
     assert response.status_code == 303
     assert response.headers["location"] == "/login"
+
+
+def test_api_requires_authentication_for_anonymous_user():
+    with TestClient(app) as client:
+        response = client.get("/api/matches")
+
+    assert response.status_code == 401
+
+
+def test_api_allows_authenticated_session_user():
+    with TestClient(app) as client:
+        _register_test_user(client)
+        response = client.get("/api/matches")
+
+    assert response.status_code == 200
+
+
+def test_dangerous_api_job_anonymous_blocked():
+    with TestClient(app) as client:
+        response = client.post("/api/steam/import/all")
+
+    assert response.status_code == 401
+
+
+def test_session_api_post_requires_csrf():
+    with TestClient(app) as client:
+        _register_test_user(client)
+        response = client.post("/api/reports/generate")
+
+    assert response.status_code == 403
+
+
+def test_csrf_missing_rejected_for_web_post():
+    with TestClient(app) as client:
+        response = client.post(
+            "/login",
+            data={"email": "missing@example.test", "password": "wrong-password"},
+        )
+
+    assert response.status_code == 403
 
 
 def test_stats_page_renders_with_filters():

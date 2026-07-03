@@ -47,11 +47,13 @@ Do not run tests by invoking the app against the default runtime `.env` or `data
 
 ## Coverage Priorities
 
+- API auth, CSRF, rate limits and strong secret fail-fast.
 - Import tolerance and dedupe.
 - Analytics and metric confidence.
 - Recommendation lifecycle and evaluation.
 - AI payload/result persistence.
 - Steam cursor handling and job status without real external jobs.
+- Steam OpenID verification with mocked Steam responses only.
 
 ## Forbidden During Stage 0
 

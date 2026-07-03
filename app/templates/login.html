@@ -10,6 +10,7 @@
     <div class="notice">{{ message }}</div>
     {% endif %}
     <form action="/login" method="post" class="auth-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label for="email">Email
         <input id="email" name="email" type="email" autocomplete="email" required>
       </label>

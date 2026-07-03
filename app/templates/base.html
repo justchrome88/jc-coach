@@ -21,6 +21,7 @@
         <a href="/settings/imports">{{ t("nav.accounts") }}</a>
         <a href="/settings/storage">Storage</a>
         <form action="/logout" method="post" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button class="nav-button" type="submit">{{ t("nav.logout") }}</button>
         </form>
         {% else %}

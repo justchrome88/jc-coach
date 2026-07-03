@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     steam_bot_timeout_seconds: int = 45
     session_secret_key: str = "change-me-before-public-release"
     auth_cookie_secure: bool = False
+    api_token: str | None = None
     openai_api_key: str | None = None
     demo_player_identifier: str | None = None
 
@@ -44,11 +45,24 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     settings = Settings()
     _assert_safe_test_settings(settings)
+    _assert_strong_session_secret(settings)
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.demo_inbox_dir.mkdir(parents=True, exist_ok=True)
     settings.reports_dir.mkdir(parents=True, exist_ok=True)
     settings.ai_handoff_dir.mkdir(parents=True, exist_ok=True)
     return settings
+
+
+def _assert_strong_session_secret(settings: Settings) -> None:
+    app_env = settings.app_env.strip().lower()
+    if app_env in {"local", "test", "dev", "development"}:
+        return
+    secret = settings.session_secret_key.strip()
+    weak_values = {"", "change-me-before-public-release", "changeme", "secret", "password"}
+    if secret in weak_values or len(secret) < 32:
+        raise RuntimeError(
+            "Unsafe session configuration: set a strong SESSION_SECRET_KEY before running outside local/test."
+        )
 
 
 def _assert_safe_test_settings(settings: Settings) -> None:

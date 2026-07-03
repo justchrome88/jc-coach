@@ -57,3 +57,14 @@ Until this milestone closes, do not prioritize:
 - `APP_ENV=test .venv/bin/pytest tests -q` is the safe test command.
 - `APP_ENV=test` with production `DATABASE_URL` fails fast.
 - Import, Steam and parser jobs are not used for Stage 0 validation.
+
+## Stage 1 Security P0 DoD
+
+- Non-health `/api/*` requires authenticated session or configured Bearer `API_TOKEN`.
+- State-changing browser POST routes require CSRF.
+- Session-authenticated API state changes require CSRF; Bearer API token calls are exempt from browser CSRF.
+- Login/upload/import/AI/Steam/report/recommendation/storage mutation routes have MVP in-memory rate limits.
+- Non-local/non-test environment rejects default or weak `SESSION_SECRET_KEY`.
+- Steam OpenID callback verifies Steam `check_authentication`.
+- Dangerous import/Steam/parser/AI/report job starts are anonymous-blocked and logged.
+- Safe tests pass with `APP_ENV=test .venv/bin/pytest tests -q`.
