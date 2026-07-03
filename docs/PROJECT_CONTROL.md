@@ -36,7 +36,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | FACEIT import | Future | Do not implement before Steam/security/parser hardening unless explicitly reprioritized. |
 | Dashboard/matches/stats | Working MVP | Good for personal use; coach-first hierarchy can improve later. |
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
-| Recommendations | Partial working loop | Multi-category goals, lifecycle, evaluations and progress exist; recommendations are not yet consistently generated from top verified problem snapshots. |
+| Recommendations | Partial working loop, Stage 4 read/write split exists | Multi-category goals, lifecycle, evaluations and progress exist. GET/read paths no longer create recommendations/evaluations. Recommendations are not yet consistently generated from top verified problem snapshots. |
 | AI coach | Partial | Codex handoff, local LLM scaffold, payload snapshots and saved AI reports exist; output is still free-form and not schema-validated. |
 | Auth/security | Personal/VPS only, Stage 1 + Stage 2 app hardening exist | App-level API auth, CSRF, MVP rate limits, strong secret fail-fast, Steam OpenID verification and enforced single-owner mode exist. Stage 2 is `PASS_WITH_WARNINGS`: this is not full multi-user ownership, and legacy `link_steam_account(..., user_id=None)` remains a later Steam hardening risk. Observability remains a blocker for friends/public use. |
 | DB/migrations | Stage 3 scaffold exists, not full Alembic | Migration policy, schema inventory and safe copy-check tooling exist. Alembic baseline and migration ledger are not implemented yet. |
@@ -55,11 +55,12 @@ Current focus:
 3. Закрыть Security P0 до friends/public use. Stage 1 covers API auth, CSRF, MVP rate limits, strong secrets and Steam OpenID verification.
 4. Stage 2 Ownership / enforced single-owner boundaries: completed / `PASS_WITH_WARNINGS`.
 5. Stage 3 Migration discipline: completed / `PASS_WITH_WARNINGS` scaffold.
-6. Сделать Steam cursor freshness и состояние worker честными.
-7. Сделать метрики confidence-aware.
-8. Усилить parser confidence.
-9. Генерировать рекомендации из verified problem evidence.
-10. Добавить structured AI output validation.
+6. Stage 4 Recommendation read/write split: completed / `PASS_WITH_WARNINGS`.
+7. Сделать Steam cursor freshness и состояние worker честными.
+8. Сделать метрики confidence-aware.
+9. Усилить parser confidence.
+10. Генерировать рекомендации из verified problem evidence.
+11. Добавить structured AI output validation.
 
 ## 4. Source-of-truth Documents
 

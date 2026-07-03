@@ -108,3 +108,25 @@ Warnings:
 
 - Stage 3 scaffold does not implement full Alembic baseline yet.
 - `Base.metadata.create_all()` and `_upgrade_sqlite_schema()` remain legacy compatibility paths.
+
+## Stage 4 Recommendation Read/Write Split
+
+Status: completed / `PASS_WITH_WARNINGS`.
+
+Goal: GET/read/query recommendation paths do not mutate DB; POST/command paths mutate explicitly.
+
+DoD:
+
+- Recommendation side-effect inventory exists.
+- Read/query helpers no longer call `ensure_default_*` or `evaluate_new_matches()`.
+- `GET /api/recommendations*` does not create recommendations/evaluations.
+- Dashboard/coach read rendering does not create recommendations/evaluations.
+- POST status/extend/restart remain explicit mutation paths.
+- No schema changes or migrations.
+- Safe tests pass.
+
+Warnings:
+
+- This is not recommendation planner.
+- Existing multi-category defaults remain until planner work.
+- Import/parser ingestion still explicitly initializes/evaluates recommendations after writing matches.

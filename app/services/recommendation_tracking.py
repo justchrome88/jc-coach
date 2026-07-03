@@ -144,27 +144,40 @@ def evaluate_match(
     return evaluation
 
 
+def list_active_recommendations(db: Session) -> list[CoachRecommendation]:
+    return list(
+        db.scalars(
+            select(CoachRecommendation)
+            .where(CoachRecommendation.status == "active")
+            .order_by(CoachRecommendation.category.asc(), CoachRecommendation.id.asc())
+        ).all()
+    )
+
+
+def get_active_recommendation(db: Session) -> CoachRecommendation | None:
+    recommendations = list_active_recommendations(db)
+    survival = next((item for item in recommendations if item.category == "survival"), None)
+    return survival or (recommendations[0] if recommendations else None)
+
+
 def get_active_recommendation_progress(db: Session) -> dict[str, Any] | None:
-    recommendation = ensure_default_recommendation(db)
+    recommendation = get_active_recommendation(db)
     if not recommendation:
         return None
-    evaluate_new_matches(db)
     return _progress_for_recommendation(db, recommendation)
 
 
 def get_all_recommendation_progress(db: Session) -> list[dict[str, Any]]:
-    recommendations = ensure_default_recommendations(db)
+    recommendations = list_active_recommendations(db)
     if not recommendations:
         return []
-    evaluate_new_matches(db)
     return [_progress_for_recommendation(db, recommendation) for recommendation in recommendations]
 
 
 def get_evaluations_by_match_id(db: Session) -> dict[int, MatchRecommendationEvaluation]:
-    recommendation = ensure_default_recommendation(db)
+    recommendation = get_active_recommendation(db)
     if not recommendation:
         return {}
-    evaluate_new_matches(db)
     evaluations = db.scalars(
         select(MatchRecommendationEvaluation).where(
             MatchRecommendationEvaluation.recommendation_id == recommendation.id
@@ -174,8 +187,6 @@ def get_evaluations_by_match_id(db: Session) -> dict[int, MatchRecommendationEva
 
 
 def get_all_evaluations_by_match_id(db: Session) -> dict[int, list[MatchRecommendationEvaluation]]:
-    ensure_default_recommendations(db)
-    evaluate_new_matches(db)
     evaluations = db.scalars(select(MatchRecommendationEvaluation)).all()
     grouped: dict[int, list[MatchRecommendationEvaluation]] = {}
     for evaluation in evaluations:
@@ -243,7 +254,6 @@ def restart_recommendation_category(db: Session, category: str) -> CoachRecommen
 
 
 def list_recommendation_history(db: Session, limit: int = 100) -> list[CoachRecommendation]:
-    ensure_default_recommendations(db)
     return list(
         db.scalars(
             select(CoachRecommendation)

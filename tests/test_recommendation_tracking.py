@@ -63,6 +63,8 @@ def test_progress_summary_counts_statuses(db):
     baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
     import_rows(db, baseline_rows, source="baseline")
     import_rows(db, [_row(20, entry_deaths=2, early_deaths=2, kast=76, adr=82)], source="new")
+    ensure_default_recommendation(db)
+    evaluate_new_matches(db)
 
     progress = get_active_recommendation_progress(db)
 
@@ -75,6 +77,8 @@ def test_all_recommendation_progress_has_categories(db):
     baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
     import_rows(db, baseline_rows, source="baseline")
     import_rows(db, [_row(20, entry_deaths=2, early_deaths=2, kast=76, adr=82)], source="new")
+    ensure_default_recommendation(db)
+    evaluate_new_matches(db)
 
     progress_items = get_all_recommendation_progress(db)
     categories = {item["recommendation"].category for item in progress_items}
@@ -120,6 +124,8 @@ def test_restart_recommendation_category_archives_current_and_creates_new(db):
 def test_recommendation_category_summary(db):
     baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
     import_rows(db, baseline_rows, source="baseline")
+    ensure_default_recommendation(db)
+    evaluate_new_matches(db)
 
     summary = recommendation_category_summary(db)
 
