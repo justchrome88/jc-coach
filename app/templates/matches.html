@@ -54,7 +54,7 @@
   <table>
     <thead>
       <tr>
-        <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=played_at&direction={{ sort_links.played_at.direction }}" title="Дата матча из демки, если доступна; иначе дата файла/импорта">Дата матча</a></th>
+        <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=played_at&direction={{ sort_links.played_at.direction }}" title="Дата матча: exact только из Steam GC match_time; approximate/unknown помечаются отдельно">Дата матча</a></th>
         <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=source&direction={{ sort_links.source.direction }}">Источник</a></th>
         <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=map&direction={{ sort_links.map.direction }}">Карта</a></th>
         <th><a href="/matches?map_name={{ filters.map_name }}&result={{ filters.result }}&source={{ filters.source }}&goal_status={{ filters.goal_status }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&per_page={{ filters.per_page }}&sort=result&direction={{ sort_links.result.direction }}">Результат</a></th>
@@ -69,8 +69,18 @@
     </thead>
     <tbody>
       {% for match in matches %}
+      {% set date_truth = date_truth_by_match_id.get(match.id) %}
       <tr>
-        <td>{{ match.played_at.strftime("%Y-%m-%d") if match.played_at else "n/a" }}</td>
+        <td>
+          {{ match.played_at.strftime("%Y-%m-%d") if match.played_at else "n/a" }}
+          {% if date_truth and date_truth.status == "exact_match_date_available" %}
+          <span class="muted">exact</span>
+          {% elif date_truth and date_truth.status == "approximate_match_date" %}
+          <span class="muted">approx</span>
+          {% elif date_truth %}
+          <span class="muted">unknown</span>
+          {% endif %}
+        </td>
         <td><span class="source-badge">{{ match.source }}</span></td>
         <td>{{ match.map_name or "n/a" }}</td>
         <td><span class="pill {{ match.result }}">{{ match.result or "n/a" }}</span></td>

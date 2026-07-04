@@ -45,12 +45,12 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-014` |
 | title | Import Acceptance |
 | target version | `v0.6` |
-| status | active; WP-014B1 import-job truth/status repair complete; cleanup repair next |
+| status | active; WP-014B1 import-job truth/status and WP-014B2 exact match-date truth repairs complete; cleanup repair next |
 | objective | Accept the one-button Steam/Valve import as the primary workflow: connected Steam account, match/auth code, truthful import_job, duplicate/no-new/error states, exact match-date truth and raw demo cleanup after successful parse/persist. |
 | guardians | `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `TEST_GUARDIAN`, `RUNTIME_GUARDIAN`, `PM_ORCHESTRATOR` |
 | source docs | `docs/STEAM_IMPORT.md`, `docs/DEMO_DEEP_PARSER_TZ_RU.md`, `docs/DEMO_STORAGE_TZ.md`, `docs/TESTING.md`, `docs/BACKUP_RESTORE.md` |
 | forbidden actions | Live Steam calls, real demo downloads/parses or production import jobs unless the WP explicitly authorizes them with backup and DB evidence. |
-| acceptance criteria | One-button import records clear success/no-new/need-code/Steam-not-connected/rate-limited/download-failed/parser-failed/partial-success/duplicate-skipped outcomes; duplicate protection is verified; exact match date is stored from Steam GC metadata or explicitly unavailable; demos are deleted only after successful parse/persist; failed demos are classified for quarantine/cleanup policy. WP-014B1 covers job truth/status taxonomy; demo cleanup and quarantine remain open for WP-014B2. |
+| acceptance criteria | One-button import records clear success/no-new/need-code/Steam-not-connected/rate-limited/download-failed/parser-failed/partial-success/duplicate-skipped outcomes; duplicate protection is verified; exact match date is stored from Steam GC metadata or explicitly unavailable; demos are deleted only after successful parse/persist; failed demos are classified for quarantine/cleanup policy. WP-014B1 covers job truth/status taxonomy; WP-014B2 covers exact match-date truth; demo cleanup and quarantine remain open for WP-014B3. |
 | required evidence | WP-014A diagnosis, mocked tests by default, live-job authorization if any, DB SHA before/after, import job result examples, cursor mutation status, demo cleanup evidence, audit report. |
 | exit criteria | The primary one-button Steam/Valve import is safe enough for controlled personal operation, with manual demo upload documented as a secondary parser/debug path and remaining alpha limitations explicit. |
 | next WP | `WP-015 Metrics Correctness` |

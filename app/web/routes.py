@@ -76,6 +76,7 @@ from app.services.steam_integration import (
     link_steam_account,
     list_steam_accounts,
     list_visible_steam_import_jobs,
+    match_date_truth,
     process_queued_steam_jobs,
     queue_match_history_sync,
     queue_steam_import_all,
@@ -579,6 +580,7 @@ def matches_page(
     page = min(page, total_pages)
     offset = (page - 1) * per_page
     paged_matches = matches[offset : offset + per_page]
+    date_truth_by_match_id = {match.id: match_date_truth(match) for match in paged_matches}
     maps = db.scalars(
         playable_match_select().with_only_columns(Match.map_name).where(Match.map_name.is_not(None)).distinct().order_by(Match.map_name)
     ).all()
@@ -591,6 +593,7 @@ def matches_page(
         context={
             "request": request,
             "matches": paged_matches,
+            "date_truth_by_match_id": date_truth_by_match_id,
             "evaluations_by_match_id": evaluations_by_match_id,
             "maps": maps,
             "sources": sources,
@@ -635,6 +638,7 @@ def match_detail_page(request: Request, db: Annotated[Session, Depends(get_db)],
             "request": request,
             "match": match,
             "detail": match_detail(match),
+            "date_truth": match_date_truth(match),
             "parse_summary": _demo_parse_summary(db, match.id),
             "evaluation": evaluations_by_match_id.get(match.id),
             "match_mistakes": match_mistakes,

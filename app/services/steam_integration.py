@@ -35,6 +35,8 @@ STEAM_IMPORT_PARTIAL_SUCCESS = "partial_success"
 STEAM_IMPORT_DUPLICATE_SKIPPED = "duplicate_skipped"
 STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE = "exact_match_date_available"
 STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE = "exact_match_date_unavailable"
+STEAM_IMPORT_APPROXIMATE_MATCH_DATE = "approximate_match_date"
+STEAM_EXACT_MATCH_DATE_SOURCES = {"steam_gc_match_time"}
 SHARE_CODE_DICTIONARY = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefhijkmnopqrstuvwxyz23456789"
 SHARE_CODE_PATTERN = re.compile(rf"^(CSGO)?(-?[{SHARE_CODE_DICTIONARY}]{{5}}){{5}}$")
 _BITMASK64 = 2**64 - 1
@@ -355,7 +357,7 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
         sync_results = []
         account_states = []
         fresh_share_codes: list[str] = []
-        latest_played_at = _latest_imported_match_played_at(db)
+        latest_played_at = _latest_exact_imported_match_played_at(db)
         for account in accounts:
             if not account.match_auth_code or not account.last_share_code:
                 account_states.append(
@@ -422,9 +424,11 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
             "demo_status": demo_status,
             "demo_download": demo_download,
             "latest_imported_played_at_before_job": latest_played_at.isoformat() if latest_played_at else None,
+            "latest_imported_played_at_source_policy": "exact_only:steam_gc_match_time",
             "note": (
                 "Synced share codes through Steam Web API, then used Steam GC match_time as the authoritative "
-                "date before downloading demos. Candidates older than the latest imported match are skipped."
+                "date before downloading demos. Candidates older than the latest exact imported Steam match "
+                "are skipped."
             ),
         }
         job.status = "succeeded" if taxonomy["clean_success"] else "failed"
@@ -639,8 +643,19 @@ def _classify_demo_failure_status(demo_download: dict[str, Any]) -> str:
 
 def _exact_date_status(demo_download: dict[str, Any]) -> str:
     results = [item for item in demo_download.get("results", []) if isinstance(item, dict)]
-    if any(item.get("played_at_source") == "steam_gc_match_time" and item.get("played_at") for item in results):
+    if any(
+        item.get("match_date_status") == STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE
+        or (item.get("played_at_source") == "steam_gc_match_time" and item.get("played_at"))
+        for item in results
+    ):
         return STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE
+    if any(item.get("match_date_status") == STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE for item in results):
+        return STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE
+    if any(
+        item.get("match_date_status") == STEAM_IMPORT_APPROXIMATE_MATCH_DATE or item.get("played_at_source")
+        for item in results
+    ):
+        return STEAM_IMPORT_APPROXIMATE_MATCH_DATE
     return STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE
 
 
@@ -906,6 +921,48 @@ def _latest_imported_match_played_at(db: Session) -> datetime | None:
     )
 
 
+def _latest_exact_imported_match_played_at(db: Session) -> datetime | None:
+    matches = db.scalars(
+        select(Match)
+        .where(Match.source != "steam_history")
+        .where(Match.played_at.is_not(None))
+        .order_by(Match.played_at.desc(), Match.id.desc())
+    ).all()
+    for match in matches:
+        if match.played_at and match_date_truth(match).get("is_exact"):
+            return match.played_at
+    return None
+
+
+def match_date_truth(match: Match) -> dict[str, Any]:
+    raw = _json_loads(match.raw_json)
+    match_raw = raw.get("match") if isinstance(raw.get("match"), dict) else {}
+    steam_metadata = raw.get("steam_metadata") if isinstance(raw.get("steam_metadata"), dict) else {}
+    source = (
+        raw.get("played_at_source")
+        or raw.get("match_date_source")
+        or match_raw.get("played_at_source")
+        or steam_metadata.get("played_at_source")
+        or "unknown"
+    )
+    source = str(source)
+    if source in STEAM_EXACT_MATCH_DATE_SOURCES and match.played_at:
+        status = STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE
+        is_exact = True
+    elif source == "unknown" or match.played_at is None:
+        status = STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE
+        is_exact = False
+    else:
+        status = STEAM_IMPORT_APPROXIMATE_MATCH_DATE
+        is_exact = False
+    return {
+        "status": status,
+        "source": source,
+        "is_exact": is_exact,
+        "played_at": match.played_at.isoformat() if match.played_at else None,
+    }
+
+
 def _steam_account_import_state(db: Session, account: SteamAccount) -> dict[str, Any]:
     share_code = (account.last_share_code or "").strip()
     match = None
@@ -923,7 +980,7 @@ def _steam_account_import_state(db: Session, account: SteamAccount) -> dict[str,
     steam_metadata = raw.get("steam_metadata") if isinstance(raw.get("steam_metadata"), dict) else {}
     played_at = raw.get("played_at") or steam_metadata.get("played_at")
     played_at_source = raw.get("played_at_source") or steam_metadata.get("played_at_source")
-    latest_imported = _latest_imported_match_played_at(db)
+    latest_imported = _latest_exact_imported_match_played_at(db)
     anchor_is_older = False
     if played_at and latest_imported:
         try:
@@ -943,6 +1000,7 @@ def _steam_account_import_state(db: Session, account: SteamAccount) -> dict[str,
         "last_share_code_played_at_source": played_at_source,
         "last_share_code_ignored_reason": raw.get("ignored_reason") if raw else None,
         "latest_imported_played_at": latest_imported.isoformat() if latest_imported else None,
+        "latest_imported_played_at_source_policy": "exact_only:steam_gc_match_time",
         "anchor_is_older_than_latest_imported": anchor_is_older,
     }
 

@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from app.db.models import ImportJob, Match, SteamAccount
@@ -8,6 +9,7 @@ from app.services.steam_demo_downloader import (
     steam_demo_downloader_configured,
 )
 from app.services.steam_integration import (
+    STEAM_IMPORT_APPROXIMATE_MATCH_DATE,
     STEAM_IMPORT_DOWNLOAD_FAILED,
     STEAM_IMPORT_DUPLICATE_SKIPPED,
     STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE,
@@ -27,6 +29,7 @@ from app.services.steam_integration import (
     import_steam_share_code_demo,
     link_steam_account,
     mark_steam_history_demo_download_status,
+    match_date_truth,
     parse_share_code_input,
     queue_match_history_sync,
     queue_steam_import_all,
@@ -592,6 +595,34 @@ def test_import_all_available_steam_matches_reports_partial_success(db, monkeypa
     assert "partial_success is represented" in result["result"]["job_status_limitation"]
 
 
+def test_import_all_available_steam_matches_reports_approximate_match_date(db, monkeypatch):
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "web-api-key")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        lambda *_args, **_kwargs: {
+            "configured": True,
+            "processed": 1,
+            "imported": 1,
+            "failed": 0,
+            "results": [{"status": "imported", "played_at": "2026-07-02T20:00:00", "played_at_source": "demo_header"}],
+        },
+    )
+
+    try:
+        result = import_all_available_steam_matches(db)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["status"] == "succeeded"
+    assert STEAM_IMPORT_APPROXIMATE_MATCH_DATE in result["result"]["statuses"]
+
+
 def test_import_steam_share_code_demo_imports_exact_code(db, monkeypatch):
     monkeypatch.setenv("STEAM_BOT_USERNAME", "")
     monkeypatch.setenv("STEAM_BOT_PASSWORD", "")
@@ -720,3 +751,149 @@ def test_steam_downloader_passes_gc_match_time_to_demo_import(db, monkeypatch, t
     assert captured["steam_metadata"]["played_at_source"] == "steam_gc_match_time"
     assert result["played_at"] == "2026-07-02T20:00:00"
     assert "steam_gc_match_time" in match.raw_json
+
+
+def test_steam_downloader_writes_exact_gc_match_time_to_imported_match(db, monkeypatch, tmp_path):
+    placeholder = Match(
+        source="steam_history",
+        external_match_id="CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+        raw_json='{"share_code":"CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL","status":"demo_download_pending"}',
+    )
+    db.add(placeholder)
+    db.commit()
+    demo_path = tmp_path / "demo.dem"
+    demo_path.write_bytes(b"demo")
+
+    def fake_download_demo_file(_url, _share_code):
+        return demo_path
+
+    def fake_import_demo_file(inner_db, _demo_path, **_kwargs):
+        imported = Match(
+            source="demo",
+            external_match_id="imported-exact",
+            played_at=datetime(1999, 1, 1, 0, 0),
+            raw_json=json.dumps({"played_at_source": "file_modified_fallback", "match": {}}),
+        )
+        inner_db.add(imported)
+        inner_db.commit()
+        inner_db.refresh(imported)
+        return {"match_id": imported.id, "imported": 1, "skipped_duplicates": 0, "stored_path": str(demo_path)}
+
+    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+
+    result = _download_and_import_match(
+        db,
+        placeholder,
+        share_code="CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+        steam_gc_item={
+            "share_code": "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+            "match_id": "3822708819734036647",
+            "match_time": 1783022400,
+            "demo_url": "https://replay123.valve.net/730/demo.dem.bz2",
+        },
+        player_identifier=None,
+    )
+
+    imported = db.get(Match, result["demo_match_id"])
+    assert imported.played_at == datetime(2026, 7, 2, 20, 0)
+    truth = match_date_truth(imported)
+    assert truth["status"] == STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE
+    assert truth["source"] == "steam_gc_match_time"
+
+
+def test_steam_downloader_missing_gc_match_time_does_not_keep_file_mtime_as_match_date(db, monkeypatch, tmp_path):
+    placeholder = Match(
+        source="steam_history",
+        external_match_id="CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+        raw_json='{"share_code":"CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL","status":"demo_download_pending"}',
+    )
+    db.add(placeholder)
+    db.commit()
+    demo_path = tmp_path / "demo.dem"
+    demo_path.write_bytes(b"demo")
+
+    def fake_download_demo_file(_url, _share_code):
+        return demo_path
+
+    def fake_import_demo_file(inner_db, _demo_path, **_kwargs):
+        imported = Match(
+            source="demo",
+            external_match_id="imported-no-date",
+            played_at=datetime(2030, 1, 1, 0, 0),
+            raw_json=json.dumps(
+                {
+                    "played_at": "2030-01-01T00:00:00",
+                    "played_at_source": "file_modified_fallback",
+                    "match": {
+                        "played_at": "2030-01-01T00:00:00",
+                        "played_at_source": "file_modified_fallback",
+                    },
+                }
+            ),
+        )
+        inner_db.add(imported)
+        inner_db.commit()
+        inner_db.refresh(imported)
+        return {"match_id": imported.id, "imported": 1, "skipped_duplicates": 0, "stored_path": str(demo_path)}
+
+    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+
+    result = _download_and_import_match(
+        db,
+        placeholder,
+        share_code="CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+        steam_gc_item={
+            "share_code": "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+            "match_id": "3822708819734036647",
+            "demo_url": "https://replay123.valve.net/730/demo.dem.bz2",
+        },
+        player_identifier=None,
+    )
+
+    imported = db.get(Match, result["demo_match_id"])
+    assert imported.played_at is None
+    assert result["match_date_status"] == STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE
+    truth = match_date_truth(imported)
+    assert truth["status"] == STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE
+    assert truth["source"] == "unavailable"
+    db.refresh(placeholder)
+    assert "exact_match_date_unavailable" in placeholder.raw_json
+
+
+def test_steam_freshness_ignores_approximate_imported_match_dates(db, monkeypatch):
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "web-api-key")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    db.add(
+        Match(
+            source="demo",
+            external_match_id="manual-future",
+            played_at=datetime(2030, 1, 1, 0, 0),
+            raw_json=json.dumps({"played_at_source": "file_modified_fallback"}),
+        )
+    )
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+    db.commit()
+    captured = {}
+    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+
+    def fake_download_pending_steam_demos(_db, **kwargs):
+        captured.update(kwargs)
+        return {"configured": True, "processed": 0, "imported": 0, "failed": 0, "results": []}
+
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        fake_download_pending_steam_demos,
+    )
+
+    try:
+        result = import_all_available_steam_matches(db)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["result"]["latest_imported_played_at_before_job"] is None
+    assert captured["min_played_at"] is None

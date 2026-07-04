@@ -40,7 +40,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | CSV/JSON import | Working MVP | Dedupe and missing-column tolerance exist. |
 | Manual official `.dem` import | Working, partial confidence | `demoparser2` import works; parsed evidence exists; some metrics remain best-effort. |
 | Deep DEM parser | Working foundation | Normalized parser tables and `swing_score` exist; raw `.dem` is still retained. |
-| Steam import | Working alpha path, WP-014B1 status taxonomy repaired | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor source/advance/outcome semantics are explicit and tested with mocked paths. `steam_import_all` now records standardized `result_json` outcomes/statuses and avoids clean success for missing-code/download/parser/partial cases. Demo cleanup lifecycle and failed-demo quarantine policy still block `v0.6` acceptance. |
+| Steam import | Working alpha path, WP-014B1/B2 truth repaired | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor source/advance/outcome semantics are explicit and tested with mocked paths. `steam_import_all` records standardized `result_json` outcomes/statuses and avoids clean success for missing-code/download/parser/partial cases. Primary Steam match date is exact only from Steam GC `match_time`; unavailable GC dates are marked unknown instead of using file mtime as truth. Demo cleanup lifecycle and failed-demo quarantine policy still block `v0.6` acceptance. |
 | FACEIT import | Future | Do not implement before Steam/security/parser hardening unless explicitly reprioritized. |
 | Dashboard/matches/stats | Working personal MVP runtime; WP-013 `PASS_WITH_WARNINGS` | `/coach` now surfaces current tracked recommendation, next action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status. Runtime restart and read-only smoke passed; full owner manual checklist remains operator evidence to record. |
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
@@ -217,7 +217,8 @@ Stage 7 cursor truth policy:
 - `knowncode=0` is allowed only as an explicit initial sentinel when no saved cursor exists.
 - A match-history sync advances `last_share_code` only after Steam collection and local share-code persistence complete successfully.
 - Failed Steam/API/import persistence paths do not advance the cursor.
-- No-new, duplicate, missing-code, disconnected-Steam, rate-limit, download-failed, parser-failed, partial-success and exact-date availability outcomes are represented in `ImportJob.result_json`.
+- No-new, duplicate, missing-code, disconnected-Steam, rate-limit, download-failed, parser-failed, partial-success, exact-date availability and approximate/unavailable match-date outcomes are represented in `ImportJob.result_json`.
+- Primary Steam freshness checks use only exact imported Steam dates (`steam_gc_match_time`); parser/file-mtime fallback dates must not block new Steam imports.
 - `ImportJob.status` still supports only `queued`, `running`, `succeeded` and `failed`; partial success is represented in `result_json` and persisted as `failed` until a schema/status migration is explicitly approved.
 
 ### Demo Storage

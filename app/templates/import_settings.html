@@ -44,7 +44,7 @@
     {% if state.last_share_code %}
       <p class="muted">
         Cursor: {{ state.last_share_code }}
-        {% if state.last_share_code_played_at %} · дата матча {{ state.last_share_code_played_at }}{% endif %}
+        {% if state.last_share_code_played_at %} · дата матча {{ state.last_share_code_played_at }} ({{ state.last_share_code_played_at_source or "unknown" }}){% endif %}
         {% if state.last_share_code_status %} · статус {{ state.last_share_code_status }}{% endif %}
       </p>
       {% if state.anchor_is_older_than_latest_imported %}

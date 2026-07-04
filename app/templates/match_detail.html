@@ -3,7 +3,11 @@
 <section class="section-head">
   <div>
     <h1>{{ match.map_name or "Матч" }}</h1>
-    <p>{{ match.played_at.strftime("%Y-%m-%d %H:%M") if match.played_at else "Дата неизвестна" }} · {{ detail.source_label }} · score {{ detail.score }}</p>
+    <p>
+      {{ match.played_at.strftime("%Y-%m-%d %H:%M") if match.played_at else "Дата неизвестна" }}
+      · {{ date_truth.status.replace("_", " ") if date_truth else "date truth unknown" }}
+      · {{ detail.source_label }} · score {{ detail.score }}
+    </p>
   </div>
   <div class="actions">
     <a class="button ghost" href="/matches">Назад к матчам</a>
@@ -284,7 +288,8 @@
     <div class="detail-list">
       <div><span>External ID</span><strong>{{ match.external_match_id or "n/a" }}</strong></div>
       <div><span>Дата матча</span><strong>{{ match.played_at.strftime("%Y-%m-%d %H:%M") if match.played_at else "n/a" }}</strong></div>
-      <div><span>Источник даты</span><strong>{{ detail.parser_evidence.played_at_source if detail.parser_evidence else "manual/import" }}</strong></div>
+      <div><span>Правда даты</span><strong>{{ date_truth.status.replace("_", " ") if date_truth else "unknown" }}</strong></div>
+      <div><span>Источник даты</span><strong>{{ date_truth.source if date_truth else "unknown" }}</strong></div>
       <div><span>Demo file</span><strong>{{ match.demo_file or "n/a" }}</strong></div>
       <div><span>Создано</span><strong>{{ match.created_at.strftime("%Y-%m-%d %H:%M") if match.created_at else "n/a" }}</strong></div>
       <div><span>Обновлено</span><strong>{{ match.updated_at.strftime("%Y-%m-%d %H:%M") if match.updated_at else "n/a" }}</strong></div>

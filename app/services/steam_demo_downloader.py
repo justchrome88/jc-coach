@@ -21,7 +21,11 @@ from app.config import BASE_DIR, get_settings
 from app.db.models import Match
 from app.services.demo_parser import DemoParseError, import_demo_file
 from app.services.steam_integration import decode_match_share_code
-from app.services.steam_match_metadata import parse_steam_match_time, steam_gc_metadata_from_item
+from app.services.steam_match_metadata import (
+    STEAM_GC_PLAYED_AT_SOURCE,
+    parse_steam_match_time,
+    steam_gc_metadata_from_item,
+)
 
 
 class SteamDemoDownloadError(RuntimeError):
@@ -92,6 +96,8 @@ def download_pending_steam_demos(
                         "share_code": share_code,
                         "status": "skipped",
                         "played_at": steam_metadata.get("played_at"),
+                        "played_at_source": steam_metadata.get("played_at_source"),
+                        "match_date_status": _match_date_status(steam_metadata),
                         "reason": "not_newer_than_latest_imported_match",
                     }
                 )
@@ -153,6 +159,7 @@ def _download_and_import_match(
     decoded = decode_match_share_code(share_code)
     demo_url = str(steam_gc_item["demo_url"])
     steam_metadata = steam_gc_metadata_from_item(steam_gc_item)
+    date_status = _match_date_status(steam_metadata)
     demo_path = _download_demo_file(demo_url, share_code)
     try:
         import_result = import_demo_file(
@@ -168,6 +175,9 @@ def _download_and_import_match(
         shutil.rmtree(demo_path.parent, ignore_errors=True)
 
     db.refresh(match)
+    imported_match = db.get(Match, import_result.get("match_id")) if import_result.get("match_id") else None
+    if imported_match is not None:
+        _apply_primary_steam_date_truth(imported_match, steam_metadata, date_status)
     raw = _match_raw(match)
     raw.update(
         {
@@ -177,6 +187,9 @@ def _download_and_import_match(
             "steam_metadata": steam_metadata,
             "played_at": steam_metadata.get("played_at"),
             "played_at_source": steam_metadata.get("played_at_source"),
+            "match_date_status": date_status,
+            "match_date_source": steam_metadata.get("played_at_source") or "unavailable",
+            "match_date_truth_note": _match_date_truth_note(date_status),
             "demo_url_host": urlparse(demo_url).netloc,
             "imported_demo_match_id": import_result.get("match_id"),
             "imported_at": datetime.now(UTC).isoformat(),
@@ -193,6 +206,8 @@ def _download_and_import_match(
         "demo_match_id": import_result.get("match_id"),
         "played_at": steam_metadata.get("played_at"),
         "played_at_source": steam_metadata.get("played_at_source"),
+        "match_date_status": date_status,
+        "match_date_source": steam_metadata.get("played_at_source") or "unavailable",
         "imported": import_result.get("imported", 0),
         "duplicate": import_result.get("skipped_duplicates", 0),
     }
@@ -309,6 +324,8 @@ def _mark_match_download_skipped(
             "steam_metadata": steam_metadata,
             "played_at": steam_metadata.get("played_at"),
             "played_at_source": steam_metadata.get("played_at_source"),
+            "match_date_status": _match_date_status(steam_metadata),
+            "match_date_source": steam_metadata.get("played_at_source") or "unavailable",
             "ignored_reason": reason,
             "next_step": None,
         }
@@ -328,3 +345,40 @@ def _match_raw(match: Match) -> dict[str, Any]:
     except json.JSONDecodeError:
         raw = {}
     return raw if isinstance(raw, dict) else {}
+
+
+def _match_date_status(steam_metadata: dict[str, Any]) -> str:
+    if steam_metadata.get("played_at") and steam_metadata.get("played_at_source") == STEAM_GC_PLAYED_AT_SOURCE:
+        return "exact_match_date_available"
+    return "exact_match_date_unavailable"
+
+
+def _match_date_truth_note(status: str) -> str:
+    if status == "exact_match_date_available":
+        return "Exact match datetime came from Steam GC match_time."
+    return "Steam GC match_time was unavailable; parser/file timestamps are not treated as exact match date."
+
+
+def _apply_primary_steam_date_truth(match: Match, steam_metadata: dict[str, Any], date_status: str) -> None:
+    raw = _match_raw(match)
+    raw["steam_metadata"] = steam_metadata
+    raw["match_date_status"] = date_status
+    raw["match_date_source"] = steam_metadata.get("played_at_source") or "unavailable"
+    raw["match_date_truth_note"] = _match_date_truth_note(date_status)
+    parsed_match = raw.get("match") if isinstance(raw.get("match"), dict) else None
+    if parsed_match is not None:
+        parsed_match["match_date_status"] = date_status
+        parsed_match["match_date_source"] = raw["match_date_source"]
+    if date_status != "exact_match_date_available":
+        match.played_at = None
+        raw["played_at_source_before_steam_date_truth"] = raw.get("played_at_source")
+        raw["played_at"] = None
+        raw["played_at_source"] = "unavailable"
+        if parsed_match is not None:
+            parsed_match["played_at"] = None
+            parsed_match["played_at_source"] = "unavailable"
+    else:
+        match.played_at = parse_steam_match_time(steam_metadata.get("played_at"))
+        raw["played_at"] = steam_metadata.get("played_at")
+        raw["played_at_source"] = STEAM_GC_PLAYED_AT_SOURCE
+    match.raw_json = json.dumps(raw, ensure_ascii=False, default=str)

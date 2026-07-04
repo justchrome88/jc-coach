@@ -56,9 +56,12 @@ Standardized result statuses:
 - `partial_success`;
 - `duplicate_skipped`;
 - `exact_match_date_available`;
-- `exact_match_date_unavailable`.
+- `exact_match_date_unavailable`;
+- `approximate_match_date`.
 
 `ImportJob.status` still has only `queued`, `running`, `succeeded` and `failed`. Clean `success`, `no_new` and `duplicate_skipped` outcomes may use `succeeded`. Partial success is represented in `result_json.overall_outcome/statuses` and persisted as `failed` to avoid clean-success overclaim until a future schema/status migration is explicitly approved.
+
+WP-014B2 repaired exact match-date truth without changing schema or demo cleanup lifecycle. For the primary Steam/Valve path, `Match.played_at` is exact only when Steam GC metadata provides valid `match_time` with source `steam_gc_match_time`. If Steam GC `match_time` is missing, primary Steam import records `exact_match_date_unavailable`, clears the imported match `played_at` instead of retaining parser/file-mtime fallback as a match date, and records date truth in `raw_json`/`result_json`. Steam freshness comparison now uses only exact imported Steam dates; manual/file-mtime fallback dates do not silently block new Steam imports.
 
 Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
 
