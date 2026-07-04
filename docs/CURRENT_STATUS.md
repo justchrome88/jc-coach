@@ -4,7 +4,7 @@ Last updated: 2026-07-04.
 
 Current Product Version: `v0.7`.
 
-Current WP: `WP-016 Recommendation Loop Acceptance` in progress after WP-016C controlled survival refresh.
+Current WP: `WP-016 Recommendation Loop Acceptance` in progress; survival recommendation `#5` is armed and waiting for a post-refresh playable exact-date match.
 
 Next Target Version: `v0.8`.
 
@@ -51,6 +51,9 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - WP-016A recommendation loop diagnosis completed: production active recommendations are legacy; active recommendation `#1` used `steam_history` placeholder baseline rows, lacked confidence metadata, and existing evaluations lacked `metric_confidence`.
 - WP-016B recommendation legacy refresh repair foundation completed without production DB mutation or schema change: legacy/incompatible recommendations are detected, read surfaces label them as `needs_refresh`, automatic evaluation skips legacy active recommendations, and the explicit category restart path creates confidence-aware active recommendations from playable exact-date baseline rows.
 - WP-016C controlled recommendation refresh completed with production DB backup/SHA evidence: survival recommendation `#1` was archived and preserved, new active survival recommendation `#5` was created from playable exact-date demo baseline rows `23-36,70`, baseline confidence and metric confidence metadata are present, target metrics are real values, no evaluations/reports/import/parser jobs were created, and service restart/log safety passed.
+- WP-016D runtime acceptance completed / `PASS_WITH_WARNINGS`: active survival recommendation `#5` is armed and accepted for hard progress, GET/read helpers are non-mutating, but no post-refresh exact playable match exists yet.
+- WP-016E controlled next-match evaluation attempt failed safely before download/import/parser work: service-level shell invocation created `steam_import_all` job `#22`, but storage preflight resolved temp dir to `/tmp` instead of systemd `data/tmp` and failed with `storage_preflight_failed`. No match/evaluation/report/demo file was created.
+- WP-016E2 controlled next-match evaluation retry completed as `BLOCKED_NO_NEW_MATCH`: the official guarded Steam import service path was run exactly once with explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp`; parent job `#23` and child sync job `#24` succeeded with `overall_outcome=no_new`, no demo was downloaded, no parser/evaluation ran, recommendation `#5` still has zero evaluations, and v0.8 remains blocked until a real post-refresh playable exact-date match exists.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
@@ -68,6 +71,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 9 is UI presentation over existing persisted state/services, not recommendation planner, ProblemSnapshot or engine work.
 - WP-015D warnings carried forward: direct post-restart authenticated browser timings were not captured by Codex; persistent report generation acceptance is deferred because it mutates DB; `/coach` artifact overview still loads many artifact ORM rows; weak metrics remain weak; `ImportJob.status` remains coarse; uploads/tmp remain on root filesystem.
 - WP-016C refreshed the active survival recommendation. Legacy active `grenades` and `map` recommendations still need refresh before they can be accepted as hard progress, but the primary survival loop can proceed to runtime acceptance.
+- WP-016E2 exact blocker: full next-match evaluation still has not been exercised because Steam returned no new match after recommendation `#5.start_after_match_id=70`. The next controlled attempt should wait until a real new Steam match exists and must continue to use the guarded one-run import path with `TMPDIR=/opt/jc-coach/data/tmp`.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
 - AI output validation exists, but prompt versioning and provider-specific structured response enforcement remain future work.
 - Auth/security is still personal/VPS only; observability and public/friends release gates are not complete.
