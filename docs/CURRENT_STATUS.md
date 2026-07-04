@@ -4,7 +4,7 @@ Last updated: 2026-07-04.
 
 Current Product Version: `v0.6`.
 
-Current WP: `WP-014 Import Acceptance` completed / accepted with warnings; next is `WP-015 Metrics Correctness`.
+Current WP: `WP-015A1 Match Date Truth Reconciliation Repair` completed; next is `WP-015 Metrics Correctness`.
 
 Next Target Version: `v0.7`.
 
@@ -43,12 +43,14 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - WP-014C3 repeat one-button live acceptance after TMPDIR fix verified the runtime storage guard path: service temp resolved to `data/tmp`, storage preflight passed, batch cap limited work to one demo, parent job reached a terminal failed result with checkpoints, and disk growth was bounded. The run exposed a parser/import model compatibility crash after raw demo retention: `played_at_source` was passed to `Match(...)`.
 - WP-014E parser/import model compatibility repair completed without schema change: parser/Steam date-source metadata is preserved in `matches.raw_json` and result payloads, but non-column metadata such as `played_at_source` is filtered before `Match` ORM construction.
 - WP-014C4 repeat one-button live acceptance completed / `PASS_WITH_WARNINGS`: one authorized click created parent job `#20`, storage/TMPDIR preflight passed, batch cap limited the run to one demo, parser/import succeeded, exact date truth was persisted from `steam_gc_match_time`, parent `result_json` was terminal/truthful, service stayed healthy and disk growth was bounded.
+- WP-015A1 match date truth reconciliation repair completed with production DB backup/SHA evidence and no schema/file/live-job changes. Playable exact rows are now `21-36, 70` (17 rows), playable approximate rows are `37-38` (2 rows), playable unknown rows are `0`, and 29 `steam_history` placeholders remain unknown for future explicit Steam metadata recovery.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
 
 - Parser-derived metric confidence is documented and partially hardened, but trade/KAST side/utility facts still need deeper validation before upgrading weak metrics.
 - Steam import is accepted for controlled personal `v0.6` with warnings. It has deterministic cursor semantics, repaired job truth/status taxonomy, exact match-date truth, explicit retain-raw policy, WP-014D1 storage/batch guards, WP-014D2 parent checkpoint/stale handling, WP-014D3 stale job repair, WP-014E parser/model compatibility repair and WP-014C4 live acceptance evidence.
+- Match date truth is reconciled enough for WP-015 to start: metrics must treat only `match_date_status=exact_match_date_available` with `match_date_source=steam_gc_match_time` as exact, keep rows `37-38` approximate, and exclude `source="steam_history"` placeholders from playable metrics.
 - Stage 2 ownership is single-owner mode, not full multi-user SaaS ownership across all core tables.
 - Legacy `link_steam_account(..., user_id=None)` remains an internal Steam hardening risk, but it is not reachable from public OpenID callback without owner session.
 - Stage 3 migration discipline is scaffold-level, not a full Alembic baseline or production migration ledger.

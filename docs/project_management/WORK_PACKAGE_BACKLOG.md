@@ -62,12 +62,12 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-015` |
 | title | Metrics Correctness |
 | target version | `v0.7` |
-| status | planned |
+| status | ready to start after WP-015A1 date-truth reconciliation |
 | objective | Establish golden fixtures, trusted metrics and weak metric labeling. |
 | guardians | `METRICS_GUARDIAN`, `TEST_GUARDIAN`, `IMPORT_GUARDIAN`, `PM_ORCHESTRATOR` |
-| source docs | `docs/METRICS.md`, `docs/audit/METRIC_TRUTH_INVENTORY.md`, `docs/audit/PARSER_FACTS_INVENTORY.md`, `docs/RECOMMENDATIONS.md`, `docs/AI_COACH.md` |
+| source docs | `docs/METRICS.md`, `docs/audit/METRIC_TRUTH_INVENTORY.md`, `docs/audit/PARSER_FACTS_INVENTORY.md`, `docs/audit/WP_015A_MATCH_DATE_TRUTH_RECONCILIATION_DIAGNOSIS.md`, `docs/audit/WP_015A1_MATCH_DATE_TRUTH_RECONCILIATION_REPAIR_REPORT.md`, `docs/RECOMMENDATIONS.md`, `docs/AI_COACH.md` |
 | forbidden actions | Upgrading weak metrics without fixture evidence, using unavailable metrics for hard claims, live AI/import/parser jobs without explicit authorization. |
-| acceptance criteria | Golden fixtures exist for accepted metrics; trusted/medium/approximate/low/unavailable labels are enforced; weak metrics are visibly labeled or suppressed; AI/recommendation paths follow Metric Truth. |
+| acceptance criteria | Golden fixtures exist for accepted metrics; trusted/medium/approximate/low/unavailable labels are enforced; weak metrics are visibly labeled or suppressed; date-window metrics treat only exact Steam GC dates as exact and label/exclude approximate dates; AI/recommendation paths follow Metric Truth. |
 | required evidence | Metric fixture results, Metric Truth tests, AI validator/recommendation evidence tests as applicable, no unsupported metric claims. |
 | exit criteria | Accepted metrics are reliable enough to support serious recommendation evidence within documented limits. |
 | next WP | `WP-016 Recommendation Loop Acceptance` |

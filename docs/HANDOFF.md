@@ -5,7 +5,7 @@ Last updated: 2026-07-04.
 ## Current State
 
 - Current Product Version: `v0.6`
-- Current WP: `WP-014 Import Acceptance` completed / accepted with warnings; next is `WP-015 Metrics Correctness`.
+- Current WP: `WP-015A1 Match Date Truth Reconciliation Repair` completed; next is `WP-015 Metrics Correctness`.
 - Next Target Version: `v0.7`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -22,6 +22,7 @@ Last updated: 2026-07-04.
 - WP-014C3 repeat one-button live acceptance after TMPDIR fix: `FAIL`, but storage safety was proven. Service TMPDIR resolved to `data/tmp`, storage preflight passed, one authorized click downloaded/stored exactly one raw demo under the batch cap, parent job `#18` reached terminal failed state with checkpoints and bounded disk growth. Failure cause was parser/import model mismatch: `played_at_source` metadata was passed to `Match(...)`. New retained raw demo: `data/uploads/20260704160020_28436ba3a5_CSGO-SYSZK-hOFfp-WtBsM-WtsNK-pcy6A.dem`; do not delete or parse it outside an explicitly authorized WP.
 - WP-014E parser/import model compatibility repair: completed without schema change, live Steam/import/parser jobs, production DB mutation or production file cleanup. `played_at_source` and date truth metadata remain in `raw_json`/result payloads and are filtered out of `Match` constructor kwargs.
 - WP-014C4 repeat one-button live acceptance after parser repair: `PASS_WITH_WARNINGS`. One authorized click created parent job `#20`, storage/TMPDIR guard passed, batch cap limited the run to exactly one demo, parser/import succeeded, exact date truth was persisted via `steam_gc_match_time`, parent `result_json` reached terminal truthful `batch_cap_reached` with `success` and `exact_match_date_available`, service stayed healthy and disk growth was bounded. This promotes controlled personal import acceptance to `v0.6`. Warnings carried forward: coarse `ImportJob.status`, uploads/temp on root, raw demos retained, parser memory peak should be watched, and friends/public readiness remains blocked.
+- WP-015A diagnosis and WP-015A1 repair reconciled historical match-date truth without reset/resync, live Steam/API, parser jobs, schema changes or production file changes. Rows `21-24` were exact-backfilled from linked `steam_history` rows `5-8`; rows `1-8` and `59` were normalized as non-playable placeholder metadata; rows `37-38` remain playable approximate/file-mtime fallback. Current playable date truth: 17 exact, 2 approximate, 0 unknown.
 
 ## Last Incident Summary
 
@@ -39,7 +40,7 @@ Last updated: 2026-07-04.
 
 The next active WP is `WP-015 Metrics Correctness`, but it has not started.
 
-Expected focus: golden metric fixtures, trusted/weak metric labeling and enforcement. Do not run live Steam/import/parser work unless a future WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
+Expected focus: golden metric fixtures, trusted/weak metric labeling and enforcement. Date-window metrics must use exact rows only unless the UI/result explicitly labels approximate dates. Do not run live Steam/import/parser work unless a future WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
 
 Roadmap and WP wiring:
 
