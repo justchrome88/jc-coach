@@ -5,7 +5,7 @@ Last updated: 2026-07-04.
 ## Current State
 
 - Current Product Version: `v0.5`
-- Current WP: `WP-014 Import Acceptance`
+- Current WP: `WP-014D Steam Import Runtime Safety Repair`
 - Next Target Version: `v0.6`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -15,6 +15,7 @@ Last updated: 2026-07-04.
 - WP-014B1 import-job truth/status repair: completed without schema change or production DB mutation. `steam_import_all` now writes standardized outcome/status taxonomy to `result_json`, avoids clean `succeeded` for missing-code/download/parser/partial cases, and exact share-code import now creates a `share_code_import` tracking job before downloader/parser work.
 - WP-014B2 exact match-date truth repair: completed without schema change or production DB mutation. Primary Steam import treats Steam GC `match_time` as the only exact Steam match date, clears imported `Match.played_at` when GC time is unavailable instead of retaining file-mtime fallback, records `match_date_status/source`, and uses exact-only imported dates for Steam freshness.
 - WP-014B3 demo retention policy repair: completed without schema change, production DB mutation or production file deletion. Current policy is explicit `retain_raw_for_parser_development`; `delete_after_success` remains disabled; successful/failed imports record retention metadata and storage reporting has read-only file/DB consistency classification.
+- WP-014C one-button live acceptance: `FAIL`. One authorized click on `/settings/imports` -> `POST /settings/imports/pull-all` created `steam_import_all` job `#15` and `match_history_sync` job `#16`. The parent job stayed `running` with null `result_json`, downloaded/retained raw demos grew `data/uploads` from `68K` to `3.1G`, root free space fell to `508M`, graceful restart hung waiting for background tasks, and a force kill was required to protect disk. No production files were deleted and no code/schema changes were made. Report: `docs/audit/WP_014C_ONE_BUTTON_LIVE_IMPORT_ACCEPTANCE_REPORT.md`.
 
 ## Last Incident Summary
 
@@ -22,17 +23,17 @@ Last updated: 2026-07-04.
 
 ## Current Blockers
 
-- Production/friends readiness remains blocked by import acceptance, migration discipline hardening, operational visibility and release gates.
+- Production/friends readiness remains blocked by import acceptance, import disk/runtime safety, migration discipline hardening, operational visibility and release gates.
 - Recommendation planner / verified top problem is not implemented.
 - Parser, Steam, metrics and AI paths remain governed by confidence and no-live-job restrictions unless a WP explicitly authorizes them.
 
 ## Next WP
 
-`WP-014 Import Acceptance` targeting `v0.6`.
+`WP-014D Steam Import Runtime Safety Repair` targeting a repeatable `v0.6` import acceptance attempt.
 
-The next active WP is `WP-014 Import Acceptance`.
+The next active WP is `WP-014D Steam Import Runtime Safety Repair`.
 
-Expected focus: WP-014C one-button live acceptance can be planned next if explicitly authorized with DB SHA, backup/runtime evidence and no hidden jobs. Manual demo upload remains a secondary parser/debug path. Do not run live Steam/import/parser jobs unless the WP explicitly authorizes them with DB SHA and backup evidence.
+Expected focus: repair the WP-014C live blockers before any repeat live acceptance. Required areas are disk-space preflight/budget guard, one-button batch limit or operator-configurable cap, incremental parent job progress/result truth, clean handling of interrupted/stale running jobs, and graceful shutdown cancellation/failure behavior. Do not run another live Steam/import/parser job unless the WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
 
 Roadmap and WP wiring:
 

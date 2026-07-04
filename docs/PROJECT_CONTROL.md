@@ -23,7 +23,7 @@ The practical product question is:
 
 Current Product Version: `v0.5`.
 
-Current WP: `WP-014 Import Acceptance`.
+Current WP: `WP-014D Steam Import Runtime Safety Repair`.
 
 Next Target Version: `v0.6`.
 
@@ -40,7 +40,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | CSV/JSON import | Working MVP | Dedupe and missing-column tolerance exist. |
 | Manual official `.dem` import | Working, partial confidence | `demoparser2` import works; parsed evidence exists; some metrics remain best-effort. |
 | Deep DEM parser | Working foundation | Normalized parser tables and `swing_score` exist; raw `.dem` is still retained. |
-| Steam import | Working alpha path, WP-014B1/B2 truth repaired | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor source/advance/outcome semantics are explicit and tested with mocked paths. `steam_import_all` records standardized `result_json` outcomes/statuses and avoids clean success for missing-code/download/parser/partial cases. Primary Steam match date is exact only from Steam GC `match_time`; unavailable GC dates are marked unknown instead of using file mtime as truth. Demo cleanup lifecycle and failed-demo quarantine policy still block `v0.6` acceptance. |
+| Steam import | Alpha path; WP-014C live acceptance failed | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor source/advance/outcome semantics are explicit and tested with mocked paths. `steam_import_all` records standardized `result_json` outcomes/statuses in repaired paths, and primary Steam match date is exact only from Steam GC `match_time`. The controlled WP-014C live one-button run failed: the parent job stayed `running` with null `result_json`, raw demos filled `data/uploads` to `3.1G`, root free space fell to `508M`, and graceful shutdown required force kill. Disk budget, batch limits, incremental job truth and clean interruption handling block `v0.6`. |
 | FACEIT import | Future | Do not implement before Steam/security/parser hardening unless explicitly reprioritized. |
 | Dashboard/matches/stats | Working personal MVP runtime; WP-013 `PASS_WITH_WARNINGS` | `/coach` now surfaces current tracked recommendation, next action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status. Runtime restart and read-only smoke passed; full owner manual checklist remains operator evidence to record. |
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
@@ -55,11 +55,11 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 
 Current Product Version: `v0.5`.
 
-Current WP: `WP-014 Import Acceptance`.
+Current WP: `WP-014D Steam Import Runtime Safety Repair`.
 
 Next Target Version: `v0.6`.
 
-Previous stabilization stages remain historical evidence for the product state. WP-012 DB Contamination Guardrails and WP-013 Personal MVP Runtime Smoke Gate are complete with warnings. The immediate next pass should accept import workflows without live-job ambiguity.
+Previous stabilization stages remain historical evidence for the product state. WP-012 DB Contamination Guardrails and WP-013 Personal MVP Runtime Smoke Gate are complete with warnings. WP-014C live acceptance failed on disk/runtime safety and must be repaired before another live import acceptance pass.
 
 Canonical milestone doc: `docs/CURRENT_MILESTONE.md`.
 
@@ -76,7 +76,8 @@ Current focus:
 9. Stage 7 Steam cursor truth: completed / `PASS_WITH_WARNINGS`.
 10. Stage 8 AI Output Validator: completed / `PASS_WITH_WARNINGS`.
 11. Stage 9 Coach-first UI: completed / `PASS_WITH_WARNINGS`.
-12. Генерировать рекомендации из verified problem evidence.
+12. Repair one-button Steam import disk/runtime safety before repeating live acceptance.
+13. Генерировать рекомендации из verified problem evidence.
 
 ## 4. Source-of-truth Documents
 
@@ -220,6 +221,7 @@ Stage 7 cursor truth policy:
 - No-new, duplicate, missing-code, disconnected-Steam, rate-limit, download-failed, parser-failed, partial-success, exact-date availability and approximate/unavailable match-date outcomes are represented in `ImportJob.result_json`.
 - Primary Steam freshness checks use only exact imported Steam dates (`steam_gc_match_time`); parser/file-mtime fallback dates must not block new Steam imports.
 - `ImportJob.status` still supports only `queued`, `running`, `succeeded` and `failed`; partial success is represented in `result_json` and persisted as `failed` until a schema/status migration is explicitly approved.
+- WP-014C live acceptance failed because a single authorized one-button import downloaded multiple large raw demos, exhausted disk headroom, left parent job `#15` running with null `result_json`, and required force-killing uvicorn after graceful shutdown hung. Do not repeat live acceptance until disk budget/batch caps, incremental parent progress, and clean interruption handling are repaired.
 
 ### Demo Storage
 

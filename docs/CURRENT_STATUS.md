@@ -4,7 +4,7 @@ Last updated: 2026-07-04.
 
 Current Product Version: `v0.5`.
 
-Current WP: `WP-014 Import Acceptance`.
+Current WP: `WP-014D Steam Import Runtime Safety Repair`.
 
 Next Target Version: `v0.6`.
 
@@ -42,7 +42,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 ## Partial Or Risky
 
 - Parser-derived metric confidence is documented and partially hardened, but trade/KAST side/utility facts still need deeper validation before upgrading weak metrics.
-- Steam import works as an alpha path with deterministic cursor semantics, repaired job truth/status taxonomy, repaired exact match-date truth and explicit retain-raw policy, but still needs live one-button acceptance, durable scheduling, retry/backoff operations and a richer sync ledger before production/friends use.
+- Steam import works as an alpha path with deterministic cursor semantics, repaired job truth/status taxonomy, repaired exact match-date truth and explicit retain-raw policy, but WP-014C live one-button acceptance failed on disk/runtime safety. A single authorized one-button run left parent job `#15` running with null `result_json`, retained `3.1G` raw demos, reduced root free space to `508M`, and required force-killing uvicorn after graceful shutdown hung.
 - Stage 2 ownership is single-owner mode, not full multi-user SaaS ownership across all core tables.
 - Legacy `link_steam_account(..., user_id=None)` remains an internal Steam hardening risk, but it is not reachable from public OpenID callback without owner session.
 - Stage 3 migration discipline is scaffold-level, not a full Alembic baseline or production migration ledger.
@@ -51,7 +51,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 7 is not a production scheduler, durable Steam sync ledger, recommendation planner or UI redesign.
 - Stage 8 is not provider-specific structured response mode, prompt versioning, recommendation planner, ProblemSnapshot or UI redesign.
 - Stage 9 is UI presentation over existing persisted state/services, not recommendation planner, ProblemSnapshot or engine work.
-- Next hardening stage is `WP-014 Import Acceptance` targeting `v0.6`.
+- Next hardening stage is `WP-014D Steam Import Runtime Safety Repair` before a repeat `v0.6` live acceptance attempt.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
 - AI output validation exists, but prompt versioning and provider-specific structured response enforcement remain future work.
 - Auth/security is still personal/VPS only; observability and public/friends release gates are not complete.
@@ -62,4 +62,5 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Public beta.
 - FACEIT import.
 - Raw `.dem` deletion.
+- One-button Steam import promotion to `v0.6` until disk budget/batch limits, incremental job progress and clean interruption handling are repaired.
 - Payments, viewer, heatmaps, clips, practice servers or social features.

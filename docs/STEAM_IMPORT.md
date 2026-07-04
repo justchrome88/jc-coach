@@ -66,6 +66,8 @@ WP-014B2 repaired exact match-date truth without changing schema or demo cleanup
 
 WP-014B3 made demo retention explicit without enabling deletion. Current policy is `retain_raw_for_parser_development`; successful imports record `retained_for_parser_dev`, parser failures record `retained_after_failure` or `cleanup_needed`, and result/raw JSON include raw demo path/size when available. `delete_after_success` remains disabled by default and is future production mode after parser acceptance.
 
+WP-014C live one-button acceptance failed. One authorized click on `/settings/imports` -> `POST /settings/imports/pull-all` created parent job `#15` and child `match_history_sync` job `#16`. The child sync succeeded, but the parent remained `running` with null `result_json` while multiple large raw demos were retained. `data/uploads` grew from `68K` to `3.1G`, root free space fell to `508M`, graceful service restart hung waiting for background tasks, and a force kill was required to protect the host. No production demo files were deleted and no schema changes were made. Do not repeat live one-button acceptance until disk budget/batch caps, incremental parent progress/result truth and clean interruption handling are repaired.
+
 Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
 
 Stage 2 ownership hardening requires current owner session for `/auth/steam/callback`. Без owner session callback не создаёт uncontrolled user, `steam_accounts` или `import_jobs`. При owner session Steam account линкуется только к owner user.
@@ -115,6 +117,9 @@ Stage 7 does not add a durable scheduler or retry ledger. Current retry policy i
 - Stale cursor can point behind already imported history.
 - Valve replay URLs can expire or return transient 502/404/410.
 - Durable retry/backoff, scheduler behavior and a sync ledger still need hardening.
+- One-button live import currently lacks a safe disk budget/batch cap for retain-raw mode and can exhaust VPS disk headroom.
+- Parent aggregate job progress/result truth is insufficient during long downloads; interruption can leave `steam_import_all` stuck as `running` with null `result_json`.
+- Graceful shutdown does not currently cancel/fail active import work promptly enough for operator safety.
 - Steam OpenID network verification can fail closed if Steam is unreachable.
 - Low-level helper `link_steam_account(..., user_id=None)` still supports legacy Steam-only user creation for old service paths; public OpenID callback no longer uses this path without owner.
 
