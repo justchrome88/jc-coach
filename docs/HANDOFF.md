@@ -13,7 +13,8 @@ Last updated: 2026-07-04.
 - WP-013 runtime smoke: `PASS_WITH_WARNINGS`; service restart and read-only smoke passed on 2026-07-04 with DB SHA `0850e6a28b08e4150cff43e10fbd39f38bef3e3ca3e494ab5a534c22738a230d`. Full owner manual browser checklist remains operator evidence to record.
 - WP-014A Steam/Valve import diagnosis: `DIAGNOSED`; report is `docs/audit/WP_014A_STEAM_VALVE_IMPORT_DIAGNOSIS.md`. Current primary button is `/settings/imports` -> `POST /settings/imports/pull-all` -> `steam_import_all` background job. Repair is required before `v0.6`: explicit outcome taxonomy, import_job coverage for download/parser paths, exact match-date truth, and raw demo cleanup after successful parse/persist.
 - WP-014B1 import-job truth/status repair: completed without schema change or production DB mutation. `steam_import_all` now writes standardized outcome/status taxonomy to `result_json`, avoids clean `succeeded` for missing-code/download/parser/partial cases, and exact share-code import now creates a `share_code_import` tracking job before downloader/parser work.
-- WP-014B2 exact match-date truth repair: completed without schema change or production DB mutation. Primary Steam import treats Steam GC `match_time` as the only exact Steam match date, clears imported `Match.played_at` when GC time is unavailable instead of retaining file-mtime fallback, records `match_date_status/source`, and uses exact-only imported dates for Steam freshness. Demo cleanup lifecycle remains intentionally deferred to WP-014B3.
+- WP-014B2 exact match-date truth repair: completed without schema change or production DB mutation. Primary Steam import treats Steam GC `match_time` as the only exact Steam match date, clears imported `Match.played_at` when GC time is unavailable instead of retaining file-mtime fallback, records `match_date_status/source`, and uses exact-only imported dates for Steam freshness.
+- WP-014B3 demo retention policy repair: completed without schema change, production DB mutation or production file deletion. Current policy is explicit `retain_raw_for_parser_development`; `delete_after_success` remains disabled; successful/failed imports record retention metadata and storage reporting has read-only file/DB consistency classification.
 
 ## Last Incident Summary
 
@@ -31,7 +32,7 @@ Last updated: 2026-07-04.
 
 The next active WP is `WP-014 Import Acceptance`.
 
-Expected focus: continue WP-014 with demo cleanup lifecycle and failed-demo quarantine/cleanup policy. Manual demo upload remains a secondary parser/debug path. Do not run live Steam/import/parser jobs unless the WP explicitly authorizes them with DB SHA and backup evidence.
+Expected focus: WP-014C one-button live acceptance can be planned next if explicitly authorized with DB SHA, backup/runtime evidence and no hidden jobs. Manual demo upload remains a secondary parser/debug path. Do not run live Steam/import/parser jobs unless the WP explicitly authorizes them with DB SHA and backup evidence.
 
 Roadmap and WP wiring:
 

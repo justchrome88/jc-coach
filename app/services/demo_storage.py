@@ -11,6 +11,15 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.models import Match
+from app.services.demo_retention import (
+    CONSISTENCY_DB_REFERENCES_FILE_EXISTS,
+    CONSISTENCY_DB_REFERENCES_FILE_MISSING,
+    CONSISTENCY_FILE_WITHOUT_DB_REFERENCE,
+    CONSISTENCY_LEGACY_UNKNOWN,
+    DEMO_RETENTION_POLICY_RETAIN_RAW,
+    current_demo_retention_policy,
+    delete_after_success_enabled,
+)
 
 SUSPICIOUS_DEMO_BYTES = 1024 * 1024
 
@@ -71,12 +80,15 @@ def demo_storage_report(db: Session, write_manifest: bool = False) -> dict[str, 
     suspicious = [item for item in file_items if item["size_bytes"] < SUSPICIOUS_DEMO_BYTES]
     largest = sorted(file_items, key=lambda item: item["size_bytes"], reverse=True)[:20]
 
+    consistency = classify_demo_file_consistency(db, upload_dir=upload_dir)
+
     report = {
         "generated_at": datetime.now(UTC).isoformat(),
         "policy": {
-            "raw_delete_after_parse_enabled": False,
+            "demo_retention_policy": current_demo_retention_policy(),
+            "raw_delete_after_parse_enabled": delete_after_success_enabled(),
             "target_lifecycle": "download -> parse -> verify parsed payload -> delete raw .dem",
-            "current_mode": "observe only; raw .dem files are never deleted by this report",
+            "current_mode": f"{DEMO_RETENTION_POLICY_RETAIN_RAW}; raw .dem files are never deleted by this report",
         },
         "upload_dir": str(upload_dir),
         "manifest_path": str(reports_dir / "demo_storage_manifest.json"),
@@ -103,6 +115,7 @@ def demo_storage_report(db: Session, write_manifest: bool = False) -> dict[str, 
         "missing_files": missing,
         "suspicious_files": suspicious,
         "future_deletion_candidates": deletion_candidates,
+        "file_db_consistency": consistency,
     }
     if write_manifest:
         manifest_path = Path(report["manifest_path"])
@@ -112,6 +125,53 @@ def demo_storage_report(db: Session, write_manifest: bool = False) -> dict[str, 
 
 def write_demo_storage_manifest(db: Session) -> dict[str, Any]:
     return demo_storage_report(db, write_manifest=True)
+
+
+def classify_demo_file_consistency(db: Session, upload_dir: Path | None = None) -> dict[str, Any]:
+    if upload_dir is None:
+        upload_dir = Path(get_settings().upload_dir).resolve()
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    demo_files = sorted(upload_dir.glob("*.dem"), key=lambda item: item.name)
+    file_paths = {str(path.resolve()): path for path in demo_files}
+    matches = list(db.scalars(select(Match).where(Match.demo_file.is_not(None)).order_by(Match.id.asc())).all())
+    referenced_paths: set[str] = set()
+    items: list[dict[str, Any]] = []
+
+    for match in matches:
+        resolved = _resolve_demo_path(match.demo_file, upload_dir)
+        path_key = str(resolved)
+        referenced_paths.add(path_key)
+        if not match.demo_file:
+            status = CONSISTENCY_LEGACY_UNKNOWN
+        elif resolved.exists():
+            status = CONSISTENCY_DB_REFERENCES_FILE_EXISTS
+        else:
+            status = CONSISTENCY_DB_REFERENCES_FILE_MISSING
+        items.append(
+            {
+                "status": status,
+                "match_id": match.id,
+                "demo_file": match.demo_file,
+                "path": path_key,
+            }
+        )
+
+    for path_key in file_paths:
+        if path_key in referenced_paths:
+            continue
+        items.append(
+            {
+                "status": CONSISTENCY_FILE_WITHOUT_DB_REFERENCE,
+                "match_id": None,
+                "demo_file": None,
+                "path": path_key,
+            }
+        )
+
+    counts: dict[str, int] = {}
+    for item in items:
+        counts[item["status"]] = counts.get(item["status"], 0) + 1
+    return {"counts": counts, "items": items}
 
 
 def _file_item(path: Path, upload_dir: Path) -> dict[str, Any]:

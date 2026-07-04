@@ -29,8 +29,9 @@ Required primary behavior:
 - duplicates are skipped without creating duplicate match records;
 - demos are downloaded only for new or missing matches;
 - demos are parsed with current parser capabilities and weak/unavailable facts stay governed by Metric Truth;
-- parsed data and match records are persisted before cleanup;
-- raw demo files are deleted only after successful parse and DB persistence;
+- parsed data and match records are persisted before any future cleanup;
+- current policy retains raw demo files for parser development by default;
+- future delete-after-success mode may delete raw demos only after successful parse and DB persistence, but it is disabled now;
 - failed demos are classified as failed/quarantine/cleanup-policy-needed;
 - statuses distinguish success, no-new, need-code, Steam-not-connected, rate-limited, download-failed, parser-failed, partial-success, duplicate-skipped and exact match-date available/unavailable.
 
@@ -62,6 +63,8 @@ Standardized result statuses:
 `ImportJob.status` still has only `queued`, `running`, `succeeded` and `failed`. Clean `success`, `no_new` and `duplicate_skipped` outcomes may use `succeeded`. Partial success is represented in `result_json.overall_outcome/statuses` and persisted as `failed` to avoid clean-success overclaim until a future schema/status migration is explicitly approved.
 
 WP-014B2 repaired exact match-date truth without changing schema or demo cleanup lifecycle. For the primary Steam/Valve path, `Match.played_at` is exact only when Steam GC metadata provides valid `match_time` with source `steam_gc_match_time`. If Steam GC `match_time` is missing, primary Steam import records `exact_match_date_unavailable`, clears the imported match `played_at` instead of retaining parser/file-mtime fallback as a match date, and records date truth in `raw_json`/`result_json`. Steam freshness comparison now uses only exact imported Steam dates; manual/file-mtime fallback dates do not silently block new Steam imports.
+
+WP-014B3 made demo retention explicit without enabling deletion. Current policy is `retain_raw_for_parser_development`; successful imports record `retained_for_parser_dev`, parser failures record `retained_after_failure` or `cleanup_needed`, and result/raw JSON include raw demo path/size when available. `delete_after_success` remains disabled by default and is future production mode after parser acceptance.
 
 Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
 

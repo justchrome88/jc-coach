@@ -1,6 +1,6 @@
 # Metrics
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-04.
 
 Этот документ является каноническим описанием правды по метрикам. Runtime-источник для code-level политики: `app/services/metric_truth.py`.
 
@@ -66,6 +66,7 @@ Usage decision:
 - Approximate metrics can be displayed and passed to AI only with warning semantics.
 - `early_deaths` must not fallback to `entry_deaths`; parser can fill it only when timing anchors exist.
 - Side split metrics must not drive diagnosis/recommendation until parser confidence improves.
+- Match date truth follows the same confidence rule: exact match date for primary Steam import means Steam GC `match_time` / `steam_gc_match_time`. Demo header or file modified time must not be treated as exact for Steam import freshness, diagnosis windows or UI claims.
 
 ## Current Integration
 

@@ -234,7 +234,9 @@ Current lifecycle is observe-only:
 - raw demos stay in `data/uploads`;
 - `/settings/storage` and `GET /api/storage/demos` report storage state;
 - manifest can be written to `data/reports/demo_storage_manifest.json`;
-- no delete/compress/archive action is enabled.
+- current explicit policy is `retain_raw_for_parser_development`;
+- import metadata records retention status/path/size where available;
+- no delete/compress/archive action is enabled by default.
 
 ## Supporting Runtime Documentation
 

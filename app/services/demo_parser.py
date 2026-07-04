@@ -23,6 +23,7 @@ from app.db.models import (
     DemoWeaponStat,
     Match,
 )
+from app.services.demo_retention import retention_metadata
 from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_new_matches
 from app.services.steam_match_metadata import apply_steam_metadata_to_parsed_demo
 
@@ -40,7 +41,9 @@ BOMB_EVENTS = ("bomb_planted", "bomb_defused", "bomb_exploded", "bomb_beginplant
 
 
 class DemoParseError(RuntimeError):
-    pass
+    def __init__(self, message: str, retention: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.retention = retention or {}
 
 
 def list_inbox_demos() -> list[dict[str, Any]]:
@@ -81,9 +84,16 @@ def import_demo_file(
     steam_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stored_path = _store_demo(source_path, original_filename)
-    parsed = parse_demo(stored_path, player_identifier=player_identifier)
+    try:
+        parsed = parse_demo(stored_path, player_identifier=player_identifier)
+    except DemoParseError as exc:
+        exc.retention = retention_metadata(raw_demo_path=stored_path, parser_success=False)
+        raise
     if steam_metadata:
         apply_steam_metadata_to_parsed_demo(parsed, steam_metadata)
+    retention = retention_metadata(raw_demo_path=stored_path, parser_success=True)
+    parsed.update(retention)
+    parsed["demo_retention"] = retention
     match_data = parsed["match"]
     match_data["demo_file"] = str(stored_path)
     match_data["source"] = "demo"
@@ -104,6 +114,7 @@ def import_demo_file(
         _save_demo_parse_artifacts(db, existing, parsed)
         if stored_path.exists() and str(stored_path) != existing.demo_file:
             stored_path.unlink()
+        duplicate_retention = retention_metadata(raw_demo_path=existing.demo_file, parser_success=True)
         return {
             "imported": 0,
             "skipped_duplicates": 1,
@@ -117,6 +128,7 @@ def import_demo_file(
             "metric_confidence": parsed["metric_confidence"],
             "parser_confidence": parsed["parser_confidence"],
             "warnings": parsed["warnings"],
+            **duplicate_retention,
             "message": "Demo already imported.",
         }
 
@@ -140,6 +152,7 @@ def import_demo_file(
         "metric_confidence": parsed["metric_confidence"],
         "parser_confidence": parsed["parser_confidence"],
         "warnings": parsed["warnings"],
+        **retention,
         "message": parsed["message"],
     }
 

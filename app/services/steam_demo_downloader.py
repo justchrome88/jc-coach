@@ -20,6 +20,10 @@ from sqlalchemy.orm import Session
 from app.config import BASE_DIR, get_settings
 from app.db.models import Match
 from app.services.demo_parser import DemoParseError, import_demo_file
+from app.services.demo_retention import (
+    DEMO_RETENTION_STATUS_CLEANUP_NEEDED,
+    retention_metadata,
+)
 from app.services.steam_integration import decode_match_share_code
 from app.services.steam_match_metadata import (
     STEAM_GC_PLAYED_AT_SOURCE,
@@ -113,8 +117,17 @@ def download_pending_steam_demos(
             results.append(result)
         except Exception as exc:
             failed += 1
-            _mark_match_download_error(db, match, str(exc))
-            results.append({"match_id": match.id, "share_code": share_code, "status": "failed", "error": str(exc)})
+            retention = getattr(exc, "retention", {}) or {}
+            if not retention:
+                retention = retention_metadata(
+                    raw_demo_path=None,
+                    parser_success=False,
+                    status=DEMO_RETENTION_STATUS_CLEANUP_NEEDED,
+                )
+            _mark_match_download_error(db, match, str(exc), retention=retention)
+            results.append(
+                {"match_id": match.id, "share_code": share_code, "status": "failed", "error": str(exc), **retention}
+            )
 
     return {
         "configured": True,
@@ -170,7 +183,9 @@ def _download_and_import_match(
             steam_metadata=steam_metadata,
         )
     except DemoParseError as exc:
-        raise SteamDemoDownloadError(f"Downloaded demo but parser failed: {exc}") from exc
+        error = SteamDemoDownloadError(f"Downloaded demo but parser failed: {exc}")
+        error.retention = exc.retention
+        raise error from exc
     finally:
         shutil.rmtree(demo_path.parent, ignore_errors=True)
 
@@ -190,6 +205,11 @@ def _download_and_import_match(
             "match_date_status": date_status,
             "match_date_source": steam_metadata.get("played_at_source") or "unavailable",
             "match_date_truth_note": _match_date_truth_note(date_status),
+            "demo_retention_policy": import_result.get("demo_retention_policy"),
+            "demo_retention_status": import_result.get("demo_retention_status"),
+            "raw_demo_path": import_result.get("raw_demo_path"),
+            "raw_demo_size_bytes": import_result.get("raw_demo_size_bytes"),
+            "parser_success": import_result.get("parser_success"),
             "demo_url_host": urlparse(demo_url).netloc,
             "imported_demo_match_id": import_result.get("match_id"),
             "imported_at": datetime.now(UTC).isoformat(),
@@ -208,6 +228,11 @@ def _download_and_import_match(
         "played_at_source": steam_metadata.get("played_at_source"),
         "match_date_status": date_status,
         "match_date_source": steam_metadata.get("played_at_source") or "unavailable",
+        "demo_retention_policy": import_result.get("demo_retention_policy"),
+        "demo_retention_status": import_result.get("demo_retention_status"),
+        "raw_demo_path": import_result.get("raw_demo_path"),
+        "raw_demo_size_bytes": import_result.get("raw_demo_size_bytes"),
+        "parser_success": import_result.get("parser_success"),
         "imported": import_result.get("imported", 0),
         "duplicate": import_result.get("skipped_duplicates", 0),
     }
@@ -304,9 +329,21 @@ def _response_modified_timestamp(response) -> float | None:
     return parsed.timestamp()
 
 
-def _mark_match_download_error(db: Session, match: Match, message: str) -> None:
+def _mark_match_download_error(
+    db: Session,
+    match: Match,
+    message: str,
+    retention: dict[str, Any] | None = None,
+) -> None:
     raw = _match_raw(match)
-    raw.update({"status": "demo_download_error", "error": message, "failed_at": datetime.now(UTC).isoformat()})
+    raw.update(
+        {
+            "status": "demo_download_error",
+            "error": message,
+            "failed_at": datetime.now(UTC).isoformat(),
+            **(retention or {}),
+        }
+    )
     match.raw_json = json.dumps(raw, ensure_ascii=False, default=str)
     db.commit()
 

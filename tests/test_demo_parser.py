@@ -12,7 +12,13 @@ from app.db.models import (
     DemoWeaponStat,
     Match,
 )
-from app.services.demo_parser import import_demo_file, parse_demo
+from app.services.demo_parser import DemoParseError, import_demo_file, parse_demo
+from app.services.demo_retention import (
+    DEMO_RETENTION_POLICY_RETAIN_RAW,
+    DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE,
+    DEMO_RETENTION_STATUS_RETAINED_FOR_DEV,
+    delete_raw_demo_after_success,
+)
 
 
 def test_parse_demo_with_fake_demoparser(monkeypatch, tmp_path):
@@ -65,6 +71,11 @@ def test_import_demo_file_persists_match(monkeypatch, tmp_path, db):
     assert match.demo_file.endswith(".dem")
     assert match.kills == 1
     assert match.utility_damage == 50
+    assert result["demo_retention_policy"] == DEMO_RETENTION_POLICY_RETAIN_RAW
+    assert result["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_FOR_DEV
+    assert result["parser_success"] is True
+    assert result["raw_demo_size_bytes"] is not None
+    assert "retain_raw_for_parser_development" in match.raw_json
 
 
 def test_import_demo_file_persists_deep_parse_artifacts(monkeypatch, tmp_path, db):
@@ -99,6 +110,57 @@ def test_duplicate_demo_import_removes_extra_copy(monkeypatch, tmp_path, db):
     assert second["imported"] == 0
     assert second["skipped_duplicates"] == 1
     assert second["stored_path"] == first["stored_path"]
+    assert second["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_FOR_DEV
+
+
+def test_parse_failure_retains_raw_demo_metadata(monkeypatch, tmp_path, db):
+    demo_path = tmp_path / "broken.dem"
+    demo_path.write_bytes(b"HL2DEMO")
+
+    class BrokenParser:
+        def __init__(self, _path):
+            pass
+
+        def parse_header(self):
+            raise RuntimeError("broken parser")
+
+    module = types.ModuleType("demoparser2")
+    module.DemoParser = BrokenParser
+    monkeypatch.setitem(sys.modules, "demoparser2", module)
+
+    try:
+        import_demo_file(db, demo_path, original_filename="broken.dem", player_identifier="me")
+    except DemoParseError as exc:
+        retention = exc.retention
+    else:
+        raise AssertionError("broken parser should fail")
+
+    assert retention["demo_retention_policy"] == DEMO_RETENTION_POLICY_RETAIN_RAW
+    assert retention["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE
+    assert retention["parser_success"] is False
+    assert retention["raw_demo_path"].endswith("broken.dem")
+    assert retention["raw_demo_size_bytes"] is not None
+
+
+def test_delete_after_success_helper_is_disabled_by_default(tmp_path):
+    demo_path = tmp_path / "retained.dem"
+    demo_path.write_bytes(b"HL2DEMO")
+
+    result = delete_raw_demo_after_success(demo_path)
+
+    assert result["deleted"] is False
+    assert demo_path.exists()
+    assert result["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_FOR_DEV
+
+
+def test_delete_after_success_helper_requires_explicit_enable(tmp_path):
+    demo_path = tmp_path / "delete-me.dem"
+    demo_path.write_bytes(b"HL2DEMO")
+
+    result = delete_raw_demo_after_success(demo_path, enabled=True)
+
+    assert result["deleted"] is True
+    assert not demo_path.exists()
 
 
 def _install_fake_demoparser(monkeypatch):

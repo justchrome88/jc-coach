@@ -2,6 +2,11 @@ import json
 from datetime import datetime
 
 from app.db.models import ImportJob, Match, SteamAccount
+from app.services.demo_retention import (
+    DEMO_RETENTION_POLICY_RETAIN_RAW,
+    DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE,
+    DEMO_RETENTION_STATUS_RETAINED_FOR_DEV,
+)
 from app.services.match_queries import playable_match_select
 from app.services.steam_demo_downloader import (
     _download_and_import_match,
@@ -728,6 +733,11 @@ def test_steam_downloader_passes_gc_match_time_to_demo_import(db, monkeypatch, t
             "imported": 1,
             "skipped_duplicates": 0,
             "stored_path": str(demo_path),
+            "demo_retention_policy": DEMO_RETENTION_POLICY_RETAIN_RAW,
+            "demo_retention_status": DEMO_RETENTION_STATUS_RETAINED_FOR_DEV,
+            "raw_demo_path": str(demo_path),
+            "raw_demo_size_bytes": demo_path.stat().st_size,
+            "parser_success": True,
         }
 
     monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
@@ -750,7 +760,9 @@ def test_steam_downloader_passes_gc_match_time_to_demo_import(db, monkeypatch, t
     assert captured["steam_metadata"]["played_at"] == "2026-07-02T20:00:00"
     assert captured["steam_metadata"]["played_at_source"] == "steam_gc_match_time"
     assert result["played_at"] == "2026-07-02T20:00:00"
+    assert result["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_FOR_DEV
     assert "steam_gc_match_time" in match.raw_json
+    assert "retain_raw_for_parser_development" in match.raw_json
 
 
 def test_steam_downloader_writes_exact_gc_match_time_to_imported_match(db, monkeypatch, tmp_path):
@@ -835,7 +847,12 @@ def test_steam_downloader_missing_gc_match_time_does_not_keep_file_mtime_as_matc
         inner_db.add(imported)
         inner_db.commit()
         inner_db.refresh(imported)
-        return {"match_id": imported.id, "imported": 1, "skipped_duplicates": 0, "stored_path": str(demo_path)}
+        return {
+            "match_id": imported.id,
+            "imported": 1,
+            "skipped_duplicates": 0,
+            "stored_path": str(demo_path),
+        }
 
     monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
     monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
@@ -897,3 +914,58 @@ def test_steam_freshness_ignores_approximate_imported_match_dates(db, monkeypatc
 
     assert result["result"]["latest_imported_played_at_before_job"] is None
     assert captured["min_played_at"] is None
+
+
+def test_steam_download_parser_failure_records_retained_demo_metadata(db, monkeypatch, tmp_path):
+    from app.services.demo_parser import DemoParseError
+
+    match = Match(
+        source="steam_history",
+        external_match_id="CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+        raw_json='{"share_code":"CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL","status":"demo_download_pending"}',
+    )
+    db.add(match)
+    db.commit()
+    demo_path = tmp_path / "failed.dem"
+    demo_path.write_bytes(b"HL2DEMO")
+
+    def fake_fetch_demo_urls(_share_codes):
+        return {
+            "ok": True,
+            "results": [
+                {
+                    "ok": True,
+                    "share_code": "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+                    "match_id": "3822708819734036647",
+                    "match_time": 1783022400,
+                    "demo_url": "https://replay123.valve.net/730/demo.dem.bz2",
+                }
+            ],
+        }
+
+    def fake_download_demo_file(_url, _share_code):
+        return demo_path
+
+    def fake_import_demo_file(_db, _demo_path, **_kwargs):
+        raise DemoParseError(
+            "parser failed",
+            retention={
+                "demo_retention_policy": DEMO_RETENTION_POLICY_RETAIN_RAW,
+                "demo_retention_status": DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE,
+                "raw_demo_path": str(demo_path),
+                "raw_demo_size_bytes": demo_path.stat().st_size,
+                "parser_success": False,
+            },
+        )
+
+    monkeypatch.setattr("app.services.steam_demo_downloader.steam_demo_downloader_configured", lambda: True)
+    monkeypatch.setattr("app.services.steam_demo_downloader._fetch_demo_urls", fake_fetch_demo_urls)
+    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+
+    result = download_pending_steam_demos(db)
+
+    db.refresh(match)
+    assert result["failed"] == 1
+    assert result["results"][0]["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE
+    assert "retained_after_failure" in match.raw_json
