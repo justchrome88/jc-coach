@@ -33,6 +33,7 @@ Last updated: 2026-07-04.
 - WP-016D runtime acceptance completed / `PASS_WITH_WARNINGS`: active survival recommendation `#5` is armed, confidence-aware and read-safe, but no exact playable match exists after `start_after_match_id=70`, so next-match evaluation was not exercised.
 - WP-016E controlled next-match evaluation attempt failed safely before download/import/parser work. A DB backup was created, then one service-level `import_all_available_steam_matches(db)` attempt created job `#22` and stopped at `storage_preflight_failed` because the shell process resolved `temp_dir` to `/tmp`, not the systemd `TMPDIR=/opt/jc-coach/data/tmp`. Counts remained 5 recommendations, 75 evaluations, 0 reports; recommendation `#5` still has 0 evaluations.
 - WP-016E2 controlled next-match evaluation retry completed as `BLOCKED_NO_NEW_MATCH`. A DB backup was created, then one service-level `import_all_available_steam_matches(db)` attempt was run with explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp`. Parent job `#23` and child sync job `#24` succeeded with `overall_outcome=no_new`; no demo was downloaded, no parser/evaluation/report ran, and recommendation `#5` still has 0 evaluations.
+- WP-016E3 controlled next-match evaluation after a real Competitive match completed as `FAILED`. A DB backup was created, then one guarded service-level import was run with explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp`. Parent job `#25` and child sync job `#26` succeeded; exactly one new Dust2 demo was retained and parsed as playable exact-date match `#72`. The recommendation loop did not complete because recommendation `#5` still has 0 evaluations and progress remains waiting.
 
 ## Last Incident Summary
 
@@ -48,7 +49,7 @@ Last updated: 2026-07-04.
 
 `WP-016 Recommendation Loop Acceptance` targeting `v0.8`.
 
-WP-016 has started. The survival loop is armed, but v0.8 cannot be promoted until one real post-refresh playable exact-date match is imported and evaluated for recommendation `#5`. The next controlled attempt should wait until a new Steam match is expected and must use the guarded one-run path with `TMPDIR=/opt/jc-coach/data/tmp TEMP=/opt/jc-coach/data/tmp TMP=/opt/jc-coach/data/tmp` for service-level invocation; do not run live Steam/import/parser work unless explicitly authorized.
+WP-016 has started. The survival loop is armed and the first real post-refresh match now exists as playable exact-date Dust2 match `#72`, but v0.8 cannot be promoted until recommendation `#5` receives an evaluation with `metric_confidence` and progress updates. Next repair should focus narrowly on the missing post-import recommendation evaluation trigger; do not run additional live Steam/import/parser work unless explicitly authorized.
 
 Expected focus: accept recommendation -> next match -> evaluation -> progress as a coherent loop using the accepted v0.7 metric confidence rules. Do not run live Steam/import/parser work unless a future WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
 
