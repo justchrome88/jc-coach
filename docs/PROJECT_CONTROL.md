@@ -23,7 +23,7 @@ The practical product question is:
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017A Roadmap v0.9-v1.0 Planning / Real Data Onboarding Diagnosis`.
+Current WP: `WP-017C First Bulk Import Batch`.
 
 Next Target Version: `v0.9`.
 
@@ -45,7 +45,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | Dashboard/matches/stats | Working personal MVP runtime; WP-013 `PASS_WITH_WARNINGS` | `/coach` now surfaces current tracked recommendation, next action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status. Runtime restart and read-only smoke passed; full owner manual checklist remains operator evidence to record. |
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
 | Recommendations | Accepted for controlled personal `v0.8` / `PASS_WITH_WARNINGS`; planner quality not validated | Multi-category goals, lifecycle, evaluations and progress exist. GET/read paths no longer create recommendations/evaluations. Legacy/incompatible recommendations are detected and labeled `needs_refresh`, automatic evaluation skips them, and explicit restart creates confidence-aware baselines from playable exact-date rows. The accepted loop is `recommendation #5 -> match #72 -> evaluation #76 with metric_confidence -> progress completed_matches=1`. Legacy `grenades`/`map` remain unaccepted for hard progress, progress wording after one match is rough, authenticated UI inspection was not available to Codex, and recommendation planner / verified top problem remains out of scope. |
-| Metrics | Accepted for personal `v0.7` / `PASS_WITH_WARNINGS` | Runtime registry defines source/formula/reliability/usage policy. Parser no longer silently maps early deaths to entry deaths. Playable match dates now have 17 exact rows, 2 approximate rows and 0 unknown rows; dashboard/stats/coach/report/recommendation/AI date-window paths use exact playable rows and expose confidence/date-window metadata. WP-015C1 added metric context caching to keep these surfaces performant. WP-015D accepted runtime guardrails with warnings: direct post-restart authenticated browser timings were not captured by Codex, existing recommendation baseline `#1` lacks stored confidence metadata, report-write acceptance is deferred, `/coach` artifact overview still loads many artifact rows, and weak metrics remain weak. |
+| Metrics | Accepted for personal `v0.7` / `PASS_WITH_WARNINGS` | Runtime registry defines source/formula/reliability/usage policy. Parser no longer silently maps early deaths to entry deaths. Playable match dates now have 18 exact rows, 2 approximate rows and 0 unknown rows; dashboard/stats/coach/report/recommendation/AI date-window paths use exact playable rows and expose confidence/date-window metadata. WP-015C1 added metric context caching to keep these surfaces performant. WP-015D accepted runtime guardrails with warnings: direct post-restart authenticated browser timings were not captured by Codex, existing recommendation baseline `#1` lacks stored confidence metadata, report-write acceptance is deferred, `/coach` artifact overview still loads many artifact rows, and weak metrics remain weak. |
 | AI coach | Partial, Stage 8 `PASS_WITH_WARNINGS` | Codex handoff, local LLM scaffold, payload snapshots and saved AI reports exist. Structured AI output validator rejects unsupported metric claims and falls back safely; prompt versioning/provider structured mode remain future work. |
 | Auth/security | Personal/VPS only, Stage 1 + Stage 2 app hardening exist | App-level API auth, CSRF, MVP rate limits, strong secret fail-fast, Steam OpenID verification and enforced single-owner mode exist. Stage 2 is `PASS_WITH_WARNINGS`: this is not full multi-user ownership, and legacy `link_steam_account(..., user_id=None)` remains a later Steam hardening risk. Observability remains a blocker for friends/public use. |
 | DB/migrations | WP-012 guardrails completed; Stage 3 scaffold exists, not full Alembic | Production DB test/smoke contamination guardrails exist; migration policy, schema inventory and safe copy-check tooling exist. Alembic baseline and migration ledger are not implemented yet. |
@@ -55,7 +55,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017A Roadmap v0.9-v1.0 Planning / Real Data Onboarding Diagnosis`.
+Current WP: `WP-017C First Bulk Import Batch`.
 
 Next Target Version: `v0.9`.
 
@@ -80,7 +80,8 @@ Current focus:
 13. WP-015A diagnosis and WP-015A1 repair completed historical match-date truth reconciliation without reset/resync, live Steam/API, parser jobs, schema changes or production file changes.
 14. WP-015B diagnosed metric correctness risks, WP-015C implemented metric confidence/date-window gating, WP-015C1 repaired the resulting raw-JSON parsing performance regression, and WP-015D accepted runtime metrics guardrails with warnings.
 15. WP-016A diagnosed the legacy recommendation state, WP-016B added the refresh foundation, WP-016C refreshed survival into confidence-aware active recommendation `#5`, WP-016E4 repaired/evaluated the post-import match loop for match `#72`, and WP-016F promoted Recommendation Loop Acceptance to `v0.8`.
-16. Next focus is WP-017A Roadmap v0.9-v1.0 Planning / Real Data Onboarding Diagnosis, without live import/parser jobs, demo downloads, production DB mutation, production demo file movement/deletion or schema changes unless a future WP explicitly authorizes them.
+16. WP-017A diagnosed Real Data Onboarding / Bulk Demo Usage for `v0.9`: current state is 72 matches, 20 playable parsed demos, 18 exact playable dates, about 3.8G uploads, about 17.07 GiB root free, accepted recommendation `#5` with one green evaluation, and all stored playable match modes remain unknown.
+17. WP-017B planned the first controlled bulk import batch runbook. Next focus is WP-017C First Bulk Import Batch, only with explicit live-run authorization, keeping `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, at most three one-demo attempts, backup/SHA/storage/service/job/recommendation checks around every attempt, and no cap raise, raw demo deletion/move, schema change or persistent app report generation.
 
 ## 4. Source-of-truth Documents
 
