@@ -6,19 +6,19 @@ This is the roadmap control view for versions after WP-011C. It links product ve
 
 ## Current Position
 
-- Current Product Version: `v0.4.1`
-- Current status: runtime/auth emergency repair was done manually and needs formal audit evidence.
-- Next active target: `v0.4.2`
-- Next active WP: `WP-012 DB Contamination Guardrails`
+- Current Product Version: `v0.5`
+- Current status: personal MVP runtime accepted with warnings by WP-013.
+- Next active target: `v0.6`
+- Next active WP: `WP-014 Import Acceptance`
 
 ## Roadmap
 
 | Version | Title | WP | Status | Purpose | Primary Guardians |
 |---|---|---|---|---|---|
-| `v0.4.1` | Runtime/Auth Emergency Repair | bugfix lane / evidence debt | done manually, needs formal audit evidence | Runtime/auth repair and operational freshness after the `/coach` stale-process incident. | `RUNTIME_GUARDIAN`, `DB_GUARDIAN`, `PM_ORCHESTRATOR` |
-| `v0.4.2` | DB Contamination Guardrails | `WP-012` | next active target | Prevent accidental production DB contamination from tests, imports, jobs, migrations and smoke checks. | `DB_GUARDIAN`, `TEST_GUARDIAN`, `IMPORT_GUARDIAN`, `RUNTIME_GUARDIAN` |
-| `v0.5` | Personal MVP Runtime Acceptance | `WP-013` | planned | Accept login/logout, dashboard, matches, `/coach`, reports and clean logs with no hidden live jobs. | `RUNTIME_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN` |
-| `v0.6` | Import Acceptance | `WP-014` | planned | Accept Steam/import/demo/matches/import_jobs/duplicates/errors without live-job ambiguity. | `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `TEST_GUARDIAN` |
+| `v0.4.1` | Runtime/Auth Emergency Repair | bugfix lane / evidence debt | done manually | Runtime/auth repair and operational freshness after the `/coach` stale-process incident. | `RUNTIME_GUARDIAN`, `DB_GUARDIAN`, `PM_ORCHESTRATOR` |
+| `v0.4.2` | DB Contamination Guardrails | `WP-012` | completed | Prevent accidental production DB contamination from tests, imports, jobs, migrations and smoke checks. | `DB_GUARDIAN`, `TEST_GUARDIAN`, `IMPORT_GUARDIAN`, `RUNTIME_GUARDIAN` |
+| `v0.5` | Personal MVP Runtime Acceptance | `WP-013` | completed / `PASS_WITH_WARNINGS` | Accept login/logout, dashboard, matches, `/coach`, reports and clean logs with no hidden live jobs. | `RUNTIME_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN` |
+| `v0.6` | Import Acceptance | `WP-014` | next active target | Accept Steam/import/demo/matches/import_jobs/duplicates/errors without live-job ambiguity. | `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `TEST_GUARDIAN` |
 | `v0.7` | Metrics Correctness | `WP-015` | planned | Establish golden fixtures, trusted metrics and explicit weak metric labels. | `METRICS_GUARDIAN`, `TEST_GUARDIAN`, `IMPORT_GUARDIAN` |
 | `v0.8` | Recommendation Loop Acceptance | `WP-016` | planned | Accept recommendation -> next match -> evaluation -> progress as a coherent coach loop. | `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN` |
 | `v0.9` | Personal Beta | `WP-017` | planned | Stable personal usage across real sessions on controlled VPS. | `PM_ORCHESTRATOR`, `RUNTIME_GUARDIAN`, `DB_GUARDIAN`, `TEST_GUARDIAN` |
@@ -38,4 +38,3 @@ This is the roadmap control view for versions after WP-011C. It links product ve
 - Docs map: `docs/project_management/DOCS_MAP.md`
 - Gate script: `scripts/project_gate.py`
 - Project handoff: `docs/HANDOFF.md`
-

@@ -4,12 +4,13 @@ Last updated: 2026-07-04.
 
 ## Current State
 
-- Current Product Version: `v0.4.1`
-- Current WP: `WP-012 DB Contamination Guardrails`
-- Next Target Version: `v0.4.2`
+- Current Product Version: `v0.5`
+- Current WP: `WP-014 Import Acceptance`
+- Next Target Version: `v0.6`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
-- Owner recovery state: production owner currently resolves to `justchrome88@yandex.ru` (`users.id=17`) after historical `test-*@example.test` and `smoke-*@example.test` users were manually deactivated and had password hashes cleared. Current reference DB SHA for WP-012 repair start: `50af6167e0c7b1db05088bef9649db8cf29a20442d6f382af2541271bd733030`.
+- Owner recovery state: production owner currently resolves to `justchrome88@yandex.ru` (`users.id=17`) after historical `test-*@example.test` and `smoke-*@example.test` users were manually deactivated and had password hashes cleared.
+- WP-013 runtime smoke: `PASS_WITH_WARNINGS`; service restart and read-only smoke passed on 2026-07-04 with DB SHA `0850e6a28b08e4150cff43e10fbd39f38bef3e3ca3e494ab5a534c22738a230d`. Full owner manual browser checklist remains operator evidence to record.
 
 ## Last Incident Summary
 
@@ -17,17 +18,17 @@ Last updated: 2026-07-04.
 
 ## Current Blockers
 
-- Production/friends readiness remains blocked by DB contamination guardrails, migration discipline hardening, operational visibility and release gates.
+- Production/friends readiness remains blocked by import acceptance, migration discipline hardening, operational visibility and release gates.
 - Recommendation planner / verified top problem is not implemented.
 - Parser, Steam, metrics and AI paths remain governed by confidence and no-live-job restrictions unless a WP explicitly authorizes them.
 
 ## Next WP
 
-`WP-012 DB Contamination Guardrails` targeting `v0.4.2`.
+`WP-014 Import Acceptance` targeting `v0.6`.
 
-The next active WP is still `WP-012 DB Contamination Guardrails`.
+The next active WP is `WP-014 Import Acceptance`.
 
-Expected focus: protect production DB/runtime data from accidental test, import, migration or job contamination. Do not implement schema changes or production mutations unless the WP explicitly authorizes them.
+Expected focus: accept Steam/import/demo/matches/import_jobs/duplicates/errors as controlled workflows. Do not run live Steam/import/parser jobs unless the WP explicitly authorizes them with DB SHA and backup evidence.
 
 Roadmap and WP wiring:
 
@@ -40,8 +41,6 @@ Roadmap and WP wiring:
 
 Next planned versions:
 
-- `v0.4.2`: `WP-012 DB Contamination Guardrails`
-- `v0.5`: `WP-013 Personal MVP Runtime Acceptance`
 - `v0.6`: `WP-014 Import Acceptance`
 - `v0.7`: `WP-015 Metrics Correctness`
 - `v0.8`: `WP-016 Recommendation Loop Acceptance`

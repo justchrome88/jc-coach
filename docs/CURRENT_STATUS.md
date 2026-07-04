@@ -2,11 +2,11 @@
 
 Last updated: 2026-07-04.
 
-Current Product Version: `v0.4.1`.
+Current Product Version: `v0.5`.
 
-Current WP: `WP-012 DB Contamination Guardrails`.
+Current WP: `WP-014 Import Acceptance`.
 
-Next Target Version: `v0.4.2`.
+Next Target Version: `v0.6`.
 
 The project is past the original `v0.1` CSV MVP. It is usable as a personal FastAPI CS2 coach on a controlled VPS, but it is not a secure friends/public product and not a fully validated AI coach.
 
@@ -32,6 +32,8 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 8 AI Output Validator completed / `PASS_WITH_WARNINGS`: structured AI output schema, Metric Truth validation, safe fallback and mocked tests exist without schema changes or live AI calls.
 - Stage 9 Coach-first UI completed / `PASS_WITH_WARNINGS`: `/coach` now presents current tracked recommendation, next-match action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status without schema changes or live jobs.
 - WP-011B Project OS completed: governance/tooling docs, guardian roles, handoff entrypoint and read-only `scripts/project_gate.py` exist.
+- WP-012 DB Contamination Guardrails completed: test/smoke email registration guardrails, pytest DB isolation checks and runtime smoke runbook updates exist.
+- WP-013 Personal MVP Runtime Smoke Gate completed / `PASS_WITH_WARNINGS`: service restart and read-only runtime smoke passed without 500s, unexpected DB mutation or hidden live jobs. Full owner browser checklist remains operator evidence to record after restart.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
@@ -46,7 +48,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 7 is not a production scheduler, durable Steam sync ledger, recommendation planner or UI redesign.
 - Stage 8 is not provider-specific structured response mode, prompt versioning, recommendation planner, ProblemSnapshot or UI redesign.
 - Stage 9 is UI presentation over existing persisted state/services, not recommendation planner, ProblemSnapshot or engine work.
-- Next hardening stage is `WP-012 DB Contamination Guardrails` targeting `v0.4.2`.
+- Next hardening stage is `WP-014 Import Acceptance` targeting `v0.6`.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
 - AI output validation exists, but prompt versioning and provider-specific structured response enforcement remain future work.
 - Auth/security is still personal/VPS only; observability and public/friends release gates are not complete.

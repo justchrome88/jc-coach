@@ -4,9 +4,9 @@ Short entrypoint for any new Codex pass or chat.
 
 ## Current State
 
-- Current Product Version: `v0.4.1`
-- Current WP: `WP-012 DB Contamination Guardrails`
-- Next Target Version: `v0.4.2`
+- Current Product Version: `v0.5`
+- Current WP: `WP-014 Import Acceptance`
+- Next Target Version: `v0.6`
 - Current gate: governance-controlled pass; no product logic or DB mutation without explicit WP authorization.
 
 ## Source Of Truth

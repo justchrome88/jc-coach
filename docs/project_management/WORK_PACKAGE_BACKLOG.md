@@ -11,7 +11,7 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-012` |
 | title | DB Contamination Guardrails |
 | target version | `v0.4.2` |
-| status | next active target |
+| status | completed / `PASS_WITH_WARNINGS` |
 | objective | Prevent accidental production DB/runtime data contamination from tests, imports, parser/Steam jobs, migrations and smoke checks. |
 | guardians | `DB_GUARDIAN`, `TEST_GUARDIAN`, `IMPORT_GUARDIAN`, `RUNTIME_GUARDIAN`, `PM_ORCHESTRATOR` |
 | source docs | `docs/BACKUP_RESTORE.md`, `docs/TESTING.md`, `docs/MIGRATIONS.md`, `docs/PROJECT_GOVERNANCE.md`, `docs/HANDOFF.md` |
@@ -28,14 +28,14 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-013` |
 | title | Personal MVP Runtime Acceptance |
 | target version | `v0.5` |
-| status | planned |
+| status | completed / `PASS_WITH_WARNINGS` |
 | objective | Accept the controlled personal runtime across login/logout, dashboard, matches, `/coach`, reports and clean logs with no hidden live jobs. |
 | guardians | `RUNTIME_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN`, `DB_GUARDIAN`, `PM_ORCHESTRATOR` |
 | source docs | `docs/DEPLOYMENT.md`, `docs/SECURITY.md`, `docs/TESTING.md`, `docs/audit/BUGFIX_001_COACH_RUNTIME_FAILURE_DIAGNOSIS.md`, `docs/project_management/ACCEPTANCE_MATRIX.md` |
 | forbidden actions | New features, broad UI redesign, live AI/Steam/import/parser jobs, production DB writes outside explicitly accepted runtime flows. |
 | acceptance criteria | Auth flow works; dashboard, matches, `/coach`, reports load; service logs are clean; runtime freshness is verified after deploy/restart; page loads do not start hidden jobs. |
 | required evidence | Service status, runtime smoke plan/results, log excerpts, DB SHA before/after smoke, safe tests for touched code, no-live-jobs statement. |
-| exit criteria | Personal runtime can be used safely on VPS with known warnings and no unresolved P0 runtime blockers. |
+| exit criteria | Personal runtime can be used safely on VPS with known warnings and no unresolved P0 runtime blockers. Full owner manual browser checklist remains operator evidence to record after restart. |
 | next WP | `WP-014 Import Acceptance` |
 
 ## WP-014
@@ -45,7 +45,7 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-014` |
 | title | Import Acceptance |
 | target version | `v0.6` |
-| status | planned |
+| status | next active target |
 | objective | Accept Steam/import/demo/matches/import_jobs/duplicates/errors as controlled workflows. |
 | guardians | `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `TEST_GUARDIAN`, `RUNTIME_GUARDIAN`, `PM_ORCHESTRATOR` |
 | source docs | `docs/STEAM_IMPORT.md`, `docs/DEMO_DEEP_PARSER_TZ_RU.md`, `docs/DEMO_STORAGE_TZ.md`, `docs/TESTING.md`, `docs/BACKUP_RESTORE.md` |
@@ -122,4 +122,3 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | required evidence | Full acceptance matrix, audit report, release checklist, DB/runtime/test evidence, limitation review. |
 | exit criteria | Trusted personal MVP is ready for serious personal use and controlled demo. |
 | next WP | post-`v1.0` planning |
-

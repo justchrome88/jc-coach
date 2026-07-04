@@ -21,11 +21,11 @@ The practical product question is:
 
 ## 2. Current Truth
 
-Current Product Version: `v0.4.1`.
+Current Product Version: `v0.5`.
 
-Current WP: `WP-012 DB Contamination Guardrails`.
+Current WP: `WP-014 Import Acceptance`.
 
-Next Target Version: `v0.4.2`.
+Next Target Version: `v0.6`.
 
 Current governance entrypoint: `docs/PROJECT_OS.md`.
 
@@ -42,24 +42,24 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | Deep DEM parser | Working foundation | Normalized parser tables and `swing_score` exist; raw `.dem` is still retained. |
 | Steam import | Working alpha path, Stage 7 `PASS_WITH_WARNINGS` | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor source/advance/outcome semantics are explicit and tested with mocked paths; durable scheduler/ledger and live retry operations still need later hardening. |
 | FACEIT import | Future | Do not implement before Steam/security/parser hardening unless explicitly reprioritized. |
-| Dashboard/matches/stats | Working MVP; Stage 9 coach-first `/coach` completed / `PASS_WITH_WARNINGS` | `/coach` now surfaces current tracked recommendation, next action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status. This is presentation over existing state, not recommendation planner. |
+| Dashboard/matches/stats | Working personal MVP runtime; WP-013 `PASS_WITH_WARNINGS` | `/coach` now surfaces current tracked recommendation, next action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status. Runtime restart and read-only smoke passed; full owner manual checklist remains operator evidence to record. |
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
 | Recommendations | Partial working loop, Stage 4 read/write split exists | Multi-category goals, lifecycle, evaluations and progress exist. GET/read paths no longer create recommendations/evaluations. Recommendations are not yet consistently generated from top verified problem snapshots. |
 | Metrics | Metric Truth Layer exists, Stage 5 `PASS_WITH_WARNINGS`; parser confidence Stage 6 `PASS_WITH_WARNINGS` | Runtime registry defines source/formula/reliability/usage policy. Parser no longer silently maps early deaths to entry deaths; trade/side/utility facts still need deeper validation before weak metrics can be upgraded. |
 | AI coach | Partial, Stage 8 `PASS_WITH_WARNINGS` | Codex handoff, local LLM scaffold, payload snapshots and saved AI reports exist. Structured AI output validator rejects unsupported metric claims and falls back safely; prompt versioning/provider structured mode remain future work. |
 | Auth/security | Personal/VPS only, Stage 1 + Stage 2 app hardening exist | App-level API auth, CSRF, MVP rate limits, strong secret fail-fast, Steam OpenID verification and enforced single-owner mode exist. Stage 2 is `PASS_WITH_WARNINGS`: this is not full multi-user ownership, and legacy `link_steam_account(..., user_id=None)` remains a later Steam hardening risk. Observability remains a blocker for friends/public use. |
-| DB/migrations | Stage 3 scaffold exists, not full Alembic | Migration policy, schema inventory and safe copy-check tooling exist. Alembic baseline and migration ledger are not implemented yet. |
+| DB/migrations | WP-012 guardrails completed; Stage 3 scaffold exists, not full Alembic | Production DB test/smoke contamination guardrails exist; migration policy, schema inventory and safe copy-check tooling exist. Alembic baseline and migration ledger are not implemented yet. |
 | Demo storage lifecycle | Observe-only | Storage report and manifest exist. Raw `.dem` deletion is disabled until parsed payload verification is defined and implemented. |
 
 ## 3. Current Milestone
 
-Current Product Version: `v0.4.1`.
+Current Product Version: `v0.5`.
 
-Current WP: `WP-012 DB Contamination Guardrails`.
+Current WP: `WP-014 Import Acceptance`.
 
-Next Target Version: `v0.4.2`.
+Next Target Version: `v0.6`.
 
-Previous stabilization stages remain historical evidence for the product state. The immediate next pass should protect production DB/runtime data from accidental test, import, migration or job contamination before broader acceptance work.
+Previous stabilization stages remain historical evidence for the product state. WP-012 DB Contamination Guardrails and WP-013 Personal MVP Runtime Smoke Gate are complete with warnings. The immediate next pass should accept import workflows without live-job ambiguity.
 
 Canonical milestone doc: `docs/CURRENT_MILESTONE.md`.
 
