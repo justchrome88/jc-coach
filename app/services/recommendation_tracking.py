@@ -107,23 +107,30 @@ def evaluate_new_matches(db: Session) -> list[MatchRecommendationEvaluation]:
     matches = _ordered_matches(db)
     evaluations = []
     for recommendation in recommendations:
-        if recommendation_needs_refresh(db, recommendation):
-            continue
-        baseline_ids = set(json.loads(recommendation.baseline_match_ids_json or "[]"))
-        evaluated_ids = set(
-            db.scalars(
-                select(MatchRecommendationEvaluation.match_id).where(
-                    MatchRecommendationEvaluation.recommendation_id == recommendation.id
-                )
-            ).all()
-        )
         for match in matches:
-            if match.id in baseline_ids or match.id in evaluated_ids:
-                continue
-            if recommendation.start_after_match_id is not None and match.id <= recommendation.start_after_match_id:
-                continue
-            evaluations.append(evaluate_match(db, recommendation, match))
+            if _recommendation_can_evaluate_match(db, recommendation, match):
+                evaluations.append(evaluate_match(db, recommendation, match))
 
+    if evaluations:
+        db.commit()
+        for evaluation in evaluations:
+            db.refresh(evaluation)
+    return evaluations
+
+
+def evaluate_recommendations_for_match(db: Session, match_id: int) -> list[MatchRecommendationEvaluation]:
+    recommendations = ensure_default_recommendations(db)
+    if not recommendations:
+        return []
+    match = next((item for item in _ordered_matches(db) if item.id == match_id), None)
+    if match is None:
+        return []
+
+    evaluations = [
+        evaluate_match(db, recommendation, match)
+        for recommendation in recommendations
+        if _recommendation_can_evaluate_match(db, recommendation, match)
+    ]
     if evaluations:
         db.commit()
         for evaluation in evaluations:
@@ -152,6 +159,23 @@ def evaluate_match(
     )
     db.add(evaluation)
     return evaluation
+
+
+def _recommendation_can_evaluate_match(db: Session, recommendation: CoachRecommendation, match: Match) -> bool:
+    if recommendation_needs_refresh(db, recommendation):
+        return False
+    baseline_ids = set(json.loads(recommendation.baseline_match_ids_json or "[]"))
+    if match.id in baseline_ids:
+        return False
+    if recommendation.start_after_match_id is not None and match.id <= recommendation.start_after_match_id:
+        return False
+    existing = db.scalar(
+        select(MatchRecommendationEvaluation.id).where(
+            MatchRecommendationEvaluation.recommendation_id == recommendation.id,
+            MatchRecommendationEvaluation.match_id == match.id,
+        )
+    )
+    return existing is None
 
 
 def list_active_recommendations(db: Session) -> list[CoachRecommendation]:

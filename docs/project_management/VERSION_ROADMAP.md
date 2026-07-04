@@ -7,7 +7,7 @@ This is the roadmap control view for versions after WP-011C. It links product ve
 ## Current Position
 
 - Current Product Version: `v0.7`
-- Current status: WP-016 recommendation loop acceptance in progress after controlled survival refresh.
+- Current status: WP-016 recommendation loop acceptance repaired/evaluated; promotion to `v0.8` pending.
 - Next active target: `v0.8`
 - Next active WP: `WP-016 Recommendation Loop Acceptance`
 
@@ -20,7 +20,7 @@ This is the roadmap control view for versions after WP-011C. It links product ve
 | `v0.5` | Personal MVP Runtime Acceptance | `WP-013` | completed / `PASS_WITH_WARNINGS` | Accept login/logout, dashboard, matches, `/coach`, reports and clean logs with no hidden live jobs. | `RUNTIME_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN` |
 | `v0.6` | Import Acceptance | `WP-014` | completed / `PASS_WITH_WARNINGS` | Accept Steam/import/demo/matches/import_jobs/duplicates/errors without live-job ambiguity. | `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `TEST_GUARDIAN` |
 | `v0.7` | Metrics Correctness | `WP-015` | completed / `PASS_WITH_WARNINGS` | Establish golden fixtures, trusted metrics, exact-date window gating and explicit weak metric labels. | `METRICS_GUARDIAN`, `TEST_GUARDIAN`, `IMPORT_GUARDIAN` |
-| `v0.8` | Recommendation Loop Acceptance | `WP-016` | in progress | Accept recommendation -> next match -> evaluation -> progress as a coherent coach loop. WP-016B added legacy detection/refresh foundation and WP-016C refreshed survival; runtime loop acceptance is pending. | `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN` |
+| `v0.8` | Recommendation Loop Acceptance | `WP-016` | pending promotion | Accept recommendation -> next match -> evaluation -> progress as a coherent coach loop. WP-016E4 repaired and evaluated the primary survival loop for match `#72`; promotion report remains. | `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN` |
 | `v0.9` | Personal Beta | `WP-017` | planned | Stable personal usage across real sessions on controlled VPS. | `PM_ORCHESTRATOR`, `RUNTIME_GUARDIAN`, `DB_GUARDIAN`, `TEST_GUARDIAN` |
 | `v1.0` | Trusted MVP | `WP-018` | planned | Core loop trusted enough for serious personal use and demo. | all guardians |
 

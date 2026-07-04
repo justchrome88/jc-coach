@@ -5,7 +5,7 @@ Last updated: 2026-07-04.
 ## Current State
 
 - Current Product Version: `v0.7`
-- Current WP: `WP-016 Recommendation Loop Acceptance` in progress; survival recommendation `#5` is armed and waiting for a post-refresh playable exact-date match.
+- Current WP: `WP-016 Recommendation Loop Acceptance` repaired/evaluated; promotion to `v0.8` remains a separate status WP.
 - Next Target Version: `v0.8`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -34,6 +34,7 @@ Last updated: 2026-07-04.
 - WP-016E controlled next-match evaluation attempt failed safely before download/import/parser work. A DB backup was created, then one service-level `import_all_available_steam_matches(db)` attempt created job `#22` and stopped at `storage_preflight_failed` because the shell process resolved `temp_dir` to `/tmp`, not the systemd `TMPDIR=/opt/jc-coach/data/tmp`. Counts remained 5 recommendations, 75 evaluations, 0 reports; recommendation `#5` still has 0 evaluations.
 - WP-016E2 controlled next-match evaluation retry completed as `BLOCKED_NO_NEW_MATCH`. A DB backup was created, then one service-level `import_all_available_steam_matches(db)` attempt was run with explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp`. Parent job `#23` and child sync job `#24` succeeded with `overall_outcome=no_new`; no demo was downloaded, no parser/evaluation/report ran, and recommendation `#5` still has 0 evaluations.
 - WP-016E3 controlled next-match evaluation after a real Competitive match completed as `FAILED`. A DB backup was created, then one guarded service-level import was run with explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp`. Parent job `#25` and child sync job `#26` succeeded; exactly one new Dust2 demo was retained and parsed as playable exact-date match `#72`. The recommendation loop did not complete because recommendation `#5` still has 0 evaluations and progress remains waiting.
+- WP-016E4 post-import recommendation evaluation repair completed / `REPAIRED_AND_EVALUATED`. The parser/import completion path now evaluates the specific newly imported match through `evaluate_recommendations_for_match(...)`. After backup, a controlled production evaluation for existing match `#72` created evaluation `#76` for recommendation `#5` with `metric_confidence`; progress now has 1 completed match and legacy recommendations `#1/#3/#4` received no new evaluations.
 
 ## Last Incident Summary
 
@@ -49,7 +50,7 @@ Last updated: 2026-07-04.
 
 `WP-016 Recommendation Loop Acceptance` targeting `v0.8`.
 
-WP-016 has started. The survival loop is armed and the first real post-refresh match now exists as playable exact-date Dust2 match `#72`, but v0.8 cannot be promoted until recommendation `#5` receives an evaluation with `metric_confidence` and progress updates. Next repair should focus narrowly on the missing post-import recommendation evaluation trigger; do not run additional live Steam/import/parser work unless explicitly authorized.
+WP-016 has completed the primary survival loop evidence: recommendation `#5` -> playable exact-date Dust2 match `#72` -> evaluation `#76` with `metric_confidence` -> progress update. Next WP should be a documentation/status promotion decision for `v0.8`; do not run additional live Steam/import/parser work unless explicitly authorized.
 
 Expected focus: accept recommendation -> next match -> evaluation -> progress as a coherent loop using the accepted v0.7 metric confidence rules. Do not run live Steam/import/parser work unless a future WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
 

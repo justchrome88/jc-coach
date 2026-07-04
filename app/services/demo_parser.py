@@ -24,7 +24,7 @@ from app.db.models import (
     Match,
 )
 from app.services.demo_retention import retention_metadata
-from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_new_matches
+from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_recommendations_for_match
 from app.services.steam_match_metadata import apply_steam_metadata_to_parsed_demo
 
 PARSER_PAYLOAD_VERSION = "2026-07-02.1"
@@ -141,12 +141,22 @@ def import_demo_file(
     db.refresh(match)
     _save_demo_parse_artifacts(db, match, parsed)
     ensure_default_recommendation(db)
-    evaluate_new_matches(db)
+    recommendation_evaluations = evaluate_recommendations_for_match(db, match.id)
     return {
         "imported": 1,
         "skipped_duplicates": 0,
         "errors": 0,
         "match_id": match.id,
+        "recommendation_evaluations": [
+            {
+                "id": evaluation.id,
+                "recommendation_id": evaluation.recommendation_id,
+                "match_id": evaluation.match_id,
+                "status": evaluation.status,
+                "score": evaluation.score,
+            }
+            for evaluation in recommendation_evaluations
+        ],
         "player": parsed["player"],
         "stored_path": str(stored_path),
         "match": parsed["match"],

@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from sqlalchemy import select
 
@@ -8,6 +9,7 @@ from app.services.metric_confidence import is_exact_date_match, metric_context
 from app.services.recommendation_tracking import (
     ensure_default_recommendation,
     evaluate_new_matches,
+    evaluate_recommendations_for_match,
     extend_recommendation_target,
     get_active_recommendation_progress,
     get_all_recommendation_progress,
@@ -147,6 +149,85 @@ def test_evaluate_new_matches_skips_legacy_active_recommendation(db):
     assert db.query(MatchRecommendationEvaluation).count() == before
 
 
+def test_evaluate_recommendations_for_match_evaluates_eligible_match_after_anchor(db):
+    baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
+    import_rows(db, baseline_rows, source="baseline")
+    recommendation = ensure_default_recommendation(db)
+    assert recommendation is not None
+
+    match = _add_match(db, 20, source="new", entry_deaths=2, early_deaths=2, kast=76, adr=82)
+
+    evaluations = evaluate_recommendations_for_match(db, match.id)
+
+    survival_evaluation = next(item for item in evaluations if item.recommendation_id == recommendation.id)
+    evidence = json.loads(survival_evaluation.evidence_json)
+    assert survival_evaluation.match_id == match.id
+    assert survival_evaluation.status == "green"
+    assert "metric_confidence" in evidence
+
+
+def test_evaluate_recommendations_for_match_respects_start_after_and_baseline_filters(db):
+    baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
+    import_rows(db, baseline_rows, source="baseline")
+    recommendation = ensure_default_recommendation(db)
+    assert recommendation is not None
+    baseline_id = json.loads(recommendation.baseline_match_ids_json)[-1]
+
+    baseline_evaluations = evaluate_recommendations_for_match(db, baseline_id)
+
+    assert baseline_evaluations == []
+
+
+def test_evaluate_recommendations_for_match_skips_legacy_recommendation(db):
+    baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
+    import_rows(db, baseline_rows, source="baseline")
+    recommendation = ensure_default_recommendation(db)
+    assert recommendation is not None
+    recommendation.baseline_metrics_json = json.dumps({"matches_count": 15, "entry_deaths_per_match": 4})
+    db.commit()
+
+    match = _add_match(db, 20, source="new", entry_deaths=2, early_deaths=2, kast=76, adr=82)
+    before = db.query(MatchRecommendationEvaluation).count()
+
+    evaluations = evaluate_recommendations_for_match(db, match.id)
+
+    assert all(evaluation.recommendation_id != recommendation.id for evaluation in evaluations)
+    assert (
+        db.query(MatchRecommendationEvaluation)
+        .filter(
+            MatchRecommendationEvaluation.recommendation_id == recommendation.id,
+            MatchRecommendationEvaluation.match_id == match.id,
+        )
+        .count()
+        == 0
+    )
+    assert db.query(MatchRecommendationEvaluation).count() >= before
+
+
+def test_evaluate_recommendations_for_match_does_not_duplicate_evaluation(db):
+    baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
+    import_rows(db, baseline_rows, source="baseline")
+    recommendation = ensure_default_recommendation(db)
+    assert recommendation is not None
+
+    match = _add_match(db, 20, source="new", entry_deaths=2, early_deaths=2, kast=76, adr=82)
+
+    first = evaluate_recommendations_for_match(db, match.id)
+    second = evaluate_recommendations_for_match(db, match.id)
+
+    assert any(item.recommendation_id == recommendation.id for item in first)
+    assert second == []
+    assert (
+        db.query(MatchRecommendationEvaluation)
+        .filter(
+            MatchRecommendationEvaluation.recommendation_id == recommendation.id,
+            MatchRecommendationEvaluation.match_id == match.id,
+        )
+        .count()
+        == 1
+    )
+
+
 def test_progress_summary_counts_statuses(db):
     baseline_rows = [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)]
     import_rows(db, baseline_rows, source="baseline")
@@ -277,3 +358,48 @@ def _row(index: int, entry_deaths: int, early_deaths: int, kast: float, adr: flo
         "utility_damage": 70,
         "flash_assists": 1,
     }
+
+
+def _add_match(
+    db,
+    index: int,
+    *,
+    source: str = "demo",
+    entry_deaths: int,
+    early_deaths: int,
+    kast: float,
+    adr: float,
+) -> Match:
+    played_at = datetime.fromisoformat(f"2026-06-{index + 1:02d}T12:00:00")
+    match = Match(
+        source=source,
+        external_match_id=f"{source}-{index}",
+        played_at=played_at,
+        map_name="Mirage",
+        result="win",
+        rounds_for=13,
+        rounds_against=10,
+        kills=20,
+        deaths=16,
+        assists=4,
+        kd=1.25,
+        adr=adr,
+        kast=kast,
+        rating=1.05,
+        entry_kills=2,
+        entry_deaths=entry_deaths,
+        early_deaths=early_deaths,
+        utility_damage=70,
+        flash_assists=1,
+        raw_json=json.dumps(
+            {
+                "match_date_status": "exact_match_date_available",
+                "match_date_source": "steam_gc_match_time",
+                "played_at_source": "steam_gc_match_time",
+            }
+        ),
+    )
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    return match
