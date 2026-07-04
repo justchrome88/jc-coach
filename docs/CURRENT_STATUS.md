@@ -4,7 +4,7 @@ Last updated: 2026-07-04.
 
 Current Product Version: `v0.5`.
 
-Current WP: `WP-014D2 Parent Checkpoints and Interruption Repair` completed; next is `WP-014D3 Operator Stale Job Repair and Repeat Acceptance Prep`.
+Current WP: `WP-014D3 Operator Stale Job Repair` completed; next is `WP-014C2 Repeat One-Button Live Import Acceptance`.
 
 Next Target Version: `v0.6`.
 
@@ -39,12 +39,13 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - WP-014B3 demo retention policy completed: raw demos are retained by default under `retain_raw_for_parser_development`, retention metadata is recorded for successful/failed demo imports, and storage reporting includes read-only file/DB consistency classification.
 - WP-014D1 Steam import storage guard/batch cap repair completed: one-button demo downloads now have configurable disk preflight, per-run demo cap, per-job byte budget, per-demo byte guard, preserve-free checks and streamed download byte counting.
 - WP-014D2 Steam import parent checkpoint/interruption repair completed: parent `steam_import_all` jobs now persist bounded progress checkpoints, stale running parent jobs are marked failed/interrupted at queue time before a new parent is created, non-stale running jobs remain blocking, soft background interruption marking is best-effort, startup stale repair is opt-in, and explicit operator repair for production job `#15` is available through `scripts/repair_stale_steam_import_job.py`.
+- WP-014D3 Steam import operator stale job repair completed: production `import_jobs.id=15` was backed up and marked `failed/interrupted`; only job `#15` changed logically, no live Steam/import/parser work ran, and `data/uploads` stayed unchanged.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
 
 - Parser-derived metric confidence is documented and partially hardened, but trade/KAST side/utility facts still need deeper validation before upgrading weak metrics.
-- Steam import works as an alpha path with deterministic cursor semantics, repaired job truth/status taxonomy, repaired exact match-date truth, explicit retain-raw policy, WP-014D1 storage/batch guards and WP-014D2 parent checkpoint/stale handling. WP-014C live one-button acceptance still blocks promotion because production job `#15` remains stale until an explicit operator repair step is authorized and repeat live acceptance has not been rerun.
+- Steam import works as an alpha path with deterministic cursor semantics, repaired job truth/status taxonomy, repaired exact match-date truth, explicit retain-raw policy, WP-014D1 storage/batch guards, WP-014D2 parent checkpoint/stale handling and WP-014D3 stale job repair. WP-014C live one-button acceptance still blocks promotion because repeat live acceptance has not been rerun after the safety repairs.
 - Stage 2 ownership is single-owner mode, not full multi-user SaaS ownership across all core tables.
 - Legacy `link_steam_account(..., user_id=None)` remains an internal Steam hardening risk, but it is not reachable from public OpenID callback without owner session.
 - Stage 3 migration discipline is scaffold-level, not a full Alembic baseline or production migration ledger.
@@ -53,7 +54,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 7 is not a production scheduler, durable Steam sync ledger, recommendation planner or UI redesign.
 - Stage 8 is not provider-specific structured response mode, prompt versioning, recommendation planner, ProblemSnapshot or UI redesign.
 - Stage 9 is UI presentation over existing persisted state/services, not recommendation planner, ProblemSnapshot or engine work.
-- Next hardening stage is `WP-014D3 Operator Stale Job Repair and Repeat Acceptance Prep` before a repeat `v0.6` live acceptance attempt.
+- Next hardening stage is `WP-014C2 Repeat One-Button Live Import Acceptance`, with explicit live-job authorization and DB/disk evidence.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
 - AI output validation exists, but prompt versioning and provider-specific structured response enforcement remain future work.
 - Auth/security is still personal/VPS only; observability and public/friends release gates are not complete.
@@ -64,5 +65,5 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Public beta.
 - FACEIT import.
 - Raw `.dem` deletion.
-- One-button Steam import promotion to `v0.6` until stale production job `#15` is explicitly repaired and a repeat live acceptance is explicitly authorized and passed.
+- One-button Steam import promotion to `v0.6` until repeat live acceptance is explicitly authorized and passed after WP-014D1/D2/D3 repairs.
 - Payments, viewer, heatmaps, clips, practice servers or social features.

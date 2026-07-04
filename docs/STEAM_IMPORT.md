@@ -83,7 +83,7 @@ Operator repair for WP-014C job `#15` is intentionally explicit. Before repair, 
 python3 scripts/repair_stale_steam_import_job.py --job-id 15 --i-have-backup --confirm-interrupt
 ```
 
-The helper refuses to run without the backup/confirmation flags, updates only the selected stale running `steam_import_all` job, and writes `overall_outcome: interrupted` with `statuses: ["interrupted"]`.
+WP-014D3 executed that explicit operator repair for production job `#15` with backup/SHA evidence. Job `#15` is now `failed` with `overall_outcome: interrupted` and `statuses: ["interrupted"]`; backup is `data/manual_backups/cs2_coach_before_wp014d3_repair_job15_20260704_183815.db`. Only job `#15` changed logically. No live Steam/import/parser work ran, no production demo files were deleted or moved, and `data/uploads` remained `3.1G`.
 
 Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
 
@@ -134,8 +134,8 @@ Stage 7 does not add a durable scheduler or retry ledger. Current retry policy i
 - Stale cursor can point behind already imported history.
 - Valve replay URLs can expire or return transient 502/404/410.
 - Durable retry/backoff, scheduler behavior and a sync ledger still need hardening.
-- One-button live import now has storage budget, batch caps, parent checkpoints and stale/interrupted job handling, but these repairs have only mocked/local test coverage so far.
-- Production job `#15` remains stale until an explicit operator repair step is authorized and run with backup/SHA evidence.
+- One-button live import now has storage budget, batch caps, parent checkpoints and stale/interrupted job handling, but these repairs have only mocked/local test coverage plus the WP-014D3 operator repair evidence so far.
+- Production job `#15` no longer blocks future one-button queueing; repeat live acceptance still has not been rerun.
 - Hard process kill can still stop work before in-process interruption marking runs; queue-time stale repair is the durable recovery path.
 - Steam OpenID network verification can fail closed if Steam is unreachable.
 - Low-level helper `link_steam_account(..., user_id=None)` still supports legacy Steam-only user creation for old service paths; public OpenID callback no longer uses this path without owner.

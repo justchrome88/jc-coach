@@ -5,7 +5,7 @@ Last updated: 2026-07-04.
 ## Current State
 
 - Current Product Version: `v0.5`
-- Current WP: `WP-014D2 Parent Checkpoints and Interruption Repair` completed; next is explicit operator repair/acceptance prep.
+- Current WP: `WP-014D3 Operator Stale Job Repair` completed; next is repeat live acceptance prep.
 - Next Target Version: `v0.6`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -18,6 +18,7 @@ Last updated: 2026-07-04.
 - WP-014C one-button live acceptance: `FAIL`. One authorized click on `/settings/imports` -> `POST /settings/imports/pull-all` created `steam_import_all` job `#15` and `match_history_sync` job `#16`. The parent job stayed `running` with null `result_json`, downloaded/retained raw demos grew `data/uploads` from `68K` to `3.1G`, root free space fell to `508M`, graceful restart hung waiting for background tasks, and a force kill was required to protect disk. No production files were deleted and no code/schema changes were made. Report: `docs/audit/WP_014C_ONE_BUTTON_LIVE_IMPORT_ACCEPTANCE_REPORT.md`.
 - WP-014D1 storage guard/batch cap repair: completed without live Steam/import/parser jobs, production DB mutation or production file cleanup. Added configurable disk preflight, per-run demo cap, per-job byte budget, per-demo max size, preserve-free checks before download/decompression/upload copy, streamed download with byte counting, and budget-aware result statuses.
 - WP-014D2 parent checkpoint/interruption repair: completed without live Steam/import/parser jobs, production DB mutation or production file cleanup. Parent `steam_import_all` jobs now commit bounded progress checkpoints, queue-time stale running parent jobs are marked failed/interrupted before a new one is queued, non-stale running jobs remain blocking, startup repair is available but disabled by default, and `scripts/repair_stale_steam_import_job.py` provides explicit operator repair for job `#15` after backup/SHA evidence.
+- WP-014D3 operator stale job repair: completed with backup/SHA evidence. Production `import_jobs.id=15` was the only logical `import_jobs` row changed; it is now `failed` with `result_json.overall_outcome="interrupted"`. No live Steam/import/parser job ran, and no production demo files were deleted or moved. Report: `docs/audit/WP_014D3_OPERATOR_REPAIR_STALE_JOB15_REPORT.md`.
 
 ## Last Incident Summary
 
@@ -31,11 +32,11 @@ Last updated: 2026-07-04.
 
 ## Next WP
 
-`WP-014D3 Operator Stale Job Repair and Repeat Acceptance Prep` targeting explicit production job `#15` repair and a repeatable `v0.6` import acceptance attempt.
+`WP-014C2 Repeat One-Button Live Import Acceptance` targeting a guarded repeat `v0.6` import acceptance attempt.
 
-The next active WP is `WP-014D3 Operator Stale Job Repair and Repeat Acceptance Prep`.
+The next active WP is `WP-014C2 Repeat One-Button Live Import Acceptance`.
 
-Expected focus: explicitly back up production DB, record before/after SHA, run the operator repair helper for stale job `#15` only if authorized, verify status/result_json, and prepare repeat live acceptance. Do not run another live Steam/import/parser job unless the WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
+Expected focus: explicitly authorize a repeat one-button live import, record DB SHA and disk state before/after, confirm storage guard settings, monitor parent checkpoints/result_json, and verify no unbounded downloads. Do not run live Steam/import/parser work unless the WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
 
 Roadmap and WP wiring:
 
