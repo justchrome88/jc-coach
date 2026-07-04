@@ -74,6 +74,26 @@ def test_coach_page_displays_current_tracked_recommendation_without_verified_top
     assert "Last evaluation" in response.text
 
 
+def test_coach_page_labels_legacy_recommendation_as_needing_refresh():
+    _seed_recommendation(with_evaluation=False)
+    with SessionLocal() as session:
+        recommendation = session.query(CoachRecommendation).filter_by(category="survival").one()
+        recommendation.baseline_metrics_json = json.dumps({"matches_count": 15, "entry_deaths_per_match": 4})
+        session.commit()
+
+    with TestClient(app) as client:
+        _register_owner(client)
+        response = client.get("/coach")
+
+    assert response.status_code == 200
+    assert "needs_refresh" in response.text
+    assert (
+        "Legacy recommendation: refresh this category before treating progress as accepted coach evidence."
+        in response.text
+    )
+    assert "Historical/unverified evaluations are shown for audit only." in response.text
+
+
 def test_coach_page_surfaces_metric_truth_warning_labels_for_weak_metrics():
     _seed_recommendation(with_evaluation=False)
 

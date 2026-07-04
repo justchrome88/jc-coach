@@ -255,6 +255,7 @@ def _serialize_recommendation_progress(progress: dict[str, Any] | None) -> dict[
         "id": recommendation.id,
         "title": recommendation.title,
         "status": recommendation.status,
+        "health": progress.get("health") or {},
         "baseline": progress["baseline"],
         "target": progress["target"],
         "counts": progress["counts"],

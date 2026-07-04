@@ -815,6 +815,12 @@ def _current_recommendation_card(recommendation_progress: dict | None) -> dict:
         "available": True,
         "label": "Current tracked recommendation",
         "not_planner_label": "Это текущая отслеживаемая цель, не verified top problem.",
+        "health": recommendation_progress.get("health") or {},
+        "legacy_label": (recommendation_progress.get("health") or {}).get("label"),
+        "needs_refresh": bool((recommendation_progress.get("health") or {}).get("needs_refresh")),
+        "accepted_for_hard_progress": bool(
+            (recommendation_progress.get("health") or {}).get("accepted_for_hard_progress", True)
+        ),
         "category": category,
         "title": recommendation.title,
         "description": recommendation.description,

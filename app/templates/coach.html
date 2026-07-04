@@ -31,9 +31,17 @@
   <div class="coach-first-grid">
     <div>
       <span class="source-badge">{{ coach_ui.current.category }}</span>
+      {% if coach_ui.current.needs_refresh %}
+      <span class="status-badge confidence-low">needs_refresh</span>
+      {% endif %}
       <h3>{{ coach_ui.current.title }}</h3>
       <p>{{ coach_ui.current.description }}</p>
       <p class="muted">{{ coach_ui.current.not_planner_label }}</p>
+      {% if coach_ui.current.needs_refresh %}
+      <p class="warning-text">
+        Legacy recommendation: refresh this category before treating progress as accepted coach evidence.
+      </p>
+      {% endif %}
       <div class="next-action">
         <span>Следующий матч</span>
         <strong>{{ coach_ui.current.next_action }}</strong>
@@ -42,6 +50,9 @@
         {{ coach_ui.current.completed_matches }}/{{ coach_ui.current.target_matches }}
         матчей · score {{ coach_ui.current.progress_score }}/100
       </p>
+      {% if not coach_ui.current.accepted_for_hard_progress %}
+      <p class="muted">Historical/unverified evaluations are shown for audit only.</p>
+      {% endif %}
       <p>{{ coach_ui.current.summary }}</p>
     </div>
     <div class="goal-counts">

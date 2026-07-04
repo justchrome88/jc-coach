@@ -87,6 +87,9 @@
   <div class="coach-preview-row">
     <div>
       <h3>{{ recommendation_progress.recommendation.title }}</h3>
+      {% if recommendation_progress.health and recommendation_progress.health.needs_refresh %}
+      <p class="warning-text">Legacy recommendation: refresh required before using progress as coach evidence.</p>
+      {% endif %}
       <p>{{ recommendation_progress.summary }}</p>
     </div>
     <strong>{{ recommendation_progress.completed_matches }}/{{ recommendation_progress.target_matches }}</strong>

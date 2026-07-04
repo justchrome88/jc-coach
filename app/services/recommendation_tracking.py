@@ -9,7 +9,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import CoachRecommendation, Match, MatchRecommendationEvaluation
-from app.services.match_queries import NON_PLAYABLE_MATCH_SOURCES, playable_match_select
+from app.services.match_queries import NON_PLAYABLE_MATCH_SOURCES, is_playable_match, playable_match_select
 from app.services.metric_confidence import (
     exact_date_window_metadata,
     exact_recent_matches,
@@ -107,6 +107,8 @@ def evaluate_new_matches(db: Session) -> list[MatchRecommendationEvaluation]:
     matches = _ordered_matches(db)
     evaluations = []
     for recommendation in recommendations:
+        if recommendation_needs_refresh(db, recommendation):
+            continue
         baseline_ids = set(json.loads(recommendation.baseline_match_ids_json or "[]"))
         evaluated_ids = set(
             db.scalars(
@@ -202,6 +204,90 @@ def get_all_evaluations_by_match_id(db: Session) -> dict[int, list[MatchRecommen
     return grouped
 
 
+def recommendation_needs_refresh(db: Session, recommendation: CoachRecommendation) -> bool:
+    return recommendation_health(db, recommendation)["needs_refresh"]
+
+
+def is_legacy_recommendation(db: Session, recommendation: CoachRecommendation) -> bool:
+    return recommendation_needs_refresh(db, recommendation)
+
+
+def recommendation_health(db: Session, recommendation: CoachRecommendation) -> dict[str, Any]:
+    baseline = _json_dict(recommendation.baseline_metrics_json)
+    target = _json_dict(recommendation.target_metrics_json)
+    baseline_ids = _json_list(recommendation.baseline_match_ids_json)
+    success_rules = [str(item) for item in _json_list(recommendation.success_rules_json)]
+    failure_rules = [str(item) for item in _json_list(recommendation.failure_rules_json)]
+
+    reasons: list[str] = []
+    baseline_match_sources: dict[int, str | None] = {}
+    baseline_non_playable_ids: list[int] = []
+    missing_baseline_ids: list[int] = []
+
+    if not isinstance(baseline.get("confidence"), dict):
+        reasons.append("baseline_missing_confidence")
+
+    for match_id in baseline_ids:
+        if not isinstance(match_id, int):
+            reasons.append("baseline_match_ids_invalid")
+            continue
+        match = db.get(Match, match_id)
+        if match is None:
+            missing_baseline_ids.append(match_id)
+            continue
+        baseline_match_sources[match_id] = match.source
+        if not is_playable_match(match):
+            baseline_non_playable_ids.append(match_id)
+
+    if baseline_non_playable_ids:
+        reasons.append("baseline_contains_non_playable_matches")
+    if missing_baseline_ids:
+        reasons.append("baseline_contains_missing_matches")
+
+    required_keys = _required_baseline_metric_keys(recommendation.category)
+    empty_required = [key for key in required_keys if baseline.get(key) is None]
+    if empty_required:
+        reasons.append("baseline_required_metrics_empty")
+
+    if target and any(value == "need data" for value in target.values()):
+        reasons.append("target_metrics_need_data")
+
+    evaluation_payloads = list(
+        db.scalars(
+            select(MatchRecommendationEvaluation.evidence_json).where(
+                MatchRecommendationEvaluation.recommendation_id == recommendation.id
+            )
+        ).all()
+    )
+    has_legacy_evaluations = any(
+        not isinstance(_json_dict(payload).get("metric_confidence"), dict)
+        for payload in evaluation_payloads
+    )
+    if evaluation_payloads and has_legacy_evaluations:
+        reasons.append("evaluations_missing_metric_confidence")
+
+    hard_rule_metrics = _hard_rule_metric_warnings(success_rules + failure_rules)
+    if hard_rule_metrics:
+        reasons.append("rules_use_weak_metrics_as_hard_evidence")
+
+    reasons = sorted(set(reasons))
+    return {
+        "legacy": bool(reasons),
+        "needs_refresh": bool(reasons),
+        "accepted_for_hard_progress": not reasons,
+        "status": "needs_refresh" if reasons else "accepted",
+        "label": "Legacy recommendation - refresh required" if reasons else "Confidence-aware recommendation",
+        "reasons": reasons,
+        "baseline_match_ids": baseline_ids,
+        "baseline_match_sources": baseline_match_sources,
+        "baseline_non_playable_ids": baseline_non_playable_ids,
+        "missing_baseline_ids": missing_baseline_ids,
+        "empty_required_metrics": empty_required,
+        "hard_rule_metric_warnings": hard_rule_metrics,
+        "evaluations_checked": len(evaluation_payloads),
+    }
+
+
 def update_recommendation_status(db: Session, recommendation_id: int, status: str) -> CoachRecommendation:
     allowed = {"active", "paused", "completed", "failed", "archived"}
     if status not in allowed:
@@ -286,6 +372,7 @@ def recommendation_category_summary(db: Session) -> list[dict[str, Any]]:
         category_history = [item for item in history if item.category == category]
         active = next((item for item in category_history if item.status == "active"), None)
         progress = progress_by_category.get(category)
+        health = progress["health"] if progress else None
         summary.append(
             {
                 "category": category,
@@ -297,6 +384,8 @@ def recommendation_category_summary(db: Session) -> list[dict[str, Any]]:
                 "progress_score": progress["progress_score"] if progress else None,
                 "completed_matches": progress["completed_matches"] if progress else 0,
                 "target_matches": progress["target_matches"] if progress else TARGET_PERIOD_MATCHES,
+                "needs_refresh": health["needs_refresh"] if health else False,
+                "accepted_for_hard_progress": health["accepted_for_hard_progress"] if health else False,
             }
         )
     return summary
@@ -314,21 +403,25 @@ def _progress_for_recommendation(db: Session, recommendation: CoachRecommendatio
     counts = Counter(evaluation.status for evaluation in target_evaluations)
     baseline = json.loads(recommendation.baseline_metrics_json)
     current = _aggregate_current_evaluations(target_evaluations)
-    progress_score = _progress_score(target_evaluations, recommendation.target_period_matches)
+    health = recommendation_health(db, recommendation)
+    raw_progress_score = _progress_score(target_evaluations, recommendation.target_period_matches)
+    progress_score = raw_progress_score if health["accepted_for_hard_progress"] else 0
     last = target_evaluations[-1] if target_evaluations else None
     return {
         "recommendation": recommendation,
+        "health": health,
         "baseline": baseline,
         "target": json.loads(recommendation.target_metrics_json),
         "current": current,
         "evaluations": target_evaluations,
         "counts": {"green": counts["green"], "yellow": counts["yellow"], "red": counts["red"], "gray": counts["gray"]},
         "progress_score": progress_score,
+        "raw_progress_score": raw_progress_score,
         "completed_matches": len(target_evaluations),
         "target_matches": recommendation.target_period_matches,
         "last_status": last.status if last else None,
         "last_comment": last.coach_comment if last else "Новые матчи после постановки цели ещё не оценивались.",
-        "summary": _progress_summary(progress_score, len(target_evaluations)),
+        "summary": _progress_summary(progress_score, len(target_evaluations), health=health),
     }
 
 
@@ -487,6 +580,36 @@ def _coach_comment(category: str) -> str:
         "map": "Следующие 10 матчей цель успешна, если слабые карты играются стабильнее и без раннего развала.",
     }
     return comments.get(category, "Следующие матчи оцениваются против baseline.")
+
+
+def _required_baseline_metric_keys(category: str) -> tuple[str, ...]:
+    if category == "aim":
+        return ("adr",)
+    if category == "grenades":
+        return ("utility_damage", "flash_assists")
+    if category == "map":
+        return ("winrate", "entry_deaths_per_match", "adr")
+    return ("entry_deaths_per_match", "kast", "adr")
+
+
+def _hard_rule_metric_warnings(rules: list[str]) -> list[str]:
+    warnings = []
+    for rule in rules:
+        lowered = rule.lower()
+        for phrase, metric_id in (
+            ("early death", "early_deaths"),
+            ("early deaths", "early_deaths"),
+            ("traded death", "traded_deaths"),
+            ("trade kill", "trade_kills"),
+            ("side split", "side_split_metrics"),
+        ):
+            if phrase not in lowered:
+                continue
+            if "warning" in lowered or "not hard" in lowered or "не является hard" in lowered:
+                continue
+            if not is_metric_allowed_for_hard_claim(metric_id, "recommendation"):
+                warnings.append(metric_id)
+    return sorted(set(warnings))
 
 
 def _match_evidence(match: Match) -> dict[str, Any]:
@@ -745,7 +868,9 @@ def _progress_score(evaluations: list[MatchRecommendationEvaluation], target_mat
     return round(average * completion_factor)
 
 
-def _progress_summary(progress_score: int, matches_count: int) -> str:
+def _progress_summary(progress_score: int, matches_count: int, *, health: dict[str, Any] | None = None) -> str:
+    if health and health["needs_refresh"]:
+        return "Legacy recommendation: refresh required before progress can be accepted as coach evidence."
     if matches_count == 0:
         return "Ждём новые матчи после постановки цели."
     if progress_score >= 70:
@@ -761,6 +886,26 @@ def _ordered_matches(db: Session) -> list[Match]:
     )
     context = metric_context(matches)
     return exact_recent_matches(sort_matches(matches), len(matches), context=context)
+
+
+def _json_dict(raw_json: str | None) -> dict[str, Any]:
+    if not raw_json:
+        return {}
+    try:
+        loaded = json.loads(raw_json)
+    except json.JSONDecodeError:
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _json_list(raw_json: str | None) -> list[Any]:
+    if not raw_json:
+        return []
+    try:
+        loaded = json.loads(raw_json)
+    except json.JSONDecodeError:
+        return []
+    return loaded if isinstance(loaded, list) else []
 
 
 def _avg(matches: list[Match], attr: str) -> float | None:

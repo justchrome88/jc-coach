@@ -79,13 +79,13 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-016` |
 | title | Recommendation Loop Acceptance |
 | target version | `v0.8` |
-| status | planned |
+| status | in progress |
 | objective | Accept recommendation -> next match -> evaluation -> progress as a coherent loop. |
 | guardians | `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN`, `DB_GUARDIAN`, `PM_ORCHESTRATOR` |
 | source docs | `docs/RECOMMENDATIONS.md`, `docs/METRICS.md`, `docs/AI_COACH.md`, `docs/PROJECT_CONTROL.md`, `docs/project_management/ACCEPTANCE_MATRIX.md` |
 | forbidden actions | Planner claims without verified evidence, hidden writes on GET/read paths, AI overclaims, schema changes without explicit migration scope. |
-| acceptance criteria | One primary recommendation is evidence-backed; next-match action is visible; evaluation updates progress through explicit write paths; weak metrics do not drive hard success/failure. |
-| required evidence | Recommendation read/write tests, Metric Truth checks, UI evidence, DB SHA/mutation explanation, audit report. |
+| acceptance criteria | One primary recommendation is evidence-backed; legacy active recommendations are not accepted as hard progress; next-match action is visible; evaluation updates progress through explicit write paths; weak metrics do not drive hard success/failure. |
+| required evidence | WP-016A diagnosis, WP-016B legacy refresh repair tests, controlled refresh evidence, recommendation read/write tests, Metric Truth checks, UI evidence, DB SHA/mutation explanation, audit report. |
 | exit criteria | The core coach loop is understandable, measurable and honest for personal use. |
 | next WP | `WP-017 Personal Beta` |
 

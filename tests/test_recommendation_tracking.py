@@ -2,8 +2,9 @@ import json
 
 from sqlalchemy import select
 
-from app.db.models import CoachRecommendation, MatchRecommendationEvaluation
+from app.db.models import CoachRecommendation, Match, MatchRecommendationEvaluation
 from app.services.importer import import_rows
+from app.services.metric_confidence import is_exact_date_match, metric_context
 from app.services.recommendation_tracking import (
     ensure_default_recommendation,
     evaluate_new_matches,
@@ -12,6 +13,8 @@ from app.services.recommendation_tracking import (
     get_all_recommendation_progress,
     list_recommendation_history,
     recommendation_category_summary,
+    recommendation_health,
+    recommendation_needs_refresh,
     restart_recommendation_category,
     update_recommendation_status,
 )
@@ -33,6 +36,63 @@ def test_creates_default_recommendation_with_baseline(db):
     assert baseline["confidence"]["date_window"]["exact_date_matches"] == 15
     assert baseline["confidence"]["metrics"]["early_deaths"]["level"] == "low_confidence"
     assert db.query(CoachRecommendation).count() == 4
+
+
+def test_legacy_recommendation_detected_when_baseline_has_no_confidence(db):
+    import_rows(db, [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=75) for index in range(15)])
+    recommendation = ensure_default_recommendation(db)
+    assert recommendation is not None
+    recommendation.baseline_metrics_json = json.dumps({"matches_count": 15, "entry_deaths_per_match": 4})
+    db.commit()
+
+    health = recommendation_health(db, recommendation)
+
+    assert health["needs_refresh"] is True
+    assert "baseline_missing_confidence" in health["reasons"]
+
+
+def test_legacy_recommendation_detected_when_baseline_ids_are_steam_history(db):
+    for index in range(15):
+        db.add(
+            Match(
+                source="steam_history",
+                external_match_id=f"history-{index}",
+                raw_json=json.dumps(
+                    {
+                        "match_date_status": "exact_match_date_available",
+                        "match_date_source": "steam_gc_match_time",
+                    }
+                ),
+            )
+        )
+    db.commit()
+    history_ids = [match.id for match in db.scalars(select(Match).order_by(Match.id)).all()]
+    recommendation = CoachRecommendation(
+        title="legacy",
+        description="legacy",
+        category="survival",
+        status="active",
+        priority="high",
+        target_period_matches=10,
+        baseline_period_matches=15,
+        start_after_match_id=max(history_ids),
+        baseline_metrics_json=json.dumps({"matches_count": 15, "entry_deaths_per_match": None}),
+        target_metrics_json=json.dumps({"entry_deaths_per_match": "need data"}),
+        success_rules_json=json.dumps(["early deaths ниже baseline"]),
+        failure_rules_json=json.dumps(["early deaths выше baseline"]),
+        baseline_match_ids_json=json.dumps(history_ids),
+        created_by="system",
+    )
+    db.add(recommendation)
+    db.commit()
+    db.refresh(recommendation)
+
+    health = recommendation_health(db, recommendation)
+
+    assert recommendation_needs_refresh(db, recommendation) is True
+    assert "baseline_contains_non_playable_matches" in health["reasons"]
+    assert "rules_use_weak_metrics_as_hard_evidence" in health["reasons"]
+    assert health["baseline_non_playable_ids"] == history_ids
 
 
 def test_evaluates_new_matches_green_yellow_red(db):
@@ -62,6 +122,29 @@ def test_evaluates_new_matches_green_yellow_red(db):
     ]
 
     assert statuses == ["green", "yellow", "red"]
+    evidence = json.loads(
+        db.scalar(
+            select(MatchRecommendationEvaluation.evidence_json)
+            .where(MatchRecommendationEvaluation.recommendation_id == survival.id)
+            .order_by(MatchRecommendationEvaluation.id)
+        )
+    )
+    assert "metric_confidence" in evidence
+
+
+def test_evaluate_new_matches_skips_legacy_active_recommendation(db):
+    import_rows(db, [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)])
+    recommendation = ensure_default_recommendation(db)
+    assert recommendation is not None
+    recommendation.baseline_metrics_json = json.dumps({"matches_count": 15, "entry_deaths_per_match": 4})
+    db.commit()
+
+    import_rows(db, [_row(20, entry_deaths=2, early_deaths=2, kast=76, adr=82)], source="new")
+    before = db.query(MatchRecommendationEvaluation).count()
+    evaluations = evaluate_new_matches(db)
+
+    assert evaluations == []
+    assert db.query(MatchRecommendationEvaluation).count() == before
 
 
 def test_progress_summary_counts_statuses(db):
@@ -76,6 +159,22 @@ def test_progress_summary_counts_statuses(db):
     assert progress["completed_matches"] == 1
     assert progress["counts"]["green"] == 1
     assert progress["last_status"] == "green"
+
+
+def test_legacy_progress_is_not_accepted_hard_progress(db):
+    import_rows(db, [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)])
+    import_rows(db, [_row(20, entry_deaths=2, early_deaths=2, kast=76, adr=82)], source="new")
+    recommendation = ensure_default_recommendation(db)
+    assert recommendation is not None
+    recommendation.baseline_metrics_json = json.dumps({"matches_count": 15, "entry_deaths_per_match": 4})
+    db.commit()
+
+    progress = get_active_recommendation_progress(db)
+
+    assert progress["health"]["needs_refresh"] is True
+    assert progress["health"]["accepted_for_hard_progress"] is False
+    assert progress["progress_score"] == 0
+    assert "Legacy recommendation" in progress["summary"]
 
 
 def test_all_recommendation_progress_has_categories(db):
@@ -124,6 +223,27 @@ def test_restart_recommendation_category_archives_current_and_creates_new(db):
     assert restarted.id != original.id
     assert restarted.status == "active"
     assert any(item.id == original.id and item.status == "archived" for item in history)
+
+
+def test_restart_recommendation_category_creates_confidence_aware_playable_baseline(db):
+    import_rows(db, [_row(index, entry_deaths=4, early_deaths=4, kast=70, adr=80) for index in range(15)])
+    original = ensure_default_recommendation(db)
+    assert original is not None
+    original.baseline_metrics_json = json.dumps({"matches_count": 15, "entry_deaths_per_match": 4})
+    db.commit()
+
+    restarted = restart_recommendation_category(db, "survival")
+    baseline = json.loads(restarted.baseline_metrics_json)
+    baseline_ids = json.loads(restarted.baseline_match_ids_json)
+    baseline_matches = db.scalars(select(Match).where(Match.id.in_(baseline_ids)).order_by(Match.id)).all()
+    context = metric_context(baseline_matches)
+
+    assert restarted.status == "active"
+    assert recommendation_health(db, restarted)["accepted_for_hard_progress"] is True
+    assert baseline["confidence"]["date_window"]["exact_date_matches"] == 15
+    assert "metrics" in baseline["confidence"]
+    assert all(match.source != "steam_history" for match in baseline_matches)
+    assert all(is_exact_date_match(match, context=context) for match in baseline_matches)
 
 
 def test_recommendation_category_summary(db):
