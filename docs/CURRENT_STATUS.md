@@ -4,7 +4,7 @@ Last updated: 2026-07-04.
 
 Current Product Version: `v0.7`.
 
-Current WP: `WP-016 Recommendation Loop Acceptance` in progress after WP-016B repair foundation.
+Current WP: `WP-016 Recommendation Loop Acceptance` in progress after WP-016C controlled survival refresh.
 
 Next Target Version: `v0.8`.
 
@@ -50,6 +50,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - WP-015D runtime metrics acceptance completed / `PASS_WITH_WARNINGS`, promoting Metrics Correctness to `v0.7`: confidence/date-window gating is accepted for personal MVP runtime, unsupported metrics are suppressed/relabelled, approximate rows are excluded from exact windows, AI payload includes confidence metadata, service restart was clean, DB SHA stayed unchanged, and no production DB/files/schema/live jobs were touched.
 - WP-016A recommendation loop diagnosis completed: production active recommendations are legacy; active recommendation `#1` used `steam_history` placeholder baseline rows, lacked confidence metadata, and existing evaluations lacked `metric_confidence`.
 - WP-016B recommendation legacy refresh repair foundation completed without production DB mutation or schema change: legacy/incompatible recommendations are detected, read surfaces label them as `needs_refresh`, automatic evaluation skips legacy active recommendations, and the explicit category restart path creates confidence-aware active recommendations from playable exact-date baseline rows.
+- WP-016C controlled recommendation refresh completed with production DB backup/SHA evidence: survival recommendation `#1` was archived and preserved, new active survival recommendation `#5` was created from playable exact-date demo baseline rows `23-36,70`, baseline confidence and metric confidence metadata are present, target metrics are real values, no evaluations/reports/import/parser jobs were created, and service restart/log safety passed.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
@@ -66,7 +67,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 8 is not provider-specific structured response mode, prompt versioning, recommendation planner, ProblemSnapshot or UI redesign.
 - Stage 9 is UI presentation over existing persisted state/services, not recommendation planner, ProblemSnapshot or engine work.
 - WP-015D warnings carried forward: direct post-restart authenticated browser timings were not captured by Codex; persistent report generation acceptance is deferred because it mutates DB; `/coach` artifact overview still loads many artifact ORM rows; weak metrics remain weak; `ImportJob.status` remains coarse; uploads/tmp remain on root filesystem.
-- WP-016B implemented the refresh/restart foundation, but production legacy recommendations have not yet been refreshed. WP-016C should run the controlled explicit refresh path with backup/SHA evidence.
+- WP-016C refreshed the active survival recommendation. Legacy active `grenades` and `map` recommendations still need refresh before they can be accepted as hard progress, but the primary survival loop can proceed to runtime acceptance.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
 - AI output validation exists, but prompt versioning and provider-specific structured response enforcement remain future work.
 - Auth/security is still personal/VPS only; observability and public/friends release gates are not complete.

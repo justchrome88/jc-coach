@@ -5,7 +5,7 @@ Last updated: 2026-07-04.
 ## Current State
 
 - Current Product Version: `v0.7`
-- Current WP: `WP-016 Recommendation Loop Acceptance` in progress after WP-016B repair foundation.
+- Current WP: `WP-016 Recommendation Loop Acceptance` in progress after WP-016C controlled survival refresh.
 - Next Target Version: `v0.8`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -29,6 +29,7 @@ Last updated: 2026-07-04.
 - WP-015D runtime metrics acceptance completed / `PASS_WITH_WARNINGS` and promoted Metrics Correctness to `v0.7`. Accepted: confidence/date-window gating, unsupported metric suppression/relabeling, approximate row exclusion from exact windows, AI confidence metadata, repaired page-builder performance, clean service restart, unchanged DB SHA, and no production DB/file/schema/live job impact. Carry warnings: no direct post-restart authenticated browser timings from Codex, old recommendation baseline `#1` lacks stored confidence metadata, report-write acceptance deferred, `/coach` artifact overview still loads many ORM rows, weak metrics remain weak, `ImportJob.status` is coarse, uploads/tmp remain on root.
 - WP-016A diagnosed recommendation loop state: production recommendations `#1-#4` are legacy, active `#1` uses non-playable `steam_history` placeholder baseline IDs, lacks baseline confidence, and existing evaluations lack `metric_confidence`.
 - WP-016B implemented the legacy refresh foundation without running the production refresh: legacy recommendation health detection, read/UI/API/report labeling, automatic evaluation skip for legacy active recommendations, and explicit category restart support that archives legacy records and creates confidence-aware baselines from playable exact-date rows.
+- WP-016C controlled production refresh completed for `survival`: DB backup was created, `restart_recommendation_category(db, "survival")` was run exactly once, old recommendation `#1` was archived/preserved, new active recommendation `#5` has playable exact-date baseline IDs `23-36,70`, confidence metadata, real target metrics and `recommendation_health.needs_refresh=false`. No evaluations, reports, imports, parser jobs or demo files were created.
 
 ## Last Incident Summary
 
@@ -44,7 +45,7 @@ Last updated: 2026-07-04.
 
 `WP-016 Recommendation Loop Acceptance` targeting `v0.8`.
 
-WP-016 has started. WP-016C should be a controlled explicit recommendation refresh with production DB backup/SHA evidence; do not run it unless the user explicitly authorizes the production write.
+WP-016 has started. WP-016D should be runtime recommendation loop acceptance for the refreshed survival recommendation. Do not run live Steam/import/parser work unless explicitly authorized.
 
 Expected focus: accept recommendation -> next match -> evaluation -> progress as a coherent loop using the accepted v0.7 metric confidence rules. Do not run live Steam/import/parser work unless a future WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
 
