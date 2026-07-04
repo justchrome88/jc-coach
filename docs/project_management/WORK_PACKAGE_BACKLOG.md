@@ -79,46 +79,97 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-016` |
 | title | Recommendation Loop Acceptance |
 | target version | `v0.8` |
-| status | in progress |
+| status | completed / promoted |
 | objective | Accept recommendation -> next match -> evaluation -> progress as a coherent loop. |
 | guardians | `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN`, `DB_GUARDIAN`, `PM_ORCHESTRATOR` |
 | source docs | `docs/RECOMMENDATIONS.md`, `docs/METRICS.md`, `docs/AI_COACH.md`, `docs/PROJECT_CONTROL.md`, `docs/project_management/ACCEPTANCE_MATRIX.md` |
 | forbidden actions | Planner claims without verified evidence, hidden writes on GET/read paths, AI overclaims, schema changes without explicit migration scope. |
-| acceptance criteria | One primary recommendation is evidence-backed; legacy active recommendations are not accepted as hard progress; next-match action is visible; evaluation updates progress through explicit write paths; weak metrics do not drive hard success/failure. |
-| required evidence | WP-016A diagnosis, WP-016B legacy refresh repair tests, WP-016C controlled survival refresh evidence, WP-016E4 post-import evaluation repair/evidence, recommendation read/write tests, Metric Truth checks, UI evidence, DB SHA/mutation explanation, audit report. |
-| exit criteria | The core coach loop is understandable, measurable and honest for personal use. |
-| next WP | `WP-017 Personal Beta` |
+| acceptance criteria | One primary recommendation is evidence-backed; legacy active recommendations are not accepted as hard progress; next-match action is visible; evaluation updates progress through explicit write paths; weak metrics do not drive hard success/failure; proven loop exists for `recommendation #5 -> match #72 -> evaluation #76 -> completed_matches=1`. |
+| required evidence | WP-016A diagnosis, WP-016B legacy refresh repair tests, WP-016C controlled survival refresh evidence, WP-016D armed runtime acceptance, WP-016E/E2/E3 controlled attempts, WP-016E4 post-import evaluation repair/evidence, WP-016F promotion report, recommendation read/write tests, Metric Truth checks, DB SHA/mutation explanation. |
+| exit criteria | The controlled personal core coach loop is understandable, measurable and honest within documented limits. |
+| next WP | `WP-017A Roadmap v0.9-v1.0 Planning / Real Data Onboarding Diagnosis` |
 
-## WP-017
+## WP-017A
 
 | Field | Value |
 |---|---|
-| id | `WP-017` |
-| title | Personal Beta |
+| id | `WP-017A` |
+| title | Roadmap v0.9-v1.0 Planning / Real Data Onboarding Diagnosis |
 | target version | `v0.9` |
 | status | planned |
-| objective | Stabilize personal usage across real sessions. |
-| guardians | `PM_ORCHESTRATOR`, `RUNTIME_GUARDIAN`, `DB_GUARDIAN`, `TEST_GUARDIAN`, `IMPORT_GUARDIAN`, `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN` |
-| source docs | `docs/RELEASE_CHECKLIST.md`, `docs/DEPLOYMENT.md`, `docs/SECURITY.md`, `docs/KNOWN_LIMITATIONS.md`, `docs/project_management/ACCEPTANCE_MATRIX.md` |
-| forbidden actions | Friends/public claims, multi-user expansion, payments/social features, unsupported metric or AI claims. |
-| acceptance criteria | Real-session personal workflows stay stable; known limitations are visible; backup/restore and runtime evidence exist; no P0 safety blockers remain for personal use. |
-| required evidence | Acceptance matrix review, runtime logs, DB safety evidence, safe tests, limitation review, audit report. |
-| exit criteria | Personal beta can be used repeatedly with documented risks and recovery procedure. |
-| next WP | `WP-018 Trusted MVP` |
+| objective | Plan the accepted `v0.9`-`v1.0` sequence and diagnose safe Real Data Onboarding / Bulk Demo Usage without running bulk jobs. |
+| guardians | `PM_ORCHESTRATOR`, `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `RUNTIME_GUARDIAN`, `TEST_GUARDIAN`, `METRICS_GUARDIAN` |
+| source docs | `docs/STEAM_IMPORT.md`, `docs/DEMO_STORAGE_TZ.md`, `docs/BACKUP_RESTORE.md`, `docs/DEPLOYMENT.md`, `docs/KNOWN_LIMITATIONS.md`, `docs/project_management/VERSION_ROADMAP.md`, `docs/project_management/ACCEPTANCE_MATRIX.md` |
+| forbidden actions | Live Steam/Valve import, demo downloads, parser jobs, production DB mutation, production demo file deletion/move, schema changes, DB reset/resync, friends/public claims. |
+| acceptance criteria | The `v0.9`-`v1.0` roadmap is explicit; bulk/demo onboarding risks are diagnosed; storage/DB/import safeguards are identified; accepted and deferred evidence are separated; follow-up WPs do not claim recommendation planner quality without proof. |
+| required evidence | Current DB SHA, read-only project gates, storage/import constraints review if needed, updated roadmap/backlog/matrix, audit report. |
+| exit criteria | Real data onboarding and bulk demo usage have a safe next-step plan that can be executed by a future authorized WP. |
+| next WP | `WP-018 Coach Quality Calibration` |
 
 ## WP-018
 
 | Field | Value |
 |---|---|
 | id | `WP-018` |
-| title | Trusted MVP |
+| title | Coach Quality Calibration |
+| target version | `v0.10` |
+| status | planned |
+| objective | Calibrate coach/recommendation quality, progress scoring and wording against accepted evidence. |
+| guardians | `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN`, `PM_ORCHESTRATOR` |
+| source docs | `docs/RECOMMENDATIONS.md`, `docs/METRICS.md`, `docs/AI_COACH.md`, `docs/project_management/ACCEPTANCE_MATRIX.md` |
+| forbidden actions | Unsupported metric upgrades, planner quality claims without evidence, live AI/import/parser jobs unless explicitly authorized. |
+| acceptance criteria | Coach claims are calibrated to evidence confidence; rough one-match progress wording is repaired or explicitly bounded; planner and recommendation quality gaps are diagnosed; weak metrics remain caveated. |
+| required evidence | Targeted tests if code changes, Metric Truth checks, UI/wording evidence, audit report. |
+| exit criteria | Coach output is useful and honest enough for repeated personal use with known caveats. |
+| next WP | `WP-019 Personal Daily Use UX` |
+
+## WP-019
+
+| Field | Value |
+|---|---|
+| id | `WP-019` |
+| title | Personal Daily Use UX |
+| target version | `v0.11` |
+| status | planned |
+| objective | Make the daily personal workflow clear, repeatable and low-friction. |
+| guardians | `UI_COACH_GUARDIAN`, `RUNTIME_GUARDIAN`, `TEST_GUARDIAN`, `PM_ORCHESTRATOR` |
+| source docs | `docs/RECOMMENDATIONS.md`, `docs/DEPLOYMENT.md`, `docs/KNOWN_LIMITATIONS.md`, `docs/project_management/ACCEPTANCE_MATRIX.md` |
+| forbidden actions | Friends/public readiness claims, broad redesign detached from the coach loop, hidden live jobs. |
+| acceptance criteria | Daily entrypoints show next action, latest match state, limitations and recovery hints clearly; read paths remain non-mutating; core pages are usable for repeated owner sessions. |
+| required evidence | Runtime smoke, UI evidence, DB SHA impact explanation, targeted tests if code changes, audit report. |
+| exit criteria | The owner can use the app day to day without relying on internal implementation knowledge. |
+| next WP | `WP-020 Deployment / Backup / Storage Hardening` |
+
+## WP-020
+
+| Field | Value |
+|---|---|
+| id | `WP-020` |
+| title | Deployment / Backup / Storage Hardening |
+| target version | `v0.12` |
+| status | planned |
+| objective | Harden VPS operation, backup/restore, storage layout and recovery before the MVP lock. |
+| guardians | `RUNTIME_GUARDIAN`, `DB_GUARDIAN`, `IMPORT_GUARDIAN`, `TEST_GUARDIAN`, `PM_ORCHESTRATOR` |
+| source docs | `docs/DEPLOYMENT.md`, `docs/BACKUP_RESTORE.md`, `docs/DEMO_STORAGE_TZ.md`, `docs/SECURITY.md`, `docs/RELEASE_CHECKLIST.md` |
+| forbidden actions | Unbounded import/parser jobs, production DB changes without backup/SHA evidence, demo deletion/move without explicit retention WP, schema changes without migration scope. |
+| acceptance criteria | Backup/restore evidence is current; storage risk is bounded; service recovery is documented and tested; deployment gaps are named before `v1.0`. |
+| required evidence | Backup/restore checks, service status/logs, storage evidence, safe tests if code changes, audit report. |
+| exit criteria | Controlled personal deployment has enough recovery and storage discipline for MVP lock. |
+| next WP | `WP-021 Personal MVP Lock` |
+
+## WP-021
+
+| Field | Value |
+|---|---|
+| id | `WP-021` |
+| title | Personal MVP Lock |
 | target version | `v1.0` |
 | status | planned |
-| objective | Make the core loop trusted enough for serious use/demo. |
+| objective | Lock the controlled personal MVP scope and acceptance evidence. |
 | guardians | all guardians |
 | source docs | `docs/PROJECT_CONTROL.md`, `docs/project_management/VERSION_ROADMAP.md`, `docs/project_management/ACCEPTANCE_MATRIX.md`, `docs/RELEASE_CHECKLIST.md`, all canonical domain docs |
 | forbidden actions | Public/friends readiness claims unless release gates are met, hidden live jobs, unsupported data confidence, committing runtime secrets/data. |
-| acceptance criteria | Auth/runtime/import/metrics/recommendations/AI/backup/deployment gates are accepted or explicitly deferred; core loop evidence is trusted and reproducible. |
+| acceptance criteria | Auth/runtime/import/metrics/recommendations/AI/backup/deployment gates are accepted or explicitly deferred; core loop evidence is trusted and reproducible for personal use. |
 | required evidence | Full acceptance matrix, audit report, release checklist, DB/runtime/test evidence, limitation review. |
-| exit criteria | Trusted personal MVP is ready for serious personal use and controlled demo. |
+| exit criteria | Personal MVP is locked for serious personal use within explicit non-public limits. |
 | next WP | post-`v1.0` planning |

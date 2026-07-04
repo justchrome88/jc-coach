@@ -6,10 +6,10 @@ This is the roadmap control view for versions after WP-011C. It links product ve
 
 ## Current Position
 
-- Current Product Version: `v0.7`
-- Current status: WP-016 recommendation loop acceptance repaired/evaluated; promotion to `v0.8` pending.
-- Next active target: `v0.8`
-- Next active WP: `WP-016 Recommendation Loop Acceptance`
+- Current Product Version: `v0.8`
+- Current status: WP-016 Recommendation Loop Acceptance promoted for controlled personal MVP runtime.
+- Next active target: `v0.9`
+- Next active WP: `WP-017A Roadmap v0.9-v1.0 Planning / Real Data Onboarding Diagnosis`
 
 ## Roadmap
 
@@ -20,9 +20,12 @@ This is the roadmap control view for versions after WP-011C. It links product ve
 | `v0.5` | Personal MVP Runtime Acceptance | `WP-013` | completed / `PASS_WITH_WARNINGS` | Accept login/logout, dashboard, matches, `/coach`, reports and clean logs with no hidden live jobs. | `RUNTIME_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN` |
 | `v0.6` | Import Acceptance | `WP-014` | completed / `PASS_WITH_WARNINGS` | Accept Steam/import/demo/matches/import_jobs/duplicates/errors without live-job ambiguity. | `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `TEST_GUARDIAN` |
 | `v0.7` | Metrics Correctness | `WP-015` | completed / `PASS_WITH_WARNINGS` | Establish golden fixtures, trusted metrics, exact-date window gating and explicit weak metric labels. | `METRICS_GUARDIAN`, `TEST_GUARDIAN`, `IMPORT_GUARDIAN` |
-| `v0.8` | Recommendation Loop Acceptance | `WP-016` | pending promotion | Accept recommendation -> next match -> evaluation -> progress as a coherent coach loop. WP-016E4 repaired and evaluated the primary survival loop for match `#72`; promotion report remains. | `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN` |
-| `v0.9` | Personal Beta | `WP-017` | planned | Stable personal usage across real sessions on controlled VPS. | `PM_ORCHESTRATOR`, `RUNTIME_GUARDIAN`, `DB_GUARDIAN`, `TEST_GUARDIAN` |
-| `v1.0` | Trusted MVP | `WP-018` | planned | Core loop trusted enough for serious personal use and demo. | all guardians |
+| `v0.8` | Recommendation Loop Acceptance | `WP-016` | completed / promoted | Accept recommendation -> next match -> evaluation -> progress as a coherent controlled personal coach loop. Proven loop: `#5 -> #72 -> #76 -> completed_matches=1`. Planner quality, all-category refresh and friends/public readiness remain out of scope. | `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN`, `DB_GUARDIAN` |
+| `v0.9` | Real Data Onboarding / Bulk Demo Usage | `WP-017A` | planned | Plan and diagnose safe use of more real matches/demos without uncontrolled bulk jobs, DB mutation or storage risk. | `PM_ORCHESTRATOR`, `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `RUNTIME_GUARDIAN`, `TEST_GUARDIAN` |
+| `v0.10` | Coach Quality Calibration | `WP-018` | planned | Calibrate recommendation quality, progress wording, coach claims and weak-metric caveats against accepted evidence. | `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN`, `PM_ORCHESTRATOR` |
+| `v0.11` | Personal Daily Use UX | `WP-019` | planned | Make daily personal workflows clear, repeatable and low-friction without claiming friends/public readiness. | `UI_COACH_GUARDIAN`, `RUNTIME_GUARDIAN`, `TEST_GUARDIAN` |
+| `v0.12` | Deployment / Backup / Storage Hardening | `WP-020` | planned | Harden VPS operation, backup/restore evidence, storage layout and recovery before MVP lock. | `RUNTIME_GUARDIAN`, `DB_GUARDIAN`, `IMPORT_GUARDIAN`, `PM_ORCHESTRATOR` |
+| `v1.0` | Personal MVP Lock | `WP-021` | planned | Lock the controlled personal MVP scope and evidence for serious personal use. | all guardians |
 
 ## Version Rules
 
