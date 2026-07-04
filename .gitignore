@@ -17,3 +17,7 @@ data/steam_bot_credentials/*
 !data/incoming_demos/.gitkeep
 !data/reports/.gitkeep
 !data/ai_handoffs/.gitkeep
+
+data/manual_backups/
+*.db-wal
+*.db-shm

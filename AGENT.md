@@ -8,9 +8,13 @@
 
 1. Прочитать `AGENT.md`.
 2. Прочитать `docs/PROJECT_CONTROL.md`.
-3. Прочитать `docs/CURRENT_MILESTONE.md`.
-4. Выполнить `git status --short`.
-5. Прочитать релевантный доменный документ из `docs/`, если задача касается конкретной области.
+3. Прочитать `docs/PROJECT_OS.md`.
+4. Прочитать `docs/HANDOFF.md`.
+5. Прочитать `docs/CURRENT_MILESTONE.md`.
+6. Выполнить `git status --short`.
+7. Запустить `python scripts/project_gate.py preflight`, если задача не запрещает shell-проверки.
+8. Запустить `python scripts/project_gate.py changed` и прочитать активированные `docs/agents/*`, если есть изменённые пути.
+9. Прочитать релевантный доменный документ из `docs/`, если задача касается конкретной области.
 
 Если старый README, roadmap, prompt, audit или `instructions/*` конфликтует с `docs/PROJECT_CONTROL.md`, следовать `docs/PROJECT_CONTROL.md`.
 
@@ -23,6 +27,7 @@
 - Не удалять старые документы без deprecation plan в `docs/audit/DOCUMENT_DEPRECATION_PLAN.md`.
 - Не делать `git commit`, `git push` или deploy, если пользователь явно не попросил.
 - Не коммитить `.env`, DB files, raw demos, generated reports, handoff files, bot credentials, refresh tokens или `node_modules`.
+- Не перезапускать `jc-coach.service`, если задача прямо не требует runtime repair/deploy smoke и пользователь это не разрешил.
 
 ## Направление продукта
 
@@ -37,6 +42,7 @@ Match -> Facts -> Metrics -> Diagnosis -> Primary Recommendation -> Evaluation -
 ## После работы
 
 - Показать изменённые файлы.
+- Запустить `python scripts/project_gate.py postflight`, если задача выполнялась в shell.
 - Обновить релевантные docs, если изменилось поведение, процесс, архитектура, статус проекта или source-of-truth.
 - Запускать только безопасные тесты и проверки.
 - Если тесты пропущены из-за риска production DB/runtime data, явно написать почему.

@@ -1,6 +1,6 @@
 # Project Control — CS2 AI Coach
 
-Canonical project source of truth. Last updated: 2026-07-03.
+Canonical project source of truth. Last updated: 2026-07-04.
 
 This file overrides older README, roadmap, audit, prompt and `instructions/*` documents when they conflict. Historical files remain in the repository for context and should not be deleted until the deprecation plan in `docs/audit/DOCUMENT_DEPRECATION_PLAN.md` is completed.
 
@@ -21,9 +21,17 @@ The practical product question is:
 
 ## 2. Current Truth
 
-Фактический уровень продукта: `v0.4-alpha foundation`.
+Current Product Version: `v0.4.1`.
 
-Текущий milestone разработки: `v0.7-prep — Secure Single/Friends Alpha + Honest Coach Loop`.
+Current WP: `WP-012 DB Contamination Guardrails`.
+
+Next Target Version: `v0.4.2`.
+
+Current governance entrypoint: `docs/PROJECT_OS.md`.
+
+Current handoff: `docs/HANDOFF.md`.
+
+Governance contract: `docs/PROJECT_GOVERNANCE.md`.
 
 The product is beyond the original `v0.1` CSV dashboard, but it is not a secure friends/public product and not a fully validated AI coach.
 
@@ -45,7 +53,13 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 
 ## 3. Current Milestone
 
-Current milestone: `v0.7-prep — Secure Single/Friends Alpha + Honest Coach Loop`.
+Current Product Version: `v0.4.1`.
+
+Current WP: `WP-012 DB Contamination Guardrails`.
+
+Next Target Version: `v0.4.2`.
+
+Previous stabilization stages remain historical evidence for the product state. The immediate next pass should protect production DB/runtime data from accidental test, import, migration or job contamination before broader acceptance work.
 
 Canonical milestone doc: `docs/CURRENT_MILESTONE.md`.
 
@@ -69,6 +83,13 @@ Current focus:
 | Topic | Canonical document | Notes |
 |---|---|---|
 | Product status | `docs/CURRENT_STATUS.md` | Current fact state. |
+| Project OS | `docs/PROJECT_OS.md` | Short entrypoint for new Codex passes. |
+| Handoff | `docs/HANDOFF.md` | Current state and next-chat continuation context. |
+| Governance | `docs/PROJECT_GOVERNANCE.md` | Versioning, WP gates, roles and safety policies. |
+| Version roadmap | `docs/project_management/VERSION_ROADMAP.md` | Planned version-to-WP sequence from `v0.4.2` to `v1.0`. |
+| Work package backlog | `docs/project_management/WORK_PACKAGE_BACKLOG.md` | WP objectives, guardians, acceptance and exit criteria. |
+| Acceptance matrix | `docs/project_management/ACCEPTANCE_MATRIX.md` | Feature acceptance checks by version and guardian. |
+| Docs map | `docs/project_management/DOCS_MAP.md` | Documentation ownership, source-of-truth and stale-risk map. |
 | Version status | `docs/VERSION_MAP.md` | Version/milestone readiness map. |
 | Current milestone | `docs/CURRENT_MILESTONE.md` | Active work and frozen scope. |
 | Roadmap | `docs/ROADMAP.md` | Ordered development under this file. |
@@ -107,8 +128,15 @@ Before task work, Codex must read:
 
 1. `AGENT.md`
 2. `docs/PROJECT_CONTROL.md`
-3. `docs/CURRENT_MILESTONE.md`
-4. Relevant domain spec from the source-of-truth table
+3. `docs/PROJECT_OS.md`
+4. `docs/HANDOFF.md`
+5. `docs/CURRENT_MILESTONE.md`
+6. `docs/project_management/WORK_PACKAGE_BACKLOG.md`
+7. Relevant domain spec from the source-of-truth table
+
+Codex should run `python scripts/project_gate.py preflight`, `changed`, `required-checks` and `postflight` around work packages when shell access is available. Activated guardian docs under `docs/agents/` must be read before touching their domains.
+
+For future roadmap sequencing, use `docs/project_management/VERSION_ROADMAP.md` and `docs/project_management/WORK_PACKAGE_BACKLOG.md`. Older stage roadmaps remain historical evidence unless explicitly reactivated.
 
 Older `instructions/*`, roadmap, prompt and audit files are historical/supporting unless explicitly reactivated here.
 
