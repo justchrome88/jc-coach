@@ -1,8 +1,10 @@
 import json
+from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
 
+from app.db.models import Match
 from app.services.ai_coach import (
     CodexCliHandoffProvider,
     LocalLLMProvider,
@@ -25,6 +27,36 @@ def test_build_ai_coach_payload_uses_structured_match_data(db, sample_rows):
     assert payload["summary"]["matches_count"] == 2
     assert payload["rules"]["do_not_invent_facts"] is True
     assert len(payload["recent_matches"]) == 2
+    assert payload["metric_confidence"]["metrics"]["grenade_rating"]["level"] == "unavailable"
+    assert payload["metric_confidence"]["metrics"]["traded_deaths"]["level"] == "unavailable"
+
+
+def test_ai_payload_uses_exact_recent_matches_and_reports_exclusions(db):
+    db.add_all(
+        [
+            Match(
+                source="demo",
+                external_match_id="exact-ai",
+                played_at=datetime(2026, 6, 1),
+                result="win",
+                raw_json=_date_truth_raw("exact_match_date_available", "steam_gc_match_time"),
+            ),
+            Match(
+                source="demo",
+                external_match_id="approx-ai",
+                played_at=datetime(2026, 7, 1),
+                result="loss",
+                raw_json=_date_truth_raw("approximate_match_date", "file_modified_fallback"),
+            ),
+        ]
+    )
+    db.commit()
+
+    payload = build_ai_coach_payload(db)
+
+    assert [match["id"] for match in payload["recent_matches"]] == [1]
+    assert payload["metric_confidence"]["date_window"]["approximate_date_matches"] == 1
+    assert payload["rules"]["use_exact_date_windows_for_trends"] is True
 
 
 def test_codex_handoff_provider_writes_prompt_and_payload(monkeypatch, tmp_path):
@@ -129,3 +161,13 @@ def test_ai_provider_health_for_handoff(monkeypatch):
 
     assert health["provider"] == "codex_cli_handoff"
     assert health["status"] == "handoff"
+
+
+def _date_truth_raw(status: str, source: str) -> str:
+    return json.dumps(
+        {
+            "match_date_status": status,
+            "match_date_source": source,
+            "played_at_source": source,
+        }
+    )

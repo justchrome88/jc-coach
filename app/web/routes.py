@@ -51,6 +51,13 @@ from app.services.demo_storage import demo_storage_report, write_demo_storage_ma
 from app.services.i18n import normalize_locale
 from app.services.importer import import_csv, import_json
 from app.services.match_queries import is_playable_match, playable_match_select
+from app.services.metric_confidence import (
+    exact_date_matches,
+    exact_recent_matches,
+    is_exact_date_match,
+    metric_context,
+    sort_matches,
+)
 from app.services.metric_truth import metric_definition, metric_warning, usage_decision
 from app.services.mistake_detection import (
     category_scorecard,
@@ -191,15 +198,16 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     if auth_redirect:
         return auth_redirect
     matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
-    summary = get_summary(matches)
-    comparison = compare_periods(matches)
-    map_stats = get_map_stats(matches)
-    dashboard_status = get_dashboard_status(matches)
-    aim_profile = get_aim_profile(matches)
+    context = metric_context(matches)
+    summary = get_summary(matches, date_windowed=True, context=context)
+    comparison = compare_periods(matches, context=context)
+    map_stats = get_map_stats(matches, context=context)
+    dashboard_status = get_dashboard_status(matches, context=context)
+    aim_profile = get_aim_profile(matches, context=context)
     recommendation_progress = get_active_recommendation_progress(db)
     all_recommendation_progress = get_all_recommendation_progress(db)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
-    recent_matches = list(reversed(matches[-10:]))
+    recent_matches = list(reversed(exact_recent_matches(matches, 10, context=context)))
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -214,7 +222,7 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
             "all_recommendation_progress": all_recommendation_progress,
             "evaluations_by_match_id": evaluations_by_match_id,
             "recent_matches": recent_matches,
-            "chart_data": chart_series(matches),
+            "chart_data": chart_series(matches, context=context),
         },
     )
 
@@ -241,13 +249,22 @@ def stats_page(
     if auth_redirect:
         return auth_redirect
     all_matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
-    selected_matches = _select_stats_matches(all_matches, range_type, matches_count, date_from, date_to)
-    summary = get_summary(selected_matches)
-    comparison = compare_periods(selected_matches)
-    dashboard_status = get_dashboard_status(selected_matches)
-    aim_profile = get_aim_profile(selected_matches)
-    map_stats = get_map_stats(selected_matches)
-    recent_matches = list(reversed(selected_matches[-12:]))
+    all_context = metric_context(all_matches)
+    selected_matches = _select_stats_matches(
+        all_matches,
+        range_type,
+        matches_count,
+        date_from,
+        date_to,
+        context=all_context,
+    )
+    selected_context = metric_context(selected_matches)
+    summary = get_summary(selected_matches, date_windowed=range_type != "all", context=selected_context)
+    comparison = compare_periods(selected_matches, context=selected_context)
+    dashboard_status = get_dashboard_status(selected_matches, context=selected_context)
+    aim_profile = get_aim_profile(selected_matches, context=selected_context)
+    map_stats = get_map_stats(selected_matches, context=selected_context)
+    recent_matches = list(reversed(exact_recent_matches(selected_matches, 12, context=selected_context)))
     return templates.TemplateResponse(
         request=request,
         name="stats.html",
@@ -259,7 +276,7 @@ def stats_page(
             "aim_profile": aim_profile,
             "map_stats": map_stats,
             "recent_matches": recent_matches,
-            "chart_data": chart_series(selected_matches),
+            "chart_data": chart_series(selected_matches, context=selected_context),
             "filters": {
                 "range_type": range_type if range_type in {"last", "dates", "all"} else "last",
                 "matches_count": min(max(matches_count, 1), 500),
@@ -274,31 +291,33 @@ def stats_page(
 @router.get("/coach")
 def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], message: str | None = None):
     matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
-    summary = get_summary(matches)
-    comparison = compare_periods(matches)
-    map_stats = get_map_stats(matches)
+    context = metric_context(matches)
+    exact_matches = exact_date_matches(matches, context=context)
+    summary = get_summary(matches, date_windowed=True, context=context)
+    comparison = compare_periods(matches, context=context)
+    map_stats = get_map_stats(matches, context=context)
     focus = build_coach_focus(summary, comparison, map_stats)
-    structured_mistakes = detect_structured_mistakes(matches)
+    structured_mistakes = detect_structured_mistakes(exact_matches)
     coach_categories = category_scorecard(structured_mistakes)
     recommendation_progress = get_active_recommendation_progress(db)
     all_recommendation_progress = get_all_recommendation_progress(db)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
     evaluated_matches = [
         match
-        for match in reversed(matches)
+        for match in reversed(exact_matches)
         if match.id in evaluations_by_match_id
     ][:10]
     report = latest_report(db)
     ai_handoff = latest_ai_handoff()
     ai_report = latest_ai_coach_report(db)
     ai_health = ai_provider_health()
-    aim_profile = get_aim_profile(matches)
+    aim_profile = get_aim_profile(matches, context=context)
     ai_report_history = [serialize_ai_coach_report(report) for report in list_ai_coach_reports(db, limit=5)]
     recommendation_history = list_recommendation_history(db, limit=20)
     recommendation_categories = recommendation_category_summary(db)
     parse_overview = _demo_parse_overview(db, len(matches))
     coach_ui = _coach_first_view_model(
-        matches=matches,
+        matches=exact_matches,
         recommendation_progress=recommendation_progress,
         evaluations_by_match_id=evaluations_by_match_id,
         ai_report=ai_report,
@@ -810,6 +829,7 @@ def _current_recommendation_card(recommendation_progress: dict | None) -> dict:
         "failure_rule": _first_json_item(recommendation.failure_rules_json),
         "last_comment": recommendation_progress["last_comment"],
         "last_evaluation": _evaluation_summary(last_evaluation),
+        "baseline_confidence": (recommendation_progress.get("baseline") or {}).get("confidence", {}),
         "evidence": [
             _metric_evidence_item(
                 metric_id,
@@ -836,6 +856,7 @@ def _metric_evidence_item(metric_id: str, baseline: dict, current: dict, target:
     definition = metric_definition(metric_id)
     value_key = _metric_value_key(metric_id)
     warning = metric_warning(metric_id, "recommendation")
+    confidence = ((baseline.get("confidence") or {}).get("metrics") or {}).get(definition.metric_id)
     return {
         "metric_id": definition.metric_id,
         "name": definition.display_name,
@@ -845,6 +866,7 @@ def _metric_evidence_item(metric_id: str, baseline: dict, current: dict, target:
         "current": current.get(value_key),
         "target": target.get(value_key) or target.get(definition.metric_id),
         "warning": warning,
+        "confidence": confidence or {},
     }
 
 
@@ -1060,22 +1082,37 @@ def _select_stats_matches(
     matches_count: int,
     date_from: str | None,
     date_to: str | None,
+    *,
+    context=None,
 ) -> list[Match]:
-    sorted_matches = sorted(
-        matches,
-        key=lambda match: (match.played_at is None, match.played_at or match.created_at, match.id or 0),
-    )
+    sorted_matches = sort_matches(matches)
     if range_type == "all":
         return sorted_matches
     if range_type == "dates":
         selected = sorted_matches
         if date_from:
-            selected = [match for match in selected if match.played_at and match.played_at >= _parse_date(date_from)]
+            selected = [
+                match
+                for match in selected
+                if (
+                    is_exact_date_match(match, context=context)
+                    and match.played_at
+                    and match.played_at >= _parse_date(date_from)
+                )
+            ]
         if date_to:
-            selected = [match for match in selected if match.played_at and match.played_at <= _parse_date(date_to)]
+            selected = [
+                match
+                for match in selected
+                if (
+                    is_exact_date_match(match, context=context)
+                    and match.played_at
+                    and match.played_at <= _parse_date(date_to)
+                )
+            ]
         return selected
     safe_count = min(max(matches_count, 1), 500)
-    return sorted_matches[-safe_count:]
+    return exact_recent_matches(sorted_matches, safe_count, context=context)
 
 
 def _sort_matches_for_page(matches: list[Match], sort: str, direction: str) -> list[Match]:

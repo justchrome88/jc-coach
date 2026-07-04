@@ -4,7 +4,7 @@ Last updated: 2026-07-04.
 
 Current Product Version: `v0.6`.
 
-Current WP: `WP-015A1 Match Date Truth Reconciliation Repair` completed; next is `WP-015 Metrics Correctness`.
+Current WP: `WP-015C Metrics Confidence and Date-Window Gating Repair` completed; next is `WP-015D Runtime Metrics Acceptance`.
 
 Next Target Version: `v0.7`.
 
@@ -44,13 +44,16 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - WP-014E parser/import model compatibility repair completed without schema change: parser/Steam date-source metadata is preserved in `matches.raw_json` and result payloads, but non-column metadata such as `played_at_source` is filtered before `Match` ORM construction.
 - WP-014C4 repeat one-button live acceptance completed / `PASS_WITH_WARNINGS`: one authorized click created parent job `#20`, storage/TMPDIR preflight passed, batch cap limited the run to one demo, parser/import succeeded, exact date truth was persisted from `steam_gc_match_time`, parent `result_json` was terminal/truthful, service stayed healthy and disk growth was bounded.
 - WP-015A1 match date truth reconciliation repair completed with production DB backup/SHA evidence and no schema/file/live-job changes. Playable exact rows are now `21-36, 70` (17 rows), playable approximate rows are `37-38` (2 rows), playable unknown rows are `0`, and 29 `steam_history` placeholders remain unknown for future explicit Steam metadata recovery.
+- WP-015B metrics correctness diagnosis completed: playable rows are structurally usable, parser artifacts exist for all 19 playable demo rows, DB reset is not needed, and the main risk is confidence/date-window gating rather than data cleanup.
+- WP-015C metrics confidence/date-window gating repair completed without schema changes, production DB mutation, live import or parser jobs. Date-window dashboard/stats/coach/report/recommendation/AI paths now use exact-date playable rows for recent/trend/form windows, expose exact/approximate/excluded counts, and carry confidence metadata for weak/unavailable metrics.
+- WP-015C1 metrics confidence performance repair completed: the raw JSON/date-window confidence path now uses request/helper-level metric context caching, removing the blocker-level repeated `json.loads` regression diagnosed by WP-015C-PERF.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
 
-- Parser-derived metric confidence is documented and partially hardened, but trade/KAST side/utility facts still need deeper validation before upgrading weak metrics.
+- Parser-derived metric confidence is documented, date-window gating is implemented, and WP-015C1 fixed the major runtime confidence-cache performance regression. Trade/KAST side/utility facts still need deeper fixture validation before upgrading weak metrics.
 - Steam import is accepted for controlled personal `v0.6` with warnings. It has deterministic cursor semantics, repaired job truth/status taxonomy, exact match-date truth, explicit retain-raw policy, WP-014D1 storage/batch guards, WP-014D2 parent checkpoint/stale handling, WP-014D3 stale job repair, WP-014E parser/model compatibility repair and WP-014C4 live acceptance evidence.
-- Match date truth is reconciled enough for WP-015 to start: metrics must treat only `match_date_status=exact_match_date_available` with `match_date_source=steam_gc_match_time` as exact, keep rows `37-38` approximate, and exclude `source="steam_history"` placeholders from playable metrics.
+- Match date truth is reconciled enough for WP-015D runtime metrics acceptance: metrics treat only exact playable rows as eligible for exact date windows, keep rows `37-38` approximate/excluded from exact windows, and exclude `source="steam_history"` placeholders from playable metrics.
 - Stage 2 ownership is single-owner mode, not full multi-user SaaS ownership across all core tables.
 - Legacy `link_steam_account(..., user_id=None)` remains an internal Steam hardening risk, but it is not reachable from public OpenID callback without owner session.
 - Stage 3 migration discipline is scaffold-level, not a full Alembic baseline or production migration ledger.
@@ -59,7 +62,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 7 is not a production scheduler, durable Steam sync ledger, recommendation planner or UI redesign.
 - Stage 8 is not provider-specific structured response mode, prompt versioning, recommendation planner, ProblemSnapshot or UI redesign.
 - Stage 9 is UI presentation over existing persisted state/services, not recommendation planner, ProblemSnapshot or engine work.
-- Next hardening stage is `WP-015 Metrics Correctness`; do not start it without an explicit WP prompt.
+- Next hardening stage is `WP-015D Runtime Metrics Acceptance`; do not start it without an explicit WP prompt.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
 - AI output validation exists, but prompt versioning and provider-specific structured response enforcement remain future work.
 - Auth/security is still personal/VPS only; observability and public/friends release gates are not complete.

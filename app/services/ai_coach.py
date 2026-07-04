@@ -19,6 +19,12 @@ from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
 from app.services.match_queries import playable_match_select
+from app.services.metric_confidence import (
+    exact_date_window_metadata,
+    exact_recent_matches,
+    metric_confidence_map,
+    metric_context,
+)
 from app.services.metric_truth import metric_truth_payload, suppressed_metrics_for_usage
 from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_all_recommendation_progress
@@ -230,21 +236,49 @@ def latest_ai_handoff() -> dict[str, Any] | None:
 
 def build_ai_coach_payload(db: Session) -> dict[str, Any]:
     matches = list(db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())))
-    summary = get_summary(matches)
-    comparison = compare_periods(matches)
-    map_stats = get_map_stats(matches)
+    context = metric_context(matches)
+    summary = get_summary(matches, context=context)
+    comparison = compare_periods(matches, context=context)
+    map_stats = get_map_stats(matches, context=context)
     weaknesses = detect_weaknesses(summary, comparison, map_stats)
     structured_mistakes = detect_structured_mistakes(matches)
     focus = build_coach_focus(summary, comparison, map_stats)
     recommendation_progress = get_active_recommendation_progress(db)
     all_recommendation_progress = get_all_recommendation_progress(db)
-    recent_matches = matches[-10:]
+    recent_matches = exact_recent_matches(matches, 10, context=context)
+    confidence_metadata = {
+        "date_window": exact_date_window_metadata(matches, required_sample=15, context=context),
+        "metrics": metric_confidence_map(
+            (
+                "result",
+                "kd_ratio",
+                "adr",
+                "kast",
+                "hltv_rating",
+                "swing_score",
+                "entry_deaths",
+                "early_deaths",
+                "utility_damage",
+                "flash_assists",
+                "side_split_metrics",
+                "aim_rating",
+                "grenade_rating",
+                "traded_deaths",
+                "crosshair_placement",
+            ),
+            matches,
+            usage="ai",
+            date_windowed=True,
+            min_sample=15,
+            context=context,
+        ),
+    }
     return {
         "product": "CS2 Personal Coach",
         "ai_role": "AI coach over structured CS2 analytics, not raw demo parser",
         "summary": summary,
-        "dashboard_status": get_dashboard_status(matches),
-        "aim_profile": get_aim_profile(matches),
+        "dashboard_status": get_dashboard_status(matches, context=context),
+        "aim_profile": get_aim_profile(matches, context=context),
         "period_comparison": comparison,
         "map_stats": map_stats,
         "detected_weaknesses": weaknesses,
@@ -270,7 +304,9 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
             ),
             "suppressed_for_diagnosis": suppressed_metrics_for_usage("diagnosis"),
             "suppressed_for_recommendation": suppressed_metrics_for_usage("recommendation"),
+            "confidence": confidence_metadata,
         },
+        "metric_confidence": confidence_metadata,
         "active_recommendation": _serialize_recommendation_progress(recommendation_progress),
         "all_recommendations": [_serialize_recommendation_progress(item) for item in all_recommendation_progress],
         "recent_matches": [_serialize_match(match) for match in recent_matches],
@@ -278,6 +314,8 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
             "do_not_invent_facts": True,
             "use_only_payload_data": True,
             "mention_data_gaps": True,
+            "use_exact_date_windows_for_trends": True,
+            "do_not_treat_low_confidence_as_hard_evidence": True,
             "primary_goal": "give one main training focus and measurable next-match actions",
         },
     }
@@ -421,4 +459,7 @@ def _serialize_match(match: Match) -> dict[str, Any]:
         "early_deaths": match.early_deaths,
         "utility_damage": match.utility_damage,
         "flash_assists": match.flash_assists,
+        "date_truth": {
+            "requires_exact_for_trends": True,
+        },
     }

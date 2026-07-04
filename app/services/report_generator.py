@@ -13,17 +13,42 @@ from app.db.models import CoachReport, Match
 from app.services.analytics import compare_periods, detect_weaknesses, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
 from app.services.match_queries import playable_match_select
+from app.services.metric_confidence import (
+    exact_date_matches,
+    exact_date_window_metadata,
+    metric_confidence_map,
+    metric_context,
+)
 from app.services.recommendation_tracking import get_active_recommendation_progress
 
 
 def generate_report(db: Session) -> CoachReport:
     matches = list(db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())))
-    summary = get_summary(matches)
-    comparison = compare_periods(matches)
-    map_stats = get_map_stats(matches)
+    context = metric_context(matches)
+    summary = get_summary(matches, context=context)
+    comparison = compare_periods(matches, context=context)
+    map_stats = get_map_stats(matches, context=context)
     weaknesses = detect_weaknesses(summary, comparison, map_stats)
     focus = build_coach_focus(summary, comparison, map_stats)
     recommendation_progress = get_active_recommendation_progress(db)
+    metric_confidence = metric_confidence_map(
+        (
+            "result",
+            "kd_ratio",
+            "adr",
+            "kast",
+            "hltv_rating",
+            "swing_score",
+            "entry_deaths",
+            "utility_damage",
+            "flash_assists",
+        ),
+        matches,
+        usage="diagnosis",
+        date_windowed=True,
+        min_sample=15,
+        context=context,
+    )
     report_payload = {
         "player_profile": {"skill_level": "low-mid", "goal": "improve consistently in CS2"},
         "summary": summary,
@@ -33,10 +58,13 @@ def generate_report(db: Session) -> CoachReport:
         "coach_focus": focus,
         "active_recommendation": _serialize_recommendation_progress(recommendation_progress),
         "available_metrics": summary.get("available_metrics", []),
+        "date_window": exact_date_window_metadata(matches, required_sample=15, context=context),
+        "metric_confidence": metric_confidence,
     }
     markdown = render_markdown_report(report_payload)
-    period_start = next((match.played_at for match in matches if match.played_at), None)
-    period_end = next((match.played_at for match in reversed(matches) if match.played_at), None)
+    exact_matches = exact_date_matches(matches, context=context)
+    period_start = next((match.played_at for match in exact_matches if match.played_at), None)
+    period_end = next((match.played_at for match in reversed(exact_matches) if match.played_at), None)
     report = CoachReport(
         period_start=period_start,
         period_end=period_end,
@@ -62,6 +90,8 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
     weaknesses = payload["detected_weaknesses"]
     focus = payload["coach_focus"]
     recommendation = payload.get("active_recommendation")
+    date_window = payload.get("date_window") or {}
+    confidence = payload.get("metric_confidence") or {}
     best_maps = maps[:3]
     weak_maps = sorted(maps, key=lambda item: item["winrate"] if item["winrate"] is not None else 101)[:3]
     summary_line = (
@@ -70,7 +100,7 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         f"Средний K/D: {_fmt(summary['avg_kd'])}, "
         f"ADR: {_fmt(summary['avg_adr'])}, "
         f"KAST: {_fmt(summary['avg_kast'], '%')}, "
-        f"rating: {_fmt(summary['avg_rating'])}."
+        f"rating: {_fmt(summary['avg_rating'])} ({_confidence_level(confidence, 'hltv_rating')})."
     )
 
     lines = [
@@ -78,6 +108,13 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         "",
         "## Краткий вывод",
         summary_line,
+        (
+            "Date-window confidence: "
+            f"{date_window.get('confidence', 'unknown')}; exact-date matches "
+            f"{date_window.get('exact_date_matches', 0)}, excluded non-exact "
+            f"{date_window.get('excluded_from_exact_windows', 0)}."
+        ),
+        "Metric confidence caveat: KAST, swing, flash/utility and map stats are not standalone hard evidence.",
         f"Главный фокус: **{focus['title']}**. {focus['evidence']}",
         "",
         "## 3 главные проблемы",
@@ -97,7 +134,7 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         lines.append("Лучшие карты:")
         lines.extend(
             (
-                f"- {item['map_name']}: {item['matches_count']} матч., "
+                f"- {item['map_name']}: {item['matches_count']} матч. ({item.get('sample_confidence', 'unknown')}), "
                 f"winrate {_fmt(item['winrate'], '%')}, ADR {_fmt(item['avg_adr'])}"
             )
             for item in best_maps
@@ -105,7 +142,7 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
         lines.append("Карты для внимания:")
         lines.extend(
             (
-                f"- {item['map_name']}: {item['matches_count']} матч., "
+                f"- {item['map_name']}: {item['matches_count']} матч. ({item.get('sample_confidence', 'unknown')}), "
                 f"winrate {_fmt(item['winrate'], '%')}, entry diff {item['entry_diff']}"
             )
             for item in weak_maps
@@ -167,10 +204,10 @@ def render_markdown_report(payload: dict[str, Any]) -> str:
             "",
             "## Метрики контроля",
             "- Winrate последних 15 матчей.",
-            "- K/D, ADR, KAST и rating последних 15 матчей.",
-            "- Entry diff и entry deaths per match.",
-            "- Utility damage и flash assists.",
-            "- Winrate и ADR на слабых картах.",
+            "- K/D и ADR exact-date окна.",
+            "- KAST, swing, utility и flash assists только с caveat.",
+            "- Entry diff и entry deaths per match с sample-size context.",
+            "- Winrate и ADR на картах только при достаточном числе матчей.",
         ]
     )
     return "\n".join(lines)
@@ -230,6 +267,11 @@ def _serialize_recommendation_progress(progress: dict[str, Any] | None) -> dict[
 
 def _fmt(value: Any, suffix: str = "") -> str:
     return "n/a" if value is None else f"{value}{suffix}"
+
+
+def _confidence_level(confidence: dict[str, Any], metric_id: str) -> str:
+    item = confidence.get(metric_id) or {}
+    return str(item.get("level") or "unknown")
 
 
 def _write_report_file(report_id: int, markdown: str) -> None:

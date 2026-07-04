@@ -93,6 +93,8 @@ WP-014C4 repeat one-button live acceptance after parser repair passed with warni
 
 WP-015A/WP-015A1 reconciled historical match-date truth without reset/resync, live Steam/API, parser jobs, schema changes or production file changes. Rows `21-24` were exact-backfilled from linked `steam_history` rows `5-8`; rows `1-8` and `59` were normalized as non-playable placeholder metadata; rows `37-38` remain playable approximate/file-mtime fallback. Metrics must treat only `match_date_status=exact_match_date_available` with `match_date_source=steam_gc_match_time` as exact and must not use `source="steam_history"` placeholders as playable matches.
 
+WP-015C consumes that import/date truth in metric surfaces. Recent/trend/form/report/recommendation/AI date-window metrics now use exact playable rows for exact windows, count approximate rows as excluded, and expose confidence metadata instead of silently treating file-mtime fallback rows as exact evidence.
+
 Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
 
 Stage 2 ownership hardening requires current owner session for `/auth/steam/callback`. Без owner session callback не создаёт uncontrolled user, `steam_accounts` или `import_jobs`. При owner session Steam account линкуется только к owner user.

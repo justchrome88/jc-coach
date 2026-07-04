@@ -22,6 +22,23 @@
   <div class="metric"><span>Форма</span><strong>{{ summary.form_score or "n/a" }}</strong></div>
 </section>
 
+<section class="panel">
+  <div class="panel-head">
+    <h2>Metric confidence</h2>
+    <span>{{ dashboard_status.date_window.confidence }}</span>
+  </div>
+  <div class="mini-metrics">
+    <div><span>Exact-date rows</span><strong>{{ dashboard_status.date_window.exact_date_matches }}</strong></div>
+    <div><span>Excluded non-exact</span><strong>{{ dashboard_status.date_window.excluded_from_exact_windows }}</strong></div>
+    <div><span>KAST</span><strong>{{ summary.metric_confidence.kast.level }}</strong></div>
+    <div><span>Rating</span><strong>{{ summary.metric_confidence.hltv_rating.level }}</strong></div>
+    <div><span>Swing</span><strong>{{ summary.metric_confidence.swing_score.level }}</strong></div>
+  </div>
+  {% if dashboard_status.date_window.warnings %}
+  <p class="warning-text">{{ dashboard_status.date_window.warnings|join("; ") }}</p>
+  {% endif %}
+</section>
+
 <section class="layout-three">
   <div class="panel stat-card">
     <div class="panel-head">
@@ -84,14 +101,14 @@
   <div class="panel">
     <div class="panel-head">
       <h2>Динамика</h2>
-      <span>последние 30</span>
+      <span>exact-date window</span>
     </div>
     <canvas id="trendChart" height="120"></canvas>
   </div>
   <div class="panel stat-note">
     <div class="panel-head">
       <h2>Что изменилось</h2>
-      <span>последний блок</span>
+      <span>{{ dashboard_status.date_window.confidence }}</span>
     </div>
     <div class="mini-metrics stacked">
       <div><span>Матчи в блоке</span><strong>{{ dashboard_status.session.recent_matches }}</strong></div>
@@ -107,7 +124,7 @@
   <div class="panel">
     <div class="panel-head">
       <h2>Последние 15 vs предыдущие 15</h2>
-      <span>{{ comparison.trend }}</span>
+      <span>{{ comparison.trend }} · {{ comparison.confidence }}</span>
     </div>
     <table>
       <thead><tr><th>Метрика</th><th>Сейчас</th><th>Было</th><th>Изменение</th></tr></thead>

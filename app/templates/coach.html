@@ -92,6 +92,9 @@
           <div><span>Current</span><strong>{{ item.current if item.current is not none else "n/a" }}</strong></div>
           <div><span>Target</span><strong>{{ item.target if item.target is not none else "n/a" }}</strong></div>
         </div>
+        {% if item.confidence %}
+        <p class="muted">Confidence: {{ item.confidence.level }} · coverage {{ item.confidence.coverage }}%</p>
+        {% endif %}
         {% if item.warning %}
         <p class="warning-text">{{ item.warning }}</p>
         {% endif %}
@@ -144,6 +147,13 @@
     <h2>Metric Truth warnings</h2>
     <span>weak facts are not hard claims</span>
   </div>
+  {% if coach_ui.current.available and coach_ui.current.baseline_confidence.date_window %}
+  <p class="muted">
+    Baseline date window: {{ coach_ui.current.baseline_confidence.date_window.confidence }},
+    exact {{ coach_ui.current.baseline_confidence.date_window.exact_date_matches }},
+    excluded {{ coach_ui.current.baseline_confidence.date_window.excluded_from_exact_windows }}.
+  </p>
+  {% endif %}
   <div class="category-grid">
     {% for item in coach_ui.weak_metric_notes %}
     <div class="category-card {{ 'critical' if item.decision == 'suppressed' else 'watch' }}">

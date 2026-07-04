@@ -53,18 +53,35 @@
   <div class="metric"><span>Форма</span><strong>{{ summary.form_score or "n/a" }}</strong></div>
 </section>
 
+<section class="panel">
+  <div class="panel-head">
+    <h2>Metric confidence</h2>
+    <span>{{ dashboard_status.date_window.confidence }}</span>
+  </div>
+  <div class="mini-metrics">
+    <div><span>Exact-date rows</span><strong>{{ dashboard_status.date_window.exact_date_matches }}</strong></div>
+    <div><span>Excluded non-exact</span><strong>{{ dashboard_status.date_window.excluded_from_exact_windows }}</strong></div>
+    <div><span>KAST</span><strong>{{ summary.metric_confidence.kast.level }}</strong></div>
+    <div><span>Rating</span><strong>{{ summary.metric_confidence.hltv_rating.level }}</strong></div>
+    <div><span>Swing</span><strong>{{ summary.metric_confidence.swing_score.level }}</strong></div>
+  </div>
+  {% if dashboard_status.date_window.warnings %}
+  <p class="warning-text">{{ dashboard_status.date_window.warnings|join("; ") }}</p>
+  {% endif %}
+</section>
+
 <section class="layout-two">
   <div class="panel">
     <div class="panel-head">
       <h2>{{ t("stats.trend") }}</h2>
-      <span>до 30 матчей в графике</span>
+      <span>exact-date rows only</span>
     </div>
     <canvas id="trendChart" height="120"></canvas>
   </div>
   <div class="panel">
     <div class="panel-head">
       <h2>Текущая форма</h2>
-      <span>{{ comparison.trend }}</span>
+      <span>{{ comparison.trend }} · {{ comparison.confidence }}</span>
     </div>
     <div class="mini-metrics stacked">
       <div><span>Раунды</span><strong>{{ summary.rounds_for }}:{{ summary.rounds_against }}</strong></div>
@@ -177,7 +194,7 @@
         {% for item in map_stats %}
         <tr>
           <td>{{ item.map_name }}</td>
-          <td>{{ item.matches_count }}</td>
+          <td>{{ item.matches_count }} · {{ item.sample_confidence }}</td>
           <td>{{ item.winrate or 0 }}%</td>
           <td>{{ item.avg_kd or "n/a" }}</td>
           <td>{{ item.avg_adr or "n/a" }}</td>

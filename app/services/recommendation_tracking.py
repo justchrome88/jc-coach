@@ -10,6 +10,13 @@ from sqlalchemy.orm import Session
 
 from app.db.models import CoachRecommendation, Match, MatchRecommendationEvaluation
 from app.services.match_queries import NON_PLAYABLE_MATCH_SOURCES, playable_match_select
+from app.services.metric_confidence import (
+    exact_date_window_metadata,
+    exact_recent_matches,
+    metric_confidence_map,
+    metric_context,
+    sort_matches,
+)
 from app.services.metric_truth import is_metric_allowed_for_hard_claim, metric_warning
 
 DEFAULT_TITLE = "Снизить первые смерти"
@@ -326,7 +333,8 @@ def _progress_for_recommendation(db: Session, recommendation: CoachRecommendatio
 
 
 def _new_system_recommendation(definition: dict[str, str], matches: list[Match]) -> CoachRecommendation:
-    baseline_matches = matches[-BASELINE_PERIOD_MATCHES:]
+    context = metric_context(matches)
+    baseline_matches = exact_recent_matches(matches, BASELINE_PERIOD_MATCHES, context=context)
     baseline_metrics = _aggregate_baseline(baseline_matches)
     baseline_ids = [match.id for match in baseline_matches]
     start_after_match_id = max((match.id for match in matches if match.id is not None), default=None)
@@ -358,7 +366,8 @@ def _definition_for_category(category: str) -> dict[str, str]:
     return definition
 
 
-def _aggregate_baseline(matches: list[Match]) -> dict[str, float | int | None]:
+def _aggregate_baseline(matches: list[Match]) -> dict[str, Any]:
+    context = metric_context(matches)
     return {
         "matches_count": len(matches),
         "kd": _avg(matches, "kd"),
@@ -369,6 +378,30 @@ def _aggregate_baseline(matches: list[Match]) -> dict[str, float | int | None]:
         "utility_damage": _avg(matches, "utility_damage"),
         "flash_assists": _avg(matches, "flash_assists"),
         "winrate": _winrate(matches),
+        "confidence": {
+            "date_window": exact_date_window_metadata(
+                matches,
+                required_sample=BASELINE_PERIOD_MATCHES,
+                context=context,
+            ),
+            "metrics": metric_confidence_map(
+                (
+                    "kd_ratio",
+                    "entry_deaths",
+                    "early_deaths",
+                    "kast",
+                    "adr",
+                    "utility_damage",
+                    "flash_assists",
+                    "result",
+                ),
+                matches,
+                usage="recommendation",
+                date_windowed=True,
+                min_sample=BASELINE_PERIOD_MATCHES,
+                context=context,
+            ),
+        },
     }
 
 
@@ -457,6 +490,7 @@ def _coach_comment(category: str) -> str:
 
 
 def _match_evidence(match: Match) -> dict[str, Any]:
+    context = metric_context([match])
     warnings = [
         warning
         for metric_id in ("early_deaths", "kast", "flash_assists", "utility_damage")
@@ -472,6 +506,14 @@ def _match_evidence(match: Match) -> dict[str, Any]:
         "utility_damage": match.utility_damage,
         "flash_assists": match.flash_assists,
         "metric_truth_warnings": warnings,
+        "metric_confidence": metric_confidence_map(
+            ("entry_deaths", "early_deaths", "kast", "adr", "utility_damage", "flash_assists", "result"),
+            [match],
+            usage="recommendation",
+            date_windowed=True,
+            min_sample=1,
+            context=context,
+        ),
     }
 
 
@@ -690,6 +732,7 @@ def _aggregate_current_evaluations(evaluations: list[MatchRecommendationEvaluati
         "adr": _avg_dict(evidence_items, "adr"),
         "utility_damage": _avg_dict(evidence_items, "utility_damage"),
         "flash_assists": _avg_dict(evidence_items, "flash_assists"),
+        "confidence": {"evaluated_matches": len(evidence_items)},
     }
 
 
@@ -713,7 +756,11 @@ def _progress_summary(progress_score: int, matches_count: int) -> str:
 
 
 def _ordered_matches(db: Session) -> list[Match]:
-    return list(db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all())
+    matches = list(
+        db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
+    )
+    context = metric_context(matches)
+    return exact_recent_matches(sort_matches(matches), len(matches), context=context)
 
 
 def _avg(matches: list[Match], attr: str) -> float | None:

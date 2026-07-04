@@ -5,6 +5,14 @@ from collections.abc import Iterable
 from typing import Any
 
 from app.db.models import Match
+from app.services.metric_confidence import (
+    MetricContext,
+    exact_period_windows,
+    metric_confidence_map,
+    metric_context,
+    raw_match,
+    sort_matches,
+)
 
 AIM_DATA_GAPS = [
     "accuracy requires reliable weapon_fire and hit correlation",
@@ -15,20 +23,20 @@ AIM_DATA_GAPS = [
 ]
 
 
-def get_aim_profile(matches: Iterable[Match]) -> dict[str, Any]:
-    items = _sort_matches(matches)
-    recent = items[-15:]
-    previous = items[-30:-15] if len(items) > 15 else []
-    weapon_breakdown = _aggregate_weapon_breakdown(items)
+def get_aim_profile(matches: Iterable[Match], *, context: MetricContext | None = None) -> dict[str, Any]:
+    items = sort_matches(matches)
+    ctx = context or metric_context(items)
+    recent, previous, window_meta = exact_period_windows(items, context=ctx)
+    weapon_breakdown = _aggregate_weapon_breakdown(items, context=ctx)
     return {
         "matches_count": len(items),
         "averages": {
             "adr": _avg(items, "adr"),
             "kd": _avg(items, "kd"),
             "headshot_percent": _avg(items, "headshot_percent"),
-            "damage_per_death": _avg_aim_summary(items, "damage_per_death"),
+            "damage_per_death": _avg_aim_summary(items, "damage_per_death", context=ctx),
             "opening_duel_success": _opening_duel_success(items),
-            "multi_kill_rounds": _sum_aim_summary(items, "multi_kill_rounds"),
+            "multi_kill_rounds": _sum_aim_summary(items, "multi_kill_rounds", context=ctx),
         },
         "recent": {
             "matches_count": len(recent),
@@ -53,8 +61,16 @@ def get_aim_profile(matches: Iterable[Match]) -> dict[str, Any]:
             key=lambda item: (item["kills"], item["damage"]),
             reverse=True,
         )[:8],
-        "coverage": _coverage(items),
-        "confidence": _confidence(items, weapon_breakdown),
+        "coverage": _coverage(items, context=ctx),
+        "confidence": _confidence(items, weapon_breakdown, context=ctx),
+        "metric_confidence": metric_confidence_map(
+            ("adr", "kd_ratio", "headshot_rate", "entry_deaths"),
+            items,
+            date_windowed=True,
+            min_sample=15,
+            context=ctx,
+        ),
+        "date_window": window_meta,
         "data_gaps": AIM_DATA_GAPS,
         "interpretation": _interpretation(items, weapon_breakdown),
     }
@@ -82,10 +98,14 @@ def match_aim_profile(match: Match) -> dict[str, Any]:
     }
 
 
-def _aggregate_weapon_breakdown(matches: list[Match]) -> dict[str, dict[str, Any]]:
+def _aggregate_weapon_breakdown(
+    matches: list[Match],
+    *,
+    context: MetricContext | None = None,
+) -> dict[str, dict[str, Any]]:
     aggregate: dict[str, dict[str, Any]] = {}
     for match in matches:
-        weapon_breakdown = _raw(match).get("weapon_breakdown")
+        weapon_breakdown = raw_match(match, context=context).get("weapon_breakdown")
         if not isinstance(weapon_breakdown, dict):
             continue
         for weapon, stats in weapon_breakdown.items():
@@ -107,7 +127,8 @@ def _aggregate_weapon_breakdown(matches: list[Match]) -> dict[str, dict[str, Any
     return aggregate
 
 
-def _coverage(matches: list[Match]) -> dict[str, float]:
+def _coverage(matches: list[Match], *, context: MetricContext | None = None) -> dict[str, float]:
+    ctx = context or metric_context(matches)
     total = len(matches)
     return {
         "adr": _percent(sum(1 for match in matches if match.adr is not None), total),
@@ -117,14 +138,19 @@ def _coverage(matches: list[Match]) -> dict[str, float]:
             total,
         ),
         "weapon_breakdown": _percent(
-            sum(1 for match in matches if isinstance(_raw(match).get("weapon_breakdown"), dict)),
+            sum(1 for match in matches if isinstance(raw_match(match, context=ctx).get("weapon_breakdown"), dict)),
             total,
         ),
     }
 
 
-def _confidence(matches: list[Match], weapon_breakdown: dict[str, Any]) -> str:
-    coverage = _coverage(matches)
+def _confidence(
+    matches: list[Match],
+    weapon_breakdown: dict[str, Any],
+    *,
+    context: MetricContext | None = None,
+) -> str:
+    coverage = _coverage(matches, context=context)
     if len(matches) >= 10 and coverage["adr"] >= 80 and coverage["weapon_breakdown"] >= 60:
         return "high"
     if len(matches) >= 3 and coverage["adr"] >= 60:
@@ -155,19 +181,29 @@ def _opening_duel_success(matches: list[Match]) -> float | None:
     return round(kills / attempts * 100, 2) if attempts else None
 
 
-def _avg_aim_summary(matches: list[Match], key: str) -> float | None:
+def _avg_aim_summary(
+    matches: list[Match],
+    key: str,
+    *,
+    context: MetricContext | None = None,
+) -> float | None:
     values = []
     for match in matches:
-        value = _raw(match).get("aim_summary", {}).get(key)
+        value = raw_match(match, context=context).get("aim_summary", {}).get(key)
         if value is not None:
             values.append(float(value))
     return round(sum(values) / len(values), 2) if values else None
 
 
-def _sum_aim_summary(matches: list[Match], key: str) -> int:
+def _sum_aim_summary(
+    matches: list[Match],
+    key: str,
+    *,
+    context: MetricContext | None = None,
+) -> int:
     total = 0
     for match in matches:
-        total += int(_raw(match).get("aim_summary", {}).get(key) or 0)
+        total += int(raw_match(match, context=context).get("aim_summary", {}).get(key) or 0)
     return total
 
 
@@ -197,7 +233,4 @@ def _raw(match: Match) -> dict[str, Any]:
 
 
 def _sort_matches(matches: Iterable[Match]) -> list[Match]:
-    return sorted(
-        list(matches),
-        key=lambda match: (match.played_at is None, match.played_at or match.created_at, match.id or 0),
-    )
+    return sort_matches(matches)

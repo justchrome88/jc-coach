@@ -62,12 +62,12 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-015` |
 | title | Metrics Correctness |
 | target version | `v0.7` |
-| status | ready to start after WP-015A1 date-truth reconciliation |
+| status | in progress; WP-015C confidence/date-window gating and WP-015C1 performance repair completed, WP-015D runtime acceptance next |
 | objective | Establish golden fixtures, trusted metrics and weak metric labeling. |
 | guardians | `METRICS_GUARDIAN`, `TEST_GUARDIAN`, `IMPORT_GUARDIAN`, `PM_ORCHESTRATOR` |
 | source docs | `docs/METRICS.md`, `docs/audit/METRIC_TRUTH_INVENTORY.md`, `docs/audit/PARSER_FACTS_INVENTORY.md`, `docs/audit/WP_015A_MATCH_DATE_TRUTH_RECONCILIATION_DIAGNOSIS.md`, `docs/audit/WP_015A1_MATCH_DATE_TRUTH_RECONCILIATION_REPAIR_REPORT.md`, `docs/RECOMMENDATIONS.md`, `docs/AI_COACH.md` |
 | forbidden actions | Upgrading weak metrics without fixture evidence, using unavailable metrics for hard claims, live AI/import/parser jobs without explicit authorization. |
-| acceptance criteria | Golden fixtures exist for accepted metrics; trusted/medium/approximate/low/unavailable labels are enforced; weak metrics are visibly labeled or suppressed; date-window metrics treat only exact Steam GC dates as exact and label/exclude approximate dates; AI/recommendation paths follow Metric Truth. |
+| acceptance criteria | Golden fixtures exist for accepted metrics; trusted/medium/approximate/low/unavailable labels are enforced; weak metrics are visibly labeled or suppressed; date-window metrics treat only exact Steam GC dates as exact and label/exclude approximate dates; AI/recommendation paths follow Metric Truth. WP-015C implements the first confidence/date-window guardrails; WP-015C1 repaired the performance regression from repeated raw JSON parsing; WP-015D must verify runtime surfaces before `v0.7` promotion. |
 | required evidence | Metric fixture results, Metric Truth tests, AI validator/recommendation evidence tests as applicable, no unsupported metric claims. |
 | exit criteria | Accepted metrics are reliable enough to support serious recommendation evidence within documented limits. |
 | next WP | `WP-016 Recommendation Loop Acceptance` |

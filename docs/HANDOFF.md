@@ -5,7 +5,7 @@ Last updated: 2026-07-04.
 ## Current State
 
 - Current Product Version: `v0.6`
-- Current WP: `WP-015A1 Match Date Truth Reconciliation Repair` completed; next is `WP-015 Metrics Correctness`.
+- Current WP: `WP-015C Metrics Confidence and Date-Window Gating Repair` completed; next is `WP-015D Runtime Metrics Acceptance`.
 - Next Target Version: `v0.7`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -23,6 +23,9 @@ Last updated: 2026-07-04.
 - WP-014E parser/import model compatibility repair: completed without schema change, live Steam/import/parser jobs, production DB mutation or production file cleanup. `played_at_source` and date truth metadata remain in `raw_json`/result payloads and are filtered out of `Match` constructor kwargs.
 - WP-014C4 repeat one-button live acceptance after parser repair: `PASS_WITH_WARNINGS`. One authorized click created parent job `#20`, storage/TMPDIR guard passed, batch cap limited the run to exactly one demo, parser/import succeeded, exact date truth was persisted via `steam_gc_match_time`, parent `result_json` reached terminal truthful `batch_cap_reached` with `success` and `exact_match_date_available`, service stayed healthy and disk growth was bounded. This promotes controlled personal import acceptance to `v0.6`. Warnings carried forward: coarse `ImportJob.status`, uploads/temp on root, raw demos retained, parser memory peak should be watched, and friends/public readiness remains blocked.
 - WP-015A diagnosis and WP-015A1 repair reconciled historical match-date truth without reset/resync, live Steam/API, parser jobs, schema changes or production file changes. Rows `21-24` were exact-backfilled from linked `steam_history` rows `5-8`; rows `1-8` and `59` were normalized as non-playable placeholder metadata; rows `37-38` remain playable approximate/file-mtime fallback. Current playable date truth: 17 exact, 2 approximate, 0 unknown.
+- WP-015B diagnosed metrics correctness and found no DB reset requirement: all 19 playable demo rows have parser artifacts, `steam_history` placeholders are excluded from playable metrics, and the main v0.7 risk is confidence/date-window gating.
+- WP-015C implemented metric confidence and exact-date window guardrails without schema changes, production DB mutation, live import or parser jobs. Dashboard/stats/coach/report/recommendation/AI paths now use exact-date playable rows for recent/trend/form windows, expose exact/approximate/excluded counts, and carry confidence metadata for weak or unavailable metrics.
+- WP-015C-PERF diagnosed blocker-level latency from repeated `json.loads` of large `matches.raw_json` payloads. WP-015C1 repaired it with request/helper-level `MetricContext` caching and removed duplicated confidence/date-window work. Runtime builders are now sub-second in local production-DB measurements; `/coach` remains the heaviest because artifact overview still loads many ORM rows.
 
 ## Last Incident Summary
 
@@ -36,11 +39,11 @@ Last updated: 2026-07-04.
 
 ## Next WP
 
-`WP-015 Metrics Correctness` targeting `v0.7`.
+`WP-015D Runtime Metrics Acceptance` targeting `v0.7`.
 
-The next active WP is `WP-015 Metrics Correctness`, but it has not started.
+The next active WP is `WP-015D Runtime Metrics Acceptance`, but it has not started.
 
-Expected focus: golden metric fixtures, trusted/weak metric labeling and enforcement. Date-window metrics must use exact rows only unless the UI/result explicitly labels approximate dates. Do not run live Steam/import/parser work unless a future WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
+Expected focus: runtime verification that dashboard, stats, coach, report and AI payload surfaces expose the new confidence metadata, stay performant after WP-015C1, and do not present approximate/unknown dates or unavailable metrics as hard evidence. Do not run live Steam/import/parser work unless a future WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
 
 Roadmap and WP wiring:
 

@@ -7,6 +7,15 @@ from typing import Any
 
 from app.db.models import Match
 from app.services.aim_stats import match_aim_profile
+from app.services.metric_confidence import (
+    MetricContext,
+    exact_date_window_metadata,
+    exact_period_windows,
+    exact_recent_matches,
+    metric_confidence_map,
+    metric_context,
+    sort_matches,
+)
 
 KEY_METRICS = (
     "winrate",
@@ -21,14 +30,42 @@ KEY_METRICS = (
     "deaths",
 )
 
+CONFIDENCE_METRICS = (
+    "result",
+    "kd_ratio",
+    "adr",
+    "kast",
+    "hltv_rating",
+    "swing_score",
+    "entry_deaths",
+    "early_deaths",
+    "utility_damage",
+    "flash_assists",
+    "side_split_metrics",
+)
 
-def get_summary(matches: Iterable[Match]) -> dict[str, Any]:
-    items = _sort_matches(matches)
+
+def get_summary(
+    matches: Iterable[Match],
+    *,
+    date_windowed: bool = False,
+    context: MetricContext | None = None,
+) -> dict[str, Any]:
+    items = sort_matches(matches)
+    ctx = context or metric_context(items)
     count = len(items)
     wins = sum(1 for match in items if match.result == "win")
     losses = sum(1 for match in items if match.result == "loss")
     rounds_for = _sum(items, "rounds_for")
     rounds_against = _sum(items, "rounds_against")
+    form_matches = exact_recent_matches(items, 15, context=ctx) if date_windowed else items[-15:]
+    metric_confidence = metric_confidence_map(
+        CONFIDENCE_METRICS,
+        items,
+        date_windowed=date_windowed,
+        min_sample=15 if date_windowed else 5,
+        context=ctx,
+    )
     return {
         "matches_count": count,
         "wins": wins,
@@ -49,20 +86,31 @@ def get_summary(matches: Iterable[Match]) -> dict[str, Any]:
         "round_diff": rounds_for - rounds_against,
         "rounds_for": rounds_for,
         "rounds_against": rounds_against,
-        "form_score": calculate_form_score(items[-15:]),
-        "recent_results": [match.result for match in items[-15:]],
+        "form_score": calculate_form_score(form_matches, date_windowed=date_windowed),
+        "form_score_confidence": _form_confidence(form_matches, date_windowed=date_windowed),
+        "recent_results": [match.result for match in form_matches],
         "available_metrics": _available_metrics(items),
+        "metric_confidence": metric_confidence,
+        "date_window": exact_date_window_metadata(items, required_sample=15, context=ctx),
     }
 
 
-def get_dashboard_status(matches: Iterable[Match]) -> dict[str, Any]:
-    items = _sort_matches(matches)
-    recent = items[-15:]
-    previous = items[-30:-15] if len(items) > 15 else []
+def get_dashboard_status(matches: Iterable[Match], *, context: MetricContext | None = None) -> dict[str, Any]:
+    items = sort_matches(matches)
+    ctx = context or metric_context(items)
+    recent, previous, window_meta = exact_period_windows(items, context=ctx)
     return {
         "source_breakdown": get_source_breakdown(items),
-        "adr_profile": get_adr_profile(items),
+        "adr_profile": get_adr_profile(items, context=ctx),
         "data_quality": get_data_quality(items),
+        "metric_confidence": metric_confidence_map(
+            CONFIDENCE_METRICS,
+            items,
+            date_windowed=True,
+            min_sample=15,
+            context=ctx,
+        ),
+        "date_window": window_meta,
         "session": {
             "recent_matches": len(recent),
             "previous_matches": len(previous),
@@ -92,7 +140,7 @@ def get_source_breakdown(matches: Iterable[Match]) -> list[dict[str, Any]]:
 
 
 def get_data_quality(matches: Iterable[Match]) -> dict[str, Any]:
-    items = _sort_matches(matches)
+    items = sort_matches(matches)
     total = len(items)
     required_fields = {
         "result": "result",
@@ -116,11 +164,11 @@ def get_data_quality(matches: Iterable[Match]) -> dict[str, Any]:
     return {"matches_count": total, "coverage": coverage, "label": label}
 
 
-def get_adr_profile(matches: Iterable[Match]) -> dict[str, Any]:
-    items = _sort_matches(matches)
+def get_adr_profile(matches: Iterable[Match], *, context: MetricContext | None = None) -> dict[str, Any]:
+    items = sort_matches(matches)
+    ctx = context or metric_context(items)
     with_adr = [match for match in items if match.adr is not None]
-    recent = items[-15:]
-    previous = items[-30:-15] if len(items) > 15 else []
+    recent, previous, window_meta = exact_period_windows(items, context=ctx)
     best = max(with_adr, key=lambda match: match.adr or 0, default=None)
     worst = min(with_adr, key=lambda match: match.adr or 0, default=None)
     coverage = _percent(len(with_adr), len(items)) or 0
@@ -134,6 +182,14 @@ def get_adr_profile(matches: Iterable[Match]) -> dict[str, Any]:
         "delta": _delta(recent_adr, previous_adr),
         "coverage": coverage,
         "confidence": confidence,
+        "metric_confidence": metric_confidence_map(
+            ("adr",),
+            items,
+            date_windowed=True,
+            min_sample=15,
+            context=ctx,
+        )["adr"],
+        "date_window": window_meta,
         "best_match": best,
         "worst_match": worst,
         "source_breakdown": get_source_breakdown(with_adr),
@@ -141,12 +197,23 @@ def get_adr_profile(matches: Iterable[Match]) -> dict[str, Any]:
     }
 
 
-def compare_periods(matches: Iterable[Match], current_n: int = 15, previous_n: int = 15) -> dict[str, Any]:
-    items = _sort_matches(matches)
-    current = items[-current_n:]
-    previous = items[-(current_n + previous_n) : -current_n] if len(items) > current_n else []
-    current_summary = get_summary(current)
-    previous_summary = get_summary(previous)
+def compare_periods(
+    matches: Iterable[Match],
+    current_n: int = 15,
+    previous_n: int = 15,
+    *,
+    context: MetricContext | None = None,
+) -> dict[str, Any]:
+    items = sort_matches(matches)
+    ctx = context or metric_context(items)
+    current, previous, window_meta = exact_period_windows(
+        items,
+        current_n=current_n,
+        previous_n=previous_n,
+        context=ctx,
+    )
+    current_summary = get_summary(current, date_windowed=True, context=ctx)
+    previous_summary = get_summary(previous, date_windowed=True, context=ctx)
     metric_map = {
         "winrate": ("winrate", "pp"),
         "kd": ("avg_kd", ""),
@@ -177,17 +244,21 @@ def compare_periods(matches: Iterable[Match], current_n: int = 15, previous_n: i
         "deltas": deltas,
         "worsened_metrics": worsened,
         "trend": "down" if len(worsened) >= 3 else "stable",
+        "date_window": window_meta,
+        "confidence": window_meta["confidence"],
     }
 
 
-def get_map_stats(matches: Iterable[Match]) -> list[dict[str, Any]]:
+def get_map_stats(matches: Iterable[Match], *, context: MetricContext | None = None) -> list[dict[str, Any]]:
+    items = sort_matches(matches)
+    ctx = context or metric_context(items)
     buckets: dict[str, list[Match]] = defaultdict(list)
-    for match in matches:
+    for match in items:
         buckets[match.map_name or "Unknown"].append(match)
 
     stats = []
     for map_name, items in buckets.items():
-        summary = get_summary(items)
+        summary = get_summary(items, context=ctx)
         stats.append(
             {
                 "map_name": map_name,
@@ -202,6 +273,13 @@ def get_map_stats(matches: Iterable[Match]) -> list[dict[str, Any]]:
                 "avg_utility_damage": summary["avg_utility_damage"],
                 "t_round_winrate": _side_winrate(items, "side_t_rounds_won", "side_t_rounds_lost"),
                 "ct_round_winrate": _side_winrate(items, "side_ct_rounds_won", "side_ct_rounds_lost"),
+                "sample_confidence": _map_sample_confidence(len(items)),
+                "metric_confidence": metric_confidence_map(
+                    ("result", "adr", "kast", "entry_deaths", "side_split_metrics"),
+                    items,
+                    min_sample=3,
+                    context=ctx,
+                ),
             }
         )
     return sorted(stats, key=lambda item: (item["winrate"] if item["winrate"] is not None else -1), reverse=True)
@@ -285,9 +363,11 @@ def detect_weaknesses(
     return weaknesses[:6]
 
 
-def calculate_form_score(matches: Iterable[Match]) -> float | None:
-    items = _sort_matches(matches)
+def calculate_form_score(matches: Iterable[Match], *, date_windowed: bool = False) -> float | None:
+    items = sort_matches(matches)
     if not items:
+        return None
+    if date_windowed and len(items) < 5:
         return None
     score = 0.0
     for match in items:
@@ -300,8 +380,8 @@ def calculate_form_score(matches: Iterable[Match]) -> float | None:
     return round(max(0, min(100, score / len(items))), 1)
 
 
-def chart_series(matches: Iterable[Match], limit: int = 30) -> dict[str, Any]:
-    items = _sort_matches(matches)[-limit:]
+def chart_series(matches: Iterable[Match], limit: int = 30, *, context: MetricContext | None = None) -> dict[str, Any]:
+    items = exact_recent_matches(matches, limit, context=context)
     return {
         "labels": [match.played_at.strftime("%m-%d") if match.played_at else f"#{match.id}" for match in items],
         "kd": [match.kd for match in items],
@@ -378,13 +458,6 @@ def _weakness(title: str, category: str, severity: str, evidence: str) -> dict[s
     return {"title": title, "category": category, "severity": severity, "evidence": evidence}
 
 
-def _sort_matches(matches: Iterable[Match]) -> list[Match]:
-    return sorted(
-        list(matches),
-        key=lambda match: (match.played_at is None, match.played_at or match.created_at, match.id or 0),
-    )
-
-
 def _avg(items: list[Match], attr: str) -> float | None:
     values = [getattr(item, attr) for item in items if getattr(item, attr) is not None]
     return round(sum(values) / len(values), 2) if values else None
@@ -450,3 +523,28 @@ def _available_metrics(items: list[Match]) -> list[str]:
         if any(getattr(item, attr, None) is not None for item in items):
             available.append(field)
     return available
+
+
+def _form_confidence(items: list[Match], *, date_windowed: bool) -> dict[str, Any]:
+    if not items:
+        level = "unavailable"
+    elif date_windowed and len(items) < 5:
+        level = "unavailable"
+    elif date_windowed and len(items) < 15:
+        level = "low_confidence"
+    else:
+        level = "partial"
+    return {
+        "level": level,
+        "sample_size": len(items),
+        "requires_exact_date": date_windowed,
+        "reasons": ["Form score is a composite of mixed-confidence metrics and should not be hard evidence."],
+    }
+
+
+def _map_sample_confidence(matches_count: int) -> str:
+    if matches_count >= 5:
+        return "partial"
+    if matches_count >= 3:
+        return "low_confidence"
+    return "unavailable"
