@@ -21,11 +21,11 @@ The practical product question is:
 
 ## 2. Current Truth
 
-Current Product Version: `v0.6`.
+Current Product Version: `v0.7`.
 
-Current WP: `WP-015C Metrics Confidence and Date-Window Gating Repair` completed; next is `WP-015D Runtime Metrics Acceptance`.
+Current WP: `WP-015 Metrics Correctness` completed / accepted with warnings; next is `WP-016 Recommendation Loop Acceptance`.
 
-Next Target Version: `v0.7`.
+Next Target Version: `v0.8`.
 
 Current governance entrypoint: `docs/PROJECT_OS.md`.
 
@@ -45,7 +45,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | Dashboard/matches/stats | Working personal MVP runtime; WP-013 `PASS_WITH_WARNINGS` | `/coach` now surfaces current tracked recommendation, next action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status. Runtime restart and read-only smoke passed; full owner manual checklist remains operator evidence to record. |
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
 | Recommendations | Partial working loop, Stage 4 read/write split exists | Multi-category goals, lifecycle, evaluations and progress exist. GET/read paths no longer create recommendations/evaluations. Recommendations are not yet consistently generated from top verified problem snapshots. |
-| Metrics | Metric Truth Layer exists, Stage 5 `PASS_WITH_WARNINGS`; parser confidence Stage 6 `PASS_WITH_WARNINGS`; WP-015A1 date truth reconciliation, WP-015C confidence/date-window gating and WP-015C1 performance repair completed | Runtime registry defines source/formula/reliability/usage policy. Parser no longer silently maps early deaths to entry deaths. Playable match dates now have 17 exact rows, 2 approximate rows and 0 unknown rows; dashboard/stats/coach/report/recommendation/AI date-window paths use exact playable rows and expose confidence/date-window metadata. WP-015C1 added metric context caching to keep these surfaces performant. Trade/side/utility facts still need deeper fixture validation before weak metrics can be upgraded. |
+| Metrics | Accepted for personal `v0.7` / `PASS_WITH_WARNINGS` | Runtime registry defines source/formula/reliability/usage policy. Parser no longer silently maps early deaths to entry deaths. Playable match dates now have 17 exact rows, 2 approximate rows and 0 unknown rows; dashboard/stats/coach/report/recommendation/AI date-window paths use exact playable rows and expose confidence/date-window metadata. WP-015C1 added metric context caching to keep these surfaces performant. WP-015D accepted runtime guardrails with warnings: direct post-restart authenticated browser timings were not captured by Codex, existing recommendation baseline `#1` lacks stored confidence metadata, report-write acceptance is deferred, `/coach` artifact overview still loads many artifact rows, and weak metrics remain weak. |
 | AI coach | Partial, Stage 8 `PASS_WITH_WARNINGS` | Codex handoff, local LLM scaffold, payload snapshots and saved AI reports exist. Structured AI output validator rejects unsupported metric claims and falls back safely; prompt versioning/provider structured mode remain future work. |
 | Auth/security | Personal/VPS only, Stage 1 + Stage 2 app hardening exist | App-level API auth, CSRF, MVP rate limits, strong secret fail-fast, Steam OpenID verification and enforced single-owner mode exist. Stage 2 is `PASS_WITH_WARNINGS`: this is not full multi-user ownership, and legacy `link_steam_account(..., user_id=None)` remains a later Steam hardening risk. Observability remains a blocker for friends/public use. |
 | DB/migrations | WP-012 guardrails completed; Stage 3 scaffold exists, not full Alembic | Production DB test/smoke contamination guardrails exist; migration policy, schema inventory and safe copy-check tooling exist. Alembic baseline and migration ledger are not implemented yet. |
@@ -53,11 +53,11 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 
 ## 3. Current Milestone
 
-Current Product Version: `v0.6`.
+Current Product Version: `v0.7`.
 
-Current WP: `WP-015C Metrics Confidence and Date-Window Gating Repair` completed; next is `WP-015D Runtime Metrics Acceptance`.
+Current WP: `WP-015 Metrics Correctness` completed / accepted with warnings; next is `WP-016 Recommendation Loop Acceptance`.
 
-Next Target Version: `v0.7`.
+Next Target Version: `v0.8`.
 
 Previous stabilization stages remain historical evidence for the product state. WP-012 DB Contamination Guardrails, WP-013 Personal MVP Runtime Smoke Gate and WP-014 Import Acceptance are complete with warnings.
 
@@ -78,8 +78,8 @@ Current focus:
 11. Stage 9 Coach-first UI: completed / `PASS_WITH_WARNINGS`.
 12. WP-014 Import Acceptance completed / accepted with warnings after WP-014C4 repeat live acceptance.
 13. WP-015A diagnosis and WP-015A1 repair completed historical match-date truth reconciliation without reset/resync, live Steam/API, parser jobs, schema changes or production file changes.
-14. WP-015B diagnosed metric correctness risks, WP-015C implemented metric confidence/date-window gating, and WP-015C1 repaired the resulting raw-JSON parsing performance regression without schema changes, production DB mutation, live import or parser jobs.
-15. WP-015D Runtime Metrics Acceptance is next; generate recommendations from verified problem evidence only after runtime metric surfaces are accepted.
+14. WP-015B diagnosed metric correctness risks, WP-015C implemented metric confidence/date-window gating, WP-015C1 repaired the resulting raw-JSON parsing performance regression, and WP-015D accepted runtime metrics guardrails with warnings.
+15. WP-016 Recommendation Loop Acceptance is next; generate recommendations from verified problem evidence and keep weak/unavailable metrics from driving hard success/failure claims.
 
 ## 4. Source-of-truth Documents
 

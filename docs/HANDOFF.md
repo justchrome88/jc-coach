@@ -4,9 +4,9 @@ Last updated: 2026-07-04.
 
 ## Current State
 
-- Current Product Version: `v0.6`
-- Current WP: `WP-015C Metrics Confidence and Date-Window Gating Repair` completed; next is `WP-015D Runtime Metrics Acceptance`.
-- Next Target Version: `v0.7`
+- Current Product Version: `v0.7`
+- Current WP: `WP-015 Metrics Correctness` completed / accepted with warnings; next is `WP-016 Recommendation Loop Acceptance`.
+- Next Target Version: `v0.8`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
 - Owner recovery state: production owner currently resolves to `justchrome88@yandex.ru` (`users.id=17`) after historical `test-*@example.test` and `smoke-*@example.test` users were manually deactivated and had password hashes cleared.
@@ -26,6 +26,7 @@ Last updated: 2026-07-04.
 - WP-015B diagnosed metrics correctness and found no DB reset requirement: all 19 playable demo rows have parser artifacts, `steam_history` placeholders are excluded from playable metrics, and the main v0.7 risk is confidence/date-window gating.
 - WP-015C implemented metric confidence and exact-date window guardrails without schema changes, production DB mutation, live import or parser jobs. Dashboard/stats/coach/report/recommendation/AI paths now use exact-date playable rows for recent/trend/form windows, expose exact/approximate/excluded counts, and carry confidence metadata for weak or unavailable metrics.
 - WP-015C-PERF diagnosed blocker-level latency from repeated `json.loads` of large `matches.raw_json` payloads. WP-015C1 repaired it with request/helper-level `MetricContext` caching and removed duplicated confidence/date-window work. Runtime builders are now sub-second in local production-DB measurements; `/coach` remains the heaviest because artifact overview still loads many ORM rows.
+- WP-015D runtime metrics acceptance completed / `PASS_WITH_WARNINGS` and promoted Metrics Correctness to `v0.7`. Accepted: confidence/date-window gating, unsupported metric suppression/relabeling, approximate row exclusion from exact windows, AI confidence metadata, repaired page-builder performance, clean service restart, unchanged DB SHA, and no production DB/file/schema/live job impact. Carry warnings: no direct post-restart authenticated browser timings from Codex, old recommendation baseline `#1` lacks stored confidence metadata, report-write acceptance deferred, `/coach` artifact overview still loads many ORM rows, weak metrics remain weak, `ImportJob.status` is coarse, uploads/tmp remain on root.
 
 ## Last Incident Summary
 
@@ -39,11 +40,11 @@ Last updated: 2026-07-04.
 
 ## Next WP
 
-`WP-015D Runtime Metrics Acceptance` targeting `v0.7`.
+`WP-016 Recommendation Loop Acceptance` targeting `v0.8`.
 
-The next active WP is `WP-015D Runtime Metrics Acceptance`, but it has not started.
+The next active WP is `WP-016 Recommendation Loop Acceptance`, but it has not started.
 
-Expected focus: runtime verification that dashboard, stats, coach, report and AI payload surfaces expose the new confidence metadata, stay performant after WP-015C1, and do not present approximate/unknown dates or unavailable metrics as hard evidence. Do not run live Steam/import/parser work unless a future WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
+Expected focus: accept recommendation -> next match -> evaluation -> progress as a coherent loop using the accepted v0.7 metric confidence rules. Do not run live Steam/import/parser work unless a future WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
 
 Roadmap and WP wiring:
 
@@ -57,7 +58,7 @@ Roadmap and WP wiring:
 Next planned versions:
 
 - `v0.6`: `WP-014 Import Acceptance` completed / accepted with warnings
-- `v0.7`: `WP-015 Metrics Correctness`
+- `v0.7`: `WP-015 Metrics Correctness` completed / accepted with warnings
 - `v0.8`: `WP-016 Recommendation Loop Acceptance`
 - `v0.9`: `WP-017 Personal Beta`
 - `v1.0`: `WP-018 Trusted MVP`
