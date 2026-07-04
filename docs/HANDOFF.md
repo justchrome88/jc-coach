@@ -12,6 +12,7 @@ Last updated: 2026-07-04.
 - Owner recovery state: production owner currently resolves to `justchrome88@yandex.ru` (`users.id=17`) after historical `test-*@example.test` and `smoke-*@example.test` users were manually deactivated and had password hashes cleared.
 - WP-013 runtime smoke: `PASS_WITH_WARNINGS`; service restart and read-only smoke passed on 2026-07-04 with DB SHA `0850e6a28b08e4150cff43e10fbd39f38bef3e3ca3e494ab5a534c22738a230d`. Full owner manual browser checklist remains operator evidence to record.
 - WP-014A Steam/Valve import diagnosis: `DIAGNOSED`; report is `docs/audit/WP_014A_STEAM_VALVE_IMPORT_DIAGNOSIS.md`. Current primary button is `/settings/imports` -> `POST /settings/imports/pull-all` -> `steam_import_all` background job. Repair is required before `v0.6`: explicit outcome taxonomy, import_job coverage for download/parser paths, exact match-date truth, and raw demo cleanup after successful parse/persist.
+- WP-014B1 import-job truth/status repair: completed without schema change or production DB mutation. `steam_import_all` now writes standardized outcome/status taxonomy to `result_json`, avoids clean `succeeded` for missing-code/download/parser/partial cases, and exact share-code import now creates a `share_code_import` tracking job before downloader/parser work. Demo cleanup lifecycle remains intentionally deferred to WP-014B2.
 
 ## Last Incident Summary
 
@@ -29,7 +30,7 @@ Last updated: 2026-07-04.
 
 The next active WP is `WP-014 Import Acceptance`.
 
-Expected focus: repair the one-button Steam/Valve import guardrails found in WP-014A. Manual demo upload remains a secondary parser/debug path. Do not run live Steam/import/parser jobs unless the WP explicitly authorizes them with DB SHA and backup evidence.
+Expected focus: continue WP-014 with demo cleanup lifecycle and failed-demo quarantine/cleanup policy. Manual demo upload remains a secondary parser/debug path. Do not run live Steam/import/parser jobs unless the WP explicitly authorizes them with DB SHA and backup evidence.
 
 Roadmap and WP wiring:
 

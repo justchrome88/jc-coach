@@ -34,12 +34,13 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - WP-011B Project OS completed: governance/tooling docs, guardian roles, handoff entrypoint and read-only `scripts/project_gate.py` exist.
 - WP-012 DB Contamination Guardrails completed: test/smoke email registration guardrails, pytest DB isolation checks and runtime smoke runbook updates exist.
 - WP-013 Personal MVP Runtime Smoke Gate completed / `PASS_WITH_WARNINGS`: service restart and read-only runtime smoke passed without 500s, unexpected DB mutation or hidden live jobs. Full owner browser checklist remains operator evidence to record after restart.
+- WP-014B1 Steam import job truth/status taxonomy completed: `steam_import_all` now records standardized `result_json` outcomes/statuses, exact share-code import creates tracking jobs before downloader/parser work, and aggregate jobs no longer report clean success for missing-code/download/parser/partial cases.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
 
 - Parser-derived metric confidence is documented and partially hardened, but trade/KAST side/utility facts still need deeper validation before upgrading weak metrics.
-- Steam import works as an alpha path with deterministic cursor semantics, but still needs durable scheduling, retry/backoff operations and a richer sync ledger before production/friends use.
+- Steam import works as an alpha path with deterministic cursor semantics and repaired job truth/status taxonomy, but still needs demo cleanup lifecycle, failed-demo quarantine/cleanup policy, durable scheduling, retry/backoff operations and a richer sync ledger before production/friends use.
 - Stage 2 ownership is single-owner mode, not full multi-user SaaS ownership across all core tables.
 - Legacy `link_steam_account(..., user_id=None)` remains an internal Steam hardening risk, but it is not reachable from public OpenID callback without owner session.
 - Stage 3 migration discipline is scaffold-level, not a full Alembic baseline or production migration ledger.

@@ -24,6 +24,17 @@ STEAM_SYNC_SUCCESS_NEW_MATCH_IMPORTED = "SUCCESS_NEW_MATCH_IMPORTED"
 STEAM_SYNC_SUCCESS_NO_NEW_MATCHES = "SUCCESS_NO_NEW_MATCHES"
 STEAM_SYNC_DUPLICATE_ALREADY_IMPORTED = "DUPLICATE_ALREADY_IMPORTED"
 STEAM_SYNC_STEAM_TEMPORARY_ERROR = "STEAM_TEMPORARY_ERROR"
+STEAM_IMPORT_SUCCESS = "success"
+STEAM_IMPORT_NO_NEW = "no_new"
+STEAM_IMPORT_NEED_CODE = "need_code"
+STEAM_IMPORT_STEAM_NOT_CONNECTED = "steam_not_connected"
+STEAM_IMPORT_RATE_LIMITED = "rate_limited"
+STEAM_IMPORT_DOWNLOAD_FAILED = "download_failed"
+STEAM_IMPORT_PARSER_FAILED = "parser_failed"
+STEAM_IMPORT_PARTIAL_SUCCESS = "partial_success"
+STEAM_IMPORT_DUPLICATE_SKIPPED = "duplicate_skipped"
+STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE = "exact_match_date_available"
+STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE = "exact_match_date_unavailable"
 SHARE_CODE_DICTIONARY = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefhijkmnopqrstuvwxyz23456789"
 SHARE_CODE_PATTERN = re.compile(rf"^(CSGO)?(-?[{SHARE_CODE_DICTIONARY}]{{5}}){{5}}$")
 _BITMASK64 = 2**64 - 1
@@ -342,15 +353,18 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
         settings = get_settings()
         accounts = list_steam_accounts(db)
         sync_results = []
+        account_states = []
         fresh_share_codes: list[str] = []
         latest_played_at = _latest_imported_match_played_at(db)
         for account in accounts:
             if not account.match_auth_code or not account.last_share_code:
-                sync_results.append(
+                account_states.append(
                     {
                         "steam_account_id": account.id,
-                        "status": "skipped",
+                        "status": STEAM_IMPORT_NEED_CODE,
                         "error": "Steam account is missing match token or authentication code.",
+                        "has_match_auth_code": bool(account.match_auth_code),
+                        "has_last_share_code": bool(account.last_share_code),
                     }
                 )
                 continue
@@ -358,14 +372,24 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
             try:
                 decode_match_share_code(saved_share_code)
             except ValueError as exc:
-                sync_results.append(
+                account_states.append(
                     {
                         "steam_account_id": account.id,
-                        "status": "skipped",
+                        "status": STEAM_IMPORT_NEED_CODE,
                         "error": str(exc),
+                        "has_match_auth_code": bool(account.match_auth_code),
+                        "has_last_share_code": bool(account.last_share_code),
                     }
                 )
                 continue
+            account_states.append(
+                {
+                    "steam_account_id": account.id,
+                    "status": "ready",
+                    "has_match_auth_code": True,
+                    "has_last_share_code": True,
+                }
+            )
             _store_steam_share_code_match(db, account, saved_share_code)
             fresh_share_codes.append(saved_share_code)
             sync_job = queue_match_history_sync(db, account.id)
@@ -384,8 +408,16 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
             share_codes=fresh_share_codes,
             min_played_at=latest_played_at,
         )
+        taxonomy = classify_steam_import_all_result(
+            accounts_count=len(accounts),
+            account_states=account_states,
+            sync_results=sync_results,
+            demo_download=demo_download,
+        )
         result = {
+            **taxonomy,
             "accounts": len(accounts),
+            "account_states": account_states,
             "sync_jobs": sync_results,
             "demo_status": demo_status,
             "demo_download": demo_download,
@@ -395,12 +427,14 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
                 "date before downloading demos. Candidates older than the latest imported match are skipped."
             ),
         }
-        job.status = "succeeded"
+        job.status = "succeeded" if taxonomy["clean_success"] else "failed"
+        if not taxonomy["clean_success"]:
+            job.error_message = taxonomy["error_message"]
         job.finished_at = datetime.now(UTC).replace(tzinfo=None)
         job.result_json = json.dumps(result, ensure_ascii=False, default=str)
         db.commit()
         db.refresh(job)
-        return {"id": job.id, "status": job.status, "result": result, "error": None}
+        return {"id": job.id, "status": job.status, "result": result, "error": job.error_message}
     except Exception as exc:
         return _fail_job(db, job, str(exc))
 
@@ -417,22 +451,206 @@ def import_steam_share_code_demo(db: Session, steam_account_id: int, share_code_
     parsed = parse_share_code_input(share_code_input)
     share_code = str(parsed["share_code"]).strip()
     decode_match_share_code(share_code)
+    job = create_steam_import_job(
+        db,
+        account.id,
+        "share_code_import",
+        {
+            "steam_id": account.steam_id,
+            "share_code": share_code,
+            "created_from": "settings_imports_exact_share_code",
+            "primary_path": False,
+        },
+    )
+    job.status = "running"
+    job.started_at = datetime.now(UTC).replace(tzinfo=None)
+    db.commit()
     was_inserted = _store_steam_share_code_match(db, account, share_code)
     account.last_share_code = share_code
     account.last_sync_at = datetime.now(UTC).replace(tzinfo=None)
     account.sync_enabled = 1
     db.commit()
 
-    demo_status = mark_steam_history_demo_download_status(db, share_codes=[share_code])
-    from app.services.steam_demo_downloader import download_pending_steam_demos
+    try:
+        demo_status = mark_steam_history_demo_download_status(db, share_codes=[share_code])
+        from app.services.steam_demo_downloader import download_pending_steam_demos
 
-    demo_download = download_pending_steam_demos(db, limit=1, share_codes=[share_code])
-    return {
-        "share_code": share_code,
-        "inserted": was_inserted,
-        "demo_status": demo_status,
-        "demo_download": demo_download,
+        demo_download = download_pending_steam_demos(db, limit=1, share_codes=[share_code])
+        taxonomy = classify_steam_import_all_result(
+            accounts_count=1,
+            account_states=[
+                {
+                    "steam_account_id": account.id,
+                    "status": "ready",
+                    "has_match_auth_code": bool(account.match_auth_code),
+                    "has_last_share_code": True,
+                }
+            ],
+            sync_results=[],
+            demo_download=demo_download,
+        )
+        result = {
+            **taxonomy,
+            "share_code": share_code,
+            "inserted": was_inserted,
+            "demo_status": demo_status,
+            "demo_download": demo_download,
+            "primary_path": False,
+            "note": "Exact share-code import is tracked but remains a non-primary debug/manual path.",
+        }
+        job.status = "succeeded" if taxonomy["clean_success"] else "failed"
+        if not taxonomy["clean_success"]:
+            job.error_message = taxonomy["error_message"]
+        job.finished_at = datetime.now(UTC).replace(tzinfo=None)
+        job.result_json = json.dumps(result, ensure_ascii=False, default=str)
+        db.commit()
+        db.refresh(job)
+        return {**result, "job_id": job.id, "job_status": job.status, "job_error": job.error_message}
+    except Exception as exc:
+        failed = _fail_job(db, job, str(exc))
+        raise ValueError(str(failed["error"])) from exc
+
+
+def classify_steam_import_all_result(
+    *,
+    accounts_count: int,
+    account_states: list[dict[str, Any]],
+    sync_results: list[dict[str, Any]],
+    demo_download: dict[str, Any],
+) -> dict[str, Any]:
+    statuses: list[str] = []
+    failure_reasons: list[str] = []
+    imported = int(demo_download.get("imported") or 0)
+    failed = int(demo_download.get("failed") or 0)
+    skipped = int(demo_download.get("skipped") or 0)
+    pending = int(demo_download.get("pending") or 0)
+
+    if accounts_count == 0:
+        statuses.append(STEAM_IMPORT_STEAM_NOT_CONNECTED)
+        failure_reasons.append("No Steam account is connected.")
+    if any(state.get("status") == STEAM_IMPORT_NEED_CODE for state in account_states):
+        statuses.append(STEAM_IMPORT_NEED_CODE)
+        failure_reasons.append("At least one Steam account is missing a Game Authentication Code or share-code cursor.")
+
+    sync_outcomes = [
+        (item.get("result") or {}).get("sync_outcome")
+        for item in sync_results
+        if isinstance(item.get("result"), dict)
+    ]
+    if any(item.get("status") == "failed" for item in sync_results):
+        errors = " ".join(str(item.get("error") or "") for item in sync_results)
+        if _looks_rate_limited(errors):
+            statuses.append(STEAM_IMPORT_RATE_LIMITED)
+        else:
+            statuses.append(STEAM_IMPORT_DOWNLOAD_FAILED)
+        failure_reasons.append("At least one Steam share-code sync job failed.")
+    if sync_outcomes and all(outcome == STEAM_SYNC_SUCCESS_NO_NEW_MATCHES for outcome in sync_outcomes):
+        statuses.append(STEAM_IMPORT_NO_NEW)
+    if sync_outcomes and all(outcome == STEAM_SYNC_DUPLICATE_ALREADY_IMPORTED for outcome in sync_outcomes):
+        statuses.append(STEAM_IMPORT_DUPLICATE_SKIPPED)
+
+    if demo_download.get("configured") is False and pending:
+        statuses.append(STEAM_IMPORT_DOWNLOAD_FAILED)
+        failure_reasons.append(str(demo_download.get("message") or "Steam demo downloader is not configured."))
+    if failed:
+        failure_status = _classify_demo_failure_status(demo_download)
+        statuses.append(failure_status)
+        failure_reasons.append(f"{failed} demo download/parser task(s) failed.")
+    if imported:
+        statuses.append(STEAM_IMPORT_SUCCESS)
+    if skipped and not imported and not failed and not pending:
+        statuses.append(STEAM_IMPORT_NO_NEW)
+    if skipped:
+        statuses.append(STEAM_IMPORT_DUPLICATE_SKIPPED)
+
+    date_status = _exact_date_status(demo_download)
+    statuses.append(date_status)
+
+    statuses = _dedupe_statuses(statuses)
+    has_failure = any(
+        status in statuses
+        for status in (
+            STEAM_IMPORT_NEED_CODE,
+            STEAM_IMPORT_STEAM_NOT_CONNECTED,
+            STEAM_IMPORT_RATE_LIMITED,
+            STEAM_IMPORT_DOWNLOAD_FAILED,
+            STEAM_IMPORT_PARSER_FAILED,
+        )
+    )
+    has_success = any(status in statuses for status in (STEAM_IMPORT_SUCCESS, STEAM_IMPORT_DUPLICATE_SKIPPED))
+    if not has_failure and STEAM_IMPORT_NO_NEW in statuses:
+        has_success = True
+    if has_failure and has_success:
+        statuses = _dedupe_statuses([STEAM_IMPORT_PARTIAL_SUCCESS, *statuses])
+    if not has_failure and not has_success:
+        statuses = _dedupe_statuses([STEAM_IMPORT_NO_NEW, *statuses])
+        has_success = True
+
+    failure_order = [
+        STEAM_IMPORT_STEAM_NOT_CONNECTED,
+        STEAM_IMPORT_NEED_CODE,
+        STEAM_IMPORT_RATE_LIMITED,
+        STEAM_IMPORT_PARSER_FAILED,
+        STEAM_IMPORT_DOWNLOAD_FAILED,
+    ]
+    overall = STEAM_IMPORT_PARTIAL_SUCCESS if STEAM_IMPORT_PARTIAL_SUCCESS in statuses else statuses[0]
+    if has_failure and STEAM_IMPORT_PARTIAL_SUCCESS not in statuses:
+        overall = next((status for status in failure_order if status in statuses), overall)
+    clean_success = not has_failure and overall in {
+        STEAM_IMPORT_SUCCESS,
+        STEAM_IMPORT_NO_NEW,
+        STEAM_IMPORT_DUPLICATE_SKIPPED,
     }
+    if clean_success and STEAM_IMPORT_SUCCESS in statuses:
+        overall = STEAM_IMPORT_SUCCESS
+    elif clean_success and STEAM_IMPORT_DUPLICATE_SKIPPED in statuses:
+        overall = STEAM_IMPORT_DUPLICATE_SKIPPED
+    elif clean_success:
+        overall = STEAM_IMPORT_NO_NEW
+
+    error_message = None
+    if not clean_success:
+        error_message = "; ".join(_dedupe_statuses(failure_reasons)) or f"Steam import outcome: {overall}"
+    return {
+        "overall_outcome": overall,
+        "statuses": statuses,
+        "status_summary": {status: statuses.count(status) for status in statuses},
+        "clean_success": clean_success,
+        "error_message": error_message,
+        "job_status_limitation": (
+            "ImportJob.status supports queued/running/succeeded/failed only; partial_success is represented "
+            "in result_json.overall_outcome/statuses and persisted as failed to avoid clean-success overclaim."
+        ),
+    }
+
+
+def _classify_demo_failure_status(demo_download: dict[str, Any]) -> str:
+    errors = " ".join(
+        str(item.get("error") or "")
+        for item in demo_download.get("results", [])
+        if isinstance(item, dict)
+    )
+    if _looks_rate_limited(errors):
+        return STEAM_IMPORT_RATE_LIMITED
+    if "parser failed" in errors.lower() or "demoparse" in errors.lower():
+        return STEAM_IMPORT_PARSER_FAILED
+    return STEAM_IMPORT_DOWNLOAD_FAILED
+
+
+def _exact_date_status(demo_download: dict[str, Any]) -> str:
+    results = [item for item in demo_download.get("results", []) if isinstance(item, dict)]
+    if any(item.get("played_at_source") == "steam_gc_match_time" and item.get("played_at") for item in results):
+        return STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE
+    return STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE
+
+
+def _looks_rate_limited(message: str) -> bool:
+    normalized = message.lower()
+    return "429" in normalized or "rate limit" in normalized or "too many requests" in normalized
+
+
+def _dedupe_statuses(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(value for value in values if value))
 
 
 def mark_steam_history_demo_download_status(db: Session, share_codes: list[str] | None = None) -> dict[str, Any]:

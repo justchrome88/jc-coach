@@ -42,6 +42,24 @@ Steam import is an alpha path, not production-ready.
 
 WP-014A diagnosis found that the current one-button UI and backend path exist, but `v0.6` acceptance is blocked by incomplete status taxonomy, incomplete `import_job` coverage for exact share-code download/parser work, missing persisted raw-demo cleanup after successful parse/persist, weak failed-demo cleanup policy and inconsistent exact-date availability surfacing. See `docs/audit/WP_014A_STEAM_VALVE_IMPORT_DIAGNOSIS.md`.
 
+WP-014B1 repaired import-job truth/status taxonomy without changing schema or demo cleanup lifecycle. The primary `steam_import_all` job now records `overall_outcome`, `statuses`, `clean_success`, `error_message` and the existing-status limitation in `result_json`. Exact share-code import is tracked by a `share_code_import` job before downloader/parser work, but remains a non-primary debug/manual path.
+
+Standardized result statuses:
+
+- `success`;
+- `no_new`;
+- `need_code`;
+- `steam_not_connected`;
+- `rate_limited`;
+- `download_failed`;
+- `parser_failed`;
+- `partial_success`;
+- `duplicate_skipped`;
+- `exact_match_date_available`;
+- `exact_match_date_unavailable`.
+
+`ImportJob.status` still has only `queued`, `running`, `succeeded` and `failed`. Clean `success`, `no_new` and `duplicate_skipped` outcomes may use `succeeded`. Partial success is represented in `result_json.overall_outcome/statuses` and persisted as `failed` to avoid clean-success overclaim until a future schema/status migration is explicitly approved.
+
 Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
 
 Stage 2 ownership hardening requires current owner session for `/auth/steam/callback`. Без owner session callback не создаёт uncontrolled user, `steam_accounts` или `import_jobs`. При owner session Steam account линкуется только к owner user.

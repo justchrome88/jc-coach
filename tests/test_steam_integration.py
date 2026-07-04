@@ -8,6 +8,16 @@ from app.services.steam_demo_downloader import (
     steam_demo_downloader_configured,
 )
 from app.services.steam_integration import (
+    STEAM_IMPORT_DOWNLOAD_FAILED,
+    STEAM_IMPORT_DUPLICATE_SKIPPED,
+    STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE,
+    STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE,
+    STEAM_IMPORT_NEED_CODE,
+    STEAM_IMPORT_NO_NEW,
+    STEAM_IMPORT_PARSER_FAILED,
+    STEAM_IMPORT_PARTIAL_SUCCESS,
+    STEAM_IMPORT_STEAM_NOT_CONNECTED,
+    STEAM_IMPORT_SUCCESS,
     clear_steam_demo_download_errors,
     create_steam_import_job,
     current_steam_import_all_job,
@@ -131,7 +141,7 @@ def test_queue_steam_import_all_is_idempotent_while_active(db):
     assert db.query(ImportJob).count() == 1
 
 
-def test_run_steam_import_all_job_marks_job_succeeded(db, monkeypatch):
+def test_run_steam_import_all_job_reports_steam_not_connected(db, monkeypatch):
     monkeypatch.setenv("STEAM_BOT_USERNAME", "")
     monkeypatch.setenv("STEAM_BOT_PASSWORD", "")
     monkeypatch.setenv("STEAM_BOT_REFRESH_TOKEN", "")
@@ -146,9 +156,83 @@ def test_run_steam_import_all_job_marks_job_succeeded(db, monkeypatch):
         get_settings.cache_clear()
 
     db.refresh(job)
-    assert result["status"] == "succeeded"
-    assert job.status == "succeeded"
+    assert result["status"] == "failed"
+    assert job.status == "failed"
+    assert result["result"]["overall_outcome"] == STEAM_IMPORT_STEAM_NOT_CONNECTED
+    assert STEAM_IMPORT_STEAM_NOT_CONNECTED in result["result"]["statuses"]
     assert current_steam_import_all_job(db) is None
+
+
+def test_run_steam_import_all_job_reports_need_code(db, monkeypatch):
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    job = queue_steam_import_all(db)
+
+    result = run_steam_import_all_job(db, job.id)
+
+    db.refresh(account)
+    db.refresh(job)
+    assert result["status"] == "failed"
+    assert job.status == "failed"
+    assert result["result"]["overall_outcome"] == STEAM_IMPORT_NEED_CODE
+    assert result["result"]["account_states"][0]["has_match_auth_code"] is False
+    assert result["result"]["account_states"][0]["has_last_share_code"] is False
+
+
+def test_run_steam_import_all_job_reports_no_new_clean_success(db, monkeypatch):
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "web-api-key")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        lambda *_args, **_kwargs: {"configured": True, "processed": 0, "imported": 0, "failed": 0, "results": []},
+    )
+
+    try:
+        result = import_all_available_steam_matches(db)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["status"] == "succeeded"
+    assert result["result"]["overall_outcome"] == STEAM_IMPORT_NO_NEW
+    assert STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE in result["result"]["statuses"]
+
+
+def test_run_steam_import_all_job_reports_duplicate_skipped_clean_success(db, monkeypatch):
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "web-api-key")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+    db.add(
+        Match(
+            source="steam_history",
+            external_match_id="CSGO-cAQhC-XL4SM-wWoxt-NNdVO-anUaK",
+            raw_json='{"share_code":"CSGO-cAQhC-XL4SM-wWoxt-NNdVO-anUaK"}',
+        )
+    )
+    db.commit()
+    monkeypatch.setattr(
+        "app.services.steam_integration._collect_match_share_codes",
+        lambda **_kwargs: ["CSGO-cAQhC-XL4SM-wWoxt-NNdVO-anUaK"],
+    )
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        lambda *_args, **_kwargs: {"configured": True, "processed": 0, "imported": 0, "failed": 0, "results": []},
+    )
+
+    try:
+        result = import_all_available_steam_matches(db)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["status"] == "succeeded"
+    assert result["result"]["overall_outcome"] == STEAM_IMPORT_DUPLICATE_SKIPPED
+    assert STEAM_IMPORT_DUPLICATE_SKIPPED in result["result"]["statuses"]
 
 
 def test_steam_import_overview_reports_current_job_and_demo_counts(db):
@@ -373,7 +457,8 @@ def test_import_all_available_steam_matches(db, monkeypatch):
     finally:
         get_settings.cache_clear()
 
-    assert result["status"] == "succeeded"
+    assert result["status"] == "failed"
+    assert result["result"]["overall_outcome"] == STEAM_IMPORT_DOWNLOAD_FAILED
     assert result["result"]["demo_status"]["pending_demo_download"] == 2
     assert result["result"]["demo_status"]["steam_history_matches"] == 2
     assert result["result"]["sync_jobs"][0]["status"] == "succeeded"
@@ -404,9 +489,107 @@ def test_import_all_available_steam_matches_uses_sync_even_after_recent_sync(db,
     finally:
         get_settings.cache_clear()
 
-    assert result["status"] == "succeeded"
+    assert result["status"] == "failed"
+    assert result["result"]["overall_outcome"] == STEAM_IMPORT_DOWNLOAD_FAILED
     assert result["result"]["sync_jobs"][0]["status"] == "succeeded"
     assert result["result"]["demo_status"]["pending_demo_download"] == 2
+
+
+def test_import_all_available_steam_matches_reports_download_failure(db, monkeypatch):
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "web-api-key")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        lambda *_args, **_kwargs: {
+            "configured": True,
+            "processed": 1,
+            "imported": 0,
+            "failed": 1,
+            "results": [{"status": "failed", "error": "Valve replay CDN returned HTTP 502"}],
+        },
+    )
+
+    try:
+        result = import_all_available_steam_matches(db)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["status"] == "failed"
+    assert result["result"]["overall_outcome"] == STEAM_IMPORT_DOWNLOAD_FAILED
+    assert STEAM_IMPORT_DOWNLOAD_FAILED in result["result"]["statuses"]
+
+
+def test_import_all_available_steam_matches_reports_parser_failure(db, monkeypatch):
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "web-api-key")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        lambda *_args, **_kwargs: {
+            "configured": True,
+            "processed": 1,
+            "imported": 0,
+            "failed": 1,
+            "results": [{"status": "failed", "error": "Downloaded demo but parser failed: broken demo"}],
+        },
+    )
+
+    try:
+        result = import_all_available_steam_matches(db)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["status"] == "failed"
+    assert result["result"]["overall_outcome"] == STEAM_IMPORT_PARSER_FAILED
+    assert STEAM_IMPORT_PARSER_FAILED in result["result"]["statuses"]
+
+
+def test_import_all_available_steam_matches_reports_partial_success(db, monkeypatch):
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "web-api-key")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        lambda *_args, **_kwargs: {
+            "configured": True,
+            "processed": 2,
+            "imported": 1,
+            "failed": 1,
+            "results": [
+                {
+                    "status": "imported",
+                    "played_at": "2026-07-02T20:00:00",
+                    "played_at_source": "steam_gc_match_time",
+                },
+                {"status": "failed", "error": "Valve replay CDN returned HTTP 502"},
+            ],
+        },
+    )
+
+    try:
+        result = import_all_available_steam_matches(db)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["status"] == "failed"
+    assert result["result"]["overall_outcome"] == STEAM_IMPORT_PARTIAL_SUCCESS
+    assert STEAM_IMPORT_SUCCESS in result["result"]["statuses"]
+    assert STEAM_IMPORT_DOWNLOAD_FAILED in result["result"]["statuses"]
+    assert STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE in result["result"]["statuses"]
+    assert "partial_success is represented" in result["result"]["job_status_limitation"]
 
 
 def test_import_steam_share_code_demo_imports_exact_code(db, monkeypatch):
@@ -428,6 +611,42 @@ def test_import_steam_share_code_demo_imports_exact_code(db, monkeypatch):
     assert result["share_code"] == "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL"
     assert result["demo_status"]["pending_demo_download"] == 1
     assert result["demo_download"]["pending"] == 1
+    assert result["job_id"] is not None
+    assert result["job_status"] == "failed"
+
+
+def test_import_steam_share_code_demo_creates_tracking_job_before_downloader(db, monkeypatch):
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+
+    def fake_download_pending_steam_demos(inner_db, *_args, **_kwargs):
+        job = inner_db.query(ImportJob).filter(ImportJob.job_type == "share_code_import").one()
+        assert job.status == "running"
+        return {
+            "configured": True,
+            "processed": 1,
+            "imported": 1,
+            "failed": 0,
+            "results": [
+                {
+                    "status": "imported",
+                    "played_at": "2026-07-02T20:00:00",
+                    "played_at_source": "steam_gc_match_time",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        fake_download_pending_steam_demos,
+    )
+
+    result = import_steam_share_code_demo(db, account.id, "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+
+    job = db.query(ImportJob).filter(ImportJob.job_type == "share_code_import").one()
+    assert result["job_id"] == job.id
+    assert result["job_status"] == "succeeded"
+    assert result["overall_outcome"] == STEAM_IMPORT_SUCCESS
+    assert STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE in result["statuses"]
 
 
 def test_steam_demo_downloader_is_disabled_without_bot_credentials(db, monkeypatch):
