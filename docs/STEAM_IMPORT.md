@@ -85,6 +85,10 @@ python3 scripts/repair_stale_steam_import_job.py --job-id 15 --i-have-backup --c
 
 WP-014D3 executed that explicit operator repair for production job `#15` with backup/SHA evidence. Job `#15` is now `failed` with `overall_outcome: interrupted` and `statuses: ["interrupted"]`; backup is `data/manual_backups/cs2_coach_before_wp014d3_repair_job15_20260704_183815.db`. Only job `#15` changed logically. No live Steam/import/parser work ran, no production demo files were deleted or moved, and `data/uploads` remained `3.1G`.
 
+WP-014C3 repeat one-button live acceptance after the TMPDIR fix proved the storage guard path but still failed acceptance. Service temp resolved to `data/tmp`, storage preflight passed, one authorized click downloaded/stored exactly one raw demo under `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, parent job `#18` reached terminal failed state with bounded checkpoints, and disk growth stayed within budget. The failure was a parser/import model mismatch after raw demo retention: Steam date-source metadata added `played_at_source` to the parsed match payload, and `import_demo_file()` passed that non-column key to `Match(...)`.
+
+WP-014E repaired that parser/import model compatibility issue without schema change. Date-source truth (`played_at_source`, `match_date_status`, `match_date_source`) remains represented in `matches.raw_json` and Steam result payloads; only real `matches` table columns are passed to the SQLAlchemy `Match` constructor. Repeat live acceptance is still required before `v0.6`.
+
 Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
 
 Stage 2 ownership hardening requires current owner session for `/auth/steam/callback`. Без owner session callback не создаёт uncontrolled user, `steam_accounts` или `import_jobs`. При owner session Steam account линкуется только к owner user.
@@ -134,8 +138,8 @@ Stage 7 does not add a durable scheduler or retry ledger. Current retry policy i
 - Stale cursor can point behind already imported history.
 - Valve replay URLs can expire or return transient 502/404/410.
 - Durable retry/backoff, scheduler behavior and a sync ledger still need hardening.
-- One-button live import now has storage budget, batch caps, parent checkpoints and stale/interrupted job handling, but these repairs have only mocked/local test coverage plus the WP-014D3 operator repair evidence so far.
-- Production job `#15` no longer blocks future one-button queueing; repeat live acceptance still has not been rerun.
+- One-button live import now has storage budget, batch caps, parent checkpoints, stale/interrupted job handling and parser/import model compatibility for date-source metadata, but final end-to-end success still needs repeat live acceptance after WP-014E.
+- Production job `#15` no longer blocks future one-button queueing; WP-014C3 proved guarded one-demo behavior but failed on the parser/model mismatch fixed in WP-014E.
 - Hard process kill can still stop work before in-process interruption marking runs; queue-time stale repair is the durable recovery path.
 - Steam OpenID network verification can fail closed if Steam is unreachable.
 - Low-level helper `link_steam_account(..., user_id=None)` still supports legacy Steam-only user creation for old service paths; public OpenID callback no longer uses this path without owner.

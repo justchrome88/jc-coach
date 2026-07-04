@@ -5,7 +5,7 @@ Last updated: 2026-07-04.
 ## Current State
 
 - Current Product Version: `v0.5`
-- Current WP: `WP-014D3 Operator Stale Job Repair` completed; next is repeat live acceptance prep.
+- Current WP: `WP-014E Parser Import Match Model Compatibility Repair` completed; next is repeat live acceptance prep.
 - Next Target Version: `v0.6`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -19,6 +19,8 @@ Last updated: 2026-07-04.
 - WP-014D1 storage guard/batch cap repair: completed without live Steam/import/parser jobs, production DB mutation or production file cleanup. Added configurable disk preflight, per-run demo cap, per-job byte budget, per-demo max size, preserve-free checks before download/decompression/upload copy, streamed download with byte counting, and budget-aware result statuses.
 - WP-014D2 parent checkpoint/interruption repair: completed without live Steam/import/parser jobs, production DB mutation or production file cleanup. Parent `steam_import_all` jobs now commit bounded progress checkpoints, queue-time stale running parent jobs are marked failed/interrupted before a new one is queued, non-stale running jobs remain blocking, startup repair is available but disabled by default, and `scripts/repair_stale_steam_import_job.py` provides explicit operator repair for job `#15` after backup/SHA evidence.
 - WP-014D3 operator stale job repair: completed with backup/SHA evidence. Production `import_jobs.id=15` was the only logical `import_jobs` row changed; it is now `failed` with `result_json.overall_outcome="interrupted"`. No live Steam/import/parser job ran, and no production demo files were deleted or moved. Report: `docs/audit/WP_014D3_OPERATOR_REPAIR_STALE_JOB15_REPORT.md`.
+- WP-014C3 repeat one-button live acceptance after TMPDIR fix: `FAIL`, but storage safety was proven. Service TMPDIR resolved to `data/tmp`, storage preflight passed, one authorized click downloaded/stored exactly one raw demo under the batch cap, parent job `#18` reached terminal failed state with checkpoints and bounded disk growth. Failure cause was parser/import model mismatch: `played_at_source` metadata was passed to `Match(...)`. New retained raw demo: `data/uploads/20260704160020_28436ba3a5_CSGO-SYSZK-hOFfp-WtBsM-WtsNK-pcy6A.dem`; do not delete or parse it outside an explicitly authorized WP.
+- WP-014E parser/import model compatibility repair: completed without schema change, live Steam/import/parser jobs, production DB mutation or production file cleanup. `played_at_source` and date truth metadata remain in `raw_json`/result payloads and are filtered out of `Match` constructor kwargs.
 
 ## Last Incident Summary
 
@@ -32,9 +34,9 @@ Last updated: 2026-07-04.
 
 ## Next WP
 
-`WP-014C2 Repeat One-Button Live Import Acceptance` targeting a guarded repeat `v0.6` import acceptance attempt.
+`WP-014C4 Repeat One-Button Live Import Acceptance` targeting a guarded repeat `v0.6` import acceptance attempt after WP-014E.
 
-The next active WP is `WP-014C2 Repeat One-Button Live Import Acceptance`.
+The next active WP is `WP-014C4 Repeat One-Button Live Import Acceptance`.
 
 Expected focus: explicitly authorize a repeat one-button live import, record DB SHA and disk state before/after, confirm storage guard settings, monitor parent checkpoints/result_json, and verify no unbounded downloads. Do not run live Steam/import/parser work unless the WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
 

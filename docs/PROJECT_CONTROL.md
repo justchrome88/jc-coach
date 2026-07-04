@@ -23,7 +23,7 @@ The practical product question is:
 
 Current Product Version: `v0.5`.
 
-Current WP: `WP-014D3 Operator Stale Job Repair` completed; next is `WP-014C2 Repeat One-Button Live Import Acceptance`.
+Current WP: `WP-014E Parser Import Match Model Compatibility Repair` completed; next is `WP-014C4 Repeat One-Button Live Import Acceptance`.
 
 Next Target Version: `v0.6`.
 
@@ -40,7 +40,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | CSV/JSON import | Working MVP | Dedupe and missing-column tolerance exist. |
 | Manual official `.dem` import | Working, partial confidence | `demoparser2` import works; parsed evidence exists; some metrics remain best-effort. |
 | Deep DEM parser | Working foundation | Normalized parser tables and `swing_score` exist; raw `.dem` is still retained. |
-| Steam import | Alpha path; WP-014C live acceptance failed; WP-014D1/D2/D3 safety repairs complete | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor source/advance/outcome semantics are explicit and tested with mocked paths. `steam_import_all` records standardized `result_json` outcomes/statuses in repaired paths, and primary Steam match date is exact only from Steam GC `match_time`. The controlled WP-014C live one-button run failed: the parent job stayed `running` with null `result_json`, raw demos filled `data/uploads` to `3.1G`, root free space fell to `508M`, and graceful shutdown required force kill. WP-014D1 added disk budget, batch limits and streaming download guards. WP-014D2 added parent checkpoints, queue-time stale/interrupted handling and explicit operator repair helper. WP-014D3 used that helper with backup/SHA evidence to mark production job `#15` interrupted. Repeat live acceptance still requires explicit authorization. |
+| Steam import | Alpha path; WP-014C3 proved storage safety but found parser/model mismatch; WP-014E repair complete | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor source/advance/outcome semantics are explicit and tested with mocked paths. `steam_import_all` records standardized `result_json` outcomes/statuses in repaired paths, and primary Steam match date is exact only from Steam GC `match_time`. The controlled WP-014C live one-button run failed on disk/runtime safety; WP-014D1 added disk budget, batch limits and streaming download guards, WP-014D2 added parent checkpoints and stale/interrupted handling, and WP-014D3 marked production job `#15` interrupted. WP-014C3 then proved TMPDIR/storage/batch/checkpoint safety but failed after one retained demo because `played_at_source` metadata was passed to `Match(...)`; WP-014E fixed that without schema change. Repeat live acceptance still requires explicit authorization. |
 | FACEIT import | Future | Do not implement before Steam/security/parser hardening unless explicitly reprioritized. |
 | Dashboard/matches/stats | Working personal MVP runtime; WP-013 `PASS_WITH_WARNINGS` | `/coach` now surfaces current tracked recommendation, next action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status. Runtime restart and read-only smoke passed; full owner manual checklist remains operator evidence to record. |
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
@@ -55,7 +55,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 
 Current Product Version: `v0.5`.
 
-Current WP: `WP-014D3 Operator Stale Job Repair` completed; next is `WP-014C2 Repeat One-Button Live Import Acceptance`.
+Current WP: `WP-014E Parser Import Match Model Compatibility Repair` completed; next is `WP-014C4 Repeat One-Button Live Import Acceptance`.
 
 Next Target Version: `v0.6`.
 
@@ -76,7 +76,7 @@ Current focus:
 9. Stage 7 Steam cursor truth: completed / `PASS_WITH_WARNINGS`.
 10. Stage 8 AI Output Validator: completed / `PASS_WITH_WARNINGS`.
 11. Stage 9 Coach-first UI: completed / `PASS_WITH_WARNINGS`.
-12. Repeat one-button Steam import live acceptance only after explicit authorization. WP-014D1 storage budget/batch caps, WP-014D2 parent checkpoint/interruption handling and WP-014D3 stale job `#15` repair are complete.
+12. Repeat one-button Steam import live acceptance only after explicit authorization. WP-014D1 storage budget/batch caps, WP-014D2 parent checkpoint/interruption handling, WP-014D3 stale job `#15` repair and WP-014E parser/model compatibility repair are complete.
 13. Генерировать рекомендации из verified problem evidence.
 
 ## 4. Source-of-truth Documents

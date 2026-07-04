@@ -38,6 +38,7 @@ GRENADE_EVENTS = (
     "decoy_detonate",
 )
 BOMB_EVENTS = ("bomb_planted", "bomb_defused", "bomb_exploded", "bomb_beginplant", "bomb_begindefuse")
+MATCH_COLUMN_NAMES = frozenset(column.name for column in Match.__table__.columns)
 
 
 class DemoParseError(RuntimeError):
@@ -99,16 +100,17 @@ def import_demo_file(
     match_data["demo_file"] = str(stored_path)
     match_data["source"] = "demo"
     match_data["raw_json"] = json.dumps(parsed, ensure_ascii=False, default=str)
+    match_model_data = _match_model_kwargs(match_data)
 
     existing = db.scalar(
         select(Match).where(
-            Match.source == match_data["source"],
-            Match.external_match_id == match_data["external_match_id"],
+            Match.source == match_model_data["source"],
+            Match.external_match_id == match_model_data["external_match_id"],
         )
     )
     if existing:
-        existing.played_at = match_data["played_at"]
-        existing.raw_json = match_data["raw_json"]
+        existing.played_at = match_model_data["played_at"]
+        existing.raw_json = match_model_data["raw_json"]
         existing.demo_file = existing.demo_file or str(stored_path)
         db.commit()
         db.refresh(existing)
@@ -133,7 +135,7 @@ def import_demo_file(
             "message": "Demo already imported.",
         }
 
-    match = Match(**match_data)
+    match = Match(**match_model_data)
     db.add(match)
     db.commit()
     db.refresh(match)
@@ -156,6 +158,10 @@ def import_demo_file(
         **retention,
         "message": parsed["message"],
     }
+
+
+def _match_model_kwargs(match_data: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in match_data.items() if key in MATCH_COLUMN_NAMES}
 
 
 def _resolve_inbox_demo(filename: str) -> Path:
