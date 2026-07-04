@@ -1,6 +1,6 @@
 # Security
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-04.
 
 ## Current Truth
 
@@ -33,7 +33,9 @@ The product is still not ready for friends/public exposure until migrations/oper
 
 - Owner policy: `first_active_credentialed_user_is_owner`.
 - Первый активный пользователь с `email` и `password_hash`, созданный через register flow, является владельцем single-user инстанса.
+- This policy is intentionally documented as fragile: owner resolution depends on mutable user state and insertion order until an explicit owner state exists. A lower-id active credentialed test/smoke user can become owner if guardrails fail.
 - После появления owner новая публичная регистрация возвращает ошибку и не создаёт запись в `users`.
+- `test-*@example.test` and `smoke-*@example.test` registrations are blocked outside `APP_ENV=test`.
 - Session login и session guards принимают только owner. Legacy/non-owner записи не получают доступ к owner state через session.
 - `API_TOKEN` трактуется как owner/operator token для автоматизации и не создаёт пользователей.
 - Steam OpenID callback не создаёт и не линкует Steam account без текущей owner session.

@@ -1,12 +1,14 @@
 # Testing
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-04.
 
 ## Current Truth
 
 Test isolation is now a Stage 0 safety requirement. Tests must run with `APP_ENV=test` and a non-production SQLite database.
 
 `tests/conftest.py` forces `APP_ENV=test` and defaults `DATABASE_URL` to a temp DB under `/tmp`. If a caller explicitly sets `DATABASE_URL` to the production path `data/cs2_coach.db`, app settings fail fast.
+
+Standalone `TestClient` snippets are forbidden unless `APP_ENV=test`, `DATABASE_URL` and runtime artifact directories are configured to temp paths before importing `app.main` or `app.db.session`. Importing the app first can bind the global SQLAlchemy engine to the default runtime DB.
 
 ## Safe Commands
 
@@ -78,6 +80,7 @@ Do not run tests by invoking the app against the default runtime `.env` or `data
 - Do not run parser jobs, Steam jobs or import jobs during documentation-only tasks.
 - Tests must not use production DB/settings.
 - `APP_ENV=test` with production `DATABASE_URL` must fail.
+- Test/smoke registration emails (`test-*@example.test`, `smoke-*@example.test`) are allowed only in `APP_ENV=test` with a non-production DB.
 - `TestClient(app)` must use the temp test DB created by pytest configuration, not `data/cs2_coach.db`.
 - For Python route/template changes, perform live smoke checks only when the task explicitly involves runtime behavior and it is safe to start/restart the app.
 
@@ -86,6 +89,7 @@ Do not run tests by invoking the app against the default runtime `.env` or `data
 - Test runtime DB: `/tmp/jc-coach-pytest-<pid>/cs2_coach_test.db` by default.
 - Test upload/inbox/reports/AI handoff dirs: `/tmp/jc-coach-pytest-<pid>/...`.
 - Production DB path guard: `app.config._assert_safe_test_settings`.
+- Pytest DB path guard: `tests/conftest.py` calls `app.config.assert_test_database_not_production()` before importing app DB/session modules.
 - Web smoke tests may import `app.main`, but startup `init_db()` must target the temp test DB.
 
 ## Coverage Priorities

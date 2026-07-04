@@ -1,6 +1,6 @@
 # Backup And Restore
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-04.
 
 ## Current Status
 
@@ -102,6 +102,18 @@ Before Security P0, ownership, migrations or parser/Steam hardening:
 2. Run restore verification against `/tmp`.
 3. Confirm the source DB file timestamp/hash did not change during verification.
 4. Record the backup filename in the work summary.
+
+## Required Before Users-Table Cleanup Or Owner Repair
+
+Before changing `users`, clearing password hashes, deactivating users or repairing owner access in `data/cs2_coach.db`:
+
+1. Run `scripts/backup_runtime.sh`.
+2. Verify restore on a copy with `scripts/restore_runtime.sh --verify-only`.
+3. Record `sha256sum data/cs2_coach.db` before the repair.
+4. Write the exact SQL or app-service repair command in the work log before running it.
+5. Record `sha256sum data/cs2_coach.db` after the repair and verify the owner candidate.
+
+Never run test/smoke user cleanup as part of a diagnosis-only or docs-only pass.
 
 ## Required Before Schema Changes
 

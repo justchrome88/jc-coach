@@ -3,7 +3,9 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from app.db.session import Base
+from app.config import Settings
+from app.db.models import User
+from app.db.session import Base, SessionLocal
 from app.main import app
 
 
@@ -35,6 +37,35 @@ def _register_test_user(client: TestClient) -> None:
     )
     assert response.status_code == 303
     assert response.headers["location"] == "/dashboard"
+
+
+def _app_user_count() -> int:
+    with SessionLocal() as session:
+        return session.query(User).count()
+
+
+def test_register_route_rejects_test_smoke_email_outside_test_env(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.auth.get_settings",
+        lambda: Settings(app_env="local", database_url="sqlite:///:memory:"),
+    )
+
+    with TestClient(app) as client:
+        page = client.get("/register")
+        response = client.post(
+            "/register",
+            data={
+                "csrf_token": _csrf_from(page),
+                "display_name": "Smoke",
+                "email": "smoke-runtime@example.test",
+                "password": "test-password",
+            },
+            follow_redirects=False,
+        )
+
+    assert response.status_code == 400
+    assert "Refusing to register test/smoke email outside APP_ENV=test" in response.text
+    assert _app_user_count() == 0
 
 
 def test_landing_renders_for_anonymous_user():

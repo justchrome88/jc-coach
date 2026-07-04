@@ -25,9 +25,12 @@ os.environ.setdefault("SESSION_SECRET_KEY", "pytest-only-session-secret")
 os.environ.setdefault("AUTH_COOKIE_SECURE", "false")
 
 # App imports must happen after test env vars are set.
+from app.config import assert_test_database_not_production
 from app.db.models import Match
 from app.db.session import Base, engine
 from app.services.security import rate_limiter
+
+assert_test_database_not_production(os.environ["DATABASE_URL"], context="pytest configuration")
 
 
 @pytest.fixture(autouse=True)

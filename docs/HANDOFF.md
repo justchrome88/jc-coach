@@ -9,6 +9,7 @@ Last updated: 2026-07-04.
 - Next Target Version: `v0.4.2`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
+- Owner recovery state: production owner currently resolves to `justchrome88@yandex.ru` (`users.id=17`) after historical `test-*@example.test` and `smoke-*@example.test` users were manually deactivated and had password hashes cleared. Current reference DB SHA for WP-012 repair start: `50af6167e0c7b1db05088bef9649db8cf29a20442d6f382af2541271bd733030`.
 
 ## Last Incident Summary
 

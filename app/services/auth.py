@@ -10,14 +10,44 @@ from fastapi import Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings, is_test_environment
 from app.db.models import User
 
 PBKDF2_ITERATIONS = 260_000
 OWNER_POLICY = "first_active_credentialed_user_is_owner"
+FORBIDDEN_TEST_EMAIL_PATTERNS = ("test-*@example.test", "smoke-*@example.test")
 
 
 def normalize_email(email: str) -> str:
     return email.strip().lower()
+
+
+def forbidden_test_smoke_email_kind(email: str | None) -> str | None:
+    if not email:
+        return None
+    normalized_email = normalize_email(email)
+    if normalized_email.startswith("test-") and normalized_email.endswith("@example.test"):
+        return "test"
+    if normalized_email.startswith("smoke-") and normalized_email.endswith("@example.test"):
+        return "smoke"
+    return None
+
+
+def is_forbidden_test_smoke_email(email: str | None) -> bool:
+    return forbidden_test_smoke_email_kind(email) is not None
+
+
+def assert_registration_email_allowed(email: str) -> None:
+    email_kind = forbidden_test_smoke_email_kind(email)
+    if email_kind is None:
+        return
+    settings = get_settings()
+    if is_test_environment(settings.app_env):
+        return
+    raise ValueError(
+        "Refusing to register test/smoke email outside APP_ENV=test: "
+        f"{normalize_email(email)} matches {email_kind}-*@example.test."
+    )
 
 
 def hash_password(password: str) -> str:
@@ -48,6 +78,7 @@ def register_user(db: Session, email: str, password: str, display_name: str | No
     if owner_user(db) is not None:
         raise ValueError("Регистрация закрыта: этот инстанс уже привязан к owner user.")
     normalized_email = normalize_email(email)
+    assert_registration_email_allowed(normalized_email)
     if "@" not in normalized_email or "." not in normalized_email:
         raise ValueError("Введите корректный email.")
     if len(password) < 8:
@@ -107,6 +138,21 @@ def owner_user(db: Session) -> User | None:
         .where(User.password_hash.is_not(None))
         .order_by(User.id.asc())
         .limit(1)
+    )
+
+
+def active_credentialed_test_smoke_users(db: Session) -> list[User]:
+    return list(
+        db.scalars(
+            select(User)
+            .where(User.is_active == 1)
+            .where(User.email.is_not(None))
+            .where(User.password_hash.is_not(None))
+            .where(
+                User.email.like("test-%@example.test") | User.email.like("smoke-%@example.test"),
+            )
+            .order_by(User.id.asc())
+        )
     )
 
 

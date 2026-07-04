@@ -5,7 +5,13 @@ from fastapi.testclient import TestClient
 from app.db.models import ImportJob, SteamAccount, User
 from app.db.session import SessionLocal
 from app.main import app, create_app
-from app.services.auth import current_user_from_session, hash_password, owner_user, register_user
+from app.services.auth import (
+    active_credentialed_test_smoke_users,
+    current_user_from_session,
+    hash_password,
+    owner_user,
+    register_user,
+)
 
 
 def _csrf_from(response) -> str:
@@ -130,6 +136,56 @@ def test_current_user_from_session_rejects_legacy_non_owner(db):
 
     assert owner.id != non_owner.id
     assert current_user_from_session(FakeRequest(), db) is None
+
+
+def test_owner_user_ignores_inactive_or_non_credentialed_test_smoke_users(db):
+    db.add_all(
+        [
+            User(
+                email="test-old@example.test",
+                password_hash=hash_password("strong-password"),
+                display_name="Historical Test",
+                is_active=0,
+            ),
+            User(
+                email="smoke-old@example.test",
+                password_hash=None,
+                display_name="Historical Smoke",
+                is_active=1,
+            ),
+        ]
+    )
+    db.commit()
+
+    owner = register_user(db, "owner@example.test", "strong-password", display_name="Owner")
+
+    assert owner_user(db).id == owner.id
+    assert active_credentialed_test_smoke_users(db) == []
+
+
+def test_active_credentialed_test_smoke_users_detects_unsafe_lower_id_user(db):
+    unsafe = User(
+        email="test-unsafe@example.test",
+        password_hash=hash_password("strong-password"),
+        display_name="Unsafe Test",
+        is_active=1,
+    )
+    db.add(unsafe)
+    db.commit()
+    db.refresh(unsafe)
+
+    owner = User(
+        email="owner@example.test",
+        password_hash=hash_password("strong-password"),
+        display_name="Owner",
+        is_active=1,
+    )
+    db.add(owner)
+    db.commit()
+
+    unsafe_users = active_credentialed_test_smoke_users(db)
+    assert [user.id for user in unsafe_users] == [unsafe.id]
+    assert owner_user(db).id == unsafe.id
 
 
 def test_steam_openid_callback_without_owner_session_does_not_create_uncontrolled_user(db, monkeypatch):

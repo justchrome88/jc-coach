@@ -74,6 +74,7 @@ Bugfixes use a separate lane when runtime is broken or user-facing behavior is f
 - `data/cs2_coach.db` is production runtime data unless a WP states otherwise.
 - Do not run migrations, parser jobs, import jobs, Steam jobs or tests against production DB.
 - Safe tests must run with `APP_ENV=test`.
+- `test-*@example.test` or `smoke-*@example.test` registrations in production DB are an incident and must be diagnosed before runtime acceptance proceeds.
 - Before any future schema work, follow `docs/BACKUP_RESTORE.md` and `docs/MIGRATIONS.md`.
 
 ## Runtime Safety Policy

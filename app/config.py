@@ -53,6 +53,22 @@ def get_settings() -> Settings:
     return settings
 
 
+def is_test_environment(app_env: str) -> bool:
+    return app_env.strip().lower() == "test"
+
+
+def database_url_points_to_production(database_url: str) -> bool:
+    db_path = _sqlite_database_path(database_url)
+    return db_path == PRODUCTION_DB_PATH
+
+
+def assert_test_database_not_production(database_url: str, context: str = "test execution") -> None:
+    if database_url_points_to_production(database_url):
+        raise RuntimeError(
+            f"Unsafe {context}: test helpers cannot use the production database at {PRODUCTION_DB_PATH}."
+        )
+
+
 def _assert_strong_session_secret(settings: Settings) -> None:
     app_env = settings.app_env.strip().lower()
     if app_env in {"local", "test", "dev", "development"}:
@@ -66,16 +82,9 @@ def _assert_strong_session_secret(settings: Settings) -> None:
 
 
 def _assert_safe_test_settings(settings: Settings) -> None:
-    if settings.app_env.strip().lower() != "test":
+    if not is_test_environment(settings.app_env):
         return
-    db_path = _sqlite_database_path(settings.database_url)
-    if db_path is None:
-        return
-    if db_path == PRODUCTION_DB_PATH:
-        raise RuntimeError(
-            "Unsafe test configuration: APP_ENV=test cannot use the production database "
-            f"at {PRODUCTION_DB_PATH}."
-        )
+    assert_test_database_not_production(settings.database_url, context="test configuration")
 
 
 def _sqlite_database_path(database_url: str) -> Path | None:
