@@ -2,11 +2,11 @@
 
 Last updated: 2026-07-04.
 
-Current Product Version: `v0.5`.
+Current Product Version: `v0.6`.
 
-Current WP: `WP-014E Parser Import Match Model Compatibility Repair` completed; next is `WP-014C4 Repeat One-Button Live Import Acceptance`.
+Current WP: `WP-014 Import Acceptance` completed / accepted with warnings; next is `WP-015 Metrics Correctness`.
 
-Next Target Version: `v0.6`.
+Next Target Version: `v0.7`.
 
 The project is past the original `v0.1` CSV MVP. It is usable as a personal FastAPI CS2 coach on a controlled VPS, but it is not a secure friends/public product and not a fully validated AI coach.
 
@@ -42,12 +42,13 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - WP-014D3 Steam import operator stale job repair completed: production `import_jobs.id=15` was backed up and marked `failed/interrupted`; only job `#15` changed logically, no live Steam/import/parser work ran, and `data/uploads` stayed unchanged.
 - WP-014C3 repeat one-button live acceptance after TMPDIR fix verified the runtime storage guard path: service temp resolved to `data/tmp`, storage preflight passed, batch cap limited work to one demo, parent job reached a terminal failed result with checkpoints, and disk growth was bounded. The run exposed a parser/import model compatibility crash after raw demo retention: `played_at_source` was passed to `Match(...)`.
 - WP-014E parser/import model compatibility repair completed without schema change: parser/Steam date-source metadata is preserved in `matches.raw_json` and result payloads, but non-column metadata such as `played_at_source` is filtered before `Match` ORM construction.
+- WP-014C4 repeat one-button live acceptance completed / `PASS_WITH_WARNINGS`: one authorized click created parent job `#20`, storage/TMPDIR preflight passed, batch cap limited the run to one demo, parser/import succeeded, exact date truth was persisted from `steam_gc_match_time`, parent `result_json` was terminal/truthful, service stayed healthy and disk growth was bounded.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
 
 - Parser-derived metric confidence is documented and partially hardened, but trade/KAST side/utility facts still need deeper validation before upgrading weak metrics.
-- Steam import works as an alpha path with deterministic cursor semantics, repaired job truth/status taxonomy, repaired exact match-date truth, explicit retain-raw policy, WP-014D1 storage/batch guards, WP-014D2 parent checkpoint/stale handling, WP-014D3 stale job repair and WP-014E parser/model compatibility repair. WP-014C3 proved storage/TMPDIR/batch/checkpoint safety but failed on parser/model compatibility before this repair; WP-014C4 repeat live acceptance still blocks promotion.
+- Steam import is accepted for controlled personal `v0.6` with warnings. It has deterministic cursor semantics, repaired job truth/status taxonomy, exact match-date truth, explicit retain-raw policy, WP-014D1 storage/batch guards, WP-014D2 parent checkpoint/stale handling, WP-014D3 stale job repair, WP-014E parser/model compatibility repair and WP-014C4 live acceptance evidence.
 - Stage 2 ownership is single-owner mode, not full multi-user SaaS ownership across all core tables.
 - Legacy `link_steam_account(..., user_id=None)` remains an internal Steam hardening risk, but it is not reachable from public OpenID callback without owner session.
 - Stage 3 migration discipline is scaffold-level, not a full Alembic baseline or production migration ledger.
@@ -56,7 +57,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 7 is not a production scheduler, durable Steam sync ledger, recommendation planner or UI redesign.
 - Stage 8 is not provider-specific structured response mode, prompt versioning, recommendation planner, ProblemSnapshot or UI redesign.
 - Stage 9 is UI presentation over existing persisted state/services, not recommendation planner, ProblemSnapshot or engine work.
-- Next hardening stage is `WP-014C4 Repeat One-Button Live Import Acceptance`, with explicit live-job authorization and DB/disk evidence.
+- Next hardening stage is `WP-015 Metrics Correctness`; do not start it without an explicit WP prompt.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
 - AI output validation exists, but prompt versioning and provider-specific structured response enforcement remain future work.
 - Auth/security is still personal/VPS only; observability and public/friends release gates are not complete.
@@ -67,5 +68,5 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Public beta.
 - FACEIT import.
 - Raw `.dem` deletion.
-- One-button Steam import promotion to `v0.6` until repeat live acceptance is explicitly authorized and passed after WP-014D1/D2/D3/E repairs.
+- Friends/public import readiness; `v0.6` is controlled personal acceptance only.
 - Payments, viewer, heatmaps, clips, practice servers or social features.

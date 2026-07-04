@@ -18,6 +18,7 @@
 - Поэтому текущий этап не должен создавать тяжелые архивные копии и не должен удалять исходные `.dem`.
 - WP-014D1 добавил runtime-защиту для Steam one-button import: лимит demo за запуск, общий byte budget, max single demo, min-free/preserve-free проверки и streaming download с подсчетом байтов. WP-014D2 добавил parent checkpoints и stale/interrupted job handling, чтобы оператор видел последний безопасно сохраненный этап и мог явно закрыть stale job после прерывания. Эти guardrails ограничивают retain-raw режим, но не включают удаление raw `.dem`.
 - WP-014E не меняет retention policy и не удаляет raw `.dem`: parser/import date-source metadata (`played_at_source`, `match_date_status/source`) хранится в `matches.raw_json`/result payloads, но не является колонкой `matches` и не передается в `Match(...)`.
+- WP-014C4 принял one-button import для controlled personal `v0.6` с предупреждениями: raw demos по-прежнему retained by policy, uploads/temp остаются на root filesystem, а dedicated volume остается рекомендованным deployment улучшением.
 
 ## Целевой pipeline
 

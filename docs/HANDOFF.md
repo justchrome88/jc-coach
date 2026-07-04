@@ -4,9 +4,9 @@ Last updated: 2026-07-04.
 
 ## Current State
 
-- Current Product Version: `v0.5`
-- Current WP: `WP-014E Parser Import Match Model Compatibility Repair` completed; next is repeat live acceptance prep.
-- Next Target Version: `v0.6`
+- Current Product Version: `v0.6`
+- Current WP: `WP-014 Import Acceptance` completed / accepted with warnings; next is `WP-015 Metrics Correctness`.
+- Next Target Version: `v0.7`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
 - Owner recovery state: production owner currently resolves to `justchrome88@yandex.ru` (`users.id=17`) after historical `test-*@example.test` and `smoke-*@example.test` users were manually deactivated and had password hashes cleared.
@@ -21,6 +21,7 @@ Last updated: 2026-07-04.
 - WP-014D3 operator stale job repair: completed with backup/SHA evidence. Production `import_jobs.id=15` was the only logical `import_jobs` row changed; it is now `failed` with `result_json.overall_outcome="interrupted"`. No live Steam/import/parser job ran, and no production demo files were deleted or moved. Report: `docs/audit/WP_014D3_OPERATOR_REPAIR_STALE_JOB15_REPORT.md`.
 - WP-014C3 repeat one-button live acceptance after TMPDIR fix: `FAIL`, but storage safety was proven. Service TMPDIR resolved to `data/tmp`, storage preflight passed, one authorized click downloaded/stored exactly one raw demo under the batch cap, parent job `#18` reached terminal failed state with checkpoints and bounded disk growth. Failure cause was parser/import model mismatch: `played_at_source` metadata was passed to `Match(...)`. New retained raw demo: `data/uploads/20260704160020_28436ba3a5_CSGO-SYSZK-hOFfp-WtBsM-WtsNK-pcy6A.dem`; do not delete or parse it outside an explicitly authorized WP.
 - WP-014E parser/import model compatibility repair: completed without schema change, live Steam/import/parser jobs, production DB mutation or production file cleanup. `played_at_source` and date truth metadata remain in `raw_json`/result payloads and are filtered out of `Match` constructor kwargs.
+- WP-014C4 repeat one-button live acceptance after parser repair: `PASS_WITH_WARNINGS`. One authorized click created parent job `#20`, storage/TMPDIR guard passed, batch cap limited the run to exactly one demo, parser/import succeeded, exact date truth was persisted via `steam_gc_match_time`, parent `result_json` reached terminal truthful `batch_cap_reached` with `success` and `exact_match_date_available`, service stayed healthy and disk growth was bounded. This promotes controlled personal import acceptance to `v0.6`. Warnings carried forward: coarse `ImportJob.status`, uploads/temp on root, raw demos retained, parser memory peak should be watched, and friends/public readiness remains blocked.
 
 ## Last Incident Summary
 
@@ -34,11 +35,11 @@ Last updated: 2026-07-04.
 
 ## Next WP
 
-`WP-014C4 Repeat One-Button Live Import Acceptance` targeting a guarded repeat `v0.6` import acceptance attempt after WP-014E.
+`WP-015 Metrics Correctness` targeting `v0.7`.
 
-The next active WP is `WP-014C4 Repeat One-Button Live Import Acceptance`.
+The next active WP is `WP-015 Metrics Correctness`, but it has not started.
 
-Expected focus: explicitly authorize a repeat one-button live import, record DB SHA and disk state before/after, confirm storage guard settings, monitor parent checkpoints/result_json, and verify no unbounded downloads. Do not run live Steam/import/parser work unless the WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
+Expected focus: golden metric fixtures, trusted/weak metric labeling and enforcement. Do not run live Steam/import/parser work unless a future WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
 
 Roadmap and WP wiring:
 
@@ -51,7 +52,7 @@ Roadmap and WP wiring:
 
 Next planned versions:
 
-- `v0.6`: `WP-014 Import Acceptance`
+- `v0.6`: `WP-014 Import Acceptance` completed / accepted with warnings
 - `v0.7`: `WP-015 Metrics Correctness`
 - `v0.8`: `WP-016 Recommendation Loop Acceptance`
 - `v0.9`: `WP-017 Personal Beta`

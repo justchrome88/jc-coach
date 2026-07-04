@@ -21,11 +21,11 @@ The practical product question is:
 
 ## 2. Current Truth
 
-Current Product Version: `v0.5`.
+Current Product Version: `v0.6`.
 
-Current WP: `WP-014E Parser Import Match Model Compatibility Repair` completed; next is `WP-014C4 Repeat One-Button Live Import Acceptance`.
+Current WP: `WP-014 Import Acceptance` completed / accepted with warnings; next is `WP-015 Metrics Correctness`.
 
-Next Target Version: `v0.6`.
+Next Target Version: `v0.7`.
 
 Current governance entrypoint: `docs/PROJECT_OS.md`.
 
@@ -40,7 +40,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 | CSV/JSON import | Working MVP | Dedupe and missing-column tolerance exist. |
 | Manual official `.dem` import | Working, partial confidence | `demoparser2` import works; parsed evidence exists; some metrics remain best-effort. |
 | Deep DEM parser | Working foundation | Normalized parser tables and `swing_score` exist; raw `.dem` is still retained. |
-| Steam import | Alpha path; WP-014C3 proved storage safety but found parser/model mismatch; WP-014E repair complete | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor source/advance/outcome semantics are explicit and tested with mocked paths. `steam_import_all` records standardized `result_json` outcomes/statuses in repaired paths, and primary Steam match date is exact only from Steam GC `match_time`. The controlled WP-014C live one-button run failed on disk/runtime safety; WP-014D1 added disk budget, batch limits and streaming download guards, WP-014D2 added parent checkpoints and stale/interrupted handling, and WP-014D3 marked production job `#15` interrupted. WP-014C3 then proved TMPDIR/storage/batch/checkpoint safety but failed after one retained demo because `played_at_source` metadata was passed to `Match(...)`; WP-014E fixed that without schema change. Repeat live acceptance still requires explicit authorization. |
+| Steam import | Accepted for controlled personal `v0.6` with warnings | OpenID + Game Authentication Code + latest share-code cursor + service bot demo URL resolver. Cursor source/advance/outcome semantics are explicit and tested with mocked paths. `steam_import_all` records standardized `result_json` outcomes/statuses, and primary Steam match date is exact only from Steam GC `match_time`. WP-014D1 added disk budget, batch limits and streaming download guards, WP-014D2 added parent checkpoints and stale/interrupted handling, WP-014D3 marked production job `#15` interrupted, WP-014E fixed parser/model metadata compatibility, and WP-014C4 passed repeat one-button live acceptance with warnings. Warnings: coarse `ImportJob.status`, uploads/temp still on root, raw demos retained, parser memory peak should be watched, and friends/public readiness remains blocked. |
 | FACEIT import | Future | Do not implement before Steam/security/parser hardening unless explicitly reprioritized. |
 | Dashboard/matches/stats | Working personal MVP runtime; WP-013 `PASS_WITH_WARNINGS` | `/coach` now surfaces current tracked recommendation, next action, evidence/confidence, Metric Truth warnings, latest match summary and AI validation status. Runtime restart and read-only smoke passed; full owner manual checklist remains operator evidence to record. |
 | Mistake detection | Partial | Rule-based, hardcoded thresholds, confidence not fully enforced. |
@@ -53,13 +53,13 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 
 ## 3. Current Milestone
 
-Current Product Version: `v0.5`.
+Current Product Version: `v0.6`.
 
-Current WP: `WP-014E Parser Import Match Model Compatibility Repair` completed; next is `WP-014C4 Repeat One-Button Live Import Acceptance`.
+Current WP: `WP-014 Import Acceptance` completed / accepted with warnings; next is `WP-015 Metrics Correctness`.
 
-Next Target Version: `v0.6`.
+Next Target Version: `v0.7`.
 
-Previous stabilization stages remain historical evidence for the product state. WP-012 DB Contamination Guardrails and WP-013 Personal MVP Runtime Smoke Gate are complete with warnings. WP-014C live acceptance failed on disk/runtime safety and must be repaired before another live import acceptance pass.
+Previous stabilization stages remain historical evidence for the product state. WP-012 DB Contamination Guardrails, WP-013 Personal MVP Runtime Smoke Gate and WP-014 Import Acceptance are complete with warnings.
 
 Canonical milestone doc: `docs/CURRENT_MILESTONE.md`.
 
@@ -76,8 +76,8 @@ Current focus:
 9. Stage 7 Steam cursor truth: completed / `PASS_WITH_WARNINGS`.
 10. Stage 8 AI Output Validator: completed / `PASS_WITH_WARNINGS`.
 11. Stage 9 Coach-first UI: completed / `PASS_WITH_WARNINGS`.
-12. Repeat one-button Steam import live acceptance only after explicit authorization. WP-014D1 storage budget/batch caps, WP-014D2 parent checkpoint/interruption handling, WP-014D3 stale job `#15` repair and WP-014E parser/model compatibility repair are complete.
-13. Генерировать рекомендации из verified problem evidence.
+12. WP-014 Import Acceptance completed / accepted with warnings after WP-014C4 repeat live acceptance.
+13. WP-015 Metrics Correctness is next; generate recommendations from verified problem evidence only after metric correctness is strengthened.
 
 ## 4. Source-of-truth Documents
 
@@ -221,7 +221,7 @@ Stage 7 cursor truth policy:
 - No-new, duplicate, missing-code, disconnected-Steam, rate-limit, download-failed, parser-failed, partial-success, exact-date availability and approximate/unavailable match-date outcomes are represented in `ImportJob.result_json`.
 - Primary Steam freshness checks use only exact imported Steam dates (`steam_gc_match_time`); parser/file-mtime fallback dates must not block new Steam imports.
 - `ImportJob.status` still supports only `queued`, `running`, `succeeded` and `failed`; partial success is represented in `result_json` and persisted as `failed` until a schema/status migration is explicitly approved.
-- WP-014C live acceptance failed because a single authorized one-button import downloaded multiple large raw demos, exhausted disk headroom, left parent job `#15` running with null `result_json`, and required force-killing uvicorn after graceful shutdown hung. WP-014D1/D2/D3 repaired storage bounds, parent progress/interruption handling and stale job `#15`; repeat live acceptance still requires explicit authorization and evidence.
+- WP-014C live acceptance failed because a single authorized one-button import downloaded multiple large raw demos, exhausted disk headroom, left parent job `#15` running with null `result_json`, and required force-killing uvicorn after graceful shutdown hung. WP-014D1/D2/D3 repaired storage bounds, parent progress/interruption handling and stale job `#15`; WP-014E fixed parser/model metadata compatibility; WP-014C4 repeat live acceptance passed with warnings and promoted controlled personal import acceptance to `v0.6`.
 
 ### Demo Storage
 

@@ -39,7 +39,7 @@ Exact match date means the actual match datetime from Valve/Steam/demo metadata.
 
 ## Current Status
 
-Steam import is an alpha path, not production-ready.
+Steam import is accepted for controlled personal `v0.6` with warnings. It is not friends/public ready.
 
 WP-014A diagnosis found that the current one-button UI and backend path exist, but `v0.6` acceptance is blocked by incomplete status taxonomy, incomplete `import_job` coverage for exact share-code download/parser work, missing persisted raw-demo cleanup after successful parse/persist, weak failed-demo cleanup policy and inconsistent exact-date availability surfacing. See `docs/audit/WP_014A_STEAM_VALVE_IMPORT_DIAGNOSIS.md`.
 
@@ -87,7 +87,9 @@ WP-014D3 executed that explicit operator repair for production job `#15` with ba
 
 WP-014C3 repeat one-button live acceptance after the TMPDIR fix proved the storage guard path but still failed acceptance. Service temp resolved to `data/tmp`, storage preflight passed, one authorized click downloaded/stored exactly one raw demo under `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, parent job `#18` reached terminal failed state with bounded checkpoints, and disk growth stayed within budget. The failure was a parser/import model mismatch after raw demo retention: Steam date-source metadata added `played_at_source` to the parsed match payload, and `import_demo_file()` passed that non-column key to `Match(...)`.
 
-WP-014E repaired that parser/import model compatibility issue without schema change. Date-source truth (`played_at_source`, `match_date_status`, `match_date_source`) remains represented in `matches.raw_json` and Steam result payloads; only real `matches` table columns are passed to the SQLAlchemy `Match` constructor. Repeat live acceptance is still required before `v0.6`.
+WP-014E repaired that parser/import model compatibility issue without schema change. Date-source truth (`played_at_source`, `match_date_status`, `match_date_source`) remains represented in `matches.raw_json` and Steam result payloads; only real `matches` table columns are passed to the SQLAlchemy `Match` constructor.
+
+WP-014C4 repeat one-button live acceptance after parser repair passed with warnings and promoted controlled personal import acceptance to `v0.6`. One authorized click created parent job `#20`, storage/TMPDIR guard passed, batch cap limited the run to exactly one demo, parser/import succeeded, exact date truth was persisted via `steam_gc_match_time`, parent `result_json` reached terminal truthful `batch_cap_reached` with `success` and `exact_match_date_available`, service stayed healthy, and disk growth was bounded. Carried warnings: `ImportJob.status` remains coarse and may be `failed` for non-clean outcomes like `batch_cap_reached`; canonical truth is `result_json.overall_outcome/statuses`; uploads/temp still live on root; raw demos are retained by policy; parser memory peak should be watched; friends/public readiness remains blocked.
 
 Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
 
@@ -138,8 +140,11 @@ Stage 7 does not add a durable scheduler or retry ledger. Current retry policy i
 - Stale cursor can point behind already imported history.
 - Valve replay URLs can expire or return transient 502/404/410.
 - Durable retry/backoff, scheduler behavior and a sync ledger still need hardening.
-- One-button live import now has storage budget, batch caps, parent checkpoints, stale/interrupted job handling and parser/import model compatibility for date-source metadata, but final end-to-end success still needs repeat live acceptance after WP-014E.
-- Production job `#15` no longer blocks future one-button queueing; WP-014C3 proved guarded one-demo behavior but failed on the parser/model mismatch fixed in WP-014E.
+- One-button live import is accepted for controlled personal use, but `ImportJob.status` remains coarse; use `result_json.overall_outcome/statuses` as the canonical outcome.
+- Uploads/temp still live on root filesystem; a dedicated volume remains recommended.
+- Raw demos are retained by policy under `retain_raw_for_parser_development`.
+- Parser memory peak should be watched during real demo imports.
+- Production job `#15` no longer blocks future one-button queueing.
 - Hard process kill can still stop work before in-process interruption marking runs; queue-time stale repair is the durable recovery path.
 - Steam OpenID network verification can fail closed if Steam is unreachable.
 - Low-level helper `link_steam_account(..., user_id=None)` still supports legacy Steam-only user creation for old service paths; public OpenID callback no longer uses this path without owner.
