@@ -1,3 +1,4 @@
+import bz2
 import json
 from datetime import datetime
 
@@ -10,11 +11,15 @@ from app.services.demo_retention import (
 from app.services.match_queries import playable_match_select
 from app.services.steam_demo_downloader import (
     _download_and_import_match,
+    _download_demo_file,
     download_pending_steam_demos,
     steam_demo_downloader_configured,
 )
 from app.services.steam_integration import (
     STEAM_IMPORT_APPROXIMATE_MATCH_DATE,
+    STEAM_IMPORT_BATCH_CAP_REACHED,
+    STEAM_IMPORT_DEMO_TOO_LARGE,
+    STEAM_IMPORT_DISK_BUDGET_EXCEEDED,
     STEAM_IMPORT_DOWNLOAD_FAILED,
     STEAM_IMPORT_DUPLICATE_SKIPPED,
     STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE,
@@ -46,6 +51,7 @@ from app.services.steam_integration import (
     validate_openid_callback,
 )
 from app.services.steam_match_metadata import parse_steam_match_time, steam_gc_metadata_from_item
+from app.services.steam_storage_guard import SteamImportStorageBudget
 
 
 def test_steam_login_url_contains_openid_fields(monkeypatch):
@@ -711,6 +717,247 @@ def test_steam_demo_downloader_is_disabled_without_bot_credentials(db, monkeypat
     assert result["pending"] == 1
 
 
+def test_steam_demo_batch_cap_leaves_remaining_pending(db, monkeypatch, tmp_path):
+    monkeypatch.setenv("STEAM_IMPORT_MAX_DEMOS_PER_RUN", "1")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    share_codes = [
+        "CSGO-FpxoS-hCLi9-My3iH-JJsdP-xbjsF",
+        "CSGO-uCGaY-r6Pcy-X3KpH-oQDBR-e75RG",
+        "CSGO-KeYZ6-uqGoK-ZRMVA-8DJFQ-P8o3B",
+    ]
+    for code in share_codes:
+        db.add(Match(source="steam_history", external_match_id=code, raw_json=json.dumps({"share_code": code})))
+    db.commit()
+    demo_path = tmp_path / "demo.dem"
+    demo_path.write_bytes(b"demo")
+
+    def fake_fetch_demo_urls(codes):
+        return {
+            "ok": True,
+            "results": [
+                {"ok": True, "share_code": code, "match_id": str(index), "demo_url": "https://example.test/demo.dem"}
+                for index, code in enumerate(codes)
+            ],
+        }
+
+    def fake_download_demo_file(_url, _share_code, storage_budget=None):
+        return demo_path
+
+    def fake_import_demo_file(_db, _demo_path, **_kwargs):
+        return {"match_id": None, "imported": 1, "skipped_duplicates": 0, "stored_path": str(demo_path)}
+
+    monkeypatch.setattr("app.services.steam_demo_downloader.steam_demo_downloader_configured", lambda: True)
+    monkeypatch.setattr("app.services.steam_demo_downloader._fetch_demo_urls", fake_fetch_demo_urls)
+    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+
+    try:
+        result = download_pending_steam_demos(db, limit=20)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["processed"] == 1
+    assert result["imported"] == 1
+    assert result["failed"] == 0
+    assert result["batch_cap_reached"] is True
+    assert result["remaining_pending"] == 2
+    pending_rows = [json.loads(match.raw_json or "{}").get("status") for match in db.query(Match).all()]
+    assert pending_rows.count("demo_imported") == 1
+    assert "demo_download_error" not in pending_rows
+
+
+def test_steam_import_result_reports_batch_cap(db, monkeypatch):
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        lambda *_args, **_kwargs: {
+            "configured": True,
+            "processed": 1,
+            "imported": 1,
+            "failed": 0,
+            "remaining_pending": 19,
+            "batch_cap_reached": True,
+            "results": [{"status": "imported", "played_at_source": "steam_gc_match_time", "played_at": "2026-07-02"}],
+        },
+    )
+
+    result = import_all_available_steam_matches(db)
+
+    assert result["status"] == "succeeded"
+    assert STEAM_IMPORT_BATCH_CAP_REACHED in result["result"]["statuses"]
+
+
+def test_steam_download_content_length_blocks_too_large_demo(monkeypatch, tmp_path):
+    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path / "uploads"))
+    monkeypatch.setenv("STEAM_IMPORT_MAX_SINGLE_DEMO_BYTES", "3")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+
+    class FakeResponse:
+        headers = {"Content-Length": "4"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, _size=-1):
+            return b"data"
+
+    monkeypatch.setattr("app.services.steam_demo_downloader.urlopen", lambda *_args, **_kwargs: FakeResponse())
+    try:
+        budget = SteamImportStorageBudget()
+        try:
+            _download_demo_file(
+                "https://example.test/demo.dem",
+                "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+                storage_budget=budget,
+            )
+        except Exception as exc:
+            captured = exc
+        else:
+            raise AssertionError("too-large demo should be blocked")
+    finally:
+        get_settings.cache_clear()
+
+    assert captured.status == STEAM_IMPORT_DEMO_TOO_LARGE
+
+
+def test_steam_job_byte_budget_stops_before_next_demo(db, monkeypatch, tmp_path):
+    monkeypatch.setenv("STEAM_IMPORT_MAX_DEMOS_PER_RUN", "2")
+    monkeypatch.setenv("STEAM_IMPORT_MAX_BYTES_PER_JOB", "7")
+    monkeypatch.setenv("STEAM_IMPORT_UNKNOWN_DEMO_RESERVE_BYTES", "4")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    share_codes = ["CSGO-FpxoS-hCLi9-My3iH-JJsdP-xbjsF", "CSGO-uCGaY-r6Pcy-X3KpH-oQDBR-e75RG"]
+    for code in share_codes:
+        db.add(Match(source="steam_history", external_match_id=code, raw_json=json.dumps({"share_code": code})))
+    db.commit()
+    demo_path = tmp_path / "demo.dem"
+    demo_path.write_bytes(b"demo")
+
+    def fake_fetch_demo_urls(codes):
+        return {
+            "ok": True,
+            "results": [
+                {"ok": True, "share_code": code, "match_id": code, "demo_url": "https://example.test/demo.dem"}
+                for code in codes
+            ],
+        }
+
+    def fake_download_demo_file(_url, _share_code, storage_budget=None):
+        storage_budget.record_downloaded(4)
+        return demo_path
+
+    def fake_import_demo_file(_db, _demo_path, **_kwargs):
+        return {"match_id": None, "imported": 1, "skipped_duplicates": 0, "stored_path": str(demo_path)}
+
+    monkeypatch.setattr("app.services.steam_demo_downloader.steam_demo_downloader_configured", lambda: True)
+    monkeypatch.setattr("app.services.steam_demo_downloader._fetch_demo_urls", fake_fetch_demo_urls)
+    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+
+    try:
+        result = download_pending_steam_demos(db, limit=20)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["processed"] == 1
+    assert result["failed"] == 0
+    assert result["budget_status"] == STEAM_IMPORT_DISK_BUDGET_EXCEEDED
+    assert result["remaining_pending"] == 1
+    assert result["results"][-1]["status"] == "not_attempted"
+
+
+def test_streamed_download_writes_chunks_and_counts_bytes(monkeypatch, tmp_path):
+    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path / "uploads"))
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+
+    class FakeResponse:
+        headers = {"Content-Length": "4"}
+
+        def __init__(self):
+            self.chunks = [b"ab", b"cd", b""]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, _size=-1):
+            return self.chunks.pop(0)
+
+    monkeypatch.setattr("app.services.steam_demo_downloader.urlopen", lambda *_args, **_kwargs: FakeResponse())
+    try:
+        budget = SteamImportStorageBudget()
+        path = _download_demo_file(
+            "https://example.test/demo.dem",
+            "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+            storage_budget=budget,
+        )
+    finally:
+        get_settings.cache_clear()
+
+    assert path.read_bytes() == b"abcd"
+    assert budget.downloaded_bytes == 4
+    shutil_parent = path.parent
+    # The caller normally removes the temp dir; this direct unit test owns it.
+    import shutil
+
+    shutil.rmtree(shutil_parent, ignore_errors=True)
+
+
+def test_streamed_bz2_decompression_counts_bytes(monkeypatch, tmp_path):
+    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path / "uploads"))
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    payload = bz2.compress(b"demo-data")
+
+    class FakeResponse:
+        headers = {"Content-Length": str(len(payload))}
+
+        def __init__(self):
+            self.chunks = [payload[:3], payload[3:], b""]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, _size=-1):
+            return self.chunks.pop(0)
+
+    monkeypatch.setattr("app.services.steam_demo_downloader.urlopen", lambda *_args, **_kwargs: FakeResponse())
+    try:
+        budget = SteamImportStorageBudget()
+        path = _download_demo_file(
+            "https://example.test/demo.dem.bz2",
+            "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+            storage_budget=budget,
+        )
+    finally:
+        get_settings.cache_clear()
+
+    assert path.read_bytes() == b"demo-data"
+    assert budget.downloaded_bytes == len(payload)
+    assert budget.decompressed_bytes == len(b"demo-data")
+    import shutil
+
+    shutil.rmtree(path.parent, ignore_errors=True)
+
+
 def test_steam_downloader_passes_gc_match_time_to_demo_import(db, monkeypatch, tmp_path):
     match = Match(
         source="steam_history",
@@ -723,7 +970,7 @@ def test_steam_downloader_passes_gc_match_time_to_demo_import(db, monkeypatch, t
     demo_path.write_bytes(b"demo")
     captured = {}
 
-    def fake_download_demo_file(_url, _share_code):
+    def fake_download_demo_file(_url, _share_code, storage_budget=None):
         return demo_path
 
     def fake_import_demo_file(_db, _demo_path, **kwargs):
@@ -776,7 +1023,7 @@ def test_steam_downloader_writes_exact_gc_match_time_to_imported_match(db, monke
     demo_path = tmp_path / "demo.dem"
     demo_path.write_bytes(b"demo")
 
-    def fake_download_demo_file(_url, _share_code):
+    def fake_download_demo_file(_url, _share_code, storage_budget=None):
         return demo_path
 
     def fake_import_demo_file(inner_db, _demo_path, **_kwargs):
@@ -825,7 +1072,7 @@ def test_steam_downloader_missing_gc_match_time_does_not_keep_file_mtime_as_matc
     demo_path = tmp_path / "demo.dem"
     demo_path.write_bytes(b"demo")
 
-    def fake_download_demo_file(_url, _share_code):
+    def fake_download_demo_file(_url, _share_code, storage_budget=None):
         return demo_path
 
     def fake_import_demo_file(inner_db, _demo_path, **_kwargs):
@@ -943,7 +1190,7 @@ def test_steam_download_parser_failure_records_retained_demo_metadata(db, monkey
             ],
         }
 
-    def fake_download_demo_file(_url, _share_code):
+    def fake_download_demo_file(_url, _share_code, storage_budget=None):
         return demo_path
 
     def fake_import_demo_file(_db, _demo_path, **_kwargs):

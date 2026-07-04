@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     steam_bot_two_factor_code: str | None = None
     steam_bot_refresh_token: str | None = None
     steam_bot_timeout_seconds: int = 45
+    steam_import_max_demos_per_run: int = 1
+    steam_import_max_bytes_per_job: int = 2 * 1024 * 1024 * 1024
+    steam_import_max_single_demo_bytes: int = 600 * 1024 * 1024
+    steam_import_min_free_bytes: int = 8 * 1024 * 1024 * 1024
+    steam_import_preserve_free_bytes: int = 5 * 1024 * 1024 * 1024
+    steam_import_unknown_demo_reserve_bytes: int = 1536 * 1024 * 1024
     session_secret_key: str = "change-me-before-public-release"
     auth_cookie_secure: bool = False
     api_token: str | None = None

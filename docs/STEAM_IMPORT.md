@@ -59,6 +59,10 @@ Standardized result statuses:
 - `exact_match_date_available`;
 - `exact_match_date_unavailable`;
 - `approximate_match_date`.
+- `disk_budget_exceeded`;
+- `batch_cap_reached`;
+- `demo_too_large`;
+- `storage_preflight_failed`.
 
 `ImportJob.status` still has only `queued`, `running`, `succeeded` and `failed`. Clean `success`, `no_new` and `duplicate_skipped` outcomes may use `succeeded`. Partial success is represented in `result_json.overall_outcome/statuses` and persisted as `failed` to avoid clean-success overclaim until a future schema/status migration is explicitly approved.
 
@@ -66,7 +70,9 @@ WP-014B2 repaired exact match-date truth without changing schema or demo cleanup
 
 WP-014B3 made demo retention explicit without enabling deletion. Current policy is `retain_raw_for_parser_development`; successful imports record `retained_for_parser_dev`, parser failures record `retained_after_failure` or `cleanup_needed`, and result/raw JSON include raw demo path/size when available. `delete_after_success` remains disabled by default and is future production mode after parser acceptance.
 
-WP-014C live one-button acceptance failed. One authorized click on `/settings/imports` -> `POST /settings/imports/pull-all` created parent job `#15` and child `match_history_sync` job `#16`. The child sync succeeded, but the parent remained `running` with null `result_json` while multiple large raw demos were retained. `data/uploads` grew from `68K` to `3.1G`, root free space fell to `508M`, graceful service restart hung waiting for background tasks, and a force kill was required to protect the host. No production demo files were deleted and no schema changes were made. Do not repeat live one-button acceptance until disk budget/batch caps, incremental parent progress/result truth and clean interruption handling are repaired.
+WP-014C live one-button acceptance failed. One authorized click on `/settings/imports` -> `POST /settings/imports/pull-all` created parent job `#15` and child `match_history_sync` job `#16`. The child sync succeeded, but the parent remained `running` with null `result_json` while multiple large raw demos were retained. `data/uploads` grew from `68K` to `3.1G`, root free space fell to `508M`, graceful service restart hung waiting for background tasks, and a force kill was required to protect the host. No production demo files were deleted and no schema changes were made.
+
+WP-014D1 repaired the storage/batch part of that failure without live Steam work, production DB mutation or file cleanup. One-button demo download now has configurable disk preflight, per-run demo cap, per-job byte budget, per-demo byte guard, preserve-free checks before download/decompression/upload copy, streamed download with byte counting, and first-class result statuses for `disk_budget_exceeded`, `batch_cap_reached`, `demo_too_large` and `storage_preflight_failed`. Parent progress checkpoints, stale job `#15` repair and graceful shutdown/interruption handling remain open for WP-014D2.
 
 Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
 
@@ -117,7 +123,7 @@ Stage 7 does not add a durable scheduler or retry ledger. Current retry policy i
 - Stale cursor can point behind already imported history.
 - Valve replay URLs can expire or return transient 502/404/410.
 - Durable retry/backoff, scheduler behavior and a sync ledger still need hardening.
-- One-button live import currently lacks a safe disk budget/batch cap for retain-raw mode and can exhaust VPS disk headroom.
+- One-button live import now has storage budget and batch caps, but these have only mocked/local test coverage so far; repeat live acceptance remains blocked until parent checkpoint/interruption repair is complete.
 - Parent aggregate job progress/result truth is insufficient during long downloads; interruption can leave `steam_import_all` stuck as `running` with null `result_json`.
 - Graceful shutdown does not currently cancel/fail active import work promptly enough for operator safety.
 - Steam OpenID network verification can fail closed if Steam is unreachable.

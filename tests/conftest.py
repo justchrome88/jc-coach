@@ -23,6 +23,11 @@ os.environ.setdefault("REPORTS_DIR", str(TEST_RUNTIME_ROOT / "reports"))
 os.environ.setdefault("AI_HANDOFF_DIR", str(TEST_RUNTIME_ROOT / "ai_handoffs"))
 os.environ.setdefault("SESSION_SECRET_KEY", "pytest-only-session-secret")
 os.environ.setdefault("AUTH_COOKIE_SECURE", "false")
+os.environ.setdefault("STEAM_IMPORT_MIN_FREE_BYTES", "0")
+os.environ.setdefault("STEAM_IMPORT_PRESERVE_FREE_BYTES", "0")
+os.environ.setdefault("STEAM_IMPORT_MAX_BYTES_PER_JOB", str(64 * 1024 * 1024))
+os.environ.setdefault("STEAM_IMPORT_MAX_SINGLE_DEMO_BYTES", str(16 * 1024 * 1024))
+os.environ.setdefault("STEAM_IMPORT_UNKNOWN_DEMO_RESERVE_BYTES", str(1024 * 1024))
 
 # App imports must happen after test env vars are set.
 from app.config import assert_test_database_not_production

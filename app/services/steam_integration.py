@@ -36,6 +36,10 @@ STEAM_IMPORT_DUPLICATE_SKIPPED = "duplicate_skipped"
 STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE = "exact_match_date_available"
 STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE = "exact_match_date_unavailable"
 STEAM_IMPORT_APPROXIMATE_MATCH_DATE = "approximate_match_date"
+STEAM_IMPORT_DISK_BUDGET_EXCEEDED = "disk_budget_exceeded"
+STEAM_IMPORT_BATCH_CAP_REACHED = "batch_cap_reached"
+STEAM_IMPORT_DEMO_TOO_LARGE = "demo_too_large"
+STEAM_IMPORT_STORAGE_PREFLIGHT_FAILED = "storage_preflight_failed"
 STEAM_EXACT_MATCH_DATE_SOURCES = {"steam_gc_match_time"}
 SHARE_CODE_DICTIONARY = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefhijkmnopqrstuvwxyz23456789"
 SHARE_CODE_PATTERN = re.compile(rf"^(CSGO)?(-?[{SHARE_CODE_DICTIONARY}]{{5}}){{5}}$")
@@ -347,12 +351,39 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
     if job.status == "succeeded":
         return {"id": job.id, "status": job.status, "result": _json_loads(job.result_json), "error": None}
 
-    job.status = "running"
-    job.started_at = datetime.now(UTC).replace(tzinfo=None)
-    db.commit()
-
     try:
         settings = get_settings()
+        from app.services.steam_storage_guard import SteamImportStorageBudget, SteamStorageBudgetExceeded
+
+        storage_budget = SteamImportStorageBudget()
+        try:
+            storage_preflight = storage_budget.preflight()
+        except SteamStorageBudgetExceeded as exc:
+            result = {
+                "overall_outcome": STEAM_IMPORT_STORAGE_PREFLIGHT_FAILED,
+                "statuses": [STEAM_IMPORT_STORAGE_PREFLIGHT_FAILED, exc.status],
+                "status_summary": {STEAM_IMPORT_STORAGE_PREFLIGHT_FAILED: 1, exc.status: 1},
+                "clean_success": False,
+                "error_message": str(exc),
+                "storage_budget": exc.budget,
+                "job_status_limitation": (
+                    "ImportJob.status supports queued/running/succeeded/failed only; storage safety blocks "
+                    "are represented in result_json.statuses and persisted as failed."
+                ),
+            }
+            job.status = "failed"
+            job.started_at = datetime.now(UTC).replace(tzinfo=None)
+            job.finished_at = datetime.now(UTC).replace(tzinfo=None)
+            job.error_message = str(exc)
+            job.result_json = json.dumps(result, ensure_ascii=False, default=str)
+            db.commit()
+            db.refresh(job)
+            return {"id": job.id, "status": job.status, "result": result, "error": job.error_message}
+
+        job.status = "running"
+        job.started_at = datetime.now(UTC).replace(tzinfo=None)
+        db.commit()
+
         accounts = list_steam_accounts(db)
         sync_results = []
         account_states = []
@@ -406,9 +437,10 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
 
         demo_download = download_pending_steam_demos(
             db,
-            limit=max(1, min(int(settings.steam_sync_max_codes), 50)),
+            limit=max(1, int(settings.steam_import_max_demos_per_run)),
             share_codes=fresh_share_codes,
             min_played_at=latest_played_at,
+            storage_budget=storage_budget,
         )
         taxonomy = classify_steam_import_all_result(
             accounts_count=len(accounts),
@@ -423,6 +455,7 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
             "sync_jobs": sync_results,
             "demo_status": demo_status,
             "demo_download": demo_download,
+            "storage_preflight": storage_preflight,
             "latest_imported_played_at_before_job": latest_played_at.isoformat() if latest_played_at else None,
             "latest_imported_played_at_source_policy": "exact_only:steam_gc_match_time",
             "note": (
@@ -556,6 +589,17 @@ def classify_steam_import_all_result(
     if demo_download.get("configured") is False and pending:
         statuses.append(STEAM_IMPORT_DOWNLOAD_FAILED)
         failure_reasons.append(str(demo_download.get("message") or "Steam demo downloader is not configured."))
+    budget_status = demo_download.get("budget_status")
+    if budget_status:
+        statuses.append(str(budget_status))
+        if budget_status in {
+            STEAM_IMPORT_DISK_BUDGET_EXCEEDED,
+            STEAM_IMPORT_DEMO_TOO_LARGE,
+            STEAM_IMPORT_STORAGE_PREFLIGHT_FAILED,
+        }:
+            failure_reasons.append(f"Steam import storage guard stopped demo processing: {budget_status}.")
+    if demo_download.get("batch_cap_reached"):
+        statuses.append(STEAM_IMPORT_BATCH_CAP_REACHED)
     if failed:
         failure_status = _classify_demo_failure_status(demo_download)
         statuses.append(failure_status)
@@ -579,6 +623,9 @@ def classify_steam_import_all_result(
             STEAM_IMPORT_RATE_LIMITED,
             STEAM_IMPORT_DOWNLOAD_FAILED,
             STEAM_IMPORT_PARSER_FAILED,
+            STEAM_IMPORT_DISK_BUDGET_EXCEEDED,
+            STEAM_IMPORT_DEMO_TOO_LARGE,
+            STEAM_IMPORT_STORAGE_PREFLIGHT_FAILED,
         )
     )
     has_success = any(status in statuses for status in (STEAM_IMPORT_SUCCESS, STEAM_IMPORT_DUPLICATE_SKIPPED))
@@ -594,6 +641,9 @@ def classify_steam_import_all_result(
         STEAM_IMPORT_STEAM_NOT_CONNECTED,
         STEAM_IMPORT_NEED_CODE,
         STEAM_IMPORT_RATE_LIMITED,
+        STEAM_IMPORT_STORAGE_PREFLIGHT_FAILED,
+        STEAM_IMPORT_DISK_BUDGET_EXCEEDED,
+        STEAM_IMPORT_DEMO_TOO_LARGE,
         STEAM_IMPORT_PARSER_FAILED,
         STEAM_IMPORT_DOWNLOAD_FAILED,
     ]
@@ -630,10 +680,16 @@ def classify_steam_import_all_result(
 
 def _classify_demo_failure_status(demo_download: dict[str, Any]) -> str:
     errors = " ".join(
-        str(item.get("error") or "")
+        " ".join(str(value) for value in (item.get("budget_status"), item.get("error")) if value)
         for item in demo_download.get("results", [])
         if isinstance(item, dict)
     )
+    if STEAM_IMPORT_STORAGE_PREFLIGHT_FAILED in errors:
+        return STEAM_IMPORT_STORAGE_PREFLIGHT_FAILED
+    if STEAM_IMPORT_DISK_BUDGET_EXCEEDED in errors:
+        return STEAM_IMPORT_DISK_BUDGET_EXCEEDED
+    if STEAM_IMPORT_DEMO_TOO_LARGE in errors:
+        return STEAM_IMPORT_DEMO_TOO_LARGE
     if _looks_rate_limited(errors):
         return STEAM_IMPORT_RATE_LIMITED
     if "parser failed" in errors.lower() or "demoparse" in errors.lower():

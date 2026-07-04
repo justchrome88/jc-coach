@@ -82,8 +82,9 @@ def import_demo_file(
     original_filename: str | None = None,
     player_identifier: str | None = None,
     steam_metadata: dict[str, Any] | None = None,
+    storage_budget: Any | None = None,
 ) -> dict[str, Any]:
-    stored_path = _store_demo(source_path, original_filename)
+    stored_path = _store_demo(source_path, original_filename, storage_budget=storage_budget)
     try:
         parsed = parse_demo(stored_path, player_identifier=player_identifier)
     except DemoParseError as exc:
@@ -452,7 +453,7 @@ def _safe_grenade_trajectories(parser, round_end_events) -> list[dict[str, Any]]
     return list(grouped.values())
 
 
-def _store_demo(source_path: Path, original_filename: str | None) -> Path:
+def _store_demo(source_path: Path, original_filename: str | None, storage_budget: Any | None = None) -> Path:
     settings = get_settings()
     suffix = source_path.suffix.lower() or ".dem"
     digest = _file_sha1(source_path)
@@ -460,7 +461,11 @@ def _store_demo(source_path: Path, original_filename: str | None) -> Path:
     if not safe_name.lower().endswith(".dem"):
         safe_name = f"{safe_name}{suffix}"
     destination = Path(settings.upload_dir) / f"{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}_{digest[:10]}_{safe_name}"
+    if storage_budget is not None:
+        storage_budget.ensure_upload_write(source_path.stat().st_size, phase="copy_to_uploads")
     shutil.copy2(source_path, destination)
+    if storage_budget is not None:
+        storage_budget.record_stored(destination.stat().st_size)
     return destination
 
 

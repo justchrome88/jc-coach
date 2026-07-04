@@ -5,7 +5,7 @@ Last updated: 2026-07-04.
 ## Current State
 
 - Current Product Version: `v0.5`
-- Current WP: `WP-014D Steam Import Runtime Safety Repair`
+- Current WP: `WP-014D2 Parent Checkpoints and Interruption Repair`
 - Next Target Version: `v0.6`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -16,6 +16,7 @@ Last updated: 2026-07-04.
 - WP-014B2 exact match-date truth repair: completed without schema change or production DB mutation. Primary Steam import treats Steam GC `match_time` as the only exact Steam match date, clears imported `Match.played_at` when GC time is unavailable instead of retaining file-mtime fallback, records `match_date_status/source`, and uses exact-only imported dates for Steam freshness.
 - WP-014B3 demo retention policy repair: completed without schema change, production DB mutation or production file deletion. Current policy is explicit `retain_raw_for_parser_development`; `delete_after_success` remains disabled; successful/failed imports record retention metadata and storage reporting has read-only file/DB consistency classification.
 - WP-014C one-button live acceptance: `FAIL`. One authorized click on `/settings/imports` -> `POST /settings/imports/pull-all` created `steam_import_all` job `#15` and `match_history_sync` job `#16`. The parent job stayed `running` with null `result_json`, downloaded/retained raw demos grew `data/uploads` from `68K` to `3.1G`, root free space fell to `508M`, graceful restart hung waiting for background tasks, and a force kill was required to protect disk. No production files were deleted and no code/schema changes were made. Report: `docs/audit/WP_014C_ONE_BUTTON_LIVE_IMPORT_ACCEPTANCE_REPORT.md`.
+- WP-014D1 storage guard/batch cap repair: completed without live Steam/import/parser jobs, production DB mutation or production file cleanup. Added configurable disk preflight, per-run demo cap, per-job byte budget, per-demo max size, preserve-free checks before download/decompression/upload copy, streamed download with byte counting, and budget-aware result statuses. Parent checkpoints, stale job `#15` repair and graceful shutdown/interruption handling remain open.
 
 ## Last Incident Summary
 
@@ -29,11 +30,11 @@ Last updated: 2026-07-04.
 
 ## Next WP
 
-`WP-014D Steam Import Runtime Safety Repair` targeting a repeatable `v0.6` import acceptance attempt.
+`WP-014D2 Parent Checkpoints and Interruption Repair` targeting a repeatable `v0.6` import acceptance attempt.
 
-The next active WP is `WP-014D Steam Import Runtime Safety Repair`.
+The next active WP is `WP-014D2 Parent Checkpoints and Interruption Repair`.
 
-Expected focus: repair the WP-014C live blockers before any repeat live acceptance. Required areas are disk-space preflight/budget guard, one-button batch limit or operator-configurable cap, incremental parent job progress/result truth, clean handling of interrupted/stale running jobs, and graceful shutdown cancellation/failure behavior. Do not run another live Steam/import/parser job unless the WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
+Expected focus: repair remaining WP-014C live blockers before any repeat live acceptance. Storage preflight and batch caps exist after WP-014D1. Required remaining areas are incremental parent job progress/result truth, clean handling of interrupted/stale running jobs, explicit operator repair for job `#15`, and graceful shutdown cancellation/failure behavior. Do not run another live Steam/import/parser job unless the WP explicitly authorizes it with DB SHA, backup evidence and disk-cap safeguards.
 
 Roadmap and WP wiring:
 
