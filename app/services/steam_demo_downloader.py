@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Callable
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -59,6 +60,7 @@ def download_pending_steam_demos(
     share_codes: list[str] | None = None,
     min_played_at: datetime | None = None,
     storage_budget: SteamImportStorageBudget | None = None,
+    progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     storage_budget = storage_budget or SteamImportStorageBudget()
     total_pending = _count_pending_steam_history_matches(db, share_codes=share_codes)
@@ -115,6 +117,19 @@ def download_pending_steam_demos(
     budget_status = None
     for match in matches:
         share_code = _share_code_for_match(match)
+        _emit_progress(
+            progress_callback,
+            "demo_queued",
+            share_code=share_code,
+            match_id=match.id,
+            counters={
+                "processed": processed,
+                "imported": imported,
+                "failed": failed,
+                "skipped": skipped,
+                "pending": total_pending - processed,
+            },
+        )
         item = by_share_code.get(share_code) or {"ok": False, "error": "Steam bot did not return this share code."}
         try:
             storage_budget.reserve_next_demo()
@@ -151,11 +166,20 @@ def download_pending_steam_demos(
                 steam_gc_item=item,
                 player_identifier=player_identifier,
                 storage_budget=storage_budget,
+                progress_callback=progress_callback,
             )
             imported += 1 if result.get("imported") else 0
             results.append(result)
             processed += 1
         except SteamStorageBudgetExceeded as exc:
+            _emit_progress(
+                progress_callback,
+                exc.status,
+                share_code=share_code,
+                match_id=match.id,
+                budget_status=exc.status,
+                error=str(exc),
+            )
             fail_current = exc.status != STEAM_IMPORT_DISK_BUDGET_EXCEEDED or not results
             if fail_current:
                 failed += 1
@@ -206,6 +230,20 @@ def download_pending_steam_demos(
             processed += 1
 
     final_batch_cap_reached = batch_cap_reached or remaining_pending > 0
+    if final_batch_cap_reached:
+        _emit_progress(
+            progress_callback,
+            "batch_cap_reached",
+            remaining_pending=remaining_pending,
+            batch_cap_reached=True,
+            counters={
+                "processed": processed,
+                "imported": imported,
+                "failed": failed,
+                "skipped": skipped,
+                "pending": remaining_pending,
+            },
+        )
     return {
         "configured": True,
         "processed": processed,
@@ -255,13 +293,18 @@ def _download_and_import_match(
     steam_gc_item: dict[str, Any],
     player_identifier: str | None,
     storage_budget: SteamImportStorageBudget | None = None,
+    progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     decoded = decode_match_share_code(share_code)
     demo_url = str(steam_gc_item["demo_url"])
     steam_metadata = steam_gc_metadata_from_item(steam_gc_item)
     date_status = _match_date_status(steam_metadata)
-    demo_path = _download_demo_file(demo_url, share_code, storage_budget=storage_budget)
+    download_kwargs: dict[str, Any] = {"storage_budget": storage_budget}
+    if progress_callback is not None:
+        download_kwargs["progress_callback"] = progress_callback
+    demo_path = _download_demo_file(demo_url, share_code, **download_kwargs)
     try:
+        _emit_progress(progress_callback, "parser_started", share_code=share_code, match_id=match.id)
         import_result = import_demo_file(
             db,
             demo_path,
@@ -270,7 +313,30 @@ def _download_and_import_match(
             steam_metadata=steam_metadata,
             storage_budget=storage_budget,
         )
+        _emit_progress(
+            progress_callback,
+            "demo_stored",
+            share_code=share_code,
+            match_id=match.id,
+            stored_path=import_result.get("stored_path"),
+            raw_demo_path=import_result.get("raw_demo_path"),
+            raw_demo_size_bytes=import_result.get("raw_demo_size_bytes"),
+        )
+        _emit_progress(
+            progress_callback,
+            "parser_succeeded",
+            share_code=share_code,
+            match_id=match.id,
+            status="imported",
+        )
     except DemoParseError as exc:
+        _emit_progress(
+            progress_callback,
+            "parser_failed",
+            share_code=share_code,
+            match_id=match.id,
+            error=str(exc),
+        )
         error = SteamDemoDownloadError(f"Downloaded demo but parser failed: {exc}")
         error.retention = exc.retention
         raise error from exc
@@ -378,6 +444,7 @@ def _download_demo_file(
     url: str,
     share_code: str,
     storage_budget: SteamImportStorageBudget | None = None,
+    progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
 ) -> Path:
     if not url.startswith(("http://", "https://")):
         raise SteamDemoDownloadError("Steam service bot returned an invalid demo URL.")
@@ -392,7 +459,14 @@ def _download_demo_file(
             content_length = _response_content_length(response)
             if storage_budget is not None:
                 storage_budget.reserve_next_demo(content_length)
-            _stream_response_to_file(response, archive_path, storage_budget=storage_budget)
+            _emit_progress(progress_callback, "demo_downloading", share_code=share_code)
+            downloaded = _stream_response_to_file(response, archive_path, storage_budget=storage_budget)
+            _emit_progress(
+                progress_callback,
+                "demo_downloaded",
+                share_code=share_code,
+                downloaded_bytes=downloaded,
+            )
             modified_timestamp = _response_modified_timestamp(response)
     except HTTPError as exc:
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -405,6 +479,7 @@ def _download_demo_file(
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
     if archive_path.suffix == ".bz2":
+        _emit_progress(progress_callback, "demo_decompressing", share_code=share_code)
         decompressed = _decompress_bz2_stream(archive_path, demo_path, storage_budget=storage_budget)
         if modified_timestamp:
             os.utime(demo_path, (modified_timestamp, modified_timestamp))
@@ -552,6 +627,16 @@ def _match_date_truth_note(status: str) -> str:
     if status == "exact_match_date_available":
         return "Exact match datetime came from Steam GC match_time."
     return "Steam GC match_time was unavailable; parser/file timestamps are not treated as exact match date."
+
+
+def _emit_progress(
+    callback: Callable[[str, dict[str, Any]], None] | None,
+    phase: str,
+    **event: Any,
+) -> None:
+    if callback is None:
+        return
+    callback(phase, event)
 
 
 def _apply_primary_steam_date_truth(match: Match, steam_metadata: dict[str, Any], date_status: str) -> None:

@@ -1,6 +1,6 @@
 import bz2
 import json
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 from app.db.models import ImportJob, Match, SteamAccount
 from app.services.demo_retention import (
@@ -24,12 +24,14 @@ from app.services.steam_integration import (
     STEAM_IMPORT_DUPLICATE_SKIPPED,
     STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE,
     STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE,
+    STEAM_IMPORT_INTERRUPTED,
     STEAM_IMPORT_NEED_CODE,
     STEAM_IMPORT_NO_NEW,
     STEAM_IMPORT_PARSER_FAILED,
     STEAM_IMPORT_PARTIAL_SUCCESS,
     STEAM_IMPORT_STEAM_NOT_CONNECTED,
     STEAM_IMPORT_SUCCESS,
+    checkpoint_steam_import_all_job,
     clear_steam_demo_download_errors,
     create_steam_import_job,
     current_steam_import_all_job,
@@ -37,12 +39,15 @@ from app.services.steam_integration import (
     extract_steam_id,
     import_all_available_steam_matches,
     import_steam_share_code_demo,
+    is_stale_steam_import_all_job,
     link_steam_account,
     mark_steam_history_demo_download_status,
+    mark_steam_import_all_job_interrupted,
     match_date_truth,
     parse_share_code_input,
     queue_match_history_sync,
     queue_steam_import_all,
+    run_startup_stale_steam_import_repair,
     run_steam_import_all_job,
     steam_import_overview,
     steam_login_url,
@@ -153,6 +158,212 @@ def test_queue_steam_import_all_is_idempotent_while_active(db):
     assert first.status == "queued"
     assert current_steam_import_all_job(db).id == first.id
     assert db.query(ImportJob).count() == 1
+
+
+def test_parent_checkpoint_persists_after_account_checked(db):
+    link_steam_account(db, "76561198056634139", persona_name="JC")
+    job = queue_steam_import_all(db)
+
+    result = run_steam_import_all_job(db, job.id)
+
+    db.refresh(job)
+    progress = result["result"]["progress"]
+    phases = [event["phase"] for event in progress["recent_events"]]
+    assert "started" in phases
+    assert "account_checked" in phases
+    assert progress["phase"] == "demo_queued"
+    assert job.result_json
+
+
+def test_parent_checkpoint_persists_after_child_sync_success(db, monkeypatch):
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "web-api-key")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        lambda *_args, **_kwargs: {"configured": True, "processed": 0, "imported": 0, "failed": 0, "results": []},
+    )
+
+    try:
+        result = import_all_available_steam_matches(db)
+    finally:
+        get_settings.cache_clear()
+
+    progress = result["result"]["progress"]
+    phases = [event["phase"] for event in progress["recent_events"]]
+    assert "share_codes_fetch_started" in phases
+    assert "share_codes_fetched" in phases
+    assert progress["child_job_ids"]
+
+
+def test_parent_checkpoint_persists_before_demo_download(db, monkeypatch):
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "web-api-key")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+
+    def fake_download_pending_steam_demos(_db, **kwargs):
+        kwargs["progress_callback"](
+            "demo_downloading",
+            {
+                "share_code": "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+                "counters": {"processed": 0, "imported": 0, "failed": 0, "skipped": 0, "pending": 1},
+            },
+        )
+        return {"configured": True, "processed": 0, "imported": 0, "failed": 0, "pending": 1, "results": []}
+
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        fake_download_pending_steam_demos,
+    )
+
+    try:
+        result = import_all_available_steam_matches(db)
+    finally:
+        get_settings.cache_clear()
+
+    phases = [event["phase"] for event in result["result"]["progress"]["recent_events"]]
+    assert "demo_queued" in phases
+    assert "demo_downloading" in phases
+
+
+def test_parent_checkpoint_persists_disk_budget_exceeded(db, monkeypatch):
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "web-api-key")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
+    update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
+    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+
+    def fake_download_pending_steam_demos(_db, **kwargs):
+        kwargs["progress_callback"](
+            STEAM_IMPORT_DISK_BUDGET_EXCEEDED,
+            {
+                "share_code": "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+                "budget_status": STEAM_IMPORT_DISK_BUDGET_EXCEEDED,
+            },
+        )
+        return {
+            "configured": True,
+            "processed": 0,
+            "imported": 0,
+            "failed": 1,
+            "pending": 1,
+            "budget_status": STEAM_IMPORT_DISK_BUDGET_EXCEEDED,
+            "results": [{"status": "failed", "budget_status": STEAM_IMPORT_DISK_BUDGET_EXCEEDED}],
+        }
+
+    monkeypatch.setattr(
+        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        fake_download_pending_steam_demos,
+    )
+
+    try:
+        result = import_all_available_steam_matches(db)
+    finally:
+        get_settings.cache_clear()
+
+    assert result["status"] == "failed"
+    progress = result["result"]["progress"]
+    assert progress["phase"] == STEAM_IMPORT_DISK_BUDGET_EXCEEDED
+    assert any(event["phase"] == STEAM_IMPORT_DISK_BUDGET_EXCEEDED for event in progress["recent_events"])
+
+
+def test_stale_running_steam_import_all_is_not_reused(db):
+    stale = queue_steam_import_all(db)
+    stale.status = "running"
+    stale.started_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=2)
+    db.commit()
+
+    queued = queue_steam_import_all(db)
+
+    db.refresh(stale)
+    assert queued.id != stale.id
+    assert queued.status == "queued"
+    assert stale.status == "failed"
+    assert json.loads(stale.result_json)["overall_outcome"] == STEAM_IMPORT_INTERRUPTED
+
+
+def test_stale_running_steam_import_all_can_be_marked_interrupted(db):
+    job = queue_steam_import_all(db)
+    job.status = "running"
+    job.started_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=2)
+    db.commit()
+
+    assert is_stale_steam_import_all_job(job)
+    mark_steam_import_all_job_interrupted(db, job, reason="test interruption")
+
+    db.refresh(job)
+    result = json.loads(job.result_json)
+    assert job.status == "failed"
+    assert result["overall_outcome"] == STEAM_IMPORT_INTERRUPTED
+    assert result["statuses"] == [STEAM_IMPORT_INTERRUPTED]
+    assert result["progress"]["phase"] == STEAM_IMPORT_INTERRUPTED
+
+
+def test_non_stale_running_steam_import_all_blocks_new_queue(db):
+    running = queue_steam_import_all(db)
+    running.status = "running"
+    running.started_at = datetime.now(UTC).replace(tzinfo=None)
+    db.commit()
+
+    queued = queue_steam_import_all(db)
+
+    db.refresh(running)
+    assert queued.id == running.id
+    assert running.status == "running"
+    assert db.query(ImportJob).count() == 1
+
+
+def test_startup_stale_repair_is_opt_in(db, monkeypatch):
+    from app.config import get_settings
+
+    job = create_steam_import_job(db, None, "steam_import_all")
+    job.status = "running"
+    job.started_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=2)
+    db.commit()
+
+    monkeypatch.setenv("STEAM_IMPORT_REPAIR_STALE_ON_STARTUP", "false")
+    get_settings.cache_clear()
+    try:
+        assert run_startup_stale_steam_import_repair(db) == []
+        db.refresh(job)
+        assert job.status == "running"
+
+        monkeypatch.setenv("STEAM_IMPORT_REPAIR_STALE_ON_STARTUP", "true")
+        get_settings.cache_clear()
+        repaired = run_startup_stale_steam_import_repair(db)
+    finally:
+        get_settings.cache_clear()
+
+    db.refresh(job)
+    assert [item.id for item in repaired] == [job.id]
+    assert job.status == "failed"
+    assert json.loads(job.result_json)["overall_outcome"] == STEAM_IMPORT_INTERRUPTED
+
+
+def test_parent_checkpoint_recent_events_are_bounded(db):
+    job = queue_steam_import_all(db)
+    job.status = "running"
+    job.started_at = datetime.now(UTC).replace(tzinfo=None)
+    db.commit()
+
+    for index in range(40):
+        checkpoint_steam_import_all_job(db, job, f"phase_{index}", event={"status": str(index)})
+
+    db.refresh(job)
+    progress = json.loads(job.result_json)["progress"]
+    assert len(progress["recent_events"]) == 25
+    assert progress["recent_events"][0]["phase"] == "phase_15"
+    assert progress["recent_events"][-1]["phase"] == "phase_39"
 
 
 def test_run_steam_import_all_job_reports_steam_not_connected(db, monkeypatch):

@@ -51,6 +51,15 @@ templates = Jinja2Templates(
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     init_db()
+    settings = get_settings()
+    if settings.steam_import_repair_stale_on_startup:
+        from app.services.steam_integration import run_startup_stale_steam_import_repair
+
+        db = SessionLocal()
+        try:
+            run_startup_stale_steam_import_repair(db)
+        finally:
+            db.close()
     yield
 
 

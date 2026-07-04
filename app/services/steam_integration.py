@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
@@ -40,6 +40,9 @@ STEAM_IMPORT_DISK_BUDGET_EXCEEDED = "disk_budget_exceeded"
 STEAM_IMPORT_BATCH_CAP_REACHED = "batch_cap_reached"
 STEAM_IMPORT_DEMO_TOO_LARGE = "demo_too_large"
 STEAM_IMPORT_STORAGE_PREFLIGHT_FAILED = "storage_preflight_failed"
+STEAM_IMPORT_INTERRUPTED = "interrupted"
+STEAM_IMPORT_RUNNING = "running"
+STEAM_IMPORT_MAX_CHECKPOINT_EVENTS = 25
 STEAM_EXACT_MATCH_DATE_SOURCES = {"steam_gc_match_time"}
 SHARE_CODE_DICTIONARY = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefhijkmnopqrstuvwxyz23456789"
 SHARE_CODE_PATTERN = re.compile(rf"^(CSGO)?(-?[{SHARE_CODE_DICTIONARY}]{{5}}){{5}}$")
@@ -146,6 +149,7 @@ def current_steam_import_all_job(db: Session) -> ImportJob | None:
 
 
 def queue_steam_import_all(db: Session) -> ImportJob:
+    mark_stale_steam_import_all_jobs_interrupted(db)
     running = current_steam_import_all_job(db)
     if running:
         return running
@@ -155,6 +159,90 @@ def queue_steam_import_all(db: Session) -> ImportJob:
         "steam_import_all",
         {"reason": "manual_pull_all", "created_from": "settings_imports"},
     )
+
+
+def mark_stale_steam_import_all_jobs_interrupted(
+    db: Session,
+    *,
+    now: datetime | None = None,
+    timeout_seconds: int | None = None,
+    reason: str = "Stale steam_import_all job exceeded the running-job timeout.",
+) -> list[ImportJob]:
+    settings = get_settings()
+    timeout = max(1, int(timeout_seconds or settings.steam_import_stale_running_job_seconds))
+    marked: list[ImportJob] = []
+    running_jobs = db.scalars(
+        select(ImportJob)
+        .where(ImportJob.provider == "steam")
+        .where(ImportJob.job_type == "steam_import_all")
+        .where(ImportJob.status == "running")
+        .order_by(ImportJob.created_at.asc(), ImportJob.id.asc())
+    ).all()
+    for job in running_jobs:
+        if is_stale_steam_import_all_job(job, now=now, timeout_seconds=timeout):
+            mark_steam_import_all_job_interrupted(db, job, reason=reason)
+            marked.append(job)
+    return marked
+
+
+def is_stale_steam_import_all_job(
+    job: ImportJob,
+    *,
+    now: datetime | None = None,
+    timeout_seconds: int | None = None,
+) -> bool:
+    if job.provider != "steam" or job.job_type != "steam_import_all" or job.status != "running":
+        return False
+    settings = get_settings()
+    timeout = max(1, int(timeout_seconds or settings.steam_import_stale_running_job_seconds))
+    reference = job.started_at or job.created_at
+    if reference is None:
+        return True
+    current = now or _now()
+    return reference <= current - timedelta(seconds=timeout)
+
+
+def mark_steam_import_all_job_interrupted(
+    db: Session,
+    job: ImportJob,
+    *,
+    reason: str = "steam_import_all job was interrupted.",
+    now: datetime | None = None,
+) -> ImportJob:
+    if job.provider != "steam" or job.job_type != "steam_import_all":
+        raise ValueError("Only steam_import_all jobs can be marked interrupted.")
+    previous = _json_loads(job.result_json)
+    progress = previous.get("progress") if isinstance(previous.get("progress"), dict) else {}
+    interrupted_at = (now or _now()).isoformat()
+    progress = _bounded_progress(
+        {
+            **progress,
+            "phase": STEAM_IMPORT_INTERRUPTED,
+            "updated_at": interrupted_at,
+        },
+        {
+            "phase": STEAM_IMPORT_INTERRUPTED,
+            "at": interrupted_at,
+            "reason": reason,
+        },
+    )
+    result = {
+        "overall_outcome": STEAM_IMPORT_INTERRUPTED,
+        "statuses": [STEAM_IMPORT_INTERRUPTED],
+        "status_summary": {STEAM_IMPORT_INTERRUPTED: 1},
+        "clean_success": False,
+        "error_message": reason,
+        "interrupted_at": interrupted_at,
+        "previous_overall_outcome": previous.get("overall_outcome"),
+        "progress": progress,
+    }
+    job.status = "failed"
+    job.error_message = reason
+    job.finished_at = now or _now()
+    job.result_json = json.dumps(result, ensure_ascii=False, default=str)
+    db.commit()
+    db.refresh(job)
+    return job
 
 
 def steam_import_overview(db: Session) -> dict[str, Any]:
@@ -372,8 +460,8 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
                 ),
             }
             job.status = "failed"
-            job.started_at = datetime.now(UTC).replace(tzinfo=None)
-            job.finished_at = datetime.now(UTC).replace(tzinfo=None)
+            job.started_at = _now()
+            job.finished_at = _now()
             job.error_message = str(exc)
             job.result_json = json.dumps(result, ensure_ascii=False, default=str)
             db.commit()
@@ -381,8 +469,15 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
             return {"id": job.id, "status": job.status, "result": result, "error": job.error_message}
 
         job.status = "running"
-        job.started_at = datetime.now(UTC).replace(tzinfo=None)
+        job.started_at = _now()
         db.commit()
+        checkpoint_steam_import_all_job(
+            db,
+            job,
+            "started",
+            storage_budget=storage_budget,
+            extra={"storage_preflight": _compact_storage_budget(storage_preflight)},
+        )
 
         accounts = list_steam_accounts(db)
         sync_results = []
@@ -390,6 +485,13 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
         fresh_share_codes: list[str] = []
         latest_played_at = _latest_exact_imported_match_played_at(db)
         for account in accounts:
+            checkpoint_steam_import_all_job(
+                db,
+                job,
+                "account_checked",
+                storage_budget=storage_budget,
+                event={"steam_account_id": account.id},
+            )
             if not account.match_auth_code or not account.last_share_code:
                 account_states.append(
                     {
@@ -426,14 +528,55 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
             _store_steam_share_code_match(db, account, saved_share_code)
             fresh_share_codes.append(saved_share_code)
             sync_job = queue_match_history_sync(db, account.id)
+            checkpoint_steam_import_all_job(
+                db,
+                job,
+                "share_codes_fetch_started",
+                child_job_ids=[sync_job.id],
+                current_share_code=saved_share_code,
+                storage_budget=storage_budget,
+                event={"child_job_id": sync_job.id, "share_code": saved_share_code},
+            )
             sync_result = sync_match_history_job(db, sync_job.id)
             sync_results.append(sync_result)
             result_payload = sync_result.get("result") or {}
             fresh_share_codes.extend(result_payload.get("collected_share_codes") or [])
+            checkpoint_steam_import_all_job(
+                db,
+                job,
+                "share_codes_fetched",
+                child_job_ids=[sync_job.id],
+                current_share_code=saved_share_code,
+                storage_budget=storage_budget,
+                event={
+                    "child_job_id": sync_job.id,
+                    "share_code": saved_share_code,
+                    "status": sync_result.get("status"),
+                },
+            )
         fresh_share_codes = list(dict.fromkeys(fresh_share_codes))
 
         demo_status = mark_steam_history_demo_download_status(db, share_codes=fresh_share_codes)
+        checkpoint_steam_import_all_job(
+            db,
+            job,
+            "demo_queued",
+            counters={"pending": demo_status.get("pending_demo_download", 0)},
+            storage_budget=storage_budget,
+            event={"status": "demo_download_pending"},
+        )
         from app.services.steam_demo_downloader import download_pending_steam_demos
+
+        def progress_callback(phase: str, event: dict[str, Any]) -> None:
+            checkpoint_steam_import_all_job(
+                db,
+                job,
+                phase,
+                counters=event.get("counters") if isinstance(event.get("counters"), dict) else None,
+                current_share_code=event.get("share_code"),
+                storage_budget=storage_budget,
+                event=event,
+            )
 
         demo_download = download_pending_steam_demos(
             db,
@@ -441,13 +584,49 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
             share_codes=fresh_share_codes,
             min_played_at=latest_played_at,
             storage_budget=storage_budget,
+            progress_callback=progress_callback,
         )
+        if demo_download.get("budget_status"):
+            checkpoint_steam_import_all_job(
+                db,
+                job,
+                str(demo_download["budget_status"]),
+                counters={
+                    "processed": demo_download.get("processed", 0),
+                    "imported": demo_download.get("imported", 0),
+                    "failed": demo_download.get("failed", 0),
+                    "skipped": demo_download.get("skipped", 0),
+                    "pending": demo_download.get("pending", 0),
+                },
+                storage_budget=storage_budget,
+                event={"budget_status": demo_download.get("budget_status")},
+            )
+        if demo_download.get("batch_cap_reached"):
+            checkpoint_steam_import_all_job(
+                db,
+                job,
+                "batch_cap_reached",
+                counters={
+                    "processed": demo_download.get("processed", 0),
+                    "imported": demo_download.get("imported", 0),
+                    "failed": demo_download.get("failed", 0),
+                    "skipped": demo_download.get("skipped", 0),
+                    "pending": demo_download.get("pending", 0),
+                },
+                storage_budget=storage_budget,
+                event={
+                    "batch_cap_reached": True,
+                    "remaining_pending": demo_download.get("remaining_pending"),
+                },
+            )
         taxonomy = classify_steam_import_all_result(
             accounts_count=len(accounts),
             account_states=account_states,
             sync_results=sync_results,
             demo_download=demo_download,
         )
+        checkpoint_payload = _json_loads(job.result_json)
+        progress = checkpoint_payload.get("progress") if isinstance(checkpoint_payload.get("progress"), dict) else {}
         result = {
             **taxonomy,
             "accounts": len(accounts),
@@ -456,6 +635,7 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
             "demo_status": demo_status,
             "demo_download": demo_download,
             "storage_preflight": storage_preflight,
+            "progress": progress,
             "latest_imported_played_at_before_job": latest_played_at.isoformat() if latest_played_at else None,
             "latest_imported_played_at_source_policy": "exact_only:steam_gc_match_time",
             "note": (
@@ -467,13 +647,23 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
         job.status = "succeeded" if taxonomy["clean_success"] else "failed"
         if not taxonomy["clean_success"]:
             job.error_message = taxonomy["error_message"]
-        job.finished_at = datetime.now(UTC).replace(tzinfo=None)
+        job.finished_at = _now()
         job.result_json = json.dumps(result, ensure_ascii=False, default=str)
         db.commit()
         db.refresh(job)
         return {"id": job.id, "status": job.status, "result": result, "error": job.error_message}
     except Exception as exc:
         return _fail_job(db, job, str(exc))
+
+
+def run_startup_stale_steam_import_repair(db: Session) -> list[ImportJob]:
+    settings = get_settings()
+    if not settings.steam_import_repair_stale_on_startup:
+        return []
+    return mark_stale_steam_import_all_jobs_interrupted(
+        db,
+        reason="Stale steam_import_all job was interrupted during application startup repair.",
+    )
 
 
 def import_all_available_steam_matches(db: Session) -> dict[str, Any]:
@@ -1059,6 +1249,126 @@ def _steam_account_import_state(db: Session, account: SteamAccount) -> dict[str,
         "latest_imported_played_at_source_policy": "exact_only:steam_gc_match_time",
         "anchor_is_older_than_latest_imported": anchor_is_older,
     }
+
+
+def checkpoint_steam_import_all_job(
+    db: Session,
+    job: ImportJob,
+    phase: str,
+    *,
+    counters: dict[str, Any] | None = None,
+    child_job_ids: list[int] | None = None,
+    current_share_code: str | None = None,
+    storage_budget: Any | None = None,
+    event: dict[str, Any] | None = None,
+    extra: dict[str, Any] | None = None,
+) -> None:
+    payload = _json_loads(job.result_json)
+    progress = payload.get("progress") if isinstance(payload.get("progress"), dict) else {}
+    previous_counters = progress.get("counters") if isinstance(progress.get("counters"), dict) else {}
+    merged_counters = {
+        "processed": int(previous_counters.get("processed") or 0),
+        "imported": int(previous_counters.get("imported") or 0),
+        "failed": int(previous_counters.get("failed") or 0),
+        "skipped": int(previous_counters.get("skipped") or 0),
+        "pending": int(previous_counters.get("pending") or 0),
+    }
+    for key, value in (counters or {}).items():
+        if key in merged_counters:
+            merged_counters[key] = int(value or 0)
+    child_ids = list(progress.get("child_job_ids") or [])
+    for child_id in child_job_ids or []:
+        if child_id not in child_ids:
+            child_ids.append(child_id)
+    at = _now().isoformat()
+    checkpoint_event = {
+        "phase": phase,
+        "at": at,
+    }
+    if current_share_code:
+        checkpoint_event["share_code"] = current_share_code
+    if event:
+        checkpoint_event.update(_compact_checkpoint_event(event))
+    progress = {
+        **progress,
+        "phase": phase,
+        "updated_at": at,
+        "counters": merged_counters,
+        "child_job_ids": child_ids,
+        "current_share_code": current_share_code or progress.get("current_share_code"),
+    }
+    if storage_budget is not None:
+        snapshot = storage_budget.snapshot() if hasattr(storage_budget, "snapshot") else storage_budget
+        progress["storage_budget"] = _compact_storage_budget(snapshot)
+    if extra:
+        progress.update(extra)
+    payload["overall_outcome"] = payload.get("overall_outcome") or STEAM_IMPORT_RUNNING
+    payload["statuses"] = payload.get("statuses") or [STEAM_IMPORT_RUNNING]
+    payload["progress"] = _bounded_progress(progress, checkpoint_event)
+    job.result_json = json.dumps(payload, ensure_ascii=False, default=str)
+    db.commit()
+    db.refresh(job)
+
+
+def _bounded_progress(progress: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
+    recent_events = list(progress.get("recent_events") or [])
+    recent_events.append(event)
+    progress["recent_events"] = recent_events[-STEAM_IMPORT_MAX_CHECKPOINT_EVENTS:]
+    return progress
+
+
+def _compact_checkpoint_event(event: dict[str, Any]) -> dict[str, Any]:
+    allowed = {
+        "match_id",
+        "share_code",
+        "child_job_id",
+        "status",
+        "error",
+        "budget_status",
+        "downloaded_bytes",
+        "raw_demo_size_bytes",
+        "stored_path",
+        "raw_demo_path",
+        "remaining_pending",
+        "batch_cap_reached",
+    }
+    return {key: value for key, value in event.items() if key in allowed and value is not None}
+
+
+def _compact_storage_budget(snapshot: dict[str, Any]) -> dict[str, Any]:
+    usage = snapshot.get("usage") if isinstance(snapshot.get("usage"), dict) else {}
+    filesystems = snapshot.get("filesystems") if isinstance(snapshot.get("filesystems"), dict) else {}
+    upload = filesystems.get("upload") if isinstance(filesystems.get("upload"), dict) else {}
+    temp = filesystems.get("temp") if isinstance(filesystems.get("temp"), dict) else {}
+    settings = snapshot.get("settings") if isinstance(snapshot.get("settings"), dict) else {}
+    return {
+        "settings": {
+            "max_demos_per_run": settings.get("max_demos_per_run"),
+            "max_bytes_per_job": settings.get("max_bytes_per_job"),
+            "max_single_demo_bytes": settings.get("max_single_demo_bytes"),
+            "min_free_bytes": settings.get("min_free_bytes"),
+            "preserve_free_bytes": settings.get("preserve_free_bytes"),
+            "unknown_demo_reserve_bytes": settings.get("unknown_demo_reserve_bytes"),
+        },
+        "usage": {
+            "downloaded_bytes": usage.get("downloaded_bytes"),
+            "decompressed_bytes": usage.get("decompressed_bytes"),
+            "stored_bytes": usage.get("stored_bytes"),
+            "consumed_bytes": usage.get("consumed_bytes"),
+            "remaining_job_bytes": usage.get("remaining_job_bytes"),
+        },
+        "filesystems": {
+            "upload_free_bytes": upload.get("free_bytes"),
+            "upload_total_bytes": upload.get("total_bytes"),
+            "temp_free_bytes": temp.get("free_bytes"),
+            "same_filesystem": filesystems.get("same_filesystem"),
+        },
+        "warnings": snapshot.get("warnings") or [],
+    }
+
+
+def _now() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _fail_job(db: Session, job: ImportJob, message: str, sync_outcome: str | None = None) -> dict[str, Any]:

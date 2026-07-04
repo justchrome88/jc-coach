@@ -42,6 +42,7 @@ from app.services.steam_integration import (
     create_steam_import_job,
     list_import_jobs,
     list_steam_accounts,
+    mark_steam_import_all_job_interrupted,
     parse_share_code_input,
     process_queued_steam_jobs,
     queue_steam_import_all,
@@ -60,6 +61,15 @@ def _run_steam_import_all_background(job_id: int) -> None:
     db = SessionLocal()
     try:
         run_steam_import_all_job(db, job_id)
+    except BaseException as exc:
+        job = db.get(ImportJob, job_id)
+        if job is not None and job.status == "running":
+            mark_steam_import_all_job_interrupted(
+                db,
+                job,
+                reason=f"steam_import_all background task was interrupted: {type(exc).__name__}",
+            )
+        raise
     finally:
         db.close()
 

@@ -19,6 +19,7 @@ from app.db.models import (
     DemoPlayerRound,
     DemoRound,
     DemoWeaponStat,
+    ImportJob,
     Match,
 )
 from app.db.session import SessionLocal, get_db
@@ -76,6 +77,7 @@ from app.services.steam_integration import (
     link_steam_account,
     list_steam_accounts,
     list_visible_steam_import_jobs,
+    mark_steam_import_all_job_interrupted,
     match_date_truth,
     process_queued_steam_jobs,
     queue_match_history_sync,
@@ -95,6 +97,15 @@ def _run_steam_import_all_background(job_id: int) -> None:
     db = SessionLocal()
     try:
         run_steam_import_all_job(db, job_id)
+    except BaseException as exc:
+        job = db.get(ImportJob, job_id)
+        if job is not None and job.status == "running":
+            mark_steam_import_all_job_interrupted(
+                db,
+                job,
+                reason=f"steam_import_all background task was interrupted: {type(exc).__name__}",
+            )
+        raise
     finally:
         db.close()
 
