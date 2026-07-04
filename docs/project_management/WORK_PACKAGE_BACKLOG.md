@@ -45,14 +45,14 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-014` |
 | title | Import Acceptance |
 | target version | `v0.6` |
-| status | next active target |
-| objective | Accept Steam/import/demo/matches/import_jobs/duplicates/errors as controlled workflows. |
+| status | active diagnosis complete; repair next |
+| objective | Accept the one-button Steam/Valve import as the primary workflow: connected Steam account, match/auth code, truthful import_job, duplicate/no-new/error states, exact match-date truth and raw demo cleanup after successful parse/persist. |
 | guardians | `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `TEST_GUARDIAN`, `RUNTIME_GUARDIAN`, `PM_ORCHESTRATOR` |
 | source docs | `docs/STEAM_IMPORT.md`, `docs/DEMO_DEEP_PARSER_TZ_RU.md`, `docs/DEMO_STORAGE_TZ.md`, `docs/TESTING.md`, `docs/BACKUP_RESTORE.md` |
 | forbidden actions | Live Steam calls, real demo downloads/parses or production import jobs unless the WP explicitly authorizes them with backup and DB evidence. |
-| acceptance criteria | Import jobs record clear success/no-new/duplicate/error outcomes; duplicate protection is verified; parser/import errors are visible; cursor rules are preserved; production DB mutation is controlled and evidenced. |
-| required evidence | Mocked tests by default, live-job authorization if any, DB SHA before/after, import job result examples, cursor mutation status, audit report. |
-| exit criteria | Import workflows are safe enough for controlled personal operation with known alpha limitations documented. |
+| acceptance criteria | One-button import records clear success/no-new/need-code/Steam-not-connected/rate-limited/download-failed/parser-failed/partial-success/duplicate-skipped outcomes; duplicate protection is verified; exact match date is stored from Steam GC metadata or explicitly unavailable; demos are deleted only after successful parse/persist; failed demos are classified for quarantine/cleanup policy. |
+| required evidence | WP-014A diagnosis, mocked tests by default, live-job authorization if any, DB SHA before/after, import job result examples, cursor mutation status, demo cleanup evidence, audit report. |
+| exit criteria | The primary one-button Steam/Valve import is safe enough for controlled personal operation, with manual demo upload documented as a secondary parser/debug path and remaining alpha limitations explicit. |
 | next WP | `WP-015 Metrics Correctness` |
 
 ## WP-015

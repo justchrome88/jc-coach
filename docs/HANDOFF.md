@@ -11,6 +11,7 @@ Last updated: 2026-07-04.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
 - Owner recovery state: production owner currently resolves to `justchrome88@yandex.ru` (`users.id=17`) after historical `test-*@example.test` and `smoke-*@example.test` users were manually deactivated and had password hashes cleared.
 - WP-013 runtime smoke: `PASS_WITH_WARNINGS`; service restart and read-only smoke passed on 2026-07-04 with DB SHA `0850e6a28b08e4150cff43e10fbd39f38bef3e3ca3e494ab5a534c22738a230d`. Full owner manual browser checklist remains operator evidence to record.
+- WP-014A Steam/Valve import diagnosis: `DIAGNOSED`; report is `docs/audit/WP_014A_STEAM_VALVE_IMPORT_DIAGNOSIS.md`. Current primary button is `/settings/imports` -> `POST /settings/imports/pull-all` -> `steam_import_all` background job. Repair is required before `v0.6`: explicit outcome taxonomy, import_job coverage for download/parser paths, exact match-date truth, and raw demo cleanup after successful parse/persist.
 
 ## Last Incident Summary
 
@@ -28,7 +29,7 @@ Last updated: 2026-07-04.
 
 The next active WP is `WP-014 Import Acceptance`.
 
-Expected focus: accept Steam/import/demo/matches/import_jobs/duplicates/errors as controlled workflows. Do not run live Steam/import/parser jobs unless the WP explicitly authorizes them with DB SHA and backup evidence.
+Expected focus: repair the one-button Steam/Valve import guardrails found in WP-014A. Manual demo upload remains a secondary parser/debug path. Do not run live Steam/import/parser jobs unless the WP explicitly authorizes them with DB SHA and backup evidence.
 
 Roadmap and WP wiring:
 

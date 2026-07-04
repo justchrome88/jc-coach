@@ -1,6 +1,6 @@
 # Steam Import
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-04.
 
 Canonical supporting docs:
 
@@ -15,9 +15,32 @@ Canonical supporting docs:
 4. Dedicated service bot resolves known share codes through the CS2 Game Coordinator.
 5. App downloads `.dem.bz2`, decompresses to `.dem`, imports through parser and stores Steam GC `match_time` as authoritative `played_at`.
 
+## Primary v0.6 Target
+
+The primary `v0.6` import is one-button Steam/Valve import from the logged-in owner's import/settings page. Manual demo upload is secondary and exists for parser fixtures/debugging.
+
+Required primary behavior:
+
+- the user opens `/settings/imports` and clicks "Обновить и скачать демки";
+- the app validates a connected Steam account;
+- the app validates the Game Authentication Code and latest share-code cursor;
+- an `import_job` exists before any Steam, demo download or parser work begins;
+- new share codes or match references are fetched from Valve/Steam;
+- duplicates are skipped without creating duplicate match records;
+- demos are downloaded only for new or missing matches;
+- demos are parsed with current parser capabilities and weak/unavailable facts stay governed by Metric Truth;
+- parsed data and match records are persisted before cleanup;
+- raw demo files are deleted only after successful parse and DB persistence;
+- failed demos are classified as failed/quarantine/cleanup-policy-needed;
+- statuses distinguish success, no-new, need-code, Steam-not-connected, rate-limited, download-failed, parser-failed, partial-success, duplicate-skipped and exact match-date available/unavailable.
+
+Exact match date means the actual match datetime from Valve/Steam/demo metadata. Job creation time, download time, parser time, DB creation time and file mtime must not be presented as match date.
+
 ## Current Status
 
 Steam import is an alpha path, not production-ready.
+
+WP-014A diagnosis found that the current one-button UI and backend path exist, but `v0.6` acceptance is blocked by incomplete status taxonomy, incomplete `import_job` coverage for exact share-code download/parser work, missing persisted raw-demo cleanup after successful parse/persist, weak failed-demo cleanup policy and inconsistent exact-date availability surfacing. See `docs/audit/WP_014A_STEAM_VALVE_IMPORT_DIAGNOSIS.md`.
 
 Stage 1 security hardening verifies Steam OpenID callback assertions through Steam `check_authentication` before linking an account. A callback that only provides a `claimed_id` is rejected.
 

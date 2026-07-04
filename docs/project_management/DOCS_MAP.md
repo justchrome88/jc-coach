@@ -83,6 +83,7 @@ For human navigation by category, start with `docs/README.md` and `docs/project_
 | `docs/audit/STAGE_1_*` through `docs/audit/STAGE_9_*` | Stage implementation/review evidence. | relevant domain guardian + `PM_ORCHESTRATOR` | historical stages, evidence for WP-013..WP-016 | source evidence |
 | `docs/audit/WP_011B_PROJECT_OS_IMPLEMENTATION_REPORT.md` | Project OS implementation evidence. | `PM_ORCHESTRATOR` | WP-011B | source evidence |
 | `docs/audit/WP_011C_ROADMAP_DOCS_WIRING_REPORT.md` | Roadmap/docs wiring evidence. | `PM_ORCHESTRATOR` | WP-011C | source evidence |
+| `docs/audit/WP_014A_STEAM_VALVE_IMPORT_DIAGNOSIS.md` | One-button Steam/Valve import diagnosis and `v0.6` repair criteria. | `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `PM_ORCHESTRATOR` | WP-014 | source evidence |
 | `docs/audit/BUGFIX_001_COACH_RUNTIME_FAILURE_DIAGNOSIS.md` | Runtime stale-process diagnosis. | `RUNTIME_GUARDIAN`, `UI_COACH_GUARDIAN` | v0.4.1, WP-013 | source evidence; formal repair audit still needed |
 | `docs/audit/*_INVENTORY.md` | Domain inventories. | corresponding guardian | WP-012..WP-016 | source/supporting evidence |
 | `docs/audit/DOCUMENT_CONFLICTS.md` | Conflict inventory. | `PM_ORCHESTRATOR` | docs cleanup | source evidence, stale version-label risk |
