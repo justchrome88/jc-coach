@@ -1,12 +1,18 @@
 # Project OS
 
-Short entrypoint for any new Codex pass or chat.
+> Status: Historical / superseded as the active Codex entrypoint.
+> Do not use this file as current project state.
+> Current source of truth: `AGENTS.md`, `docs/CURRENT_STATUS.md`,
+> `docs/project_management/WP_REGISTRY.md`.
+> For new-session bootstrap, also read `docs/HANDOFF.md`.
+
+Short historical entrypoint for Codex passes or chats.
 
 ## Current State
 
-- Current Product Version: `v0.5`
-- Current WP: `WP-014 Import Acceptance`
-- Next Target Version: `v0.6`
+- Current Product Version: see `docs/CURRENT_STATUS.md`.
+- Current WP: see `docs/project_management/WP_REGISTRY.md`.
+- Next Target Version: see `docs/CURRENT_STATUS.md`.
 - Current gate: governance-controlled pass; no product logic or DB mutation without explicit WP authorization.
 
 ## Source Of Truth
@@ -27,17 +33,22 @@ Short entrypoint for any new Codex pass or chat.
 - Backup/restore: `docs/BACKUP_RESTORE.md`
 - Deployment/runtime: `docs/DEPLOYMENT.md`
 
-## Mandatory Workflow
+## Reading Policy
 
-1. Read `AGENT.md`, `docs/PROJECT_CONTROL.md`, `docs/PROJECT_OS.md`, `docs/HANDOFF.md`.
-2. Run `python scripts/project_gate.py preflight`.
-3. Identify changed paths with `python scripts/project_gate.py changed`.
-4. Read activated guardian docs under `docs/agents/`.
-5. Read `docs/project_management/WORK_PACKAGE_BACKLOG.md` for active/next WP scope.
-6. Run `python scripts/project_gate.py required-checks`.
-7. Do the smallest authorized task only.
-8. Run safe checks and `python scripts/project_gate.py postflight`.
-9. Report DB SHA before/after, tests, live jobs, service restart and commit status.
+Use the Hot/Warm/Cold context policy in `AGENTS.md`.
+
+Per-task Hot context:
+
+1. `AGENTS.md`
+2. `docs/CURRENT_STATUS.md`
+3. `docs/project_management/WP_REGISTRY.md`
+
+New-session Hot context additionally includes:
+
+4. `docs/HANDOFF.md`
+
+Warm docs are read only when the task domain requires them. Before reading Warm
+docs, state which files are needed and why.
 
 ## Guardians
 

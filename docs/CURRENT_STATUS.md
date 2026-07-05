@@ -4,7 +4,7 @@ Last updated: 2026-07-05.
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017J Match Mode Classification Repair / Labels, Or Explicit Deferral`.
+Current WP: `WP-017K Real Data Onboarding Promotion to v0.9`.
 
 Next Target Version: `v0.9`.
 
@@ -69,6 +69,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - WP-017I0 root `AGENTS.md` project contract completed / `CREATED`: repository-level Codex operating rules now exist and `docs/PROJECT_CONTROL.md` points to `AGENTS.md`.
 - WP-017R roadmap / WP registry governance repair completed / `REPAIRED`: `docs/project_management/WP_REGISTRY.md` is the canonical WP registry, WP-017 numbering drift is explicitly documented, and `v0.9` promotion is blocked until match mode classification diagnosis/repair WPs are completed or explicitly deferred with an accepted limitation.
 - WP-017I match mode classification diagnosis completed / `DIAGNOSED`: persisted data can prove parser/import provenance and generic Valve share-code provenance, but cannot reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom playlist modes. Current playable rows should remain playlist `unknown`; WP-017J should explicitly defer historical playlist classification for `v0.9` unless a safe repair path is separately authorized.
+- WP-017J match mode explicit deferral completed / `DEFERRED_ACCEPTED`: `v0.9` will not include exact playlist mode classification. Accepted labels are `mode_unknown`, `provenance_demo`, `provenance_valve_matchmaking` and `exact_date_source=steam_gc_match_time`; Premier/Competitive/Wingman/Casual/Deathmatch/FACEIT/custom labels remain forbidden unless future WPs capture reliable metadata.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
@@ -86,7 +87,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 9 is UI presentation over existing persisted state/services, not recommendation planner, ProblemSnapshot or engine work.
 - WP-015D warnings carried forward: direct post-restart authenticated browser timings were not captured by Codex; persistent report generation acceptance is deferred because it mutates DB; `/coach` artifact overview still loads many artifact ORM rows; weak metrics remain weak; `ImportJob.status` remains coarse; uploads/tmp remain on root filesystem.
 - `v0.8` accepts only the controlled primary survival recommendation loop. Legacy active `grenades` recommendation `#3` and `map` recommendation `#4` remain `needs_refresh` and are not accepted for hard progress.
-- `v0.9` is still not promoted. WP-017G accepted data integrity and WP-017H accepted performance, both with warnings. WP-017I diagnosed match mode as not recoverable from persisted data. WP-017J must repair labels if possible or explicitly defer playlist classification with accepted limitation before WP-017K can promote.
+- `v0.9` is still not promoted. WP-017G accepted data integrity and WP-017H accepted performance, both with warnings. WP-017I diagnosed match mode as not recoverable from persisted data, and WP-017J accepted explicit deferral: Match playlist mode is not accepted as exact in v0.9. Current persisted data distinguishes parser/import provenance (`demo`) and generic Valve share-code provenance (`Valve Matchmaking`), but it does not reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom modes. No playlist-specific claims, filters or recommendations are accepted in v0.9 unless future WPs capture reliable mode metadata. WP-017K may now make the v0.9 promotion/block decision.
 - Recommendation progress summary wording remains rough after one green evaluation: it may say the goal is failing because the 10-match target progress score is still low after `1/10` completed matches. This is a UX/calibration warning, not a loop blocker.
 - Authenticated browser UI was not directly inspected by Codex for WP-016 because no authenticated session was available; unauthenticated smoke returned expected login redirects.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.

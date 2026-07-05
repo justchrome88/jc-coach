@@ -2,38 +2,40 @@
 
 Human navigation entrypoint for the JC Coach documentation tree.
 
+> Status: Navigation document.
+> Do not use this file as current project state.
+> Current source of truth: `AGENTS.md`, `docs/CURRENT_STATUS.md`,
+> `docs/project_management/WP_REGISTRY.md`.
+> For new-session bootstrap, also read `docs/HANDOFF.md`.
+
 ## Start Here
 
-For a new human review, read in this order:
+For a normal Codex task, use the Hot context defined in `AGENTS.md`:
 
-1. `docs/PROJECT_OS.md` - short operating entrypoint.
-2. `docs/HANDOFF.md` - current state and next active WP.
-3. `docs/project_management/DOCS_INDEX.md` - human-readable navigation by category.
-4. `docs/project_management/VERSION_ROADMAP.md` - version roadmap.
-5. `docs/project_management/WORK_PACKAGE_BACKLOG.md` - WP scope, guardians and exit criteria.
-6. `docs/project_management/ACCEPTANCE_MATRIX.md` - feature acceptance criteria.
+1. `AGENTS.md`
+2. `docs/CURRENT_STATUS.md`
+3. `docs/project_management/WP_REGISTRY.md`
 
-For a Codex/pass, also follow `AGENT.md`, `docs/PROJECT_CONTROL.md`, `docs/PROJECT_GOVERNANCE.md` and the guardian docs under `docs/agents/`.
+For a new-session bootstrap, also read `docs/HANDOFF.md`.
+
+For a human review, use this navigation file to find Warm docs by topic. Do not
+read the whole documentation tree by default.
 
 ## Current WP
 
-Current active target remains:
-
-```text
-WP-012 DB Contamination Guardrails
-Target version: v0.4.2
-```
+Current product version, current WP and next target live in
+`docs/CURRENT_STATUS.md` and `docs/project_management/WP_REGISTRY.md`.
 
 Do not start product work without an explicit WP prompt and the required gate checks.
 
 ## Source Of Truth
 
-Top-level control:
+Hot context:
 
-- `docs/PROJECT_CONTROL.md`
-- `docs/PROJECT_OS.md`
-- `docs/HANDOFF.md`
-- `docs/PROJECT_GOVERNANCE.md`
+- `AGENTS.md`
+- `docs/CURRENT_STATUS.md`
+- `docs/project_management/WP_REGISTRY.md`
+- `docs/HANDOFF.md` for new-session bootstrap
 
 Roadmap and planning:
 
@@ -56,7 +58,10 @@ Domain truth:
 - `docs/DEPLOYMENT.md`
 - `docs/KNOWN_LIMITATIONS.md`
 
-When documents conflict, follow `docs/PROJECT_CONTROL.md`, then the relevant Project OS / governance / domain source-of-truth document.
+When documents conflict, follow the source-of-truth order in `AGENTS.md`: the
+current explicit WP prompt, then Hot context, then relevant Warm docs.
+Historical docs, audit reports and old prompts are evidence/history, not current
+project state.
 
 ## Folders
 
@@ -77,4 +82,3 @@ Use `docs/project_management/DOCS_MAP.md` for ownership/freshness status and `do
 - Roadmap: `docs/project_management/VERSION_ROADMAP.md`
 - WP details: `docs/project_management/WORK_PACKAGE_BACKLOG.md`
 - Acceptance criteria: `docs/project_management/ACCEPTANCE_MATRIX.md`
-

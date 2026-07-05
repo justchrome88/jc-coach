@@ -5,7 +5,7 @@ Last updated: 2026-07-05.
 ## Current State
 
 - Current Product Version: `v0.8`
-- Current WP: `WP-017J Match Mode Classification Repair / Labels, Or Explicit Deferral`
+- Current WP: `WP-017K Real Data Onboarding Promotion to v0.9`
 - Next Target Version: `v0.9`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -48,6 +48,7 @@ Last updated: 2026-07-05.
 - WP-017I0 add root `AGENTS.md` project contract completed / `CREATED`. The repository now has a root Codex operating contract and `docs/PROJECT_CONTROL.md` points future Codex passes at `AGENTS.md`.
 - WP-017R roadmap / WP registry governance repair completed / `REPAIRED`. Numbering drift was found: match mode classification diagnosis/repair had been planned for WP-017 but were pushed behind emergency import/evaluation repair work after the automatic evaluation trigger became a blocker. The old history must not be deleted. `docs/project_management/WP_REGISTRY.md` is now the canonical registry and `v0.9` promotion is blocked until WP-017I and WP-017J are completed or explicitly deferred with a documented accepted limitation.
 - WP-017I match mode classification diagnosis completed / `DIAGNOSED`. Current persisted data cannot reliably distinguish Premier/Competitive/Wingman/Casual/Deathmatch/FACEIT/custom modes. `mode=demo` is parser/import provenance only, `Valve Matchmaking` is generic Steam provenance only, and current playable rows should remain playlist `unknown`.
+- WP-017J match mode explicit deferral completed / `DEFERRED_ACCEPTED`. `v0.9` will not include exact playlist mode classification. Allowed labels are `mode_unknown`, `provenance_demo`, `provenance_valve_matchmaking` and `exact_date_source=steam_gc_match_time`. Premier/Competitive/Wingman/Casual/Deathmatch/FACEIT/custom labels, playlist-specific claims, filters and recommendations remain forbidden unless future WPs capture reliable mode metadata.
 
 ## Last Incident Summary
 
@@ -61,9 +62,9 @@ Last updated: 2026-07-05.
 
 ## Next WP
 
-`WP-017J Match Mode Classification Repair / Labels, Or Explicit Deferral` targeting `v0.9`.
+`WP-017K Real Data Onboarding Promotion to v0.9` targeting `v0.9`.
 
-WP-017J should repair labels if a safe non-live path exists, or explicitly defer historical playlist classification as an accepted `v0.9` limitation. Do not promote `v0.9` in WP-017J. Use:
+WP-017K is the only promotion WP. It may decide whether to promote `v0.9` or block with a next repair WP, using the accepted WP-017J limitation: Match playlist mode is not accepted as exact in v0.9. Current persisted data distinguishes parser/import provenance (`demo`) and generic Valve share-code provenance (`Valve Matchmaking`), but it does not reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom modes. No playlist-specific claims, filters or recommendations are accepted in v0.9 unless future WPs capture reliable mode metadata. Use:
 
 - `docs/audit/WP_017C_FIRST_CONTROLLED_BULK_IMPORT_BATCH_REPORT.md`
 - `docs/audit/WP_017C2_CONTROLLED_IMPORT_AFTER_NEW_MATCH_REPORT.md`
@@ -75,9 +76,10 @@ WP-017J should repair labels if a safe non-live path exists, or explicitly defer
 - `docs/audit/WP_017I0_ADD_ROOT_AGENTS_PROJECT_CONTRACT_REPORT.md`
 - `docs/audit/WP_017R_ROADMAP_WP_REGISTRY_GOVERNANCE_REPAIR_REPORT.md`
 - `docs/audit/WP_017I_MATCH_MODE_CLASSIFICATION_DIAGNOSIS_REPORT.md`
+- `docs/audit/WP_017J_MATCH_MODE_EXPLICIT_DEFERRAL_REPORT.md`
 - `docs/project_management/WP_REGISTRY.md`
 
-Expected focus: ensure user-facing/docs wording does not claim exact Premier/Competitive/Wingman mode and either implement an explicitly authorized label repair or accept the limitation text for WP-017K. Carry forward cap `1`, root-backed storage, `/coach` artifact overview scaling, authenticated browser timing and metadata/job-surface warnings. Do not run live imports, delete/move raw demos, change schema, run manual evaluator, raise cap, or create persistent app reports unless a later WP explicitly authorizes it.
+Expected focus: verify registry prerequisites, carry forward accepted warnings and decide promotion. Carry forward cap `1`, root-backed storage, `/coach` artifact overview scaling, authenticated browser timing, metadata/job-surface warnings and exact playlist-mode deferral. Do not run live imports, delete/move raw demos, change schema, run manual evaluator, raise cap, create persistent app reports or claim friends/public readiness unless a later WP explicitly authorizes it.
 
 Roadmap and WP wiring:
 

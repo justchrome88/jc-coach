@@ -23,7 +23,7 @@ The practical product question is:
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017J Match Mode Classification Repair / Labels, Or Explicit Deferral`.
+Current WP: `WP-017K Real Data Onboarding Promotion to v0.9`.
 
 Next Target Version: `v0.9`.
 
@@ -55,7 +55,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017J Match Mode Classification Repair / Labels, Or Explicit Deferral`.
+Current WP: `WP-017K Real Data Onboarding Promotion to v0.9`.
 
 Next Target Version: `v0.9`.
 
@@ -92,6 +92,7 @@ Current focus:
 25. WP-017I0 added root `AGENTS.md` as the repository-level Codex operating contract.
 26. WP-017R repaired roadmap/WP registry governance. Numbering drift is explicitly recorded: emergency repair WPs were inserted because the Steam-path automatic evaluation trigger became a blocker, while match mode classification diagnosis/repair remained open. `v0.9` promotion is blocked until WP-017I and WP-017J are completed or explicitly deferred with a documented accepted limitation.
 27. WP-017I diagnosed match mode classification: persisted data does not reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom playlist modes. Current rows should remain playlist `unknown`; `mode=demo` and `Valve Matchmaking` are provenance labels only.
+28. WP-017J accepted explicit deferral for match mode labels: `v0.9` will not include exact playlist mode classification. Allowed labels are `mode_unknown`, `provenance_demo`, `provenance_valve_matchmaking` and `exact_date_source=steam_gc_match_time`; Premier/Competitive/Wingman/Casual/Deathmatch/FACEIT/custom labels, playlist-specific filters and mode-specific recommendation claims remain forbidden unless future WPs capture reliable mode metadata.
 
 ## 4. Source-of-truth Documents
 
@@ -161,7 +162,7 @@ Governance gate:
 - Promotion WPs must verify registry prerequisites.
 - WP IDs must not be silently reused for different objectives.
 - If a planned WP is skipped, it must be marked `deferred` or `superseded` in the registry with the reason.
-- `v0.9` promotion is blocked until WP-017I Match Mode Classification Diagnosis and WP-017J Match Mode Classification Repair / Labels are completed, or explicitly deferred with documented accepted limitation.
+- `v0.9` promotion may proceed only through WP-017K. WP-017I is complete and WP-017J accepted explicit deferral with documented limitation: Match playlist mode is not accepted as exact in v0.9. Current persisted data distinguishes parser/import provenance (`demo`) and generic Valve share-code provenance (`Valve Matchmaking`), but it does not reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom modes. No playlist-specific claims, filters or recommendations are accepted in v0.9 unless future WPs capture reliable mode metadata.
 
 Older `instructions/*`, roadmap, prompt and audit files are historical/supporting unless explicitly reactivated here.
 

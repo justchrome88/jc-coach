@@ -1,5 +1,10 @@
 # Project Governance
 
+> Status: Governance reference.
+> Do not use this file as current project state.
+> Current source of truth: `AGENTS.md`, `docs/CURRENT_STATUS.md`,
+> `docs/project_management/WP_REGISTRY.md`.
+
 ## Product Versioning
 
 Version map:
@@ -16,16 +21,18 @@ Version map:
 | `v0.6` | Import Acceptance |
 | `v0.7` | Metrics Correctness |
 | `v0.8` | Recommendation Loop Acceptance |
-| `v0.9` | Personal Beta |
+| `v0.9` | Real Data Onboarding / Bulk Demo Usage |
+| `v0.10` | Coach Quality Calibration |
 | `v1.0` | Trusted MVP |
 
-The current product version is `v0.4.1`. The next target version is `v0.4.2`.
+The current product version, target version and active/next WP are maintained in
+`docs/CURRENT_STATUS.md` and `docs/project_management/WP_REGISTRY.md`.
 
 ## WP Numbering
 
 Work packages are numbered as `WP-###` and may have sub-parts such as `WP-011B`. A WP must define scope, forbidden actions, expected evidence and closeout checks before product changes begin.
 
-Current WP for the next implementation pass: `WP-012 DB Contamination Guardrails`.
+Current WP truth is maintained in `docs/project_management/WP_REGISTRY.md`.
 
 Roadmap control files:
 

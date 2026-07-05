@@ -18,11 +18,15 @@ registry.
 - If a planned WP is skipped, it must be marked `deferred` or `superseded` here
   with the reason and the accepting report.
 - Promotion WPs must verify all registry prerequisites before promotion.
-- `v0.9` promotion is blocked until `WP-017I` and `WP-017J` are completed or
-  explicitly deferred with a documented accepted limitation.
+- `v0.9` promotion must verify `WP-017I` and `WP-017J` evidence. `WP-017J`
+  accepted explicit deferral, so promotion may proceed only through `WP-017K`
+  with the documented limitation carried forward.
 - Historical emergency repair WPs remain in the registry. They were inserted
   because the Steam-path automatic recommendation evaluation trigger became a
   blocker during WP-017.
+- `docs/audit/WP_018_DOCUMENTATION_GOVERNANCE_AUDIT_REPORT.md` is an
+  out-of-band governance audit evidence file. It does not consume or replace
+  the planned `WP-018` product work-package ID.
 
 ## Status Values
 
@@ -45,19 +49,27 @@ Allowed statuses: `planned`, `in_progress`, `done`, `blocked`, `deferred`,
 | `WP-017I0` | Add Root `AGENTS.md` Project Contract | `v0.9` | `done` | `docs/audit/WP_017I0_ADD_ROOT_AGENTS_PROJECT_CONTRACT_REPORT.md` | `WP-017H` | Added root Codex contract; did not promote `v0.9`. |
 | `WP-017R` | Roadmap / WP Registry Governance Repair | `v0.9` | `done` | `docs/audit/WP_017R_ROADMAP_WP_REGISTRY_GOVERNANCE_REPAIR_REPORT.md` | `WP-017I0` | Created registry and blocked promotion until match mode WPs are resolved. |
 | `WP-017I` | Match Mode Classification Diagnosis | `v0.9` | `done` | `docs/audit/WP_017I_MATCH_MODE_CLASSIFICATION_DIAGNOSIS_REPORT.md` | `WP-017R` | Persisted data cannot distinguish exact playlist mode; current rows should remain playlist `unknown`. |
-| `WP-017J` | Match Mode Classification Repair / Labels, Or Explicit Deferral | `v0.9` | `planned` | TBD | `WP-017I` | Repair labels if recoverable, or document accepted limitation/deferral. Required before promotion unless explicitly deferred. |
-| `WP-017K` | Real Data Onboarding Promotion to `v0.9` | `v0.9` | `planned` | TBD | `WP-017G`, `WP-017H`, `WP-017I`, `WP-017J` or documented deferral | Promotion WP only. Must not raise cap, delete demos, change schema or claim friends/public readiness. |
+| `WP-017J` | Match Mode Explicit Deferral / Unknown Labels | `v0.9` | `done` | `docs/audit/WP_017J_MATCH_MODE_EXPLICIT_DEFERRAL_REPORT.md` | `WP-017I` | Explicit deferral accepted: `v0.9` will not include exact playlist classification. Use `mode_unknown`, `provenance_demo`, `provenance_valve_matchmaking` and `exact_date_source=steam_gc_match_time`; do not claim Premier/Competitive/Wingman/Casual/Deathmatch/FACEIT/custom without future reliable metadata. |
+| `WP-017S` | Documentation Governance Entrypoint Repair | `v0.9` | `done` | `docs/audit/WP_017S_GOVERNANCE_ENTRYPOINT_REPAIR_REPORT.md` | `WP-017J`, out-of-band governance audit evidence | Service governance repair before promotion lane continues; does not consume planned `WP-018`. |
+| `WP-017K` | Real Data Onboarding Promotion to `v0.9` | `v0.9` | `planned` | TBD | `WP-017G`, `WP-017H`, `WP-017I`, `WP-017J` or documented deferral, `WP-017S` | Promotion WP only. Must not raise cap, delete demos, change schema or claim friends/public readiness. |
 
 ## Current Promotion Gate
 
-`v0.9` promotion is not allowed now.
+`v0.9` promotion is not completed now, but `WP-017K` may start.
 
 Required before `WP-017K` can promote:
 
 - `WP-017I` completed: match mode classification diagnosed.
-- `WP-017J` completed or explicitly deferred: mode labels repaired if
-  recoverable, or limitation accepted in writing.
+- `WP-017J` completed with explicit deferral accepted: Match playlist mode is
+  not accepted as exact in `v0.9`. Current persisted data distinguishes
+  parser/import provenance (`demo`) and generic Valve share-code provenance
+  (`Valve Matchmaking`), but it does not reliably distinguish Premier,
+  Competitive, Wingman, Casual, Deathmatch, FACEIT or custom modes. No
+  playlist-specific claims, filters or recommendations are accepted in `v0.9`
+  unless future WPs capture reliable mode metadata.
 - Existing WP-017G/H warnings carried forward.
+- `WP-017S` completed: governance entrypoints repaired and `WP-018` audit
+  naming conflict documented as out-of-band evidence.
 - Cap remains `1` unless a separate explicit cap-change WP authorizes a change.
 
 ## Future Version Registry

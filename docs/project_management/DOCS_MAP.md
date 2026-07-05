@@ -6,16 +6,32 @@ This map connects project docs to the Project OS layer, architecture/product lay
 
 For human navigation by category, start with `docs/README.md` and `docs/project_management/DOCS_INDEX.md`.
 
+## Context Policy
+
+Per-task Hot context:
+
+1. `AGENTS.md`
+2. `docs/CURRENT_STATUS.md`
+3. `docs/project_management/WP_REGISTRY.md`
+
+New-session Hot context additionally includes `docs/HANDOFF.md`.
+
+Warm context is task-domain specific. Cold context includes old audit reports,
+stage reports, old prompts, `docs/tasks/*`, `instructions/*`, old
+roadmap/version docs and generated data reports. Cold context is evidence and
+must not override Hot context.
+
 ## Project OS Layer
 
 | Document | Role | Guardian | WP links | Status |
 |---|---|---|---|---|
-| `AGENT.md` | Canonical agent rules. | `PM_ORCHESTRATOR` | all WPs | source-of-truth |
+| `AGENTS.md` | Only root Codex operating contract. | `PM_ORCHESTRATOR` | all WPs | Hot source-of-truth |
+| `AGENT.md` | Superseded pointer to `AGENTS.md`. | `PM_ORCHESTRATOR` | historical | superseded / not active |
 | `docs/PROJECT_CONTROL.md` | Top project control file. | `PM_ORCHESTRATOR` | all WPs | source-of-truth |
 | `docs/README.md` | Human documentation entrypoint. | `PM_ORCHESTRATOR` | all WPs | navigation index |
-| `docs/PROJECT_OS.md` | Short entrypoint for new chats/passes. | `PM_ORCHESTRATOR` | all WPs | source-of-truth |
+| `docs/PROJECT_OS.md` | Historical/superseded entrypoint; use Hot context instead. | `PM_ORCHESTRATOR` | historical | superseded / not current state |
 | `docs/HANDOFF.md` | Current continuation state. | `PM_ORCHESTRATOR` | active/next WP | source-of-truth, must stay current |
-| `docs/PROJECT_GOVERNANCE.md` | Versioning, WP gates, roles, safety policy. | `PM_ORCHESTRATOR` | all WPs | source-of-truth |
+| `docs/PROJECT_GOVERNANCE.md` | Versioning, WP gates, roles, safety policy. | `PM_ORCHESTRATOR` | all WPs | Warm governance reference |
 | `docs/project_management/VERSION_ROADMAP.md` | Version-to-WP roadmap. | `PM_ORCHESTRATOR` | WP-012..WP-018 | source-of-truth for planned version sequence |
 | `docs/project_management/WORK_PACKAGE_BACKLOG.md` | WP objectives, guardians and exit criteria. | `PM_ORCHESTRATOR` | WP-012..WP-018 | source-of-truth for backlog wiring |
 | `docs/project_management/ACCEPTANCE_MATRIX.md` | Feature acceptance map. | `PM_ORCHESTRATOR`, domain guardians | WP-012..WP-018 | source-of-truth for acceptance wiring |
@@ -112,3 +128,4 @@ For human navigation by category, start with `docs/README.md` and `docs/project_
 - `docs/project_management/CS2_AI_COACH_MASTER_CURATION_PLAYBOOK.md` and `CS2_AI_COACH_PROJECT_CURATION_HANDOFF.md` are valuable historical operating manuals but predate WP-011B/011C.
 - Older strategy/scoring/prompt docs are supporting or historical, not current instructions.
 - `docs/audit/FULL_PROJECT_AUDIT_*` reports are point-in-time evidence and should not override `PROJECT_CONTROL.md`.
+- `docs/audit/WP_018_DOCUMENTATION_GOVERNANCE_AUDIT_REPORT.md` is an out-of-band governance audit evidence file. It does not consume the planned `WP-018` product ID.

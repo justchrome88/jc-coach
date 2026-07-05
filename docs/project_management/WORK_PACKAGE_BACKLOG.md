@@ -281,16 +281,16 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | Field | Value |
 |---|---|
 | id | `WP-017J` |
-| title | Match Mode Classification Repair / Labels, Or Explicit Deferral |
+| title | Match Mode Explicit Deferral / Unknown Labels |
 | target version | `v0.9` |
-| status | planned |
-| objective | Repair match mode labels if reliable metadata is recoverable, or explicitly defer mode classification as an accepted limitation. |
+| status | completed / `DEFERRED_ACCEPTED` |
+| objective | Explicitly defer exact playlist mode classification as an accepted `v0.9` limitation after WP-017I found no reliable persisted metadata. |
 | guardians | `PM_ORCHESTRATOR`, `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN` |
 | source docs | `docs/project_management/WP_REGISTRY.md`, WP-017I diagnosis report, `docs/PROJECT_CONTROL.md`, `docs/project_management/ACCEPTANCE_MATRIX.md` |
 | forbidden actions | v0.9 promotion, live imports/parser jobs unless separately authorized, cap raise, raw demo deletion/move/compression, schema changes unless explicitly scoped, persistent app reports. |
-| acceptance criteria | Recoverable mode labels are corrected/caveated with evidence, or mode classification is marked deferred with accepted limitation; docs and UI/metric claims do not overstate mode truth. |
-| required evidence | DB SHA before/after if authorized mutation occurs, backup if production mutation is authorized, project gates, focused tests only if code changes are explicitly authorized, audit report. |
-| exit criteria | Mode classification no longer blocks promotion because it is repaired or explicitly deferred with limitation. |
+| acceptance criteria | Mode classification is marked deferred with accepted limitation; docs and UI/metric claims do not overstate mode truth; accepted labels are `mode_unknown`, `provenance_demo`, `provenance_valve_matchmaking` and `exact_date_source=steam_gc_match_time`. |
+| required evidence | DB SHA before/after, project gates, docs/UI false-claim scan, audit report `docs/audit/WP_017J_MATCH_MODE_EXPLICIT_DEFERRAL_REPORT.md`. |
+| exit criteria | Mode classification no longer blocks promotion because it is explicitly deferred with limitation: Match playlist mode is not accepted as exact in v0.9. Current persisted data distinguishes parser/import provenance (`demo`) and generic Valve share-code provenance (`Valve Matchmaking`), but it does not reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom modes. No playlist-specific claims, filters or recommendations are accepted in v0.9 unless future WPs capture reliable mode metadata. |
 | next WP | `WP-017K Real Data Onboarding Promotion to v0.9` |
 
 ## WP-017K

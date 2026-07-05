@@ -4,11 +4,39 @@ Last updated: 2026-07-04.
 
 Human-readable navigation map. This file does not replace `docs/PROJECT_CONTROL.md` or `docs/project_management/DOCS_MAP.md`; it helps people find the right document without moving or renaming files.
 
+> Status: Navigation document.
+> Do not use this file as current project state.
+> Current source of truth: `AGENTS.md`, `docs/CURRENT_STATUS.md`,
+> `docs/project_management/WP_REGISTRY.md`.
+
+## Hot / Warm / Cold Context
+
+Per-task Hot context:
+
+1. `AGENTS.md`
+2. `docs/CURRENT_STATUS.md`
+3. `docs/project_management/WP_REGISTRY.md`
+
+New-session Hot context additionally includes:
+
+4. `docs/HANDOFF.md`
+
+Warm context is read only when the task requires that domain: roadmap/planning,
+acceptance/promotion, deploy/service, testing/gates, DB/data integrity,
+import/parser/evaluator, recommendations, UI/web routes, security or historical
+WP review. Before reading Warm docs, Codex should state which files are needed
+and why.
+
+Cold context includes old audit reports, stage reports, old prompts,
+`docs/tasks/*`, `instructions/*`, old roadmap/version docs and generated data
+reports. Cold files are evidence/history and must not override Hot context.
+
 ## Project OS / Control
 
-- `AGENT.md` - rules for Codex agents.
+- `AGENTS.md` - only root Codex operating contract.
+- `AGENT.md` - superseded pointer; do not use as active contract.
 - `docs/README.md` - human documentation entrypoint.
-- `docs/PROJECT_OS.md` - shortest operational entrypoint.
+- `docs/PROJECT_OS.md` - historical/superseded operational entrypoint; do not use for current state.
 - `docs/HANDOFF.md` - current state, next WP and do-not-do list.
 - `docs/PROJECT_CONTROL.md` - top source of truth.
 - `docs/PROJECT_GOVERNANCE.md` - governance, WP gates, evidence policy.
@@ -109,10 +137,5 @@ Human-readable navigation map. This file does not replace `docs/PROJECT_CONTROL.
 
 ## Current Active WP
 
-```text
-WP-012 DB Contamination Guardrails
-Target version: v0.4.2
-```
-
-See `docs/project_management/WORK_PACKAGE_BACKLOG.md` for scope and `docs/project_management/ACCEPTANCE_MATRIX.md` for acceptance criteria.
-
+See `docs/CURRENT_STATUS.md` and `docs/project_management/WP_REGISTRY.md`.
+Do not use this navigation index as current WP truth.
