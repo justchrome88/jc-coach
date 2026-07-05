@@ -23,7 +23,7 @@ The practical product question is:
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017F Controlled Pending Share Code #73 Import`.
+Current WP: `WP-017G Data Integrity Acceptance`.
 
 Next Target Version: `v0.9`.
 
@@ -55,7 +55,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017F Controlled Pending Share Code #73 Import`.
+Current WP: `WP-017G Data Integrity Acceptance`.
 
 Next Target Version: `v0.9`.
 
@@ -85,7 +85,8 @@ Current focus:
 18. WP-017C completed the first controlled batch as `PASS_WITH_WARNINGS` / `PASS_NO_NEW_MATCH`: one authorized shell-fallback parent job `#27` with child sync `#28`, explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp`, no new Steam share code, no demo download, no parser run, no new playable match, no recommendation evaluation, uploads unchanged and `data/tmp` empty.
 19. WP-017C2 completed a controlled import after a new Valve match as `PASS_ONE_DEMO_IMPORTED_AND_EVALUATED`: one authorized shell-fallback attempt created parent job `#29` and child sync `#30`, Steam exposed two new share codes, cap `1` imported/retained/parsed exactly one Overpass demo as playable exact-date match `#75`, left one pending placeholder `#73`, and recommendation `#5` received evaluation `#77` with `metric_confidence`. Parent `#29` is persisted as `failed` because `overall_outcome=batch_cap_reached`; this is a batch-cap warning, not a parser/evaluation failure.
 20. WP-017D diagnosed the post-batch evidence as `ACCEPT_WITH_REPAIR_REQUIRED`: import/parser/storage evidence was healthy, but automatic Steam-path recommendation evaluation ran before exact date truth was applied.
-21. WP-017E repaired the Steam-path auto-evaluation trigger in code/tests: Steam imports now defer parser-side evaluation, apply/commit/refresh exact Steam date truth, then run targeted evaluation and expose compact evaluation metadata in demo download results. Next focus is WP-017F controlled pending share code `#73` import under cap `1`; do not raise the cap or process more than `#73` without a new explicit WP.
+21. WP-017E repaired the Steam-path auto-evaluation trigger in code/tests: Steam imports now defer parser-side evaluation, apply/commit/refresh exact Steam date truth, then run targeted evaluation and expose compact evaluation metadata in demo download results.
+22. WP-017F proved the repaired path on pending share code `#73`: one targeted pending-demo attempt imported playable exact-date match `#76` and automatically created evaluation `#78` for recommendation `#5` with `metric_confidence`, moving progress to `3/10`. The targeted path did not create a new parent `steam_import_all` job, so metadata is in the returned service result and placeholder raw JSON. Next focus is WP-017G Data Integrity Acceptance; do not raise the cap or run more live imports without a new explicit WP.
 
 ## 4. Source-of-truth Documents
 

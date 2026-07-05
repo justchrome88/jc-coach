@@ -181,29 +181,46 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-017F` |
 | title | Controlled Pending Share Code #73 Import |
 | target version | `v0.9` |
-| status | planned |
+| status | completed / `PASS_PENDING_73_IMPORTED_AND_AUTO_EVALUATED` |
 | objective | Validate the repaired Steam auto-evaluation trigger with exactly one controlled live import attempt for pending share code `#73`. |
 | guardians | `PM_ORCHESTRATOR`, `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `RUNTIME_GUARDIAN`, `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN` |
 | source docs | WP-017A through WP-017E reports, `docs/project_management/ACCEPTANCE_MATRIX.md`, `docs/PROJECT_CONTROL.md` |
 | forbidden actions | More than one attempt, cap raise above `1`, bulk resync, manual evaluator on production DB, raw demo deletion/move/compression, schema changes, persistent app reports. |
 | acceptance criteria | Backup/SHA/storage/service/job evidence exists; pending `#73` is either imported as exactly one playable exact-date demo with automatic recommendation evaluation metadata/progress, or terminally classified without retry; legacy `#3/#4` remain unchanged; cap remains `1`. |
 | required evidence | DB backup/SHA, import job result JSON with evaluation metadata, parser artifact and retained demo validation if imported, recommendation `#5` progress validation, service/storage checks, audit report. |
-| exit criteria | The repaired live path is accepted or blocked with a concrete next repair; only after acceptance may a later WP consider v0.9 promotion or cap changes. |
-| next WP | `WP-017G Promote Real Data Onboarding To v0.9` |
+| exit criteria | Pending `#73` was processed as one playable exact-date demo match `#76`; automatic recommendation evaluation `#78` was created for `#5`; cap `1` remained unchanged; parent job metadata limitation was recorded for WP-017G review. |
+| next WP | `WP-017G Data Integrity Acceptance` |
 
 ## WP-017G
 
 | Field | Value |
 |---|---|
 | id | `WP-017G` |
+| title | Data Integrity Acceptance |
+| target version | `v0.9` |
+| status | planned |
+| objective | Read-only acceptance of the WP-017F repaired-path live import result before promotion or cap changes. |
+| guardians | `PM_ORCHESTRATOR`, `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `RUNTIME_GUARDIAN`, `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN` |
+| source docs | WP-017A through WP-017F reports, `docs/project_management/ACCEPTANCE_MATRIX.md`, `docs/PROJECT_CONTROL.md` |
+| forbidden actions | Live imports/parser jobs, manual evaluator on production DB, cap raise, raw demo deletion/move/compression, schema changes, promotion without reviewed evidence. |
+| acceptance criteria | Matches `#75/#76`, parser artifacts, exact date truth, recommendation evaluations/progress, storage deltas, service/log safety and metadata limitations are reviewed; decision is made whether v0.9 promotion can proceed or more repair is required. |
+| required evidence | Read-only DB/storage/runtime checks, DB SHA, project gates, audit acceptance report. |
+| exit criteria | The project knows whether Real Data Onboarding / Bulk Demo Usage can be promoted to controlled personal v0.9, needs another repair, or needs a separate cap-change WP. |
+| next WP | `WP-017H Promote Real Data Onboarding To v0.9` |
+
+## WP-017H
+
+| Field | Value |
+|---|---|
+| id | `WP-017H` |
 | title | Promote Real Data Onboarding To v0.9 |
 | target version | `v0.9` |
 | status | planned |
-| objective | Promote v0.9 only after controlled real-data onboarding evidence, repaired-path live import evidence and storage/runtime/recommendation checks are accepted. |
+| objective | Promote v0.9 only after WP-017G accepts controlled real-data onboarding evidence and repaired-path live import evidence. |
 | guardians | `PM_ORCHESTRATOR`, `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `RUNTIME_GUARDIAN`, `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN` |
-| source docs | WP-017A through WP-017F reports, `docs/project_management/ACCEPTANCE_MATRIX.md`, `docs/PROJECT_CONTROL.md` |
-| forbidden actions | Promotion without repaired-path batch evidence, planner quality claims, friends/public readiness claims, cap raise/deletion/schema work hidden inside promotion. |
-| acceptance criteria | Exact-date/parser/recommendation/UI/storage acceptance is documented; repaired automatic evaluation path is proven on live data or explicitly blocked; warnings are carried forward; next roadmap target remains v0.10 Coach Quality Calibration. |
+| source docs | WP-017A through WP-017G reports, `docs/project_management/ACCEPTANCE_MATRIX.md`, `docs/PROJECT_CONTROL.md` |
+| forbidden actions | Planner quality claims, friends/public readiness claims, cap raise/deletion/schema work hidden inside promotion. |
+| acceptance criteria | Accepted and deferred evidence is documented; warnings are carried forward; next roadmap target remains v0.10 Coach Quality Calibration. |
 | required evidence | WP-017 chain reports, DB SHA, project gates, audit promotion report. |
 | exit criteria | Real Data Onboarding / Bulk Demo Usage is accepted for controlled personal v0.9, or explicitly blocked with next repair WP. |
 | next WP | `WP-018 Coach Quality Calibration` |

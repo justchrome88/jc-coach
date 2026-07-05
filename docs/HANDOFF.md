@@ -5,7 +5,7 @@ Last updated: 2026-07-05.
 ## Current State
 
 - Current Product Version: `v0.8`
-- Current WP: `WP-017F Controlled Pending Share Code #73 Import`
+- Current WP: `WP-017G Data Integrity Acceptance`
 - Next Target Version: `v0.9`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -42,6 +42,7 @@ Last updated: 2026-07-05.
 - WP-017C2 controlled import after a new Valve match completed / `PASS_ONE_DEMO_IMPORTED_AND_EVALUATED`. Backup `data/manual_backups/cs2_coach_before_wp017c2_after_new_match_20260705_030831.db` was created. One shell-fallback attempt with explicit temp env created parent job `#29` and child sync job `#30`; Steam returned two new share codes, one demo was downloaded/retained/parsed under cap `1`, and playable exact-date Overpass match `#75` was created from `steam_gc_match_time`. Parent job `#29` is `failed` only because `overall_outcome=batch_cap_reached` left one pending placeholder `#73`. Recommendation `#5` received evaluation `#77` with `metric_confidence`, progress is now `2/10`, legacy `#3/#4` stayed unchanged, schema stayed unchanged, `data/tmp` returned to `0` bytes, and raw demos were not deleted/moved/compressed.
 - WP-017D post-batch diagnosis completed / `ACCEPT_WITH_REPAIR_REQUIRED`. WP-017C/C2 import, parser, storage and manual evaluation evidence was healthy, but automatic post-import recommendation evaluation in the Steam path was unreliable: `import_demo_file(...)` evaluated before `_apply_primary_steam_date_truth(...)` made the imported match exact-date eligible. Pending placeholder `#73` and cap raise remained blocked.
 - WP-017E auto-evaluation trigger repair completed / `REPAIRED`. Steam downloader imports now pass `evaluate_recommendations=False` to parser import, apply/commit/refresh authoritative Steam date truth, then run `evaluate_recommendations_for_match(...)` and carry compact `recommendation_evaluations` metadata into demo download results. Tests cover exact-date auto-evaluation, batch-cap metadata, duplicate protection, legacy skip and non-exact gating. No production DB/live Steam/import/parser/manual evaluator work ran, pending `#73` was not processed, schema and cap were unchanged.
+- WP-017F controlled pending share code `#73` import completed / `PASS_PENDING_73_IMPORTED_AND_AUTO_EVALUATED`. Backup `data/manual_backups/cs2_coach_before_wp017f_pending_73_import_20260705_034135.db` was created. One targeted pending-demo attempt processed `CSGO-owEoV-4o9Uj-kK5Fp-4zYKz-UqDZG`, downloaded/retained/parsed exactly one demo as playable exact-date Mirage match `#76`, and automatic evaluation `#78` for recommendation `#5` was created with `metric_confidence`; progress is now `3/10`. No manual evaluator ran, legacy `#3/#4` stayed unchanged, cap stayed `1`, schema stayed unchanged, raw demos were not deleted/moved/compressed, and `data/tmp` returned to `0` bytes. The narrow pending-demo path did not create a new parent `steam_import_all` job; metadata is in the returned service result and placeholder raw JSON.
 
 ## Last Incident Summary
 
@@ -55,16 +56,17 @@ Last updated: 2026-07-05.
 
 ## Next WP
 
-`WP-017F Controlled Pending Share Code #73 Import` targeting `v0.9`.
+`WP-017G Data Integrity Acceptance` targeting `v0.9`.
 
-WP-017F should validate the repaired automatic evaluation path by processing only pending share code `#73` if explicitly authorized for a live controlled import. Use:
+WP-017G should review WP-017F as a read-only data integrity and runtime acceptance gate. Use:
 
 - `docs/audit/WP_017C_FIRST_CONTROLLED_BULK_IMPORT_BATCH_REPORT.md`
 - `docs/audit/WP_017C2_CONTROLLED_IMPORT_AFTER_NEW_MATCH_REPORT.md`
 - `docs/audit/WP_017D_POST_BATCH_ACCEPTANCE_AND_EVALUATION_TRIGGER_DIAGNOSIS.md`
 - `docs/audit/WP_017E_AUTO_EVALUATION_TRIGGER_REPAIR_REPORT.md`
+- `docs/audit/WP_017F_CONTROLLED_PENDING_73_IMPORT_REPORT.md`
 
-Expected focus: create backup/SHA evidence, keep `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, run at most one controlled import attempt for pending `#73`, verify automatic recommendation evaluation metadata appears in parent result JSON for the newly imported playable exact-date match, verify recommendation `#5` increments exactly once with `metric_confidence`, keep legacy `#3/#4` unchanged, keep match mode unknown unless persisted data proves otherwise, and keep cap `2` blocked until this repaired-path live run is accepted. Do not delete/move raw demos, change schema, run bulk resync, run manual evaluator, or create persistent app reports unless a later WP explicitly authorizes it.
+Expected focus: verify DB/storage/parser/recommendation consistency after matches `#75/#76`, confirm automatic evaluation `#78` and metadata surfaces, account for the lack of parent job result JSON in the targeted pending-demo path, keep match mode unknown unless persisted data proves otherwise, and decide whether a later WP may promote v0.9 or plan a cap change. Do not run live imports, delete/move raw demos, change schema, run manual evaluator, or create persistent app reports unless a later WP explicitly authorizes it.
 
 Roadmap and WP wiring:
 
