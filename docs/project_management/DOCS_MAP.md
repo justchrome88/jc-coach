@@ -1,6 +1,6 @@
 # Docs Map
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-06.
 
 This map connects project docs to the Project OS layer, architecture/product
 layers, guardian ownership, work packages and freshness risk. Current operating
@@ -29,6 +29,8 @@ must not override Hot context.
 `docs/project_management/AGENT_WORKFLOW.md` is also Warm governance context,
 not per-task Hot context. Read them only when governance, planning, WP role
 workflow, task routing, prompt contract or audit scope requires them.
+`docs/agents/roles/*` are Warm workflow role cards and do not expand Hot
+context.
 
 ## Project OS Layer
 
@@ -43,6 +45,12 @@ workflow, task routing, prompt contract or audit scope requires them.
 | `docs/PROJECT_GOVERNANCE.md` | Versioning, WP gates, roles, safety policy. | `PM_ORCHESTRATOR` | all WPs | Warm governance reference |
 | `docs/project_management/PROJECT_OPERATING_PROTOCOL.md` | Practical operating protocol for roles, source-of-truth hierarchy, WP lifecycle, blockers, reports, commits and chat policy. | `PM_ORCHESTRATOR` | all WPs | Warm governance reference |
 | `docs/project_management/AGENT_WORKFLOW.md` | Repo-native WP role workflow, task type profiles, Task Card prompt contract and Documentation Steward checks. | `PM_ORCHESTRATOR` | all WPs | Warm governance reference; not per-task Hot context |
+| `docs/agents/README.md` | Index for workflow role cards and domain guardian docs. | `PM_ORCHESTRATOR` | all WPs | Warm role/navigation reference |
+| `docs/agents/roles/PM_ORCHESTRATOR.md` | PM / Orchestrator workflow role behavior and handoff contract. | `PM_ORCHESTRATOR` | all WPs | Warm role card |
+| `docs/agents/roles/IMPLEMENTATION_AGENT.md` | Implementation workflow role behavior and handoff contract. | `PM_ORCHESTRATOR` | all WPs | Warm role card |
+| `docs/agents/roles/QA_REVIEWER.md` | QA / Reviewer workflow role behavior, checks and verdicts. | `PM_ORCHESTRATOR` | all WPs | Warm role card |
+| `docs/agents/roles/DOCUMENTATION_STEWARD.md` | Documentation Steward role behavior, docs currency and closure readiness. | `PM_ORCHESTRATOR` | all WPs | Warm role card |
+| `docs/agents/roles/ROLE_CARD_TEMPLATE.md` | Template for future approved workflow role cards. | `PM_ORCHESTRATOR` | future governance WPs | Warm role template |
 | `docs/project_management/VERSION_ROADMAP.md` | Version-to-WP roadmap. | `PM_ORCHESTRATOR` | WP-012..WP-018 | source-of-truth for planned version sequence |
 | `docs/project_management/WORK_PACKAGE_BACKLOG.md` | WP objectives, guardians and exit criteria. | `PM_ORCHESTRATOR` | WP-012..WP-018 | source-of-truth for backlog wiring |
 | `docs/project_management/ACCEPTANCE_MATRIX.md` | Feature acceptance map. | `PM_ORCHESTRATOR`, domain guardians | WP-012..WP-018 | source-of-truth for acceptance wiring |
@@ -81,6 +89,8 @@ workflow, task routing, prompt contract or audit scope requires them.
 
 | Document | Role | Guardian | WP links | Status |
 |---|---|---|---|---|
+| `docs/agents/PM_ORCHESTRATOR.md` | Existing supporting PM/domain guardrail; canonical workflow PM role card is `docs/agents/roles/PM_ORCHESTRATOR.md`. | `PM_ORCHESTRATOR` | all WPs | supporting legacy/domain guardrail |
+| `docs/agents/*_GUARDIAN.md` | Domain guardrails for DB, runtime, tests, import, metrics and UI work. | corresponding guardian | domain WPs | supporting domain guardrails |
 | `docs/FEATURES_RU.md` | Implemented feature summary. | `PM_ORCHESTRATOR` | reference | supporting, stale risk |
 | `docs/STEAM_IMPORT_ARCHITECTURE.md` | Deeper Steam architecture. | `IMPORT_GUARDIAN` | WP-014 | supporting |
 | `docs/STEAM_MATCH_DATES_RU.md` | Steam match date policy. | `IMPORT_GUARDIAN` | WP-014 | supporting |

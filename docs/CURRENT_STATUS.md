@@ -1,12 +1,12 @@
 # Current Status
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-06.
 
 ## Snapshot
 
 - Product version: `v0.8`.
 - Current lane: `WP-017` Real Data Onboarding / Bulk Demo Usage for `v0.9`.
-- Current active WP: none; latest completed governance WP is `WP-017Y No-Risk Legacy Docs Pointer Cleanup`.
+- Current active WP: none; latest completed governance WP is `WP-017Z Agent Role Cards and Role Handoff Protocol`.
 - Next product WP: `WP-017K Real Data Onboarding Promotion to v0.9`.
 - Promotion status: `v0.9` is not promoted. WP-017K is the only promotion WP and must carry forward accepted warnings and limitations.
 - Latest known production DB SHA: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33` from WP-017H evidence. Re-check before any WP that depends on current DB state.
@@ -39,6 +39,8 @@ Last updated: 2026-07-05.
   cleanup/deprecation plan; no physical cleanup was performed.
 - WP-017Y completed no-risk legacy docs pointer cleanup by adding status headers
   and safer source-of-truth pointers; no physical cleanup was performed.
+- WP-017Z added Warm workflow role cards and a role handoff protocol for the
+  repo-native agent workflow; no runtime agents or automation were created.
 
 ## Current Blockers And Limitations
 
@@ -69,6 +71,8 @@ Last updated: 2026-07-05.
 - Operating protocol: `docs/project_management/PROJECT_OPERATING_PROTOCOL.md`.
 - Agent workflow: `docs/project_management/AGENT_WORKFLOW.md` as Warm governance
   process, task routing and prompt contract reference, not per-task Hot context.
+- Agent role cards: `docs/agents/roles/*` as Warm role definitions, not
+  per-task Hot context.
 - Full human WP campaign map: `docs/project_management/MASTER_WP_CHECKLIST.md`.
 - Detailed evidence: relevant `docs/audit/WP_*.md` reports, read only when task-relevant.
 - Roadmap/planning detail: `docs/project_management/VERSION_ROADMAP.md`, `docs/project_management/WORK_PACKAGE_BACKLOG.md`, `docs/project_management/ACCEPTANCE_MATRIX.md`.

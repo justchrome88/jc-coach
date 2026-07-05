@@ -1,6 +1,6 @@
 # Agent Workflow
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-06.
 
 ## 1. Purpose
 
@@ -9,6 +9,9 @@ This is the repo-native agent workflow v0.1 for JC Coach.
 Agents here are not separate processes, daemons or services. They are roles and
 working modes that Codex applies inside an approved WP lifecycle so scope,
 verification and documentation currency stay explicit.
+
+Canonical role cards live under `docs/agents/roles/`. This file remains the
+workflow router; role cards define behavior for each invoked role.
 
 ## 2. Non-goals
 
@@ -24,6 +27,8 @@ verification and documentation currency stay explicit.
 
 ### PM / Orchestrator Agent
 
+Role card: `docs/agents/roles/PM_ORCHESTRATOR.md`.
+
 Responsibilities:
 
 - Choose or propose the next WP.
@@ -38,6 +43,8 @@ Responsibilities:
 
 ### Implementation Agent
 
+Role card: `docs/agents/roles/IMPLEMENTATION_AGENT.md`.
+
 Responsibilities:
 
 - Make changes strictly inside scope.
@@ -50,6 +57,8 @@ Responsibilities:
 
 ### QA / Reviewer Agent
 
+Role card: `docs/agents/roles/QA_REVIEWER.md`.
+
 Responsibilities:
 
 - Check the diff against scope.
@@ -60,6 +69,8 @@ Responsibilities:
 - Give `PASS`, `PASS_WITH_WARNINGS` or `FAIL`.
 
 ### Documentation Steward / Docs Currency Agent
+
+Role card: `docs/agents/roles/DOCUMENTATION_STEWARD.md`.
 
 Responsibilities:
 
@@ -119,7 +130,31 @@ Documentation Steward must run:
 Documentation Steward should not run a full project docs audit after every tiny
 task.
 
-## 7. Task Type Profiles
+## 7. Role Handoff Protocol
+
+Standard handoffs:
+
+- PM / Orchestrator -> Implementation:
+  scope, allowed files, forbidden zones, required checks and stop conditions.
+- Implementation -> QA / Reviewer:
+  changed files, summary, checks run, intentional non-changes and risks.
+- QA / Reviewer -> Documentation Steward:
+  whether docs/status/source-of-truth changed and required docs closure checks.
+- Documentation Steward -> PM / Orchestrator / User:
+  closure verdict, missing docs, stale docs and required user decisions.
+- Any role -> User:
+  blocker, approval request or unsafe action warning.
+
+Rules:
+
+- No role may run `git add`, commit or push.
+- No role may expand scope without PM / Orchestrator and User approval.
+- No role may use old prompts, audits or plans as current truth.
+- Role cards are editable behavior contracts. Changes require explicit
+  governance/documentation scope and docs navigation updates.
+- New roles require explicit user approval and a role card.
+
+## 8. Task Type Profiles
 
 ### Tiny Task
 
@@ -205,7 +240,7 @@ requested.
 - Requires recommendations, metrics and AI coach docs.
 - Must distinguish evidence-backed claims from weak claims.
 
-## 8. Role Invocation Shortcuts
+## 9. Role Invocation Shortcuts
 
 | Phrase | Roles run | Expected output |
 |---|---|---|
@@ -218,7 +253,7 @@ requested.
 | `Tiny task, no full workflow unless needed.` | Implementation; QA light if needed; Documentation Steward only if canonical/status/WP docs are affected | Minimal change or answer, short summary, no WP report unless requested. |
 | `Stop at diagnosis; do not repair.` | PM / Orchestrator, QA / Reviewer | Facts, hypotheses, blocker status and recommended next step; no repair edits. |
 
-## 9. Standard Task Card Contract
+## 10. Standard Task Card Contract
 
 Future prompts should use a short Task Card and rely on `AGENTS.md` plus this
 workflow for generic rules. Do not repeat the full workflow in every prompt.
@@ -235,7 +270,7 @@ Report path, if WP-level:
 Stop conditions:
 ```
 
-## 10. Standard WP Preflight
+## 11. Standard WP Preflight
 
 Run:
 
@@ -248,7 +283,7 @@ git log --oneline -8 --decorate
 
 If the worktree is dirty before a WP-level task, stop and report.
 
-## 11. Standard Output Contract
+## 12. Standard Output Contract
 
 For WP-level work, console output should include:
 
@@ -266,7 +301,7 @@ For WP-level work, console output should include:
 
 The exact report path is task-specific and belongs in the Task Card.
 
-## 12. Documentation Steward Standalone Mode
+## 13. Documentation Steward Standalone Mode
 
 Example prompt:
 
@@ -289,7 +324,7 @@ Required output:
 - Recommended actions.
 - Confirmation that no automatic deletion was performed.
 
-## 13. Required Document Update Matrix
+## 14. Required Document Update Matrix
 
 | Event | Required docs to check/update |
 |---|---|
@@ -304,7 +339,7 @@ Required output:
 | Document deprecated | `DOCS_INDEX.md`, `DOCS_MAP.md`, report, but no delete without approval |
 | Side-chat decision accepted | `DECISIONS.md` or relevant canonical doc |
 
-## 14. Docs Classification Model
+## 15. Docs Classification Model
 
 - `CANONICAL` - source of truth for a specific area.
 - `SUPPORTING` - useful reference but not source of truth.
@@ -320,7 +355,7 @@ Rules:
 - If docs conflict, the source-of-truth hierarchy in
   `PROJECT_OPERATING_PROTOCOL.md` wins.
 
-## 15. WP Closure Checklist
+## 16. WP Closure Checklist
 
 A WP can close only if:
 
@@ -334,7 +369,7 @@ A WP can close only if:
 - Next step recorded.
 - User/ChatGPT review completed before commit.
 
-## 16. How To Use This Workflow In Prompts
+## 17. How To Use This Workflow In Prompts
 
 ### Normal WP Prompt
 

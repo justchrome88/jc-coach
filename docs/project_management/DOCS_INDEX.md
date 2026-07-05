@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-06.
 
 Human-readable navigation map. This file does not replace `AGENTS.md`,
 `docs/CURRENT_STATUS.md`, `docs/project_management/WP_REGISTRY.md` or
@@ -33,8 +33,9 @@ and why.
 `docs/project_management/PROJECT_OPERATING_PROTOCOL.md` and
 `docs/project_management/MASTER_WP_CHECKLIST.md` are Warm governance/planning
 references. `docs/project_management/AGENT_WORKFLOW.md` is a Warm governance
-role workflow, task type routing and prompt contract reference. They are not
-per-task Hot context.
+role workflow, task type routing and prompt contract reference.
+`docs/agents/roles/*` are Warm role definitions. These files are not per-task
+Hot context.
 
 Cold context includes old audit reports, stage reports, old prompts,
 `docs/tasks/*`, `instructions/*`, old roadmap/version docs and generated data
@@ -67,9 +68,15 @@ reports. Cold files are evidence/history and must not override Hot context.
 - `docs/VERSION_MAP.md` - historical/archive-candidate version status map; do not use as current version truth.
 - `docs/RELEASE_CHECKLIST.md` - release/friends/public gate checklist.
 
-## Guardians
+## Agent Workflow And Guardians
 
-- `docs/agents/PM_ORCHESTRATOR.md` - WP scope, handoff, version map and evidence gates.
+- `docs/agents/README.md` - Warm index for workflow role cards and domain guardian docs.
+- `docs/agents/roles/PM_ORCHESTRATOR.md` - Warm workflow role card for task routing, scope, Warm docs selection, stop conditions and handoffs.
+- `docs/agents/roles/IMPLEMENTATION_AGENT.md` - Warm workflow role card for scoped edits and implementation handoff.
+- `docs/agents/roles/QA_REVIEWER.md` - Warm workflow role card for review, checks, risk assessment and verdicts.
+- `docs/agents/roles/DOCUMENTATION_STEWARD.md` - Warm workflow role card for docs currency, required doc updates and closure readiness.
+- `docs/agents/roles/ROLE_CARD_TEMPLATE.md` - Warm template for future approved role cards.
+- `docs/agents/PM_ORCHESTRATOR.md` - supporting legacy/domain PM guardrail for WP scope, handoff, version map and evidence gates; canonical workflow PM role card is `docs/agents/roles/PM_ORCHESTRATOR.md`.
 - `docs/agents/DB_GUARDIAN.md` - production DB, migrations and contamination safety.
 - `docs/agents/RUNTIME_GUARDIAN.md` - FastAPI/Jinja runtime, service freshness and smoke checks.
 - `docs/agents/TEST_GUARDIAN.md` - test isolation and safe verification.

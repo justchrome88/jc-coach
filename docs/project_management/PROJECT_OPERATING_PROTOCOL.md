@@ -1,6 +1,6 @@
 # Project Operating Protocol
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-06.
 
 ## 1. Purpose
 
@@ -19,7 +19,8 @@ not lose context between sessions or work packages.
 workflow Codex uses inside WP-level work. These agents are process roles, not a
 runtime agent platform. It also defines task type profiles, role invocation
 shortcuts, the standard Task Card contract and WP-level console output
-contract.
+contract. Role behavior contracts live in `docs/agents/roles/` as Warm role
+definitions.
 
 ## 3. Source Of Truth Hierarchy
 
@@ -78,6 +79,7 @@ file is reconciled.
 | `docs/project_management/MASTER_WP_CHECKLIST.md` | The high-level campaign plan changes or a WP is added, renamed or reordered. |
 | `docs/project_management/DOCS_INDEX.md` / `docs/project_management/DOCS_MAP.md` | Document roles or context levels change. |
 | `docs/project_management/AGENT_WORKFLOW.md` | WP role workflow, task type profiles, Task Card contract, Documentation Steward triggers or closure gate rules change. |
+| `docs/agents/roles/*.md` | Workflow role behavior, role handoff expectations or role modification rules change. |
 | `docs/audit/WP_*.md` | A WP-level task report is required. |
 | Domain docs | The truth for that domain changes. |
 
