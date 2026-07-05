@@ -47,6 +47,9 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
   warnings carried forward.
 - WP-017Z1 added invocation modes and output modes so future prompts can stay
   short and long role outputs can be file-backed.
+- WP-017Z2 added control-plane protection so ordinary product/code/DB/import/
+  runtime/UI/recommendation tasks do not edit governance rules to make work
+  easier.
 
 ## Data And Product Facts To Carry Forward
 

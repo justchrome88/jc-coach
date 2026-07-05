@@ -18,9 +18,9 @@ not lose context between sessions or work packages.
 `docs/project_management/AGENT_WORKFLOW.md` defines the repo-native role
 workflow Codex uses inside WP-level work. These agents are process roles, not a
 runtime agent platform. It also defines task type profiles, invocation modes,
-output modes, role invocation shortcuts, the standard Task Card contract and
-WP-level console output contract. Role behavior contracts live in
-`docs/agents/roles/` as Warm role definitions.
+output modes, control-plane protection policy, role invocation shortcuts, the
+standard Task Card contract and WP-level console output contract. Role behavior
+contracts live in `docs/agents/roles/` as Warm role definitions.
 
 ## 3. Source Of Truth Hierarchy
 
@@ -78,7 +78,7 @@ file is reconciled.
 | `docs/DECISIONS.md` | A durable process, product or architecture decision is made. |
 | `docs/project_management/MASTER_WP_CHECKLIST.md` | The high-level campaign plan changes or a WP is added, renamed or reordered. |
 | `docs/project_management/DOCS_INDEX.md` / `docs/project_management/DOCS_MAP.md` | Document roles or context levels change. |
-| `docs/project_management/AGENT_WORKFLOW.md` | WP role workflow, invocation modes, output modes, task type profiles, Task Card contract, Documentation Steward triggers or closure gate rules change. |
+| `docs/project_management/AGENT_WORKFLOW.md` | WP role workflow, control-plane protection policy, invocation modes, output modes, task type profiles, Task Card contract, Documentation Steward triggers or closure gate rules change. |
 | `docs/agents/roles/*.md` | Workflow role behavior, role handoff expectations or role modification rules change. |
 | `docs/audit/WP_*.md` | A WP-level task report is required. |
 | Domain docs | The truth for that domain changes. |
@@ -98,9 +98,10 @@ file is reconciled.
 ## 7.1 Task Routing And Prompt Contract
 
 Use `docs/project_management/AGENT_WORKFLOW.md` for task type profiles,
-invocation modes, output modes, role shortcuts and the standard Task Card.
-Future prompts should state task-specific scope, mode, output mode, report path
-and acceptance constraints instead of repeating generic workflow rules.
+control-plane protection policy, invocation modes, output modes, role shortcuts
+and the standard Task Card. Future prompts should state task-specific scope,
+mode, output mode, report path and acceptance constraints instead of repeating
+generic workflow rules.
 
 ## 8. Blocker / Stuck Procedure
 

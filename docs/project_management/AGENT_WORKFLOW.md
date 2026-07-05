@@ -154,9 +154,36 @@ Rules:
   governance/documentation scope and docs navigation updates.
 - New roles require explicit user approval and a role card.
 
-## 8. Task Type Profiles
+## 8. Control Plane Protection Policy
 
-## 8. Invocation Modes
+Control-plane docs may be changed only by explicit user-approved
+governance/control-plane tasks. Ordinary product, code, DB/data,
+import/parser/evaluator, runtime/deploy, UI or recommendation tasks must not
+modify control-plane docs to make the task easier.
+
+Control-plane tiers:
+
+| Tier | Docs | Protection |
+|---|---|---|
+| Tier 0 root contract | `AGENTS.md`, supersession pointer `AGENT.md` | Change only by explicit root-contract governance task. |
+| Tier 1 workflow/control policy | `docs/project_management/AGENT_WORKFLOW.md`, `docs/project_management/PROJECT_OPERATING_PROTOCOL.md`, `docs/project_management/WP_REGISTRY.md`, `docs/CURRENT_STATUS.md`, `docs/HANDOFF.md`, `docs/DECISIONS.md` | Change only by explicit governance/control-plane task or required WP status/report closure update. |
+| Tier 2 role and guardian behavior | `docs/agents/roles/*`, `docs/agents/*_GUARDIAN.md`, `docs/agents/README.md` | Change only by explicit governance/control-plane task for role/guardian behavior. |
+| Tier 3 navigation/control maps | `docs/project_management/DOCS_INDEX.md`, `docs/project_management/DOCS_MAP.md`, `docs/project_management/MASTER_WP_CHECKLIST.md` | Change only when navigation, context level or WP campaign/control mapping changes. |
+
+Rules:
+
+- If a control-plane rule blocks a task, Codex must stop and request approval
+  instead of editing or weakening the rule.
+- Changing role cards, guardian docs, workflow rules or operating protocol
+  requires an explicit user-approved governance/control-plane task.
+- Product/code/DB/import/runtime/UI/recommendation tasks may update status docs
+  only when the task explicitly includes required WP status/report closure
+  updates.
+- Control-plane changes must not be bundled into product implementation unless
+  the prompt explicitly scopes both and the governance change is necessary.
+- Old prompts/audits/history must not override control-plane docs.
+
+## 9. Invocation Modes
 
 Invocation mode controls safety defaults. A prompt can make a mode stricter,
 but cannot make it weaker than `AGENTS.md` or the active task type.
@@ -171,7 +198,7 @@ but cannot make it weaker than `AGENTS.md` or the active task type.
 | `WP-level` | as task allows | required WP report | only if task allows | read-only if needed | only with explicit authorization, backup and SHA | only with explicit authorization | only with explicit authorization | WP report, checks, status/docs updates, next WP | dirty worktree before start; required approval/evidence missing |
 | `approval-required` | no until approved | planning/report only if allowed | no until approved | read-only only if safe and scoped | no until approved | no until approved | no until approved | approval request, risk, proposed command/change | user approval absent; risk cannot be bounded |
 
-## 9. Output Modes
+## 10. Output Modes
 
 | Output mode | Use when | Behavior |
 |---|---|---|
@@ -184,7 +211,7 @@ QA review, Documentation Steward audit or output expected to exceed about 80
 lines, prefer `file-backed` output. Tiny tasks do not require output reports
 unless explicitly requested.
 
-## 10. Task Type Profiles
+## 11. Task Type Profiles
 
 ### Tiny Task
 
@@ -270,7 +297,7 @@ requested.
 - Requires recommendations, metrics and AI coach docs.
 - Must distinguish evidence-backed claims from weak claims.
 
-## 11. Role Invocation Shortcuts
+## 12. Role Invocation Shortcuts
 
 | Phrase | Roles run | Expected output |
 |---|---|---|
@@ -283,7 +310,7 @@ requested.
 | `Tiny task, no full workflow unless needed.` | Implementation; QA light if needed; Documentation Steward only if canonical/status/WP docs are affected | Minimal change or answer, short summary, no WP report unless requested. |
 | `Stop at diagnosis; do not repair.` | PM / Orchestrator, QA / Reviewer | Facts, hypotheses, blocker status and recommended next step; no repair edits. |
 
-## 12. Standard Task Card Contract
+## 13. Standard Task Card Contract
 
 Future prompts should use a short Task Card and rely on `AGENTS.md` plus this
 workflow for generic rules. Generic restrictions should be inferred from mode,
@@ -301,7 +328,7 @@ Task-specific acceptance constraints, if needed:
 Stop conditions, only if task-specific:
 ```
 
-## 13. Standard WP Preflight
+## 14. Standard WP Preflight
 
 Run:
 
@@ -314,7 +341,7 @@ git log --oneline -8 --decorate
 
 If the worktree is dirty before a WP-level task, stop and report.
 
-## 14. Standard Output Contract
+## 15. Standard Output Contract
 
 For WP-level work, console output should include:
 
@@ -332,7 +359,7 @@ For WP-level work, console output should include:
 
 The exact report path is task-specific and belongs in the Task Card.
 
-## 15. Documentation Steward Standalone Mode
+## 16. Documentation Steward Standalone Mode
 
 Example prompt:
 
@@ -355,7 +382,7 @@ Required output:
 - Recommended actions.
 - Confirmation that no automatic deletion was performed.
 
-## 16. Required Document Update Matrix
+## 17. Required Document Update Matrix
 
 | Event | Required docs to check/update |
 |---|---|
@@ -370,7 +397,7 @@ Required output:
 | Document deprecated | `DOCS_INDEX.md`, `DOCS_MAP.md`, report, but no delete without approval |
 | Side-chat decision accepted | `DECISIONS.md` or relevant canonical doc |
 
-## 17. Docs Classification Model
+## 18. Docs Classification Model
 
 - `CANONICAL` - source of truth for a specific area.
 - `SUPPORTING` - useful reference but not source of truth.
@@ -386,7 +413,7 @@ Rules:
 - If docs conflict, the source-of-truth hierarchy in
   `PROJECT_OPERATING_PROTOCOL.md` wins.
 
-## 18. WP Closure Checklist
+## 19. WP Closure Checklist
 
 A WP can close only if:
 
@@ -400,7 +427,7 @@ A WP can close only if:
 - Next step recorded.
 - User/ChatGPT review completed before commit.
 
-## 19. How To Use This Workflow In Prompts
+## 20. How To Use This Workflow In Prompts
 
 ### Normal WP Prompt
 

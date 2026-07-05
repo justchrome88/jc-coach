@@ -34,7 +34,7 @@ and why.
 `docs/project_management/MASTER_WP_CHECKLIST.md` are Warm governance/planning
 references. `docs/project_management/AGENT_WORKFLOW.md` is a Warm governance
 role workflow, task type routing, invocation modes, output modes and prompt
-contract reference.
+contract reference, including the control-plane protection policy.
 `docs/agents/roles/*` are Warm role definitions. These files are not per-task
 Hot context.
 
@@ -54,7 +54,7 @@ reports. Cold files are evidence/history and must not override Hot context.
 - `docs/CURRENT_STATUS.md` - current product state.
 - `docs/CURRENT_MILESTONE.md` - current/historical hardening milestone detail.
 - `docs/project_management/PROJECT_OPERATING_PROTOCOL.md` - Warm governance protocol for roles, WP lifecycle, blockers, reports and commit flow.
-- `docs/project_management/AGENT_WORKFLOW.md` - Warm repo-native WP role workflow, invocation modes, output modes, task type profiles, Task Card prompt contract and Documentation Steward / Docs Currency Agent checks; not per-task Hot context.
+- `docs/project_management/AGENT_WORKFLOW.md` - Warm repo-native WP role workflow, control-plane protection policy, invocation modes, output modes, task type profiles, Task Card prompt contract and Documentation Steward / Docs Currency Agent checks; not per-task Hot context.
 
 ## Project Management
 
@@ -64,7 +64,7 @@ reports. Cold files are evidence/history and must not override Hot context.
 - `docs/project_management/DOCS_MAP.md` - documentation ownership, source-of-truth and stale-risk map.
 - `docs/project_management/DOCS_INDEX.md` - this human navigation index.
 - `docs/project_management/MASTER_WP_CHECKLIST.md` - Warm/Cold human-readable full WP campaign map; registry remains canonical for status/dependencies/report paths.
-- `docs/project_management/AGENT_WORKFLOW.md` - Warm governance/process doc for PM, Implementation, QA and Documentation Steward roles, invocation modes, output modes, task type profiles and standard prompt/report contracts inside WP lifecycle.
+- `docs/project_management/AGENT_WORKFLOW.md` - Warm governance/process doc for PM, Implementation, QA and Documentation Steward roles, control-plane protection policy, invocation modes, output modes, task type profiles and standard prompt/report contracts inside WP lifecycle.
 - `docs/ROADMAP.md` - historical/archive-candidate roadmap overview; do not use as current roadmap truth.
 - `docs/VERSION_MAP.md` - historical/archive-candidate version status map; do not use as current version truth.
 - `docs/RELEASE_CHECKLIST.md` - release/friends/public gate checklist.

@@ -60,6 +60,7 @@ Allowed statuses: `planned`, `active`, `in_progress`, `done`, `blocked`,
 | `WP-017Z` | Agent Role Cards and Role Handoff Protocol | `v0.9` | `done` | `docs/audit/WP_017Z_AGENT_ROLE_CARDS_HANDOFF_PROTOCOL_REPORT.md` | `WP-017Y` | Governance/documentation pass that adds Warm workflow role cards and a role handoff protocol; no runtime agents/automation, broad legacy cleanup, product logic, DB, service or WP-018 product block changes. |
 | `WP-017K` | Real Data Onboarding Promotion to `v0.9` | `v0.9` | `done` | `docs/audit/WP_017K_REAL_DATA_ONBOARDING_PROMOTION_REPORT.md` | `WP-017G`, `WP-017H`, `WP-017I`, `WP-017J` or documented deferral, `WP-017S`, `WP-017T`, `WP-017U`, `WP-017V`, `WP-017W`, `WP-017X`, `WP-017Y`, `WP-017Z` | Promoted `v0.9` with warnings; cap remains `1`, playlist mode remains unknown/provenance-only, and friends/public readiness is not claimed. |
 | `WP-017Z1` | Agent Invocation Modes and File-Backed Output Contract | `v0.9` | `done` | `docs/audit/WP_017Z1_AGENT_INVOCATION_OUTPUT_MODES_REPORT.md` | `WP-017Z`, `WP-017K` | Governance/documentation pass that adds invocation modes and output modes to the repo-native agent workflow; no product behavior, DB, service, import/parser/evaluator or WP-018 product implementation changes. |
+| `WP-017Z2` | Control Plane Protection Policy | `v0.9` | `done` | `docs/audit/WP_017Z2_CONTROL_PLANE_PROTECTION_POLICY_REPORT.md` | `WP-017Z1` | Governance/documentation pass that protects control-plane docs from ordinary product/code/DB/import/runtime/UI/recommendation task edits; no product behavior, DB, service, import/parser/evaluator or WP-018 product implementation changes. |
 
 ## Current Promotion Gate
 
@@ -97,13 +98,15 @@ Promotion decision carried forward:
   `v0.9` with warnings.
 - `WP-017Z1` completed: invocation modes and file-backed output contract exist
   for future short prompts.
+- `WP-017Z2` completed: control-plane docs are protected from ordinary product
+  task edits unless explicitly scoped by a governance/control-plane task.
 - Cap remains `1` unless a separate explicit cap-change WP authorizes a change.
 
 ## Future Version Registry
 
 | WP ID | Title | Version target | Status | Report path | Dependencies | Notes / warnings |
 |---|---|---|---|---|---|---|
-| `WP-018` | Coach Quality Calibration | `v0.10` | `planned` | TBD | `WP-017K` promotion, `WP-017Z1` governance workflow update | Calibrate coach claims, progress scoring and weak-metric caveats. |
+| `WP-018` | Coach Quality Calibration | `v0.10` | `planned` | TBD | `WP-017K` promotion, `WP-017Z1`/`WP-017Z2` governance workflow updates | Calibrate coach claims, progress scoring and weak-metric caveats. |
 | `WP-019` | Personal Daily Use UX | `v0.11` | `planned` | TBD | `WP-018` | Daily owner workflow polish without friends/public claims. |
 | `WP-020` | Deployment / Backup / Storage Hardening | `v0.12` | `planned` | TBD | `WP-019` | VPS operation, backup/restore and storage hardening. |
 | `WP-021` | Personal MVP Lock | `v1.0` | `planned` | TBD | `WP-020` | Controlled personal MVP lock; public/friends readiness remains separate. |

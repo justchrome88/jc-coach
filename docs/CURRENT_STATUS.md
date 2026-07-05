@@ -45,6 +45,8 @@ Last updated: 2026-07-06.
   warnings.
 - WP-017Z1 added explicit invocation modes and output modes for future
   repo-native agent prompts; this did not change product status.
+- WP-017Z2 added a control-plane protection policy for governance docs; this
+  did not change product status.
 
 ## Current Blockers And Limitations
 
@@ -75,8 +77,8 @@ Last updated: 2026-07-06.
 - New-session bootstrap: `docs/HANDOFF.md`.
 - Operating protocol: `docs/project_management/PROJECT_OPERATING_PROTOCOL.md`.
 - Agent workflow: `docs/project_management/AGENT_WORKFLOW.md` as Warm governance
-  process, invocation/output mode, task routing and prompt contract reference,
-  not per-task Hot context.
+  process, control-plane protection, invocation/output mode, task routing and
+  prompt contract reference, not per-task Hot context.
 - Agent role cards: `docs/agents/roles/*` as Warm role definitions, not
   per-task Hot context.
 - Full human WP campaign map: `docs/project_management/MASTER_WP_CHECKLIST.md`.

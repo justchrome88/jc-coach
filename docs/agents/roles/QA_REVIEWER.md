@@ -31,6 +31,8 @@ forbidden changes before a task is reported complete.
 
 - Whether the invocation mode and output mode were appropriate.
 - Diff against scope.
+- Whether control-plane docs changed only under explicit governance/control-
+  plane scope.
 - Acceptance criteria.
 - Regression risk.
 - Forbidden changes.
@@ -70,6 +72,8 @@ must run.
 ## Red Flags
 
 - Diff includes unapproved files.
+- Control-plane docs changed to bypass a blocking rule or make unrelated work
+  easier.
 - Tests/checks are unsafe or missing for the risk level.
 - Report omits changed files, checks, risks or non-changes.
 - Product behavior changed during governance/documentation scope.

@@ -34,6 +34,8 @@ every task into a full documentation audit.
 
 - Invocation mode and output mode.
 - Source-of-truth hierarchy.
+- Control-plane protection policy and whether protected docs changed only under
+  explicit governance/control-plane scope.
 - Required docs updates.
 - Registry/status/handoff/report closure readiness.
 - Docs classification: `CANONICAL`, `SUPPORTING`, `DRAFT`,
@@ -79,6 +81,8 @@ occurred.
 
 - Required registry/status/handoff/report update is missing.
 - Active docs contradict Hot context.
+- A task edits role cards, guardian docs, workflow rules or operating protocol
+  without explicit governance approval.
 - A legacy doc is being used as current truth.
 - Cleanup requires file moves/deletes/archive actions.
 - A new role or workflow change lacks explicit approval.

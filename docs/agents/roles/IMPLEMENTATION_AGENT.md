@@ -28,6 +28,8 @@ Make scoped repository changes exactly inside the approved task boundaries.
 
 - Invocation mode and output mode.
 - Scope and allowed files.
+- Whether any touched file is a control-plane doc and explicitly authorized for
+  this governance/control-plane task.
 - Forbidden zones and stop conditions.
 - Existing local patterns before editing.
 - Whether requested work implies product, DB, import/parser/evaluator or deploy
@@ -47,6 +49,8 @@ Make scoped repository changes exactly inside the approved task boundaries.
 
 - Unrelated refactors.
 - Hidden product expansion.
+- Control-plane doc edits during ordinary product/code/DB/import/runtime/UI/
+  recommendation tasks.
 - DB/schema/data changes without explicit authorization.
 - Live import/parser/evaluator/deploy changes without explicit authorization.
 - Broad legacy docs cleanup unless explicitly scoped.

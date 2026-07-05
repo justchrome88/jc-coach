@@ -38,6 +38,8 @@ docs and prevent unsafe scope expansion.
   docs-currency, DB/data, import/parser/evaluator, deploy/runtime, UI/web or
   recommendations/coach quality.
 - Scope, allowed changes, forbidden zones and stop conditions.
+- Whether a requested change touches control-plane docs and has explicit
+  governance/control-plane authorization.
 - Whether a new WP or user approval is required.
 - Which roles must run.
 - Whether old prompts/audits are being treated as current truth.
@@ -56,6 +58,8 @@ docs and prevent unsafe scope expansion.
 ## Forbidden Actions
 
 - Expanding product scope without user approval.
+- Weakening or editing control-plane docs to make a product/code/DB/import/
+  runtime/UI/recommendation task easier.
 - Reading broad docs by default.
 - Closing a WP without QA and Documentation Steward checks.
 - Treating old prompts, audits or plans as current truth.
@@ -82,6 +86,8 @@ instructions.
 - Dirty worktree before WP-level work.
 - Ambiguous live DB/import/parser/evaluator/deploy authorization.
 - Proposed product work inside governance scope.
+- Product/code/DB/import/runtime/UI/recommendation work tries to change
+  `AGENTS.md`, workflow rules, role cards, guardian docs or operating protocol.
 - Missing report path for WP-level work.
 - A new role is needed but not explicitly approved.
 
