@@ -1,6 +1,6 @@
 # Project Control — CS2 AI Coach
 
-Canonical project source of truth. Last updated: 2026-07-04.
+Canonical project source of truth. Last updated: 2026-07-05.
 
 This file overrides older README, roadmap, audit, prompt and `instructions/*` documents when they conflict. Historical files remain in the repository for context and should not be deleted until the deprecation plan in `docs/audit/DOCUMENT_DEPRECATION_PLAN.md` is completed.
 
@@ -23,7 +23,7 @@ The practical product question is:
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017C First Bulk Import Batch`.
+Current WP: `WP-017D Post-Batch Data/Performance Acceptance`.
 
 Next Target Version: `v0.9`.
 
@@ -55,7 +55,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017C First Bulk Import Batch`.
+Current WP: `WP-017D Post-Batch Data/Performance Acceptance`.
 
 Next Target Version: `v0.9`.
 
@@ -81,7 +81,8 @@ Current focus:
 14. WP-015B diagnosed metric correctness risks, WP-015C implemented metric confidence/date-window gating, WP-015C1 repaired the resulting raw-JSON parsing performance regression, and WP-015D accepted runtime metrics guardrails with warnings.
 15. WP-016A diagnosed the legacy recommendation state, WP-016B added the refresh foundation, WP-016C refreshed survival into confidence-aware active recommendation `#5`, WP-016E4 repaired/evaluated the post-import match loop for match `#72`, and WP-016F promoted Recommendation Loop Acceptance to `v0.8`.
 16. WP-017A diagnosed Real Data Onboarding / Bulk Demo Usage for `v0.9`: current state is 72 matches, 20 playable parsed demos, 18 exact playable dates, about 3.8G uploads, about 17.07 GiB root free, accepted recommendation `#5` with one green evaluation, and all stored playable match modes remain unknown.
-17. WP-017B planned the first controlled bulk import batch runbook. Next focus is WP-017C First Bulk Import Batch, only with explicit live-run authorization, keeping `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, at most three one-demo attempts, backup/SHA/storage/service/job/recommendation checks around every attempt, and no cap raise, raw demo deletion/move, schema change or persistent app report generation.
+17. WP-017B planned the first controlled bulk import batch runbook.
+18. WP-017C completed the first controlled batch as `PASS_WITH_WARNINGS` / `PASS_NO_NEW_MATCH`: one authorized shell-fallback parent job `#27` with child sync `#28`, explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp`, no new Steam share code, no demo download, no parser run, no new playable match, no recommendation evaluation, uploads unchanged and `data/tmp` empty. Next focus is WP-017D Post-Batch Data/Performance Acceptance; do not raise the cap or claim new-demo parser/recommendation acceptance from this no-new batch.
 
 ## 4. Source-of-truth Documents
 

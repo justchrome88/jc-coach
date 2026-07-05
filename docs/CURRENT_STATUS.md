@@ -1,10 +1,10 @@
 # Current Status
 
-Last updated: 2026-07-04.
+Last updated: 2026-07-05.
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017C First Bulk Import Batch`.
+Current WP: `WP-017D Post-Batch Data/Performance Acceptance`.
 
 Next Target Version: `v0.9`.
 
@@ -59,6 +59,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - WP-016F documentation/status promotion completed / `PROMOTED`, promoting Recommendation Loop Acceptance to `v0.8`: the controlled personal MVP runtime loop `recommendation #5 -> match #72 -> evaluation #76 with metric_confidence -> progress completed_matches=1` is accepted. This does not validate recommendation planner quality, refresh all categories, or make the product friends/public-ready.
 - WP-017A real data onboarding diagnosis completed / `DIAGNOSED`: current state is 72 matches, 20 playable parsed demos, 18 exact playable dates, 52 steam_history placeholders, about 3.8G uploads, root free about 17.07 GiB, active accepted recommendation `#5` with one green evaluation, and match mode classification remains stored as unknown for all playable demos.
 - WP-017B controlled bulk import plan completed / `PLANNED`: first v0.9 import batch runbook keeps `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, allows at most three one-demo attempts, requires backup/SHA/storage/service/job/recommendation checks before and after every run, preserves explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp` for shell fallback, and defers cap increases until WP-017D acceptance.
+- WP-017C first controlled bulk import batch completed / `PASS_WITH_WARNINGS`: one authorized shell-fallback `steam_import_all` run with explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp` created parent job `#27` and child sync job `#28`, completed as `PASS_NO_NEW_MATCH`, downloaded no demo, ran no parser, created no new match/evaluation, kept uploads unchanged at 29 demo files, left `data/tmp` empty, and kept recommendation `#5` at one evaluation / one completed match. Report: `docs/audit/WP_017C_FIRST_CONTROLLED_BULK_IMPORT_BATCH_REPORT.md`.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky

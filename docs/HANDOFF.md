@@ -1,11 +1,11 @@
 # Handoff
 
-Last updated: 2026-07-04.
+Last updated: 2026-07-05.
 
 ## Current State
 
 - Current Product Version: `v0.8`
-- Current WP: `WP-017C First Bulk Import Batch`
+- Current WP: `WP-017D Post-Batch Data/Performance Acceptance`
 - Next Target Version: `v0.9`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -38,6 +38,7 @@ Last updated: 2026-07-04.
 - WP-016F documentation/status promotion completed / `PROMOTED`. Recommendation Loop Acceptance is now `v0.8` for controlled personal MVP runtime: `recommendation #5 -> real exact-date Dust2 match #72 -> evaluation #76 with metric_confidence -> progress completed_matches=1`. This does not validate recommendation planner quality, refresh all categories, or make the product friends/public-ready.
 - WP-017A real data onboarding diagnosis completed / `DIAGNOSED`. Current baseline: 72 matches, 20 playable parsed demos, 18 exact playable dates, 2 approximate playable dates, 52 steam_history placeholders, about 3.8G in uploads, about 17.07 GiB root free, accepted recommendation `#5` with 1 green evaluation, and all persisted playable match modes classified as unknown because Premier/Competitive/Wingman is not reliably stored.
 - WP-017B controlled bulk import plan completed / `PLANNED`. Runbook: keep `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, run at most three one-demo attempts in WP-017C, stop after every attempt, require pre/post DB SHA, backup before first live run, storage/service/job/recommendation checks, explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp` for shell fallback, and do not raise cap until WP-017D acceptance.
+- WP-017C first controlled bulk import batch completed / `PASS_WITH_WARNINGS`. Backup `data/manual_backups/cs2_coach_before_wp017c_first_batch_20260705_015315.db` was created. Authenticated UI was unavailable to Codex (`GET /settings/imports` redirected to `/login`, unauthenticated `POST /settings/imports/pull-all` returned `403`), so the authorized shell fallback ran exactly once with explicit temp env. Parent job `#27` and child sync job `#28` succeeded as `PASS_NO_NEW_MATCH`; no new share code, demo download, parser run, playable match or recommendation evaluation occurred. DB SHA moved from `36ccd84dc5c695af1c75a74f8d1059ade68a2a0355bb43aca1a7b473dd68f320` to `809fdd5a645baac27b89e8e36b9d22f186249cab14d133314382404eac283ddf` due authorized job writes. Uploads stayed unchanged, `data/tmp` stayed empty, service stayed active, legacy `#3/#4` evaluation counts stayed unchanged, and match mode remains unknown.
 
 ## Last Incident Summary
 
@@ -51,11 +52,11 @@ Last updated: 2026-07-04.
 
 ## Next WP
 
-`WP-017C First Bulk Import Batch` targeting `v0.9`.
+`WP-017D Post-Batch Data/Performance Acceptance` targeting `v0.9`.
 
-WP-017C should execute the first controlled real-data import batch only if the next prompt explicitly authorizes live Steam/Valve import, demo download, parser job and production DB mutation. Use `docs/audit/WP_017B_CONTROLLED_BULK_IMPORT_PLAN_REPORT.md` as the operator runbook.
+WP-017D should inspect the WP-017C no-new batch using `docs/audit/WP_017C_FIRST_CONTROLLED_BULK_IMPORT_BATCH_REPORT.md`.
 
-Expected focus: create a DB backup, keep `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, run at most three one-demo attempts, stop after every terminal attempt, inspect parent/child jobs, storage growth, parser artifacts, recommendation `#5` evaluations, legacy `#3/#4` non-evaluation, service health and UI/runtime performance. Do not raise cap, delete/move raw demos, change schema or create persistent app reports in WP-017C.
+Expected focus: validate DB/storage/job/log consistency after the no-new batch, record that parser/recommendation new-match stability was not re-exercised, perform authenticated UI/page timing checks if an owner session is available, keep match mode unknown unless persisted data proves otherwise, and decide when a future controlled run should wait for a genuinely new Steam match. Do not raise cap, delete/move raw demos, change schema, or create persistent app reports unless a later WP explicitly authorizes it.
 
 Roadmap and WP wiring:
 

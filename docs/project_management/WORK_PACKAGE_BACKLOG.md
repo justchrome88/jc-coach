@@ -1,6 +1,6 @@
 # Work Package Backlog
 
-Last updated: 2026-07-04.
+Last updated: 2026-07-05.
 
 This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a governance artifact, not implementation approval. Each WP still needs an explicit user prompt before changes begin.
 
@@ -130,14 +130,14 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-017C` |
 | title | First Bulk Import Batch |
 | target version | `v0.9` |
-| status | planned |
+| status | completed / `PASS_WITH_WARNINGS` |
 | objective | Execute the first controlled real-data batch using the WP-017B runbook. |
 | guardians | `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `RUNTIME_GUARDIAN`, `METRICS_GUARDIAN`, `PM_ORCHESTRATOR` |
 | source docs | `docs/audit/WP_017B_CONTROLLED_BULK_IMPORT_PLAN_REPORT.md`, `docs/STEAM_IMPORT.md`, `docs/DEMO_STORAGE_TZ.md`, `docs/BACKUP_RESTORE.md` |
 | forbidden actions | More than three attempts, cap raise above `1`, raw demo deletion/move/compression, schema changes, app persistent reports, unbounded retries, hidden parser/import jobs outside the authorized batch. |
 | acceptance criteria | Backup exists before first run; each run has DB SHA/storage/service/job/recommendation evidence before and after; at most one demo is attempted per run; terminal outcomes are classified; new exact playable matches evaluate recommendation `#5` exactly once; legacy `#3/#4` receive no new evaluations. |
 | required evidence | Backup/SHA, parent/child import job payloads, storage deltas, parser artifacts, recommendation evaluation/progress checks, service/runtime checks, audit report. |
-| exit criteria | Up to three one-demo attempts are terminal and understood, or the batch stops on a documented anomaly and hands off to WP-017D/repair. |
+| exit criteria | Completed with one terminal no-new attempt: parent job `#27` and child job `#28` are understood, no demo/parser/recommendation new-match path ran, storage/runtime checks passed, and the batch hands off to WP-017D for post-batch/no-new acceptance. |
 | next WP | `WP-017D Post-Batch Data/Performance Acceptance` |
 
 ## WP-017D
