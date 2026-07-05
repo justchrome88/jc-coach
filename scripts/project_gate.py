@@ -12,6 +12,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DB_PATH = ROOT / "data" / "cs2_coach.db"
+AGENTS_PATH = ROOT / "AGENTS.md"
+WP_REGISTRY_PATH = ROOT / "docs" / "project_management" / "WP_REGISTRY.md"
 
 
 GUARDIAN_RULES = [
@@ -166,6 +168,13 @@ def infer_guardians(paths: list[str]) -> list[str]:
 def preflight(_: argparse.Namespace) -> int:
     print_command("git status --short", ["git", "status", "--short"])
     print_command("git log --oneline -12", ["git", "log", "--oneline", "-12"])
+    print("## governance files")
+    print(f"AGENTS.md: {'present' if AGENTS_PATH.exists() else 'MISSING'}")
+    print(
+        "docs/project_management/WP_REGISTRY.md: "
+        f"{'present' if WP_REGISTRY_PATH.exists() else 'MISSING'}"
+    )
+    print()
     print("## DB SHA")
     print(db_sha())
     print()
@@ -205,6 +214,13 @@ def required_checks(_: argparse.Namespace) -> int:
 
 def postflight(_: argparse.Namespace) -> int:
     print_command("git diff --stat", ["git", "diff", "--stat"])
+    print("## governance files")
+    print(f"AGENTS.md: {'present' if AGENTS_PATH.exists() else 'MISSING'}")
+    print(
+        "docs/project_management/WP_REGISTRY.md: "
+        f"{'present' if WP_REGISTRY_PATH.exists() else 'MISSING'}"
+    )
+    print()
     print("## DB SHA")
     print(db_sha())
     print()

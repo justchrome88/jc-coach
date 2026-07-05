@@ -222,22 +222,90 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | forbidden actions | Live imports/parser jobs, manual evaluator, cap raise, raw demo deletion/move/compression, schema changes, persistent app report generation unless explicitly authorized. |
 | acceptance criteria | Service memory/logs are clean; authenticated page timing is captured if owner session is available; read-only core pages remain usable at 22 playable demos; no hidden jobs are triggered; performance warnings are explicit. |
 | required evidence | Read-only service/log/storage checks, UI timing/smoke evidence or limitation, DB SHA, project gates, audit performance report. |
-| exit criteria | Performance is accepted with warnings at 22 playable demos; explicit promotion/block decision remains for WP-017I. |
-| next WP | `WP-017I Promote Real Data Onboarding To v0.9` |
+| exit criteria | Performance is accepted with warnings at 22 playable demos; registry/match-mode prerequisites remain before promotion. |
+| next WP | `WP-017I0 Add Root AGENTS.md Project Contract` |
+
+## WP-017I0
+
+| Field | Value |
+|---|---|
+| id | `WP-017I0` |
+| title | Add Root AGENTS.md Project Contract |
+| target version | `v0.9` |
+| status | completed / `CREATED` |
+| objective | Add a concise repository-level Codex operating contract before the v0.9 promotion lane continues. |
+| guardians | `PM_ORCHESTRATOR`, `DB_GUARDIAN`, `IMPORT_GUARDIAN` |
+| source docs | `docs/CURRENT_STATUS.md`, `docs/HANDOFF.md`, `docs/PROJECT_CONTROL.md`, WP-017D through WP-017H reports |
+| forbidden actions | Runtime code/test changes, production DB mutation, live Steam/import/parser jobs, manual evaluator, schema changes, cap raise, persistent app reports, commits. |
+| acceptance criteria | Root `AGENTS.md` exists; project docs point future Codex sessions at it; production DB SHA remains unchanged; safety bans are explicit. |
+| required evidence | Project gates, DB SHA before/after, audit report `docs/audit/WP_017I0_ADD_ROOT_AGENTS_PROJECT_CONTRACT_REPORT.md`. |
+| exit criteria | Root contract exists and WP registry/governance repair can proceed if numbering drift remains. |
+| next WP | `WP-017R Roadmap / WP Registry Governance Repair` |
+
+## WP-017R
+
+| Field | Value |
+|---|---|
+| id | `WP-017R` |
+| title | Roadmap / WP Registry Governance Repair |
+| target version | `v0.9` |
+| status | in progress |
+| objective | Create the canonical WP registry and align roadmap/status docs after WP-017 numbering drift. |
+| guardians | `PM_ORCHESTRATOR`, `DB_GUARDIAN`, `IMPORT_GUARDIAN`, `METRICS_GUARDIAN` |
+| source docs | `AGENTS.md`, `docs/project_management/WP_REGISTRY.md`, WP-017A through WP-017H reports, `docs/audit/WP_017I0_ADD_ROOT_AGENTS_PROJECT_CONTRACT_REPORT.md` |
+| forbidden actions | Runtime/product code changes except compact project-gate governance checks, recommendation/import/parser logic, production DB mutation, live import/parser jobs, manual evaluator, raw demo lifecycle actions, schema changes, persistent app reports, cap raise, v0.9 promotion, commits. |
+| acceptance criteria | `docs/project_management/WP_REGISTRY.md` exists; WP-017 canonical order is explicit; emergency repair WPs and open match mode WPs are documented; promotion prerequisites are explicit; docs align to registry. |
+| required evidence | Project gates, DB SHA before/after, `git diff --check`, audit report `docs/audit/WP_017R_ROADMAP_WP_REGISTRY_GOVERNANCE_REPAIR_REPORT.md`. |
+| exit criteria | Roadmap/WP registry governance is repaired and `v0.9` promotion remains blocked until WP-017I/J are done or explicitly deferred. |
+| next WP | `WP-017I Match Mode Classification Diagnosis` |
 
 ## WP-017I
 
 | Field | Value |
 |---|---|
 | id | `WP-017I` |
-| title | Promote Real Data Onboarding To v0.9 |
+| title | Match Mode Classification Diagnosis |
 | target version | `v0.9` |
 | status | planned |
-| objective | Promote v0.9 only after data integrity and performance acceptance evidence are accepted. |
+| objective | Diagnose whether Premier/Competitive/Wingman match mode classification can be recovered from reliable persisted metadata or explicitly authorized evidence. |
 | guardians | `PM_ORCHESTRATOR`, `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `RUNTIME_GUARDIAN`, `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN` |
-| source docs | WP-017A through WP-017H reports, `docs/project_management/ACCEPTANCE_MATRIX.md`, `docs/PROJECT_CONTROL.md` |
+| source docs | `docs/project_management/WP_REGISTRY.md`, WP-017A through WP-017R reports, `docs/project_management/ACCEPTANCE_MATRIX.md`, `docs/PROJECT_CONTROL.md` |
+| forbidden actions | v0.9 promotion, live imports/parser jobs, production DB mutation unless explicitly authorized, cap raise, raw demo lifecycle actions, schema changes, persistent app reports. |
+| acceptance criteria | Current persisted mode values are inventoried; reliable/non-reliable mode evidence is separated; no Premier/Competitive/Wingman claim is accepted without proof; WP-017J repair/deferral path is explicit. |
+| required evidence | Read-only DB/doc/code inspection as authorized, DB SHA, project gates, audit diagnosis report. |
+| exit criteria | Match mode classification is diagnosed and either a repair path or explicit deferral path is ready for WP-017J. |
+| next WP | `WP-017J Match Mode Classification Repair / Labels, Or Explicit Deferral` |
+
+## WP-017J
+
+| Field | Value |
+|---|---|
+| id | `WP-017J` |
+| title | Match Mode Classification Repair / Labels, Or Explicit Deferral |
+| target version | `v0.9` |
+| status | planned |
+| objective | Repair match mode labels if reliable metadata is recoverable, or explicitly defer mode classification as an accepted limitation. |
+| guardians | `PM_ORCHESTRATOR`, `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN` |
+| source docs | `docs/project_management/WP_REGISTRY.md`, WP-017I diagnosis report, `docs/PROJECT_CONTROL.md`, `docs/project_management/ACCEPTANCE_MATRIX.md` |
+| forbidden actions | v0.9 promotion, live imports/parser jobs unless separately authorized, cap raise, raw demo deletion/move/compression, schema changes unless explicitly scoped, persistent app reports. |
+| acceptance criteria | Recoverable mode labels are corrected/caveated with evidence, or mode classification is marked deferred with accepted limitation; docs and UI/metric claims do not overstate mode truth. |
+| required evidence | DB SHA before/after if authorized mutation occurs, backup if production mutation is authorized, project gates, focused tests only if code changes are explicitly authorized, audit report. |
+| exit criteria | Mode classification no longer blocks promotion because it is repaired or explicitly deferred with limitation. |
+| next WP | `WP-017K Real Data Onboarding Promotion to v0.9` |
+
+## WP-017K
+
+| Field | Value |
+|---|---|
+| id | `WP-017K` |
+| title | Real Data Onboarding Promotion to v0.9 |
+| target version | `v0.9` |
+| status | planned |
+| objective | Promote v0.9 only after data integrity, performance and match mode prerequisite evidence are accepted or explicitly deferred. |
+| guardians | `PM_ORCHESTRATOR`, `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `RUNTIME_GUARDIAN`, `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN` |
+| source docs | `docs/project_management/WP_REGISTRY.md`, WP-017A through WP-017J reports, `docs/project_management/ACCEPTANCE_MATRIX.md`, `docs/PROJECT_CONTROL.md` |
 | forbidden actions | Planner quality claims, friends/public readiness claims, cap raise/deletion/schema work hidden inside promotion. |
-| acceptance criteria | Accepted and deferred evidence is documented; warnings are carried forward; next roadmap target remains v0.10 Coach Quality Calibration. |
+| acceptance criteria | Registry prerequisites are verified; accepted and deferred evidence is documented; warnings are carried forward; next roadmap target remains v0.10 Coach Quality Calibration. |
 | required evidence | WP-017 chain reports, DB SHA, project gates, audit promotion report. |
 | exit criteria | Real Data Onboarding / Bulk Demo Usage is accepted for controlled personal v0.9, or explicitly blocked with next repair WP. |
 | next WP | `WP-018 Coach Quality Calibration` |

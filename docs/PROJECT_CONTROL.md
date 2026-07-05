@@ -23,7 +23,7 @@ The practical product question is:
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017I Promote Real Data Onboarding To v0.9`.
+Current WP: `WP-017R Roadmap / WP Registry Governance Repair`.
 
 Next Target Version: `v0.9`.
 
@@ -55,7 +55,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017I Promote Real Data Onboarding To v0.9`.
+Current WP: `WP-017R Roadmap / WP Registry Governance Repair`.
 
 Next Target Version: `v0.9`.
 
@@ -88,7 +88,9 @@ Current focus:
 21. WP-017E repaired the Steam-path auto-evaluation trigger in code/tests: Steam imports now defer parser-side evaluation, apply/commit/refresh exact Steam date truth, then run targeted evaluation and expose compact evaluation metadata in demo download results.
 22. WP-017F proved the repaired path on pending share code `#73`: one targeted pending-demo attempt imported playable exact-date match `#76` and automatically created evaluation `#78` for recommendation `#5` with `metric_confidence`, moving progress to `3/10`. The targeted path did not create a new parent `steam_import_all` job, so metadata is in the returned service result and placeholder raw JSON.
 23. WP-017G accepted post-batch data integrity with warnings: matches, placeholders, parser artifacts, exact-date truth, recommendation progress and retained demo files are internally consistent after WP-017F, but performance acceptance, metadata/job-surface limitations, mode uncertainty, root-backed storage and cap `1` warnings remained.
-24. WP-017H accepted post-batch performance with warnings: service health, memory, logs, DB hash and read-only helper timings are acceptable at 22 playable demos, but authenticated owner browser timing remains unavailable and `/coach` artifact overview still loads all parser rows. Next focus is WP-017I promotion decision; keep cap `1` and do not promote `v0.9` without explicit WP-017I evidence.
+24. WP-017H accepted post-batch performance with warnings: service health, memory, logs, DB hash and read-only helper timings are acceptable at 22 playable demos, but authenticated owner browser timing remains unavailable and `/coach` artifact overview still loads all parser rows.
+25. WP-017I0 added root `AGENTS.md` as the repository-level Codex operating contract.
+26. WP-017R is repairing roadmap/WP registry governance. Numbering drift is explicitly recorded: emergency repair WPs were inserted because the Steam-path automatic evaluation trigger became a blocker, while match mode classification diagnosis/repair remained open. `v0.9` promotion is blocked until WP-017I and WP-017J are completed or explicitly deferred with a documented accepted limitation.
 
 ## 4. Source-of-truth Documents
 
@@ -99,6 +101,7 @@ Current focus:
 | Handoff | `docs/HANDOFF.md` | Current state and next-chat continuation context. |
 | Governance | `docs/PROJECT_GOVERNANCE.md` | Versioning, WP gates, roles and safety policies. |
 | Version roadmap | `docs/project_management/VERSION_ROADMAP.md` | Planned version-to-WP sequence from `v0.4.2` to `v1.0`. |
+| WP registry | `docs/project_management/WP_REGISTRY.md` | Canonical WP IDs, status, dependencies and promotion prerequisites. |
 | Work package backlog | `docs/project_management/WORK_PACKAGE_BACKLOG.md` | WP objectives, guardians, acceptance and exit criteria. |
 | Acceptance matrix | `docs/project_management/ACCEPTANCE_MATRIX.md` | Feature acceptance checks by version and guardian. |
 | Docs map | `docs/project_management/DOCS_MAP.md` | Documentation ownership, source-of-truth and stale-risk map. |
@@ -148,7 +151,16 @@ Before task work, Codex must read:
 
 Codex should run `python scripts/project_gate.py preflight`, `changed`, `required-checks` and `postflight` around work packages when shell access is available. Activated guardian docs under `docs/agents/` must be read before touching their domains.
 
-For future roadmap sequencing, use `docs/project_management/VERSION_ROADMAP.md` and `docs/project_management/WORK_PACKAGE_BACKLOG.md`. Older stage roadmaps remain historical evidence unless explicitly reactivated.
+For future roadmap sequencing, use `docs/project_management/WP_REGISTRY.md` first, then `docs/project_management/VERSION_ROADMAP.md` and `docs/project_management/WORK_PACKAGE_BACKLOG.md`. Older stage roadmaps remain historical evidence unless explicitly reactivated.
+
+Governance gate:
+
+- `AGENTS.md` must exist.
+- `docs/project_management/WP_REGISTRY.md` must exist.
+- Promotion WPs must verify registry prerequisites.
+- WP IDs must not be silently reused for different objectives.
+- If a planned WP is skipped, it must be marked `deferred` or `superseded` in the registry with the reason.
+- `v0.9` promotion is blocked until WP-017I Match Mode Classification Diagnosis and WP-017J Match Mode Classification Repair / Labels are completed, or explicitly deferred with documented accepted limitation.
 
 Older `instructions/*`, roadmap, prompt and audit files are historical/supporting unless explicitly reactivated here.
 
