@@ -215,14 +215,14 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-017H` |
 | title | Performance Acceptance |
 | target version | `v0.9` |
-| status | planned |
+| status | completed / `ACCEPTED_WITH_WARNINGS` |
 | objective | Read-only runtime/UI performance acceptance on the current post-WP-017F data volume before v0.9 promotion or cap changes. |
 | guardians | `PM_ORCHESTRATOR`, `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `RUNTIME_GUARDIAN`, `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN` |
 | source docs | WP-017A through WP-017G reports, `docs/project_management/ACCEPTANCE_MATRIX.md`, `docs/PROJECT_CONTROL.md`, `docs/DEPLOYMENT.md` |
 | forbidden actions | Live imports/parser jobs, manual evaluator, cap raise, raw demo deletion/move/compression, schema changes, persistent app report generation unless explicitly authorized. |
 | acceptance criteria | Service memory/logs are clean; authenticated page timing is captured if owner session is available; read-only core pages remain usable at 22 playable demos; no hidden jobs are triggered; performance warnings are explicit. |
 | required evidence | Read-only service/log/storage checks, UI timing/smoke evidence or limitation, DB SHA, project gates, audit performance report. |
-| exit criteria | The project knows whether v0.9 can be promoted with warnings or whether performance/runtime repair is required first. |
+| exit criteria | Performance is accepted with warnings at 22 playable demos; explicit promotion/block decision remains for WP-017I. |
 | next WP | `WP-017I Promote Real Data Onboarding To v0.9` |
 
 ## WP-017I

@@ -5,7 +5,7 @@ Last updated: 2026-07-05.
 ## Current State
 
 - Current Product Version: `v0.8`
-- Current WP: `WP-017H Performance Acceptance`
+- Current WP: `WP-017I Promote Real Data Onboarding To v0.9`
 - Next Target Version: `v0.9`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -44,6 +44,7 @@ Last updated: 2026-07-05.
 - WP-017E auto-evaluation trigger repair completed / `REPAIRED`. Steam downloader imports now pass `evaluate_recommendations=False` to parser import, apply/commit/refresh authoritative Steam date truth, then run `evaluate_recommendations_for_match(...)` and carry compact `recommendation_evaluations` metadata into demo download results. Tests cover exact-date auto-evaluation, batch-cap metadata, duplicate protection, legacy skip and non-exact gating. No production DB/live Steam/import/parser/manual evaluator work ran, pending `#73` was not processed, schema and cap were unchanged.
 - WP-017F controlled pending share code `#73` import completed / `PASS_PENDING_73_IMPORTED_AND_AUTO_EVALUATED`. Backup `data/manual_backups/cs2_coach_before_wp017f_pending_73_import_20260705_034135.db` was created. One targeted pending-demo attempt processed `CSGO-owEoV-4o9Uj-kK5Fp-4zYKz-UqDZG`, downloaded/retained/parsed exactly one demo as playable exact-date Mirage match `#76`, and automatic evaluation `#78` for recommendation `#5` was created with `metric_confidence`; progress is now `3/10`. No manual evaluator ran, legacy `#3/#4` stayed unchanged, cap stayed `1`, schema stayed unchanged, raw demos were not deleted/moved/compressed, and `data/tmp` returned to `0` bytes. The narrow pending-demo path did not create a new parent `steam_import_all` job; metadata is in the returned service result and placeholder raw JSON.
 - WP-017G post-batch data integrity acceptance completed / `ACCEPTED_WITH_WARNINGS`. Data integrity is accepted for the no-new path, batch-cap path and repaired pending-demo path: total matches `76`, playable demos `22`, exact playable dates `20`, parser artifacts `22`, recommendation `#5` evaluations `#76/#77/#78`, progress `3/10`, no duplicate evaluations and no legacy `#1/#3/#4` evaluations for `#75/#76`. Warnings: no parent job metadata for targeted pending-demo path, two historical queued non-parent Steam jobs `#1/#10`, authenticated UI performance not accepted, mode provenance-only, raw demos/backups on root storage, 15 historical unreferenced demo files, and cap remains `1`.
+- WP-017H post-batch performance acceptance completed / `ACCEPTED_WITH_WARNINGS`. Service was active/running, memory stayed about `225M` with unchanged `253M` peak, DB SHA stayed `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33`, logs had no traceback/error/500, unauthenticated GETs returned fast auth redirects, and read-only helper timings were sub-2s. `/coach` remains the heaviest route-equivalent workload at about `0.65s` average because parser overview loads all artifact rows. Authenticated owner browser timing was unavailable to Codex.
 
 ## Last Incident Summary
 
@@ -57,9 +58,9 @@ Last updated: 2026-07-05.
 
 ## Next WP
 
-`WP-017H Performance Acceptance` targeting `v0.9`.
+`WP-017I Promote Real Data Onboarding To v0.9` targeting `v0.9`.
 
-WP-017H should run read-only runtime/UI performance acceptance on the current 22-demo data volume. Use:
+WP-017I should make the explicit promotion/block decision for Real Data Onboarding / Bulk Demo Usage. Use:
 
 - `docs/audit/WP_017C_FIRST_CONTROLLED_BULK_IMPORT_BATCH_REPORT.md`
 - `docs/audit/WP_017C2_CONTROLLED_IMPORT_AFTER_NEW_MATCH_REPORT.md`
@@ -67,8 +68,9 @@ WP-017H should run read-only runtime/UI performance acceptance on the current 22
 - `docs/audit/WP_017E_AUTO_EVALUATION_TRIGGER_REPAIR_REPORT.md`
 - `docs/audit/WP_017F_CONTROLLED_PENDING_73_IMPORT_REPORT.md`
 - `docs/audit/WP_017G_POST_BATCH_DATA_INTEGRITY_ACCEPTANCE_REPORT.md`
+- `docs/audit/WP_017H_POST_BATCH_PERFORMANCE_ACCEPTANCE_REPORT.md`
 
-Expected focus: authenticated UI/page timing if an owner session is available, service memory/log review, read-only smoke of dashboard/matches/stats/coach/report surfaces, and explicit decision on whether v0.9 promotion can proceed after performance evidence. Do not run live imports, delete/move raw demos, change schema, run manual evaluator, raise cap, or create persistent app reports unless a later WP explicitly authorizes it.
+Expected focus: decide whether `v0.9` can be promoted for controlled personal Real Data Onboarding with named warnings, or whether another repair WP is required. Carry forward cap `1`, root-backed storage, `/coach` artifact overview scaling, authenticated browser timing and metadata/job-surface warnings. Do not run live imports, delete/move raw demos, change schema, run manual evaluator, raise cap, or create persistent app reports unless a later WP explicitly authorizes it.
 
 Roadmap and WP wiring:
 
