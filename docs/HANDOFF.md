@@ -39,6 +39,7 @@ Last updated: 2026-07-05.
 - WP-017A real data onboarding diagnosis completed / `DIAGNOSED`. Current baseline: 72 matches, 20 playable parsed demos, 18 exact playable dates, 2 approximate playable dates, 52 steam_history placeholders, about 3.8G in uploads, about 17.07 GiB root free, accepted recommendation `#5` with 1 green evaluation, and all persisted playable match modes classified as unknown because Premier/Competitive/Wingman is not reliably stored.
 - WP-017B controlled bulk import plan completed / `PLANNED`. Runbook: keep `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, run at most three one-demo attempts in WP-017C, stop after every attempt, require pre/post DB SHA, backup before first live run, storage/service/job/recommendation checks, explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp` for shell fallback, and do not raise cap until WP-017D acceptance.
 - WP-017C first controlled bulk import batch completed / `PASS_WITH_WARNINGS`. Backup `data/manual_backups/cs2_coach_before_wp017c_first_batch_20260705_015315.db` was created. Authenticated UI was unavailable to Codex (`GET /settings/imports` redirected to `/login`, unauthenticated `POST /settings/imports/pull-all` returned `403`), so the authorized shell fallback ran exactly once with explicit temp env. Parent job `#27` and child sync job `#28` succeeded as `PASS_NO_NEW_MATCH`; no new share code, demo download, parser run, playable match or recommendation evaluation occurred. DB SHA moved from `36ccd84dc5c695af1c75a74f8d1059ade68a2a0355bb43aca1a7b473dd68f320` to `809fdd5a645baac27b89e8e36b9d22f186249cab14d133314382404eac283ddf` due authorized job writes. Uploads stayed unchanged, `data/tmp` stayed empty, service stayed active, legacy `#3/#4` evaluation counts stayed unchanged, and match mode remains unknown.
+- WP-017C2 controlled import after a new Valve match completed / `PASS_ONE_DEMO_IMPORTED_AND_EVALUATED`. Backup `data/manual_backups/cs2_coach_before_wp017c2_after_new_match_20260705_030831.db` was created. One shell-fallback attempt with explicit temp env created parent job `#29` and child sync job `#30`; Steam returned two new share codes, one demo was downloaded/retained/parsed under cap `1`, and playable exact-date Overpass match `#75` was created from `steam_gc_match_time`. Parent job `#29` is `failed` only because `overall_outcome=batch_cap_reached` left one pending placeholder `#73`. Recommendation `#5` received evaluation `#77` with `metric_confidence`, progress is now `2/10`, legacy `#3/#4` stayed unchanged, schema stayed unchanged, `data/tmp` returned to `0` bytes, and raw demos were not deleted/moved/compressed.
 
 ## Last Incident Summary
 
@@ -54,9 +55,12 @@ Last updated: 2026-07-05.
 
 `WP-017D Post-Batch Data/Performance Acceptance` targeting `v0.9`.
 
-WP-017D should inspect the WP-017C no-new batch using `docs/audit/WP_017C_FIRST_CONTROLLED_BULK_IMPORT_BATCH_REPORT.md`.
+WP-017D should inspect WP-017C and WP-017C2 using:
 
-Expected focus: validate DB/storage/job/log consistency after the no-new batch, record that parser/recommendation new-match stability was not re-exercised, perform authenticated UI/page timing checks if an owner session is available, keep match mode unknown unless persisted data proves otherwise, and decide when a future controlled run should wait for a genuinely new Steam match. Do not raise cap, delete/move raw demos, change schema, or create persistent app reports unless a later WP explicitly authorizes it.
+- `docs/audit/WP_017C_FIRST_CONTROLLED_BULK_IMPORT_BATCH_REPORT.md`
+- `docs/audit/WP_017C2_CONTROLLED_IMPORT_AFTER_NEW_MATCH_REPORT.md`
+
+Expected focus: validate DB/storage/job/log consistency after the no-new batch and the one-demo batch-cap run, review pending placeholder `#73`, review why automatic post-import recommendation evaluation did not create `#77` before the explicitly allowed evaluator call, perform authenticated UI/page timing checks if an owner session is available, keep match mode unknown unless persisted data proves otherwise, and decide whether continued cap `1` is required before any later cap change. Do not raise cap, delete/move raw demos, change schema, run another import, or create persistent app reports unless a later WP explicitly authorizes it.
 
 Roadmap and WP wiring:
 

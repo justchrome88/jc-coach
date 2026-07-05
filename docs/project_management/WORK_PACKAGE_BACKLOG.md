@@ -137,7 +137,7 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | forbidden actions | More than three attempts, cap raise above `1`, raw demo deletion/move/compression, schema changes, app persistent reports, unbounded retries, hidden parser/import jobs outside the authorized batch. |
 | acceptance criteria | Backup exists before first run; each run has DB SHA/storage/service/job/recommendation evidence before and after; at most one demo is attempted per run; terminal outcomes are classified; new exact playable matches evaluate recommendation `#5` exactly once; legacy `#3/#4` receive no new evaluations. |
 | required evidence | Backup/SHA, parent/child import job payloads, storage deltas, parser artifacts, recommendation evaluation/progress checks, service/runtime checks, audit report. |
-| exit criteria | Completed with one terminal no-new attempt: parent job `#27` and child job `#28` are understood, no demo/parser/recommendation new-match path ran, storage/runtime checks passed, and the batch hands off to WP-017D for post-batch/no-new acceptance. |
+| exit criteria | Completed first as a terminal no-new attempt (`#27/#28`), then WP-017C2 completed one controlled post-new-match attempt (`#29/#30`) that imported/parsed exactly one playable exact-date demo match `#75` and created recommendation evaluation `#77` for `#5`; one additional share code remains pending under cap `1` for a future explicit WP. |
 | next WP | `WP-017D Post-Batch Data/Performance Acceptance` |
 
 ## WP-017D
@@ -150,9 +150,9 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | status | planned |
 | objective | Inspect the first controlled batch for data integrity, parser coverage, recommendation progress, storage growth and UI/runtime performance. |
 | guardians | `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `RUNTIME_GUARDIAN`, `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `PM_ORCHESTRATOR` |
-| source docs | `docs/audit/WP_017B_CONTROLLED_BULK_IMPORT_PLAN_REPORT.md`, WP-017C report, `docs/project_management/ACCEPTANCE_MATRIX.md` |
+| source docs | `docs/audit/WP_017B_CONTROLLED_BULK_IMPORT_PLAN_REPORT.md`, `docs/audit/WP_017C_FIRST_CONTROLLED_BULK_IMPORT_BATCH_REPORT.md`, `docs/audit/WP_017C2_CONTROLLED_IMPORT_AFTER_NEW_MATCH_REPORT.md`, `docs/project_management/ACCEPTANCE_MATRIX.md` |
 | forbidden actions | Raising cap, deleting/moving raw demos, schema changes, live imports/parser jobs unless separately authorized. |
-| acceptance criteria | DB/storage/import/parser/recommendation evidence is consistent; authenticated core pages remain usable; storage and parser performance are acceptable; mode unknown risk is recorded; decision on whether a later WP may consider cap `2` is evidence-based. |
+| acceptance criteria | DB/storage/import/parser/recommendation evidence is consistent across WP-017C and WP-017C2; authenticated core pages remain usable; storage and parser performance are acceptable; pending placeholder `#73` and parent `#29` batch-cap failed status are understood; mode unknown risk is recorded; decision on whether a later WP may continue cap `1` or consider cap `2` is evidence-based. |
 | required evidence | Read-only DB/storage/runtime checks, authenticated UI/page timing evidence where possible, audit report. |
 | exit criteria | The project knows whether first-batch real data onboarding is safe to continue, needs repair, or can later consider cap `2`. |
 | next WP | `WP-017E Match Mode Classification Repair If Recoverable` |
