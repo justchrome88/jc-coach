@@ -28,7 +28,8 @@ must not override Hot context.
 `docs/project_management/MASTER_WP_CHECKLIST.md` are not per-task Hot context.
 `docs/project_management/AGENT_WORKFLOW.md` is also Warm governance context,
 not per-task Hot context. Read them only when governance, planning, WP role
-workflow, task routing, prompt contract or audit scope requires them.
+workflow, invocation/output modes, task routing, prompt contract or audit scope
+requires them.
 `docs/agents/roles/*` are Warm workflow role cards and do not expand Hot
 context.
 
@@ -44,7 +45,7 @@ context.
 | `docs/HANDOFF.md` | Current continuation state. | `PM_ORCHESTRATOR` | active/next WP | source-of-truth, must stay current |
 | `docs/PROJECT_GOVERNANCE.md` | Versioning, WP gates, roles, safety policy. | `PM_ORCHESTRATOR` | all WPs | Warm governance reference |
 | `docs/project_management/PROJECT_OPERATING_PROTOCOL.md` | Practical operating protocol for roles, source-of-truth hierarchy, WP lifecycle, blockers, reports, commits and chat policy. | `PM_ORCHESTRATOR` | all WPs | Warm governance reference |
-| `docs/project_management/AGENT_WORKFLOW.md` | Repo-native WP role workflow, task type profiles, Task Card prompt contract and Documentation Steward checks. | `PM_ORCHESTRATOR` | all WPs | Warm governance reference; not per-task Hot context |
+| `docs/project_management/AGENT_WORKFLOW.md` | Repo-native WP role workflow, invocation modes, output modes, task type profiles, Task Card prompt contract and Documentation Steward checks. | `PM_ORCHESTRATOR` | all WPs | Warm governance reference; not per-task Hot context |
 | `docs/agents/README.md` | Index for workflow role cards and domain guardian docs. | `PM_ORCHESTRATOR` | all WPs | Warm role/navigation reference |
 | `docs/agents/roles/PM_ORCHESTRATOR.md` | PM / Orchestrator workflow role behavior and handoff contract. | `PM_ORCHESTRATOR` | all WPs | Warm role card |
 | `docs/agents/roles/IMPLEMENTATION_AGENT.md` | Implementation workflow role behavior and handoff contract. | `PM_ORCHESTRATOR` | all WPs | Warm role card |

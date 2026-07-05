@@ -20,6 +20,8 @@ it. These roles are not autonomous processes, daemons, schedulers, queues or
 runtime automation.
 
 `docs/project_management/AGENT_WORKFLOW.md` remains the workflow router.
+It defines invocation modes and output modes, including when long role outputs
+should be file-backed instead of console-only.
 `docs/project_management/PROJECT_OPERATING_PROTOCOL.md` remains the operating
 policy.
 

@@ -21,6 +21,8 @@ List Hot context and task-relevant Warm docs. Do not expand Hot context.
 ## What It Checks
 
 List the checks this role owns.
+Include invocation mode and output mode if the role can affect safety or output
+length.
 
 ## Allowed Actions
 
@@ -33,6 +35,7 @@ List actions the role must not take.
 ## Required Output
 
 List the output the next role or user needs.
+State when output should be console-only, file-backed or patch-producing.
 
 ## Handoff To Other Roles
 

@@ -45,6 +45,8 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
   creating runtime agents or automation.
 - WP-017K promoted Real Data Onboarding / Bulk Demo Usage to `v0.9` with
   warnings carried forward.
+- WP-017Z1 added invocation modes and output modes so future prompts can stay
+  short and long role outputs can be file-backed.
 
 ## Data And Product Facts To Carry Forward
 

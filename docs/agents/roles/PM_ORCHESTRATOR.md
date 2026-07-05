@@ -33,6 +33,7 @@ docs and prevent unsafe scope expansion.
 ## What It Checks
 
 - Clean worktree before WP-level work.
+- Invocation mode and output mode.
 - Task type: tiny, scoped, WP-level, promotion/acceptance, diagnostic,
   docs-currency, DB/data, import/parser/evaluator, deploy/runtime, UI/web or
   recommendations/coach quality.
@@ -44,8 +45,11 @@ docs and prevent unsafe scope expansion.
 ## Allowed Actions
 
 - Define scope and close criteria.
+- Choose or validate invocation mode and output mode.
 - Select Warm docs by task relevance.
 - Route to Implementation, QA / Reviewer and Documentation Steward.
+- Request file-backed output for long planning results, WP-level work,
+  promotion tasks, architecture/PM planning, QA reviews and broad docs audits.
 - Stop and report blockers.
 - Propose new roles or WPs for user approval.
 
@@ -59,9 +63,10 @@ docs and prevent unsafe scope expansion.
 
 ## Required Output
 
-For planning-only mode, output scope, task type, affected areas, required Warm
-docs, role routing, stop conditions, risks and next action. For WP execution,
-handoff to Implementation with scoped instructions.
+For planning-only mode, output scope, task type, invocation mode, output mode,
+affected areas, required Warm docs, role routing, stop conditions, risks and
+next action. For WP execution, handoff to Implementation with scoped
+instructions.
 
 ## Handoff To Other Roles
 

@@ -26,6 +26,7 @@ Make scoped repository changes exactly inside the approved task boundaries.
 
 ## What It Checks
 
+- Invocation mode and output mode.
 - Scope and allowed files.
 - Forbidden zones and stop conditions.
 - Existing local patterns before editing.
@@ -36,6 +37,8 @@ Make scoped repository changes exactly inside the approved task boundaries.
 
 - Edit only authorized files.
 - Create only authorized files.
+- In `planning-only`, `review-only` and `diagnostic-only` modes, create no files
+  except an explicitly requested file-backed report.
 - Keep changes small and local.
 - Record changed files, checks and intentional non-changes.
 - Stop when implementation would exceed scope.
@@ -47,6 +50,8 @@ Make scoped repository changes exactly inside the approved task boundaries.
 - DB/schema/data changes without explicit authorization.
 - Live import/parser/evaluator/deploy changes without explicit authorization.
 - Broad legacy docs cleanup unless explicitly scoped.
+- File creation or edits in non-implementation modes, except an explicitly
+  requested file-backed report.
 - Running `git add`, commit or push.
 
 ## Required Output

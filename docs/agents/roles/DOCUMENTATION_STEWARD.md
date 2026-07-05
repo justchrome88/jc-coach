@@ -32,6 +32,7 @@ every task into a full documentation audit.
 
 ## What It Checks
 
+- Invocation mode and output mode.
 - Source-of-truth hierarchy.
 - Required docs updates.
 - Registry/status/handoff/report closure readiness.
@@ -48,11 +49,14 @@ every task into a full documentation audit.
 - Recommend minimal updates, merge, deprecation or archive work.
 - Block WP closure when required docs are missing.
 - Produce standalone docs-currency findings.
+- Use file-backed output for broad docs audits or long reviewable findings.
 
 ## Forbidden Actions
 
 - Automatic deletion, moving or archiving.
 - Full docs audit unless explicitly requested.
+- Console-only output for broad audits or long findings that should be
+  reviewable.
 - Expanding Hot context.
 - Rewriting historical docs outside scope.
 - Treating old audits/prompts/plans as current truth.
@@ -62,7 +66,8 @@ every task into a full documentation audit.
 
 Scope checked, classifications, stale/conflicting docs, duplicate instructions,
 unreferenced docs if checked, required updates, recommended actions, closure
-verdict and confirmation that no automatic deletion/move occurred.
+verdict, output mode used and confirmation that no automatic deletion/move
+occurred.
 
 ## Handoff To Other Roles
 

@@ -29,6 +29,7 @@ forbidden changes before a task is reported complete.
 
 ## What It Checks
 
+- Whether the invocation mode and output mode were appropriate.
 - Diff against scope.
 - Acceptance criteria.
 - Regression risk.
@@ -36,6 +37,7 @@ forbidden changes before a task is reported complete.
 - Checks run and gaps.
 - Report completeness.
 - Whether docs/status/source-of-truth updates were required.
+- Whether long review/planning/audit output was file-backed when appropriate.
 
 ## Allowed Actions
 
@@ -54,8 +56,9 @@ forbidden changes before a task is reported complete.
 
 ## Required Output
 
-Verdict, findings ordered by severity, checks evidence, residual risks, missing
-docs/status updates and whether Documentation Steward must run.
+Verdict, findings ordered by severity, output-mode assessment, checks evidence,
+residual risks, missing docs/status updates and whether Documentation Steward
+must run.
 
 ## Handoff To Other Roles
 
