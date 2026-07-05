@@ -138,6 +138,39 @@ def evaluate_recommendations_for_match(db: Session, match_id: int) -> list[Match
     return evaluations
 
 
+def compact_recommendation_evaluations(evaluations: list[MatchRecommendationEvaluation]) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": evaluation.id,
+            "recommendation_id": evaluation.recommendation_id,
+            "match_id": evaluation.match_id,
+            "status": evaluation.status,
+            "score": evaluation.score,
+        }
+        for evaluation in evaluations
+    ]
+
+
+def recommendation_evaluation_metadata(
+    evaluations: list[MatchRecommendationEvaluation] | None = None,
+    *,
+    status: str,
+    match_id: int | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    compact = compact_recommendation_evaluations(evaluations or [])
+    metadata: dict[str, Any] = {
+        "status": status,
+        "count": len(compact),
+        "evaluations": compact,
+    }
+    if match_id is not None:
+        metadata["match_id"] = match_id
+    if reason:
+        metadata["reason"] = reason
+    return metadata
+
+
 def evaluate_match(
     db: Session,
     recommendation: CoachRecommendation,

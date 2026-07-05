@@ -24,7 +24,12 @@ from app.db.models import (
     Match,
 )
 from app.services.demo_retention import retention_metadata
-from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_recommendations_for_match
+from app.services.recommendation_tracking import (
+    compact_recommendation_evaluations,
+    ensure_default_recommendation,
+    evaluate_recommendations_for_match,
+    recommendation_evaluation_metadata,
+)
 from app.services.steam_match_metadata import apply_steam_metadata_to_parsed_demo
 
 PARSER_PAYLOAD_VERSION = "2026-07-02.1"
@@ -84,6 +89,7 @@ def import_demo_file(
     player_identifier: str | None = None,
     steam_metadata: dict[str, Any] | None = None,
     storage_budget: Any | None = None,
+    evaluate_recommendations: bool = True,
 ) -> dict[str, Any]:
     stored_path = _store_demo(source_path, original_filename, storage_budget=storage_budget)
     try:
@@ -118,11 +124,18 @@ def import_demo_file(
         if stored_path.exists() and str(stored_path) != existing.demo_file:
             stored_path.unlink()
         duplicate_retention = retention_metadata(raw_demo_path=existing.demo_file, parser_success=True)
+        evaluation_metadata = recommendation_evaluation_metadata(
+            status="duplicate",
+            match_id=existing.id,
+            reason="demo_already_imported",
+        )
         return {
             "imported": 0,
             "skipped_duplicates": 1,
             "errors": 0,
             "match_id": existing.id,
+            "recommendation_evaluations": evaluation_metadata["evaluations"],
+            "recommendation_evaluation": evaluation_metadata,
             "player": parsed["player"],
             "stored_path": existing.demo_file,
             "match": parsed["match"],
@@ -140,23 +153,28 @@ def import_demo_file(
     db.commit()
     db.refresh(match)
     _save_demo_parse_artifacts(db, match, parsed)
-    ensure_default_recommendation(db)
-    recommendation_evaluations = evaluate_recommendations_for_match(db, match.id)
+    recommendation_evaluations = []
+    if evaluate_recommendations:
+        ensure_default_recommendation(db)
+        recommendation_evaluations = evaluate_recommendations_for_match(db, match.id)
+        evaluation_status = "created" if recommendation_evaluations else "not_eligible"
+        evaluation_reason = None if recommendation_evaluations else "no_eligible_recommendation_or_match"
+    else:
+        evaluation_status = "deferred"
+        evaluation_reason = "steam_date_truth_pending"
+    evaluation_metadata = recommendation_evaluation_metadata(
+        recommendation_evaluations,
+        status=evaluation_status,
+        match_id=match.id,
+        reason=evaluation_reason,
+    )
     return {
         "imported": 1,
         "skipped_duplicates": 0,
         "errors": 0,
         "match_id": match.id,
-        "recommendation_evaluations": [
-            {
-                "id": evaluation.id,
-                "recommendation_id": evaluation.recommendation_id,
-                "match_id": evaluation.match_id,
-                "status": evaluation.status,
-                "score": evaluation.score,
-            }
-            for evaluation in recommendation_evaluations
-        ],
+        "recommendation_evaluations": compact_recommendation_evaluations(recommendation_evaluations),
+        "recommendation_evaluation": evaluation_metadata,
         "player": parsed["player"],
         "stored_path": str(stored_path),
         "match": parsed["match"],

@@ -5,7 +5,7 @@ Last updated: 2026-07-05.
 ## Current State
 
 - Current Product Version: `v0.8`
-- Current WP: `WP-017D Post-Batch Data/Performance Acceptance`
+- Current WP: `WP-017F Controlled Pending Share Code #73 Import`
 - Next Target Version: `v0.9`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -40,6 +40,8 @@ Last updated: 2026-07-05.
 - WP-017B controlled bulk import plan completed / `PLANNED`. Runbook: keep `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, run at most three one-demo attempts in WP-017C, stop after every attempt, require pre/post DB SHA, backup before first live run, storage/service/job/recommendation checks, explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp` for shell fallback, and do not raise cap until WP-017D acceptance.
 - WP-017C first controlled bulk import batch completed / `PASS_WITH_WARNINGS`. Backup `data/manual_backups/cs2_coach_before_wp017c_first_batch_20260705_015315.db` was created. Authenticated UI was unavailable to Codex (`GET /settings/imports` redirected to `/login`, unauthenticated `POST /settings/imports/pull-all` returned `403`), so the authorized shell fallback ran exactly once with explicit temp env. Parent job `#27` and child sync job `#28` succeeded as `PASS_NO_NEW_MATCH`; no new share code, demo download, parser run, playable match or recommendation evaluation occurred. DB SHA moved from `36ccd84dc5c695af1c75a74f8d1059ade68a2a0355bb43aca1a7b473dd68f320` to `809fdd5a645baac27b89e8e36b9d22f186249cab14d133314382404eac283ddf` due authorized job writes. Uploads stayed unchanged, `data/tmp` stayed empty, service stayed active, legacy `#3/#4` evaluation counts stayed unchanged, and match mode remains unknown.
 - WP-017C2 controlled import after a new Valve match completed / `PASS_ONE_DEMO_IMPORTED_AND_EVALUATED`. Backup `data/manual_backups/cs2_coach_before_wp017c2_after_new_match_20260705_030831.db` was created. One shell-fallback attempt with explicit temp env created parent job `#29` and child sync job `#30`; Steam returned two new share codes, one demo was downloaded/retained/parsed under cap `1`, and playable exact-date Overpass match `#75` was created from `steam_gc_match_time`. Parent job `#29` is `failed` only because `overall_outcome=batch_cap_reached` left one pending placeholder `#73`. Recommendation `#5` received evaluation `#77` with `metric_confidence`, progress is now `2/10`, legacy `#3/#4` stayed unchanged, schema stayed unchanged, `data/tmp` returned to `0` bytes, and raw demos were not deleted/moved/compressed.
+- WP-017D post-batch diagnosis completed / `ACCEPT_WITH_REPAIR_REQUIRED`. WP-017C/C2 import, parser, storage and manual evaluation evidence was healthy, but automatic post-import recommendation evaluation in the Steam path was unreliable: `import_demo_file(...)` evaluated before `_apply_primary_steam_date_truth(...)` made the imported match exact-date eligible. Pending placeholder `#73` and cap raise remained blocked.
+- WP-017E auto-evaluation trigger repair completed / `REPAIRED`. Steam downloader imports now pass `evaluate_recommendations=False` to parser import, apply/commit/refresh authoritative Steam date truth, then run `evaluate_recommendations_for_match(...)` and carry compact `recommendation_evaluations` metadata into demo download results. Tests cover exact-date auto-evaluation, batch-cap metadata, duplicate protection, legacy skip and non-exact gating. No production DB/live Steam/import/parser/manual evaluator work ran, pending `#73` was not processed, schema and cap were unchanged.
 
 ## Last Incident Summary
 
@@ -53,14 +55,16 @@ Last updated: 2026-07-05.
 
 ## Next WP
 
-`WP-017D Post-Batch Data/Performance Acceptance` targeting `v0.9`.
+`WP-017F Controlled Pending Share Code #73 Import` targeting `v0.9`.
 
-WP-017D should inspect WP-017C and WP-017C2 using:
+WP-017F should validate the repaired automatic evaluation path by processing only pending share code `#73` if explicitly authorized for a live controlled import. Use:
 
 - `docs/audit/WP_017C_FIRST_CONTROLLED_BULK_IMPORT_BATCH_REPORT.md`
 - `docs/audit/WP_017C2_CONTROLLED_IMPORT_AFTER_NEW_MATCH_REPORT.md`
+- `docs/audit/WP_017D_POST_BATCH_ACCEPTANCE_AND_EVALUATION_TRIGGER_DIAGNOSIS.md`
+- `docs/audit/WP_017E_AUTO_EVALUATION_TRIGGER_REPAIR_REPORT.md`
 
-Expected focus: validate DB/storage/job/log consistency after the no-new batch and the one-demo batch-cap run, review pending placeholder `#73`, review why automatic post-import recommendation evaluation did not create `#77` before the explicitly allowed evaluator call, perform authenticated UI/page timing checks if an owner session is available, keep match mode unknown unless persisted data proves otherwise, and decide whether continued cap `1` is required before any later cap change. Do not raise cap, delete/move raw demos, change schema, run another import, or create persistent app reports unless a later WP explicitly authorizes it.
+Expected focus: create backup/SHA evidence, keep `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, run at most one controlled import attempt for pending `#73`, verify automatic recommendation evaluation metadata appears in parent result JSON for the newly imported playable exact-date match, verify recommendation `#5` increments exactly once with `metric_confidence`, keep legacy `#3/#4` unchanged, keep match mode unknown unless persisted data proves otherwise, and keep cap `2` blocked until this repaired-path live run is accepted. Do not delete/move raw demos, change schema, run bulk resync, run manual evaluator, or create persistent app reports unless a later WP explicitly authorizes it.
 
 Roadmap and WP wiring:
 

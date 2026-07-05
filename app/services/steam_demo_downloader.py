@@ -25,6 +25,10 @@ from app.services.demo_retention import (
     DEMO_RETENTION_STATUS_CLEANUP_NEEDED,
     retention_metadata,
 )
+from app.services.recommendation_tracking import (
+    evaluate_recommendations_for_match,
+    recommendation_evaluation_metadata,
+)
 from app.services.steam_integration import decode_match_share_code
 from app.services.steam_match_metadata import (
     STEAM_GC_PLAYED_AT_SOURCE,
@@ -312,6 +316,7 @@ def _download_and_import_match(
             player_identifier=player_identifier,
             steam_metadata=steam_metadata,
             storage_budget=storage_budget,
+            evaluate_recommendations=False,
         )
         _emit_progress(
             progress_callback,
@@ -345,8 +350,41 @@ def _download_and_import_match(
 
     db.refresh(match)
     imported_match = db.get(Match, import_result.get("match_id")) if import_result.get("match_id") else None
+    recommendation_metadata = import_result.get("recommendation_evaluation")
+    recommendation_evaluations = import_result.get("recommendation_evaluations", [])
     if imported_match is not None:
         _apply_primary_steam_date_truth(imported_match, steam_metadata, date_status)
+        db.commit()
+        db.refresh(imported_match)
+        if date_status == "exact_match_date_available":
+            evaluations = evaluate_recommendations_for_match(db, imported_match.id)
+            if evaluations:
+                recommendation_metadata = recommendation_evaluation_metadata(
+                    evaluations,
+                    status="created",
+                    match_id=imported_match.id,
+                )
+            else:
+                status = "duplicate" if import_result.get("skipped_duplicates") else "skipped"
+                recommendation_metadata = recommendation_evaluation_metadata(
+                    status=status,
+                    match_id=imported_match.id,
+                    reason="already_evaluated_or_no_eligible_recommendation",
+                )
+            recommendation_evaluations = recommendation_metadata["evaluations"]
+        else:
+            recommendation_metadata = recommendation_evaluation_metadata(
+                status="not_eligible",
+                match_id=imported_match.id,
+                reason=date_status,
+            )
+            recommendation_evaluations = []
+    elif recommendation_metadata is None:
+        recommendation_metadata = recommendation_evaluation_metadata(
+            status="skipped",
+            reason="import_result_missing_demo_match",
+        )
+        recommendation_evaluations = []
     raw = _match_raw(match)
     raw.update(
         {
@@ -364,6 +402,8 @@ def _download_and_import_match(
             "raw_demo_path": import_result.get("raw_demo_path"),
             "raw_demo_size_bytes": import_result.get("raw_demo_size_bytes"),
             "parser_success": import_result.get("parser_success"),
+            "recommendation_evaluations": recommendation_evaluations,
+            "recommendation_evaluation": recommendation_metadata,
             "demo_url_host": urlparse(demo_url).netloc,
             "imported_demo_match_id": import_result.get("match_id"),
             "imported_at": datetime.now(UTC).isoformat(),
@@ -389,6 +429,8 @@ def _download_and_import_match(
         "parser_success": import_result.get("parser_success"),
         "imported": import_result.get("imported", 0),
         "duplicate": import_result.get("skipped_duplicates", 0),
+        "recommendation_evaluations": recommendation_evaluations,
+        "recommendation_evaluation": recommendation_metadata,
     }
 
 

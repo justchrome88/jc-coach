@@ -2,13 +2,16 @@ import bz2
 import json
 from datetime import UTC, datetime, timedelta
 
-from app.db.models import ImportJob, Match, SteamAccount
+from sqlalchemy import select
+
+from app.db.models import CoachRecommendation, ImportJob, Match, MatchRecommendationEvaluation, SteamAccount
 from app.services.demo_retention import (
     DEMO_RETENTION_POLICY_RETAIN_RAW,
     DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE,
     DEMO_RETENTION_STATUS_RETAINED_FOR_DEV,
 )
 from app.services.match_queries import playable_match_select
+from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_recommendations_for_match
 from app.services.steam_demo_downloader import (
     _download_and_import_match,
     _download_demo_file,
@@ -956,7 +959,8 @@ def test_steam_demo_batch_cap_leaves_remaining_pending(db, monkeypatch, tmp_path
     def fake_download_demo_file(_url, _share_code, storage_budget=None):
         return demo_path
 
-    def fake_import_demo_file(_db, _demo_path, **_kwargs):
+    def fake_import_demo_file(_db, _demo_path, **kwargs):
+        assert kwargs["evaluate_recommendations"] is False
         return {"match_id": None, "imported": 1, "skipped_duplicates": 0, "stored_path": str(demo_path)}
 
     monkeypatch.setattr("app.services.steam_demo_downloader.steam_demo_downloader_configured", lambda: True)
@@ -974,6 +978,7 @@ def test_steam_demo_batch_cap_leaves_remaining_pending(db, monkeypatch, tmp_path
     assert result["failed"] == 0
     assert result["batch_cap_reached"] is True
     assert result["remaining_pending"] == 2
+    assert result["results"][0]["recommendation_evaluation"]["status"] == "skipped"
     pending_rows = [json.loads(match.raw_json or "{}").get("status") for match in db.query(Match).all()]
     assert pending_rows.count("demo_imported") == 1
     assert "demo_download_error" not in pending_rows
@@ -1272,6 +1277,83 @@ def test_steam_downloader_writes_exact_gc_match_time_to_imported_match(db, monke
     assert truth["source"] == "steam_gc_match_time"
 
 
+def test_steam_downloader_evaluates_recommendations_after_exact_date_truth(db, monkeypatch, tmp_path):
+    survival = _seed_steam_recommendation_baseline(db)
+    placeholder = Match(
+        source="steam_history",
+        external_match_id="CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+        raw_json='{"share_code":"CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL","status":"demo_download_pending"}',
+    )
+    db.add(placeholder)
+    db.commit()
+    demo_path = tmp_path / "demo.dem"
+    demo_path.write_bytes(b"demo")
+    captured = {}
+
+    def fake_download_demo_file(_url, _share_code, storage_budget=None):
+        return demo_path
+
+    def fake_import_demo_file(inner_db, _demo_path, **kwargs):
+        captured.update(kwargs)
+        imported = _add_steam_demo_match(
+            inner_db,
+            external_match_id="imported-auto-eval",
+            played_at=datetime(1999, 1, 1, 0, 0),
+            raw_json={
+                "played_at_source": "file_modified_fallback",
+                "match": {"played_at_source": "file_modified_fallback"},
+            },
+        )
+        return {
+            "match_id": imported.id,
+            "imported": 1,
+            "skipped_duplicates": 0,
+            "stored_path": str(demo_path),
+            "recommendation_evaluations": [],
+            "recommendation_evaluation": {
+                "status": "deferred",
+                "count": 0,
+                "evaluations": [],
+                "match_id": imported.id,
+                "reason": "steam_date_truth_pending",
+            },
+        }
+
+    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+
+    result = _download_and_import_match(
+        db,
+        placeholder,
+        share_code="CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+        steam_gc_item={
+            "share_code": "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+            "match_id": "3822708819734036647",
+            "match_time": 1783022400,
+            "demo_url": "https://replay123.valve.net/730/demo.dem.bz2",
+        },
+        player_identifier=None,
+    )
+
+    imported = db.get(Match, result["demo_match_id"])
+    evaluations = db.scalars(
+        select(MatchRecommendationEvaluation).where(MatchRecommendationEvaluation.match_id == imported.id)
+    ).all()
+    assert captured["evaluate_recommendations"] is False
+    assert match_date_truth(imported)["status"] == STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE
+    assert result["recommendation_evaluation"]["status"] == "created"
+    assert result["recommendation_evaluation"]["count"] == 1
+    assert result["recommendation_evaluations"][0]["recommendation_id"] == survival.id
+    assert len(evaluations) == 1
+    assert evaluations[0].recommendation_id == survival.id
+    assert "metric_confidence" in json.loads(evaluations[0].evidence_json)
+    assert evaluate_recommendations_for_match(db, imported.id) == []
+    db.refresh(placeholder)
+    placeholder_raw = json.loads(placeholder.raw_json)
+    assert placeholder_raw["recommendation_evaluation"]["status"] == "created"
+    assert db.query(MatchRecommendationEvaluation).filter_by(match_id=imported.id).count() == 1
+
+
 def test_steam_downloader_missing_gc_match_time_does_not_keep_file_mtime_as_match_date(db, monkeypatch, tmp_path):
     placeholder = Match(
         source="steam_history",
@@ -1330,6 +1412,9 @@ def test_steam_downloader_missing_gc_match_time_does_not_keep_file_mtime_as_matc
     imported = db.get(Match, result["demo_match_id"])
     assert imported.played_at is None
     assert result["match_date_status"] == STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE
+    assert result["recommendation_evaluation"]["status"] == "not_eligible"
+    assert result["recommendation_evaluation"]["count"] == 0
+    assert result["recommendation_evaluations"] == []
     truth = match_date_truth(imported)
     assert truth["status"] == STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE
     assert truth["source"] == "unavailable"
@@ -1427,3 +1512,68 @@ def test_steam_download_parser_failure_records_retained_demo_metadata(db, monkey
     assert result["failed"] == 1
     assert result["results"][0]["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE
     assert "retained_after_failure" in match.raw_json
+
+
+def _seed_steam_recommendation_baseline(db):
+    for index in range(15):
+        _add_steam_demo_match(
+            db,
+            external_match_id=f"baseline-{index}",
+            played_at=datetime(2026, 6, index + 1, 12, 0),
+            raw_json={
+                "match_date_status": "exact_match_date_available",
+                "match_date_source": "steam_gc_match_time",
+                "played_at_source": "steam_gc_match_time",
+            },
+            entry_deaths=4,
+            early_deaths=4,
+            kast=70,
+            adr=80,
+        )
+    survival = ensure_default_recommendation(db)
+    assert survival is not None
+    for recommendation in db.scalars(select(CoachRecommendation)).all():
+        if recommendation.id != survival.id:
+            recommendation.baseline_metrics_json = json.dumps({"matches_count": 15})
+    db.commit()
+    db.refresh(survival)
+    return survival
+
+
+def _add_steam_demo_match(
+    db,
+    *,
+    external_match_id: str,
+    played_at: datetime | None,
+    raw_json: dict,
+    entry_deaths: int = 2,
+    early_deaths: int = 2,
+    kast: float = 76,
+    adr: float = 82,
+) -> Match:
+    match = Match(
+        source="demo",
+        external_match_id=external_match_id,
+        played_at=played_at,
+        map_name="Mirage",
+        result="win",
+        rounds_for=13,
+        rounds_against=10,
+        kills=20,
+        deaths=16,
+        assists=4,
+        kd=1.25,
+        adr=adr,
+        kast=kast,
+        rating=1.05,
+        entry_kills=2,
+        entry_deaths=entry_deaths,
+        early_deaths=early_deaths,
+        utility_damage=70,
+        flash_assists=1,
+        raw_json=json.dumps(raw_json),
+    )
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    return match

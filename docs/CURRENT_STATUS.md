@@ -4,7 +4,7 @@ Last updated: 2026-07-05.
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017D Post-Batch Data/Performance Acceptance`.
+Current WP: `WP-017F Controlled Pending Share Code #73 Import`.
 
 Next Target Version: `v0.9`.
 
@@ -61,6 +61,8 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - WP-017B controlled bulk import plan completed / `PLANNED`: first v0.9 import batch runbook keeps `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`, allows at most three one-demo attempts, requires backup/SHA/storage/service/job/recommendation checks before and after every run, preserves explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp` for shell fallback, and defers cap increases until WP-017D acceptance.
 - WP-017C first controlled bulk import batch completed / `PASS_WITH_WARNINGS`: one authorized shell-fallback `steam_import_all` run with explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp` created parent job `#27` and child sync job `#28`, completed as `PASS_NO_NEW_MATCH`, downloaded no demo, ran no parser, created no new match/evaluation, kept uploads unchanged at 29 demo files, left `data/tmp` empty, and kept recommendation `#5` at one evaluation / one completed match. Report: `docs/audit/WP_017C_FIRST_CONTROLLED_BULK_IMPORT_BATCH_REPORT.md`.
 - WP-017C2 controlled import after new match completed / `PASS_ONE_DEMO_IMPORTED_AND_EVALUATED`: one authorized shell-fallback attempt with explicit `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp` created parent job `#29` and child sync job `#30`; Steam exposed two new share codes, the one-demo cap imported/retained/parsed exactly one Overpass demo as playable exact-date match `#75`, left one pending `steam_history` placeholder `#73`, and recommendation `#5` received evaluation `#77` with `metric_confidence`, moving progress to `2/10`. Parent job `#29` is persisted as `failed` because `overall_outcome=batch_cap_reached`; this is a batch-cap warning, not a parser or recommendation failure. Report: `docs/audit/WP_017C2_CONTROLLED_IMPORT_AFTER_NEW_MATCH_REPORT.md`.
+- WP-017D post-batch diagnosis completed / `ACCEPT_WITH_REPAIR_REQUIRED`: WP-017C/C2 import/parser/storage evidence was accepted, but automatic post-import recommendation evaluation was not reliable in the Steam path because evaluation ran before exact Steam date truth was applied. Pending placeholder `#73` and cap raise were blocked until repair.
+- WP-017E auto-evaluation trigger repair completed / `REPAIRED`: Steam downloader imports now defer parser-side evaluation, apply/commit/refresh authoritative Steam date truth, then run targeted recommendation evaluation with compact metadata in demo download results. Tests cover exact-date auto-evaluation, batch-cap metadata, duplicate protection, legacy skip and non-exact gating. Pending `#73` is still unprocessed and cap remains `1` until the repaired path is proven live.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
@@ -78,6 +80,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 9 is UI presentation over existing persisted state/services, not recommendation planner, ProblemSnapshot or engine work.
 - WP-015D warnings carried forward: direct post-restart authenticated browser timings were not captured by Codex; persistent report generation acceptance is deferred because it mutates DB; `/coach` artifact overview still loads many artifact ORM rows; weak metrics remain weak; `ImportJob.status` remains coarse; uploads/tmp remain on root filesystem.
 - `v0.8` accepts only the controlled primary survival recommendation loop. Legacy active `grenades` recommendation `#3` and `map` recommendation `#4` remain `needs_refresh` and are not accepted for hard progress.
+- `v0.9` is still not promoted. WP-017E repaired the automatic evaluation trigger in code/tests, but one controlled live repaired-path import is still required before processing beyond pending `#73` or raising the demo cap.
 - Recommendation progress summary wording remains rough after one green evaluation: it may say the goal is failing because the 10-match target progress score is still low after `1/10` completed matches. This is a UX/calibration warning, not a loop blocker.
 - Authenticated browser UI was not directly inspected by Codex for WP-016 because no authenticated session was available; unauthenticated smoke returned expected login redirects.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
