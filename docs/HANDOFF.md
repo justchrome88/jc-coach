@@ -9,10 +9,10 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 ## Project Identity
 
 - Project: JC Coach, a personal AI coach for CS2.
-- Current product version: `v0.8`.
-- Current lane: `WP-017` Real Data Onboarding / Bulk Demo Usage targeting `v0.9`.
-- Current active WP: none; latest completed governance WP is `WP-017Z Agent Role Cards and Role Handoff Protocol`.
-- Next product WP after WP-017Z: `WP-017K Real Data Onboarding Promotion to v0.9`.
+- Current product version: `v0.9`.
+- Current lane: `WP-018` Coach Quality Calibration targeting `v0.10`.
+- Current active WP: none; latest completed product WP is `WP-017K Real Data Onboarding Promotion to v0.9`.
+- Next product WP after WP-017K: `WP-018 Coach Quality Calibration`.
 - Runtime: FastAPI / Uvicorn service `jc-coach.service` on `127.0.0.1:8010`.
 - Production DB: `data/cs2_coach.db`.
 
@@ -29,7 +29,7 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 ## Current State Summary
 
 - `v0.8` Recommendation Loop Acceptance is promoted for controlled personal use.
-- `v0.9` is not promoted yet.
+- `v0.9` is promoted with warnings by WP-017K.
 - WP-017G accepted data integrity with warnings.
 - WP-017H accepted post-batch performance with warnings.
 - WP-017I diagnosed exact playlist mode as unrecoverable from current persisted data.
@@ -43,6 +43,8 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - WP-017Y completed no-risk legacy pointer cleanup without moving, deleting or archiving files.
 - WP-017Z added Warm workflow role cards and role handoff protocol without
   creating runtime agents or automation.
+- WP-017K promoted Real Data Onboarding / Bulk Demo Usage to `v0.9` with
+  warnings carried forward.
 
 ## Data And Product Facts To Carry Forward
 
@@ -57,7 +59,10 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Next Safe Step
 
-After WP-017Z is reviewed and committed by the user if accepted, continue to `WP-017K Real Data Onboarding Promotion to v0.9` only with explicit user/ChatGPT approval. WP-017K must verify registry prerequisites, carry forward WP-017G/H warnings and WP-017J limitation text, and decide promote/block without raising cap or changing product logic.
+After WP-017K is reviewed and committed by the user if accepted, continue to
+`WP-018 Coach Quality Calibration` only with explicit user/ChatGPT approval.
+WP-018 must carry forward WP-017K warnings and must not claim playlist-specific
+mode labels or friends/public readiness.
 
 ## Forbidden Without Explicit WP Authorization
 

@@ -58,13 +58,13 @@ Allowed statuses: `planned`, `active`, `in_progress`, `done`, `blocked`,
 | `WP-017X` | Legacy Documentation Currency Snapshot | `v0.9` | `done` | `docs/audit/WP_017X_LEGACY_DOCUMENTATION_CURRENCY_SNAPSHOT_REPORT.md` | `WP-017W` | Documentation Steward snapshot of legacy docs and conservative cleanup/deprecation plan; inspection only, no file moves/deletes/archive cleanup, no product logic, DB, service or WP-018 product block changes. |
 | `WP-017Y` | No-Risk Legacy Docs Pointer Cleanup | `v0.9` | `done` | `docs/audit/WP_017Y_LEGACY_DOCS_POINTER_CLEANUP_REPORT.md` | `WP-017X` | Documentation/governance pass that adds no-risk status headers and pointer cleanup to legacy docs; no file moves/deletes/archive cleanup, no product logic, DB, service or WP-018 product block changes. |
 | `WP-017Z` | Agent Role Cards and Role Handoff Protocol | `v0.9` | `done` | `docs/audit/WP_017Z_AGENT_ROLE_CARDS_HANDOFF_PROTOCOL_REPORT.md` | `WP-017Y` | Governance/documentation pass that adds Warm workflow role cards and a role handoff protocol; no runtime agents/automation, broad legacy cleanup, product logic, DB, service or WP-018 product block changes. |
-| `WP-017K` | Real Data Onboarding Promotion to `v0.9` | `v0.9` | `planned` | TBD | `WP-017G`, `WP-017H`, `WP-017I`, `WP-017J` or documented deferral, `WP-017S`, `WP-017T`, `WP-017U`, `WP-017V`, `WP-017W`, `WP-017X`, `WP-017Y`, `WP-017Z` | Promotion WP only. Must not raise cap, delete demos, change schema or claim friends/public readiness. |
+| `WP-017K` | Real Data Onboarding Promotion to `v0.9` | `v0.9` | `done` | `docs/audit/WP_017K_REAL_DATA_ONBOARDING_PROMOTION_REPORT.md` | `WP-017G`, `WP-017H`, `WP-017I`, `WP-017J` or documented deferral, `WP-017S`, `WP-017T`, `WP-017U`, `WP-017V`, `WP-017W`, `WP-017X`, `WP-017Y`, `WP-017Z` | Promoted `v0.9` with warnings; cap remains `1`, playlist mode remains unknown/provenance-only, and friends/public readiness is not claimed. |
 
 ## Current Promotion Gate
 
-`v0.9` promotion is not completed now, but `WP-017K` may start.
+`v0.9` promotion completed in WP-017K with `PASS_WITH_WARNINGS`.
 
-Required before `WP-017K` can promote:
+Promotion decision carried forward:
 
 - `WP-017I` completed: match mode classification diagnosed.
 - `WP-017J` completed with explicit deferral accepted: Match playlist mode is
@@ -92,13 +92,15 @@ Required before `WP-017K` can promote:
   safer source-of-truth pointers; no physical cleanup was performed.
 - `WP-017Z` completed: Warm workflow role cards and role handoff protocol exist
   before promotion review; no runtime agents or automation were created.
+- `WP-017K` completed: Real Data Onboarding / Bulk Demo Usage promoted to
+  `v0.9` with warnings.
 - Cap remains `1` unless a separate explicit cap-change WP authorizes a change.
 
 ## Future Version Registry
 
 | WP ID | Title | Version target | Status | Report path | Dependencies | Notes / warnings |
 |---|---|---|---|---|---|---|
-| `WP-018` | Coach Quality Calibration | `v0.10` | `planned` | TBD | `WP-017K` promotion or explicit `v0.9` block decision | Calibrate coach claims, progress scoring and weak-metric caveats. |
+| `WP-018` | Coach Quality Calibration | `v0.10` | `planned` | TBD | `WP-017K` promotion | Calibrate coach claims, progress scoring and weak-metric caveats. |
 | `WP-019` | Personal Daily Use UX | `v0.11` | `planned` | TBD | `WP-018` | Daily owner workflow polish without friends/public claims. |
 | `WP-020` | Deployment / Backup / Storage Hardening | `v0.12` | `planned` | TBD | `WP-019` | VPS operation, backup/restore and storage hardening. |
 | `WP-021` | Personal MVP Lock | `v1.0` | `planned` | TBD | `WP-020` | Controlled personal MVP lock; public/friends readiness remains separate. |

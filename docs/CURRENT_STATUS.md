@@ -4,11 +4,11 @@ Last updated: 2026-07-06.
 
 ## Snapshot
 
-- Product version: `v0.8`.
-- Current lane: `WP-017` Real Data Onboarding / Bulk Demo Usage for `v0.9`.
-- Current active WP: none; latest completed governance WP is `WP-017Z Agent Role Cards and Role Handoff Protocol`.
-- Next product WP: `WP-017K Real Data Onboarding Promotion to v0.9`.
-- Promotion status: `v0.9` is not promoted. WP-017K is the only promotion WP and must carry forward accepted warnings and limitations.
+- Product version: `v0.9`.
+- Current lane: `WP-018` Coach Quality Calibration for `v0.10`.
+- Current active WP: none; latest completed product WP is `WP-017K Real Data Onboarding Promotion to v0.9`.
+- Next product WP: `WP-018 Coach Quality Calibration`.
+- Promotion status: `v0.9` is promoted with warnings by WP-017K. Warnings and limitations must carry forward into WP-018.
 - Latest known production DB SHA: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33` from WP-017H evidence. Re-check before any WP that depends on current DB state.
 
 ## Runtime Basics
@@ -41,15 +41,19 @@ Last updated: 2026-07-06.
   and safer source-of-truth pointers; no physical cleanup was performed.
 - WP-017Z added Warm workflow role cards and a role handoff protocol for the
   repo-native agent workflow; no runtime agents or automation were created.
+- WP-017K promoted Real Data Onboarding / Bulk Demo Usage to `v0.9` with
+  warnings.
 
 ## Current Blockers And Limitations
 
-- `v0.9` is not promoted until WP-017K makes the explicit promote/block decision.
 - Match playlist mode is not accepted as exact in `v0.9`. Current persisted data distinguishes parser/import provenance (`demo`) and generic Valve share-code provenance (`Valve Matchmaking`), but it does not reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom modes.
 - No playlist-specific claims, filters or recommendations are accepted in `v0.9` unless a future WP captures reliable mode metadata.
+- `STEAM_IMPORT_MAX_DEMOS_PER_RUN` remains `1`; no cap raise is accepted by WP-017K.
+- Authenticated owner-browser timing remains uncaptured by Codex evidence.
+- `/coach` artifact overview is acceptable at 22 demos but should be optimized before materially larger demo volume.
+- Historical queued non-parent Steam jobs `#1` and `#10` remain.
 - Legacy recommendations `#1`, `#3` and `#4` must not receive new hard evaluations unless explicitly refreshed by a future WP.
 - Weak metrics remain caveated; recommendation evaluations must include `metric_confidence`.
-- Authenticated owner browser performance was not captured by Codex in WP-017H.
 - Raw demos and manual backups remain on root-backed storage; do not delete, move or compress raw demos without explicit storage WP authorization.
 - Friends/public readiness remains blocked.
 
@@ -58,8 +62,7 @@ Last updated: 2026-07-06.
 - Do not run live Steam/Valve import, parser jobs, evaluator jobs or manual evaluator unless the current WP explicitly authorizes them.
 - Do not mutate production DB, schema, production files or generated app reports unless the current WP explicitly authorizes them with backup/SHA evidence.
 - Do not raise `STEAM_IMPORT_MAX_DEMOS_PER_RUN` without an explicit cap-change WP.
-- Do not promote `v0.9` except through WP-017K.
-- Do not touch the planned WP-018 product block during WP-017 governance cleanup.
+- Do not start or change WP-018 product work without an explicit WP-018 prompt.
 - Do not run `git add`, commit or push without explicit user approval.
 
 ## Source Of Truth
