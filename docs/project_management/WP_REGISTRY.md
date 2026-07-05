@@ -51,7 +51,8 @@ Allowed statuses: `planned`, `in_progress`, `done`, `blocked`, `deferred`,
 | `WP-017I` | Match Mode Classification Diagnosis | `v0.9` | `done` | `docs/audit/WP_017I_MATCH_MODE_CLASSIFICATION_DIAGNOSIS_REPORT.md` | `WP-017R` | Persisted data cannot distinguish exact playlist mode; current rows should remain playlist `unknown`. |
 | `WP-017J` | Match Mode Explicit Deferral / Unknown Labels | `v0.9` | `done` | `docs/audit/WP_017J_MATCH_MODE_EXPLICIT_DEFERRAL_REPORT.md` | `WP-017I` | Explicit deferral accepted: `v0.9` will not include exact playlist classification. Use `mode_unknown`, `provenance_demo`, `provenance_valve_matchmaking` and `exact_date_source=steam_gc_match_time`; do not claim Premier/Competitive/Wingman/Casual/Deathmatch/FACEIT/custom without future reliable metadata. |
 | `WP-017S` | Documentation Governance Entrypoint Repair | `v0.9` | `done` | `docs/audit/WP_017S_GOVERNANCE_ENTRYPOINT_REPAIR_REPORT.md` | `WP-017J`, out-of-band governance audit evidence | Service governance repair before promotion lane continues; does not consume planned `WP-018`. |
-| `WP-017K` | Real Data Onboarding Promotion to `v0.9` | `v0.9` | `planned` | TBD | `WP-017G`, `WP-017H`, `WP-017I`, `WP-017J` or documented deferral, `WP-017S` | Promotion WP only. Must not raise cap, delete demos, change schema or claim friends/public readiness. |
+| `WP-017T` | Compact Current Status and Handoff | `v0.9` | `done` | `docs/audit/WP_017T_COMPACT_CURRENT_STATUS_HANDOFF_REPORT.md` | `WP-017S` | Governance/documentation pass that compresses Hot current-state docs before promotion review; no product logic, DB, service or WP-018 product block changes. |
+| `WP-017K` | Real Data Onboarding Promotion to `v0.9` | `v0.9` | `planned` | TBD | `WP-017G`, `WP-017H`, `WP-017I`, `WP-017J` or documented deferral, `WP-017S`, `WP-017T` | Promotion WP only. Must not raise cap, delete demos, change schema or claim friends/public readiness. |
 
 ## Current Promotion Gate
 
@@ -70,6 +71,8 @@ Required before `WP-017K` can promote:
 - Existing WP-017G/H warnings carried forward.
 - `WP-017S` completed: governance entrypoints repaired and `WP-018` audit
   naming conflict documented as out-of-band evidence.
+- `WP-017T` completed: active current-state and handoff docs compressed so
+  future prompts can stay short while current project truth remains in-repo.
 - Cap remains `1` unless a separate explicit cap-change WP authorizes a change.
 
 ## Future Version Registry

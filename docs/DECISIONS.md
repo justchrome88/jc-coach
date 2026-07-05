@@ -1,13 +1,19 @@
 # Decisions
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-05.
 
 ## Current Decisions
 
-- `docs/PROJECT_CONTROL.md` is the source of truth for project status, priorities and constraints.
-- Historical docs are preserved and marked before deletion or archive moves.
-- AI provider defaults to `codex_cli_handoff`; local LLM remains optional/scaffolded.
-- Steam import uses OpenID + Game Authentication Code + latest share-code cursor + service bot resolver.
-- Raw `.dem` deletion is disabled until parsed payload verification exists.
-- Friends/public release is blocked by security, ownership, CSRF/rate limit, secrets, backup and observability work.
-
+- 2026-07-05: `AGENTS.md` is the only root Codex operating contract.
+- 2026-07-05: `AGENT.md` is a superseded pointer and must not be used as the active operating contract.
+- 2026-07-05: Per-task Hot context is `AGENTS.md`, `docs/CURRENT_STATUS.md` and `docs/project_management/WP_REGISTRY.md`.
+- 2026-07-05: New-session Hot context additionally includes `docs/HANDOFF.md`.
+- 2026-07-05: Warm docs are read only by task relevance; old reports, prompts, stage reports and generated data reports are evidence/history only.
+- 2026-07-05: `docs/audit/WP_018_DOCUMENTATION_GOVERNANCE_AUDIT_REPORT.md` is out-of-band governance audit evidence and does not consume the planned WP-018 product block.
+- 2026-07-05: Match mode classification remains deferred/unknown unless future metadata capture is implemented.
+- 2026-07-05: `v0.9` must not claim playlist-specific Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom mode labels.
+- 2026-07-05: Steam demo cap remains `1` unless explicitly changed by a future WP.
+- Historical: AI provider defaults to `codex_cli_handoff`; local LLM remains optional/scaffolded.
+- Historical: Steam import uses OpenID + Game Authentication Code + latest share-code cursor + service bot resolver.
+- Historical: Raw `.dem` deletion is disabled until parsed payload verification exists.
+- Historical: Friends/public release is blocked by security, ownership, CSRF/rate limit, secrets, backup and observability work.
