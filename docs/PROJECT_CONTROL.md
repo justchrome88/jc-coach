@@ -23,7 +23,7 @@ The practical product question is:
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017R Roadmap / WP Registry Governance Repair`.
+Current WP: `WP-017J Match Mode Classification Repair / Labels, Or Explicit Deferral`.
 
 Next Target Version: `v0.9`.
 
@@ -55,7 +55,7 @@ The product is beyond the original `v0.1` CSV dashboard, but it is not a secure 
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017R Roadmap / WP Registry Governance Repair`.
+Current WP: `WP-017J Match Mode Classification Repair / Labels, Or Explicit Deferral`.
 
 Next Target Version: `v0.9`.
 
@@ -90,7 +90,8 @@ Current focus:
 23. WP-017G accepted post-batch data integrity with warnings: matches, placeholders, parser artifacts, exact-date truth, recommendation progress and retained demo files are internally consistent after WP-017F, but performance acceptance, metadata/job-surface limitations, mode uncertainty, root-backed storage and cap `1` warnings remained.
 24. WP-017H accepted post-batch performance with warnings: service health, memory, logs, DB hash and read-only helper timings are acceptable at 22 playable demos, but authenticated owner browser timing remains unavailable and `/coach` artifact overview still loads all parser rows.
 25. WP-017I0 added root `AGENTS.md` as the repository-level Codex operating contract.
-26. WP-017R is repairing roadmap/WP registry governance. Numbering drift is explicitly recorded: emergency repair WPs were inserted because the Steam-path automatic evaluation trigger became a blocker, while match mode classification diagnosis/repair remained open. `v0.9` promotion is blocked until WP-017I and WP-017J are completed or explicitly deferred with a documented accepted limitation.
+26. WP-017R repaired roadmap/WP registry governance. Numbering drift is explicitly recorded: emergency repair WPs were inserted because the Steam-path automatic evaluation trigger became a blocker, while match mode classification diagnosis/repair remained open. `v0.9` promotion is blocked until WP-017I and WP-017J are completed or explicitly deferred with a documented accepted limitation.
+27. WP-017I diagnosed match mode classification: persisted data does not reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom playlist modes. Current rows should remain playlist `unknown`; `mode=demo` and `Valve Matchmaking` are provenance labels only.
 
 ## 4. Source-of-truth Documents
 

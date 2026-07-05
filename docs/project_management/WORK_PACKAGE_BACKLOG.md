@@ -249,14 +249,14 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-017R` |
 | title | Roadmap / WP Registry Governance Repair |
 | target version | `v0.9` |
-| status | in progress |
+| status | completed / `REPAIRED` |
 | objective | Create the canonical WP registry and align roadmap/status docs after WP-017 numbering drift. |
 | guardians | `PM_ORCHESTRATOR`, `DB_GUARDIAN`, `IMPORT_GUARDIAN`, `METRICS_GUARDIAN` |
 | source docs | `AGENTS.md`, `docs/project_management/WP_REGISTRY.md`, WP-017A through WP-017H reports, `docs/audit/WP_017I0_ADD_ROOT_AGENTS_PROJECT_CONTRACT_REPORT.md` |
 | forbidden actions | Runtime/product code changes except compact project-gate governance checks, recommendation/import/parser logic, production DB mutation, live import/parser jobs, manual evaluator, raw demo lifecycle actions, schema changes, persistent app reports, cap raise, v0.9 promotion, commits. |
 | acceptance criteria | `docs/project_management/WP_REGISTRY.md` exists; WP-017 canonical order is explicit; emergency repair WPs and open match mode WPs are documented; promotion prerequisites are explicit; docs align to registry. |
 | required evidence | Project gates, DB SHA before/after, `git diff --check`, audit report `docs/audit/WP_017R_ROADMAP_WP_REGISTRY_GOVERNANCE_REPAIR_REPORT.md`. |
-| exit criteria | Roadmap/WP registry governance is repaired and `v0.9` promotion remains blocked until WP-017I/J are done or explicitly deferred. |
+| exit criteria | Roadmap/WP registry governance was repaired and `v0.9` promotion remains blocked until WP-017I/J are done or explicitly deferred. |
 | next WP | `WP-017I Match Mode Classification Diagnosis` |
 
 ## WP-017I
@@ -266,14 +266,14 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-017I` |
 | title | Match Mode Classification Diagnosis |
 | target version | `v0.9` |
-| status | planned |
+| status | completed / `DIAGNOSED` |
 | objective | Diagnose whether Premier/Competitive/Wingman match mode classification can be recovered from reliable persisted metadata or explicitly authorized evidence. |
 | guardians | `PM_ORCHESTRATOR`, `IMPORT_GUARDIAN`, `DB_GUARDIAN`, `RUNTIME_GUARDIAN`, `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN` |
 | source docs | `docs/project_management/WP_REGISTRY.md`, WP-017A through WP-017R reports, `docs/project_management/ACCEPTANCE_MATRIX.md`, `docs/PROJECT_CONTROL.md` |
 | forbidden actions | v0.9 promotion, live imports/parser jobs, production DB mutation unless explicitly authorized, cap raise, raw demo lifecycle actions, schema changes, persistent app reports. |
 | acceptance criteria | Current persisted mode values are inventoried; reliable/non-reliable mode evidence is separated; no Premier/Competitive/Wingman claim is accepted without proof; WP-017J repair/deferral path is explicit. |
-| required evidence | Read-only DB/doc/code inspection as authorized, DB SHA, project gates, audit diagnosis report. |
-| exit criteria | Match mode classification is diagnosed and either a repair path or explicit deferral path is ready for WP-017J. |
+| required evidence | Read-only DB/doc/code inspection, DB SHA, project gates, audit diagnosis report `docs/audit/WP_017I_MATCH_MODE_CLASSIFICATION_DIAGNOSIS_REPORT.md`. |
+| exit criteria | Match mode classification was diagnosed: current persisted data cannot distinguish exact playlist mode, and explicit deferral is recommended for WP-017J. |
 | next WP | `WP-017J Match Mode Classification Repair / Labels, Or Explicit Deferral` |
 
 ## WP-017J

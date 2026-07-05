@@ -5,7 +5,7 @@ Last updated: 2026-07-05.
 ## Current State
 
 - Current Product Version: `v0.8`
-- Current WP: `WP-017R Roadmap / WP Registry Governance Repair`
+- Current WP: `WP-017J Match Mode Classification Repair / Labels, Or Explicit Deferral`
 - Next Target Version: `v0.9`
 - Mode after WP-011B: governance/tooling layer exists; product logic and DB were not intentionally changed.
 - Runtime: `jc-coach.service` should be checked at pass start with `systemctl status jc-coach --no-pager`.
@@ -46,7 +46,8 @@ Last updated: 2026-07-05.
 - WP-017G post-batch data integrity acceptance completed / `ACCEPTED_WITH_WARNINGS`. Data integrity is accepted for the no-new path, batch-cap path and repaired pending-demo path: total matches `76`, playable demos `22`, exact playable dates `20`, parser artifacts `22`, recommendation `#5` evaluations `#76/#77/#78`, progress `3/10`, no duplicate evaluations and no legacy `#1/#3/#4` evaluations for `#75/#76`. Warnings: no parent job metadata for targeted pending-demo path, two historical queued non-parent Steam jobs `#1/#10`, authenticated UI performance not accepted, mode provenance-only, raw demos/backups on root storage, 15 historical unreferenced demo files, and cap remains `1`.
 - WP-017H post-batch performance acceptance completed / `ACCEPTED_WITH_WARNINGS`. Service was active/running, memory stayed about `225M` with unchanged `253M` peak, DB SHA stayed `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33`, logs had no traceback/error/500, unauthenticated GETs returned fast auth redirects, and read-only helper timings were sub-2s. `/coach` remains the heaviest route-equivalent workload at about `0.65s` average because parser overview loads all artifact rows. Authenticated owner browser timing was unavailable to Codex.
 - WP-017I0 add root `AGENTS.md` project contract completed / `CREATED`. The repository now has a root Codex operating contract and `docs/PROJECT_CONTROL.md` points future Codex passes at `AGENTS.md`.
-- WP-017R roadmap / WP registry governance repair is current. Numbering drift was found: match mode classification diagnosis/repair had been planned for WP-017 but were pushed behind emergency import/evaluation repair work after the automatic evaluation trigger became a blocker. The old history must not be deleted. `docs/project_management/WP_REGISTRY.md` is now the canonical registry and `v0.9` promotion is blocked until WP-017I and WP-017J are completed or explicitly deferred with a documented accepted limitation.
+- WP-017R roadmap / WP registry governance repair completed / `REPAIRED`. Numbering drift was found: match mode classification diagnosis/repair had been planned for WP-017 but were pushed behind emergency import/evaluation repair work after the automatic evaluation trigger became a blocker. The old history must not be deleted. `docs/project_management/WP_REGISTRY.md` is now the canonical registry and `v0.9` promotion is blocked until WP-017I and WP-017J are completed or explicitly deferred with a documented accepted limitation.
+- WP-017I match mode classification diagnosis completed / `DIAGNOSED`. Current persisted data cannot reliably distinguish Premier/Competitive/Wingman/Casual/Deathmatch/FACEIT/custom modes. `mode=demo` is parser/import provenance only, `Valve Matchmaking` is generic Steam provenance only, and current playable rows should remain playlist `unknown`.
 
 ## Last Incident Summary
 
@@ -60,9 +61,9 @@ Last updated: 2026-07-05.
 
 ## Next WP
 
-`WP-017I Match Mode Classification Diagnosis` targeting `v0.9`.
+`WP-017J Match Mode Classification Repair / Labels, Or Explicit Deferral` targeting `v0.9`.
 
-WP-017I should diagnose whether Premier/Competitive/Wingman match mode classification can be recovered from reliable persisted metadata or other explicitly authorized evidence. Do not promote `v0.9` in WP-017I. Use:
+WP-017J should repair labels if a safe non-live path exists, or explicitly defer historical playlist classification as an accepted `v0.9` limitation. Do not promote `v0.9` in WP-017J. Use:
 
 - `docs/audit/WP_017C_FIRST_CONTROLLED_BULK_IMPORT_BATCH_REPORT.md`
 - `docs/audit/WP_017C2_CONTROLLED_IMPORT_AFTER_NEW_MATCH_REPORT.md`
@@ -73,9 +74,10 @@ WP-017I should diagnose whether Premier/Competitive/Wingman match mode classific
 - `docs/audit/WP_017H_POST_BATCH_PERFORMANCE_ACCEPTANCE_REPORT.md`
 - `docs/audit/WP_017I0_ADD_ROOT_AGENTS_PROJECT_CONTRACT_REPORT.md`
 - `docs/audit/WP_017R_ROADMAP_WP_REGISTRY_GOVERNANCE_REPAIR_REPORT.md`
+- `docs/audit/WP_017I_MATCH_MODE_CLASSIFICATION_DIAGNOSIS_REPORT.md`
 - `docs/project_management/WP_REGISTRY.md`
 
-Expected focus: classify the current match mode truth state and decide whether WP-017J can repair labels or must explicitly defer mode classification as an accepted limitation. Carry forward cap `1`, root-backed storage, `/coach` artifact overview scaling, authenticated browser timing and metadata/job-surface warnings. Do not run live imports, delete/move raw demos, change schema, run manual evaluator, raise cap, or create persistent app reports unless a later WP explicitly authorizes it.
+Expected focus: ensure user-facing/docs wording does not claim exact Premier/Competitive/Wingman mode and either implement an explicitly authorized label repair or accept the limitation text for WP-017K. Carry forward cap `1`, root-backed storage, `/coach` artifact overview scaling, authenticated browser timing and metadata/job-surface warnings. Do not run live imports, delete/move raw demos, change schema, run manual evaluator, raise cap, or create persistent app reports unless a later WP explicitly authorizes it.
 
 Roadmap and WP wiring:
 
