@@ -1,5 +1,13 @@
 # CS2 AI Coach — Master Curation Playbook / Full Stage Backup
 
+> Status: Historical / archive candidate.
+> This file is retained as project history/evidence.
+> Do not use it as current workflow, roadmap, version truth or source of truth.
+> Current workflow: `docs/project_management/AGENT_WORKFLOW.md`.
+> Current WP truth: `docs/project_management/WP_REGISTRY.md`.
+> Current Hot context: `AGENTS.md`, `docs/CURRENT_STATUS.md`,
+> `docs/project_management/WP_REGISTRY.md`.
+
 Дата: 2026-07-03  
 Назначение: полный резервный план управления проектом, чтобы продолжать разработку без текущего чата.  
 Формат: stage-by-stage hardening pipeline, правила принятия решений, шаблоны prompt'ов, DoD для всех ключевых stages.
@@ -1095,4 +1103,3 @@ It needs fewer uncontrolled changes.
 Every stage must leave the repo in a better, smaller, more verifiable state.
 
 If a change cannot be tested, reviewed, and committed separately, it does not belong in the current stage.
-

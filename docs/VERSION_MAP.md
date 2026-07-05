@@ -1,5 +1,12 @@
 # Version Map
 
+> Status: Historical / archive candidate.
+> This file is retained as project history/evidence.
+> Do not use it as current version truth or current roadmap.
+> Current product state: `docs/CURRENT_STATUS.md`.
+> Current WP truth: `docs/project_management/WP_REGISTRY.md`.
+> Current version roadmap: `docs/project_management/VERSION_ROADMAP.md`.
+
 Last updated: 2026-07-03.
 
 | Version | Name | Status | Evidence | Blockers |

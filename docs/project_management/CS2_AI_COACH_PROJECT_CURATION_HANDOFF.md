@@ -1,5 +1,12 @@
 # CS2 AI Coach — Project Curation Handoff / Operating Manual
 
+> Status: Historical / archive candidate.
+> This file is retained as project history/evidence.
+> Do not use it as current handoff, workflow, roadmap or source of truth.
+> Current handoff: `docs/HANDOFF.md`.
+> Current workflow: `docs/project_management/AGENT_WORKFLOW.md`.
+> Current WP truth: `docs/project_management/WP_REGISTRY.md`.
+
 Дата: 2026-07-03  
 Назначение: резервная инструкция для продолжения проекта, если текущий чат потеряет контекст, начнёт лагать или нужно будет передать управление новому чату/модели.
 
@@ -591,4 +598,3 @@ Stage 2 → Stage 3 → Stage 4 одним большим промптом
 ```
 
 Не возвращаться к обсуждению идеи проекта, конкурентов, UI, AI coach, метрик или parser до закрытия Stage 2.
-

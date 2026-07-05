@@ -6,7 +6,7 @@ Last updated: 2026-07-05.
 
 - Product version: `v0.8`.
 - Current lane: `WP-017` Real Data Onboarding / Bulk Demo Usage for `v0.9`.
-- Current active WP: none; latest completed governance WP is `WP-017X Legacy Documentation Currency Snapshot`.
+- Current active WP: none; latest completed governance WP is `WP-017Y No-Risk Legacy Docs Pointer Cleanup`.
 - Next product WP: `WP-017K Real Data Onboarding Promotion to v0.9`.
 - Promotion status: `v0.9` is not promoted. WP-017K is the only promotion WP and must carry forward accepted warnings and limitations.
 - Latest known production DB SHA: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33` from WP-017H evidence. Re-check before any WP that depends on current DB state.
@@ -37,6 +37,8 @@ Last updated: 2026-07-05.
   Card prompt contract as Warm governance/process references.
 - WP-017X produced a legacy documentation currency snapshot and conservative
   cleanup/deprecation plan; no physical cleanup was performed.
+- WP-017Y completed no-risk legacy docs pointer cleanup by adding status headers
+  and safer source-of-truth pointers; no physical cleanup was performed.
 
 ## Current Blockers And Limitations
 

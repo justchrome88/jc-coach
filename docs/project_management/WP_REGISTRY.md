@@ -56,7 +56,8 @@ Allowed statuses: `planned`, `active`, `in_progress`, `done`, `blocked`,
 | `WP-017V` | Repo-Native Agent Workflow and Docs Steward | `v0.9` | `done` | `docs/audit/WP_017V_AGENT_WORKFLOW_REPORT.md` | `WP-017U` | Governance/documentation pass that adds repo-native WP role workflow and Documentation Steward / Docs Currency Agent; no product logic, DB, service or WP-018 product block changes. |
 | `WP-017W` | Task Type Profiles and Prompt Contract | `v0.9` | `done` | `docs/audit/WP_017W_TASK_TYPE_PROFILES_PROMPT_CONTRACT_REPORT.md` | `WP-017V` | Governance/documentation pass that adds task type routing, role invocation shortcuts and Task Card prompt contract; no product logic, DB, service or WP-018 product block changes. |
 | `WP-017X` | Legacy Documentation Currency Snapshot | `v0.9` | `done` | `docs/audit/WP_017X_LEGACY_DOCUMENTATION_CURRENCY_SNAPSHOT_REPORT.md` | `WP-017W` | Documentation Steward snapshot of legacy docs and conservative cleanup/deprecation plan; inspection only, no file moves/deletes/archive cleanup, no product logic, DB, service or WP-018 product block changes. |
-| `WP-017K` | Real Data Onboarding Promotion to `v0.9` | `v0.9` | `planned` | TBD | `WP-017G`, `WP-017H`, `WP-017I`, `WP-017J` or documented deferral, `WP-017S`, `WP-017T`, `WP-017U`, `WP-017V`, `WP-017W`, `WP-017X` | Promotion WP only. Must not raise cap, delete demos, change schema or claim friends/public readiness. |
+| `WP-017Y` | No-Risk Legacy Docs Pointer Cleanup | `v0.9` | `done` | `docs/audit/WP_017Y_LEGACY_DOCS_POINTER_CLEANUP_REPORT.md` | `WP-017X` | Documentation/governance pass that adds no-risk status headers and pointer cleanup to legacy docs; no file moves/deletes/archive cleanup, no product logic, DB, service or WP-018 product block changes. |
+| `WP-017K` | Real Data Onboarding Promotion to `v0.9` | `v0.9` | `planned` | TBD | `WP-017G`, `WP-017H`, `WP-017I`, `WP-017J` or documented deferral, `WP-017S`, `WP-017T`, `WP-017U`, `WP-017V`, `WP-017W`, `WP-017X`, `WP-017Y` | Promotion WP only. Must not raise cap, delete demos, change schema or claim friends/public readiness. |
 
 ## Current Promotion Gate
 
@@ -86,6 +87,8 @@ Required before `WP-017K` can promote:
   review.
 - `WP-017X` completed: legacy documentation currency snapshot exists before
   promotion review; no physical cleanup was performed.
+- `WP-017Y` completed: no-risk legacy pointer cleanup added status headers and
+  safer source-of-truth pointers; no physical cleanup was performed.
 - Cap remains `1` unless a separate explicit cap-change WP authorizes a change.
 
 ## Future Version Registry

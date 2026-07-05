@@ -6,7 +6,8 @@ Controls WP scope, version map, handoff quality, evidence gates and cross-guardi
 
 ## Activation Paths
 
-- `AGENT.md`
+- `AGENTS.md`
+- `AGENT.md` only as a superseded pointer
 - `docs/PROJECT_CONTROL.md`
 - `docs/PROJECT_OS.md`
 - `docs/HANDOFF.md`
@@ -42,5 +43,6 @@ Controls WP scope, version map, handoff quality, evidence gates and cross-guardi
 
 ## Escalation / Blocker Rules
 
-Escalate if scope conflicts with `docs/PROJECT_CONTROL.md`, if a requested action risks production DB/runtime mutation, or if the active WP lacks acceptance criteria for the requested change.
-
+Escalate if scope conflicts with Hot context or task-relevant Warm governance
+docs, if a requested action risks production DB/runtime mutation, or if the
+active WP lacks acceptance criteria for the requested change.

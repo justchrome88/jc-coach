@@ -47,7 +47,7 @@ reports. Cold files are evidence/history and must not override Hot context.
 - `docs/README.md` - human documentation entrypoint.
 - `docs/PROJECT_OS.md` - historical/superseded operational entrypoint; do not use for current state.
 - `docs/HANDOFF.md` - current state, next WP and do-not-do list.
-- `docs/PROJECT_CONTROL.md` - legacy project control file; current operating hierarchy starts with `AGENTS.md` and Hot context.
+- `docs/PROJECT_CONTROL.md` - supporting governance/product control reference; current operating hierarchy starts with `AGENTS.md` and Hot context.
 - `docs/PROJECT_GOVERNANCE.md` - governance, WP gates, evidence policy.
 - `docs/CURRENT_STATUS.md` - current product state.
 - `docs/CURRENT_MILESTONE.md` - current/historical hardening milestone detail.
@@ -63,8 +63,8 @@ reports. Cold files are evidence/history and must not override Hot context.
 - `docs/project_management/DOCS_INDEX.md` - this human navigation index.
 - `docs/project_management/MASTER_WP_CHECKLIST.md` - Warm/Cold human-readable full WP campaign map; registry remains canonical for status/dependencies/report paths.
 - `docs/project_management/AGENT_WORKFLOW.md` - Warm governance/process doc for PM, Implementation, QA and Documentation Steward roles, task type profiles and standard prompt/report contracts inside WP lifecycle.
-- `docs/ROADMAP.md` - older roadmap overview; use with `VERSION_ROADMAP.md`.
-- `docs/VERSION_MAP.md` - older version status map; contains stale-label risk.
+- `docs/ROADMAP.md` - historical/archive-candidate roadmap overview; do not use as current roadmap truth.
+- `docs/VERSION_MAP.md` - historical/archive-candidate version status map; do not use as current version truth.
 - `docs/RELEASE_CHECKLIST.md` - release/friends/public gate checklist.
 
 ## Guardians
@@ -131,17 +131,18 @@ reports. Cold files are evidence/history and must not override Hot context.
 
 ## Task Specs
 
-- `docs/tasks/STABILIZATION_STAGE_0_TZ_CS2_AI_COACH.md` through `docs/tasks/STABILIZATION_STAGE_9_COACH_FIRST_UI_TZ_CS2_AI_COACH.md` - historical stage task specs.
-- `docs/tasks/FULL_PROJECT_AUDIT_AFTER_DOCS_TASK.md` - earlier audit task.
-- `docs/tasks/INSTRUCTIONS_CONSOLIDATION_TASK.md` - earlier docs consolidation task.
+- `docs/tasks/STABILIZATION_STAGE_0_TZ_CS2_AI_COACH.md` through `docs/tasks/STABILIZATION_STAGE_9_COACH_FIRST_UI_TZ_CS2_AI_COACH.md` - historical/archive-candidate stage task specs; not active workflow.
+- `docs/tasks/FULL_PROJECT_AUDIT_AFTER_DOCS_TASK.md` - historical/archive-candidate earlier audit task.
+- `docs/tasks/INSTRUCTIONS_CONSOLIDATION_TASK.md` - historical/archive-candidate earlier docs consolidation task.
+- `instructions/*` - historical/archive-candidate original prompts/specs; not active workflow or current source of truth.
 
 ## Historical / Supporting
 
-- `docs/project_management/CS2_AI_COACH_MASTER_CURATION_PLAYBOOK.md` - older operating playbook; predates WP-011B/011C.
-- `docs/project_management/CS2_AI_COACH_PROJECT_CURATION_HANDOFF.md` - older handoff manual; predates WP-011B/011C.
+- `docs/project_management/CS2_AI_COACH_MASTER_CURATION_PLAYBOOK.md` - historical/archive-candidate operating playbook; superseded by `AGENTS.md`, `AGENT_WORKFLOW.md` and current Hot context.
+- `docs/project_management/CS2_AI_COACH_PROJECT_CURATION_HANDOFF.md` - historical/archive-candidate handoff manual; superseded by `docs/HANDOFF.md`.
 - `docs/PRODUCT_EXECUTION_STRATEGY.md` - older strategy, historical.
 - `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md` - older implementation plan, historical.
-- `docs/NON_STOP_DEVELOPMENT_PROMPTS.md` - prompt library, historical unless reactivated.
+- `docs/NON_STOP_DEVELOPMENT_PROMPTS.md` - historical/archive-candidate prompt library; not active workflow.
 - `docs/COMPETITOR_FEATURE_MATRIX.md` - market comparison, supporting.
 - `docs/FEATURE_ROADMAP_SCORING.md` - feature scoring, supporting/historical.
 - `docs/feature_roadmap_scoring_ru.xlsx` - supporting spreadsheet artifact.

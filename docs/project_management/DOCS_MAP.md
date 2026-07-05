@@ -36,7 +36,7 @@ workflow, task routing, prompt contract or audit scope requires them.
 |---|---|---|---|---|
 | `AGENTS.md` | Only root Codex operating contract. | `PM_ORCHESTRATOR` | all WPs | Hot source-of-truth |
 | `AGENT.md` | Superseded pointer to `AGENTS.md`. | `PM_ORCHESTRATOR` | historical | superseded / not active |
-| `docs/PROJECT_CONTROL.md` | Legacy project control file below current Hot context. | `PM_ORCHESTRATOR` | all WPs | supporting source-of-truth |
+| `docs/PROJECT_CONTROL.md` | Supporting governance/product control reference below current Hot context. | `PM_ORCHESTRATOR` | all WPs | supporting reference |
 | `docs/README.md` | Human documentation entrypoint. | `PM_ORCHESTRATOR` | all WPs | navigation index |
 | `docs/PROJECT_OS.md` | Historical/superseded entrypoint; use Hot context instead. | `PM_ORCHESTRATOR` | historical | superseded / not current state |
 | `docs/HANDOFF.md` | Current continuation state. | `PM_ORCHESTRATOR` | active/next WP | source-of-truth, must stay current |
@@ -71,8 +71,8 @@ workflow, task routing, prompt contract or audit scope requires them.
 |---|---|---|---|---|
 | `docs/CURRENT_STATUS.md` | Current product fact state. | `PM_ORCHESTRATOR` | active WP | source-of-truth |
 | `docs/CURRENT_MILESTONE.md` | Historical/current hardening milestone detail. | `PM_ORCHESTRATOR` | stages 0-9, WP-012 context | source-of-truth for stage evidence, stale version-label risk |
-| `docs/ROADMAP.md` | Ordered development overview. | `PM_ORCHESTRATOR` | roadmap WPs | source-of-truth but needs alignment with `VERSION_ROADMAP.md` |
-| `docs/VERSION_MAP.md` | Version readiness map. | `PM_ORCHESTRATOR` | roadmap WPs | source-of-truth but stale legacy version labels exist |
+| `docs/ROADMAP.md` | Historical roadmap overview. | `PM_ORCHESTRATOR` | roadmap WPs | archive candidate; current sequence is `WP_REGISTRY.md` + `VERSION_ROADMAP.md` |
+| `docs/VERSION_MAP.md` | Historical version readiness map. | `PM_ORCHESTRATOR` | roadmap WPs | archive candidate; current version truth is `CURRENT_STATUS.md` + `WP_REGISTRY.md` |
 | `docs/CHANGELOG.md` | Curated change history. | `PM_ORCHESTRATOR` | all completed WPs/stages | supporting |
 | `docs/DECISIONS.md` | Current decisions. | `PM_ORCHESTRATOR` | all WPs | supporting |
 | `docs/RELEASE_CHECKLIST.md` | Personal/friends/public gates. | `PM_ORCHESTRATOR`, `RUNTIME_GUARDIAN` | WP-017, WP-018 | source-of-truth for release checks |
@@ -95,7 +95,7 @@ workflow, task routing, prompt contract or audit scope requires them.
 |---|---|---|---|---|
 | `docs/PRODUCT_EXECUTION_STRATEGY.md` | Older product strategy. | `PM_ORCHESTRATOR` | reference only | stale risk / historical per deprecation plan |
 | `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md` | Older implementation plan. | `PM_ORCHESTRATOR` | reference only | stale risk / historical |
-| `docs/NON_STOP_DEVELOPMENT_PROMPTS.md` | Prompt library. | `PM_ORCHESTRATOR` | none unless reactivated | stale risk / historical |
+| `docs/NON_STOP_DEVELOPMENT_PROMPTS.md` | Historical prompt library. | `PM_ORCHESTRATOR` | none unless reactivated | archive candidate; not active workflow |
 | `docs/AI_COACH_PROVIDER_ARCHITECTURE.md` | AI provider memo. | `METRICS_GUARDIAN` | WP-016+ | supporting/historical; canonical truth is `AI_COACH.md` |
 | `docs/AI_RECOMMENDATIONS_AIM_EXECUTION_PLAN_RU.md` | Older AI/recommendation plan. | `METRICS_GUARDIAN` | reference only | stale risk / historical |
 | `docs/COMPETITOR_FEATURE_MATRIX.md` | Market comparison. | `PM_ORCHESTRATOR` | later product planning | supporting/historical |
@@ -123,9 +123,10 @@ workflow, task routing, prompt contract or audit scope requires them.
 
 | Pattern / Document | Role | Guardian | WP links | Status |
 |---|---|---|---|---|
-| `docs/tasks/STABILIZATION_STAGE_0_*` through `docs/tasks/STABILIZATION_STAGE_9_*` | Historical stage task prompts. | corresponding guardian + `PM_ORCHESTRATOR` | stages 0-9 | source evidence for what was asked; not active roadmap |
-| `docs/tasks/FULL_PROJECT_AUDIT_AFTER_DOCS_TASK.md` | Earlier audit task. | `PM_ORCHESTRATOR` | docs cleanup | supporting/historical |
-| `docs/tasks/INSTRUCTIONS_CONSOLIDATION_TASK.md` | Earlier consolidation task. | `PM_ORCHESTRATOR` | docs cleanup | supporting/historical |
+| `docs/tasks/STABILIZATION_STAGE_0_*` through `docs/tasks/STABILIZATION_STAGE_9_*` | Historical stage task prompts. | corresponding guardian + `PM_ORCHESTRATOR` | stages 0-9 | archive candidate/source evidence for what was asked; not active workflow |
+| `docs/tasks/FULL_PROJECT_AUDIT_AFTER_DOCS_TASK.md` | Earlier audit task. | `PM_ORCHESTRATOR` | docs cleanup | archive candidate/supporting historical evidence |
+| `docs/tasks/INSTRUCTIONS_CONSOLIDATION_TASK.md` | Earlier consolidation task. | `PM_ORCHESTRATOR` | docs cleanup | archive candidate/supporting historical evidence |
+| `instructions/*` | Original prompts/specs/sample artifacts. | `PM_ORCHESTRATOR` | historical | archive candidate/supporting historical evidence; not active workflow |
 
 ## Archive
 
@@ -135,9 +136,9 @@ workflow, task routing, prompt contract or audit scope requires them.
 
 ## Stale / Duplicated Risk List
 
-- `docs/VERSION_MAP.md` and `docs/ROADMAP.md` still contain older `v0.7-prep` style labels; use `VERSION_ROADMAP.md` for WP-012..WP-018 sequencing.
+- `docs/VERSION_MAP.md` and `docs/ROADMAP.md` are historical/archive candidates with older `v0.7-prep` style labels; use `WP_REGISTRY.md` and `VERSION_ROADMAP.md` for current sequencing.
 - `docs/CURRENT_MILESTONE.md` remains useful stage evidence but its headline version label is older than the WP-011B/011C Project OS state.
-- `docs/project_management/CS2_AI_COACH_MASTER_CURATION_PLAYBOOK.md` and `CS2_AI_COACH_PROJECT_CURATION_HANDOFF.md` are valuable historical operating manuals but predate WP-011B/011C.
-- Older strategy/scoring/prompt docs are supporting or historical, not current instructions.
+- `docs/project_management/CS2_AI_COACH_MASTER_CURATION_PLAYBOOK.md` and `CS2_AI_COACH_PROJECT_CURATION_HANDOFF.md` are archive candidates; they are valuable historical operating manuals but not current workflow.
+- Older strategy/scoring/prompt docs are supporting, historical or archive candidates, not current instructions.
 - `docs/audit/FULL_PROJECT_AUDIT_*` reports are point-in-time evidence and should not override Hot context.
 - `docs/audit/WP_018_DOCUMENTATION_GOVERNANCE_AUDIT_REPORT.md` is an out-of-band governance audit evidence file. It does not consume the planned `WP-018` product ID.

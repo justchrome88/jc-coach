@@ -1,8 +1,16 @@
 # Roadmap
 
+> Status: Historical / archive candidate.
+> This file is retained as project history/evidence.
+> Do not use it as current roadmap, version truth or workflow.
+> Current WP truth: `docs/project_management/WP_REGISTRY.md`.
+> Current version roadmap: `docs/project_management/VERSION_ROADMAP.md`.
+> Navigation: `docs/project_management/DOCS_INDEX.md`.
+
 Last updated: 2026-07-03.
 
-This roadmap is subordinate to `docs/PROJECT_CONTROL.md`. Older roadmap and scoring documents are historical/advisory unless linked here as supporting evidence.
+This roadmap is historical/advisory unless explicitly reactivated by current
+Hot context or task-relevant Warm governance docs.
 
 ## Now: v0.7-prep
 

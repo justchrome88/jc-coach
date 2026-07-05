@@ -1,8 +1,18 @@
 # Project Control — CS2 AI Coach
 
-Canonical project source of truth. Last updated: 2026-07-05.
+> Status: Supporting governance/product control reference.
+> Do not use this file as the top current project state or Codex workflow.
+> Current Hot context: `AGENTS.md`, `docs/CURRENT_STATUS.md`,
+> `docs/project_management/WP_REGISTRY.md`.
+> New-session bootstrap: `docs/HANDOFF.md`.
+> Navigation: `docs/project_management/DOCS_INDEX.md`.
 
-This file overrides older README, roadmap, audit, prompt and `instructions/*` documents when they conflict. Historical files remain in the repository for context and should not be deleted until the deprecation plan in `docs/audit/DOCUMENT_DEPRECATION_PLAN.md` is completed.
+Last updated: 2026-07-05.
+
+This file is retained as a supporting governance/product control reference.
+When it conflicts with Hot context, Hot context wins. Historical files remain
+in the repository for context and should not be deleted until an explicit
+cleanup/archive WP approves that action.
 
 ## 1. Project Goal
 
@@ -27,11 +37,11 @@ Current WP: `WP-017K Real Data Onboarding Promotion to v0.9`.
 
 Next Target Version: `v0.9`.
 
-Current governance entrypoint: `docs/PROJECT_OS.md`.
+Current governance entrypoint: `AGENTS.md` plus Hot context.
 
 Current handoff: `docs/HANDOFF.md`.
 
-Governance contract: `docs/PROJECT_GOVERNANCE.md`.
+Workflow reference: `docs/project_management/AGENT_WORKFLOW.md`.
 
 The product is beyond the original `v0.1` CSV dashboard, but it is not a secure friends/public product and not a fully validated AI coach.
 
@@ -94,12 +104,13 @@ Current focus:
 27. WP-017I diagnosed match mode classification: persisted data does not reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom playlist modes. Current rows should remain playlist `unknown`; `mode=demo` and `Valve Matchmaking` are provenance labels only.
 28. WP-017J accepted explicit deferral for match mode labels: `v0.9` will not include exact playlist mode classification. Allowed labels are `mode_unknown`, `provenance_demo`, `provenance_valve_matchmaking` and `exact_date_source=steam_gc_match_time`; Premier/Competitive/Wingman/Casual/Deathmatch/FACEIT/custom labels, playlist-specific filters and mode-specific recommendation claims remain forbidden unless future WPs capture reliable mode metadata.
 
-## 4. Source-of-truth Documents
+## 4. Current Control Documents
 
-| Topic | Canonical document | Notes |
+| Topic | Document | Notes |
 |---|---|---|
 | Product status | `docs/CURRENT_STATUS.md` | Current fact state. |
-| Project OS | `docs/PROJECT_OS.md` | Short entrypoint for new Codex passes. |
+| Codex contract | `AGENTS.md` | Root operating contract and per-task Hot context rules. |
+| Project OS | `docs/PROJECT_OS.md` | Historical/superseded entrypoint; use Hot context instead. |
 | Handoff | `docs/HANDOFF.md` | Current state and next-chat continuation context. |
 | Governance | `docs/PROJECT_GOVERNANCE.md` | Versioning, WP gates, roles and safety policies. |
 | Version roadmap | `docs/project_management/VERSION_ROADMAP.md` | Planned version-to-WP sequence from `v0.4.2` to `v1.0`. |
@@ -107,9 +118,9 @@ Current focus:
 | Work package backlog | `docs/project_management/WORK_PACKAGE_BACKLOG.md` | WP objectives, guardians, acceptance and exit criteria. |
 | Acceptance matrix | `docs/project_management/ACCEPTANCE_MATRIX.md` | Feature acceptance checks by version and guardian. |
 | Docs map | `docs/project_management/DOCS_MAP.md` | Documentation ownership, source-of-truth and stale-risk map. |
-| Version status | `docs/VERSION_MAP.md` | Version/milestone readiness map. |
+| Version status | `docs/VERSION_MAP.md` | Historical/legacy version map; current version truth starts with `CURRENT_STATUS.md` and `WP_REGISTRY.md`. |
 | Current milestone | `docs/CURRENT_MILESTONE.md` | Active work and frozen scope. |
-| Roadmap | `docs/ROADMAP.md` | Ordered development under this file. |
+| Roadmap | `docs/ROADMAP.md` | Historical/legacy roadmap; current sequence starts with `WP_REGISTRY.md` and `VERSION_ROADMAP.md`. |
 | Architecture | `docs/ARCHITECTURE.md` | System shape and boundaries. |
 | Metrics | `docs/METRICS.md` | Runtime metric truth contract. |
 | Recommendations | `docs/RECOMMENDATIONS.md` | Coach-loop and planner rules. |
@@ -141,15 +152,14 @@ Until the current milestone closes, do not prioritize:
 
 ## 6. Codex Working Rules
 
-Before task work, Codex must read:
+Before task work, Codex must follow `AGENTS.md`. Normal per-task Hot context is:
 
 1. `AGENTS.md`
-2. `docs/PROJECT_CONTROL.md`
-3. `docs/PROJECT_OS.md`
-4. `docs/HANDOFF.md`
-5. `docs/CURRENT_MILESTONE.md`
-6. `docs/project_management/WORK_PACKAGE_BACKLOG.md`
-7. Relevant domain spec from the source-of-truth table
+2. `docs/CURRENT_STATUS.md`
+3. `docs/project_management/WP_REGISTRY.md`
+
+For new-session bootstrap, also read `docs/HANDOFF.md`. Read this file and
+other Warm docs only when task relevance requires them.
 
 Codex should run `python scripts/project_gate.py preflight`, `changed`, `required-checks` and `postflight` around work packages when shell access is available. Activated guardian docs under `docs/agents/` must be read before touching their domains.
 
@@ -194,8 +204,8 @@ For documentation changes:
 
 1. Verify every done criterion in `docs/CURRENT_MILESTONE.md`.
 2. Update `docs/CURRENT_STATUS.md`.
-3. Update `docs/VERSION_MAP.md`.
-4. Update `docs/ROADMAP.md`.
+3. Update `docs/project_management/WP_REGISTRY.md`.
+4. Update `docs/project_management/VERSION_ROADMAP.md` if version sequencing changes.
 5. Add a `docs/CHANGELOG.md` entry.
 6. Review deprecation/archive candidates if the milestone changed documentation truth.
 
@@ -324,9 +334,9 @@ Use these files as supporting docs under this control file:
 
 ## Documentation Rules
 
-- Update this file when project status, architecture decisions, priority order, or hard constraints change.
-- README should stay an operator/user entrypoint and link here for truth, not duplicate all strategy.
+- Update this file when supporting governance/product-control context changes.
+- README should stay an operator/user entrypoint and link to Hot context and docs navigation for current truth, not duplicate all strategy.
 - `WORKLOG.md` records chronological engineering actions; it is not a current-state contract.
 - `instructions/*` are historical prompt/TZ artifacts unless explicitly reactivated in this file.
-- Roadmap/scoring docs can rank ideas, but their percentages are subordinate to this file and the latest audit.
-- Any old document that contradicts this file should receive a historical/deprecated notice, not be deleted immediately.
+- Roadmap/scoring docs can rank ideas, but their percentages are subordinate to current Hot context and task-relevant canonical Warm docs.
+- Any old document that contradicts current Hot context should receive a historical/deprecated notice, not be deleted immediately.

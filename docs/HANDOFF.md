@@ -11,8 +11,8 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - Project: JC Coach, a personal AI coach for CS2.
 - Current product version: `v0.8`.
 - Current lane: `WP-017` Real Data Onboarding / Bulk Demo Usage targeting `v0.9`.
-- Current active WP: none; latest completed governance WP is `WP-017X Legacy Documentation Currency Snapshot`.
-- Next product WP after WP-017X: `WP-017K Real Data Onboarding Promotion to v0.9`.
+- Current active WP: none; latest completed governance WP is `WP-017Y No-Risk Legacy Docs Pointer Cleanup`.
+- Next product WP after WP-017Y: `WP-017K Real Data Onboarding Promotion to v0.9`.
 - Runtime: FastAPI / Uvicorn service `jc-coach.service` on `127.0.0.1:8010`.
 - Production DB: `data/cs2_coach.db`.
 
@@ -40,6 +40,7 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - WP-017V added the repo-native agent workflow and Documentation Steward / Docs Currency Agent before WP-017K.
 - WP-017W added task type profiles, role invocation shortcuts and the short Task Card prompt contract before WP-017K.
 - WP-017X produced a legacy documentation currency snapshot and conservative cleanup plan without moving, deleting or archiving files.
+- WP-017Y completed no-risk legacy pointer cleanup without moving, deleting or archiving files.
 
 ## Data And Product Facts To Carry Forward
 
@@ -54,7 +55,7 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Next Safe Step
 
-After WP-017X is reviewed and committed by the user if accepted, continue to `WP-017K Real Data Onboarding Promotion to v0.9` only with explicit user/ChatGPT approval. WP-017K must verify registry prerequisites, carry forward WP-017G/H warnings and WP-017J limitation text, and decide promote/block without raising cap or changing product logic.
+After WP-017Y is reviewed and committed by the user if accepted, continue to `WP-017K Real Data Onboarding Promotion to v0.9` only with explicit user/ChatGPT approval. WP-017K must verify registry prerequisites, carry forward WP-017G/H warnings and WP-017J limitation text, and decide promote/block without raising cap or changing product logic.
 
 ## Forbidden Without Explicit WP Authorization
 

@@ -1,6 +1,11 @@
-# HISTORICAL / PROMPT LIBRARY
+# Historical Prompt Library
 
-This document is retained for context. Do not treat these prompts as active instructions when they conflict with `AGENT.md`, `docs/PROJECT_CONTROL.md` or the user's latest request.
+> Status: Historical / archive candidate.
+> This file is retained as project history/evidence.
+> Do not use these prompts as current workflow or active instructions.
+> Current workflow: `docs/project_management/AGENT_WORKFLOW.md`.
+> Current root contract: `AGENTS.md`.
+> Current WP truth: `docs/project_management/WP_REGISTRY.md`.
 
 # Non-Stop Development Prompts
 
