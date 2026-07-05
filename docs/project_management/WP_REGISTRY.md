@@ -30,8 +30,8 @@ registry.
 
 ## Status Values
 
-Allowed statuses: `planned`, `in_progress`, `done`, `blocked`, `deferred`,
-`superseded`.
+Allowed statuses: `planned`, `active`, `in_progress`, `done`, `blocked`,
+`deferred`, `failed`, `superseded`, `out-of-band evidence`.
 
 ## WP-017 Canonical Order
 
@@ -52,7 +52,8 @@ Allowed statuses: `planned`, `in_progress`, `done`, `blocked`, `deferred`,
 | `WP-017J` | Match Mode Explicit Deferral / Unknown Labels | `v0.9` | `done` | `docs/audit/WP_017J_MATCH_MODE_EXPLICIT_DEFERRAL_REPORT.md` | `WP-017I` | Explicit deferral accepted: `v0.9` will not include exact playlist classification. Use `mode_unknown`, `provenance_demo`, `provenance_valve_matchmaking` and `exact_date_source=steam_gc_match_time`; do not claim Premier/Competitive/Wingman/Casual/Deathmatch/FACEIT/custom without future reliable metadata. |
 | `WP-017S` | Documentation Governance Entrypoint Repair | `v0.9` | `done` | `docs/audit/WP_017S_GOVERNANCE_ENTRYPOINT_REPAIR_REPORT.md` | `WP-017J`, out-of-band governance audit evidence | Service governance repair before promotion lane continues; does not consume planned `WP-018`. |
 | `WP-017T` | Compact Current Status and Handoff | `v0.9` | `done` | `docs/audit/WP_017T_COMPACT_CURRENT_STATUS_HANDOFF_REPORT.md` | `WP-017S` | Governance/documentation pass that compresses Hot current-state docs before promotion review; no product logic, DB, service or WP-018 product block changes. |
-| `WP-017K` | Real Data Onboarding Promotion to `v0.9` | `v0.9` | `planned` | TBD | `WP-017G`, `WP-017H`, `WP-017I`, `WP-017J` or documented deferral, `WP-017S`, `WP-017T` | Promotion WP only. Must not raise cap, delete demos, change schema or claim friends/public readiness. |
+| `WP-017U` | Project Operating Protocol and Master WP Checklist | `v0.9` | `done` | `docs/audit/WP_017U_PROJECT_OPERATING_PROTOCOL_REPORT.md` | `WP-017T` | Governance/documentation pass that adds the operating protocol and human master WP checklist before promotion review; no product logic, DB, service or WP-018 product block changes. |
+| `WP-017K` | Real Data Onboarding Promotion to `v0.9` | `v0.9` | `planned` | TBD | `WP-017G`, `WP-017H`, `WP-017I`, `WP-017J` or documented deferral, `WP-017S`, `WP-017T`, `WP-017U` | Promotion WP only. Must not raise cap, delete demos, change schema or claim friends/public readiness. |
 
 ## Current Promotion Gate
 
@@ -73,6 +74,8 @@ Required before `WP-017K` can promote:
   naming conflict documented as out-of-band evidence.
 - `WP-017T` completed: active current-state and handoff docs compressed so
   future prompts can stay short while current project truth remains in-repo.
+- `WP-017U` completed: practical project operating protocol and human master WP
+  checklist exist before promotion review.
 - Cap remains `1` unless a separate explicit cap-change WP authorizes a change.
 
 ## Future Version Registry

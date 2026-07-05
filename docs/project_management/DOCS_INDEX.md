@@ -1,8 +1,11 @@
 # Documentation Index
 
-Last updated: 2026-07-04.
+Last updated: 2026-07-05.
 
-Human-readable navigation map. This file does not replace `docs/PROJECT_CONTROL.md` or `docs/project_management/DOCS_MAP.md`; it helps people find the right document without moving or renaming files.
+Human-readable navigation map. This file does not replace `AGENTS.md`,
+`docs/CURRENT_STATUS.md`, `docs/project_management/WP_REGISTRY.md` or
+`docs/project_management/DOCS_MAP.md`; it helps people find the right document
+without moving or renaming files.
 
 > Status: Navigation document.
 > Do not use this file as current project state.
@@ -27,6 +30,10 @@ import/parser/evaluator, recommendations, UI/web routes, security or historical
 WP review. Before reading Warm docs, Codex should state which files are needed
 and why.
 
+`docs/project_management/PROJECT_OPERATING_PROTOCOL.md` and
+`docs/project_management/MASTER_WP_CHECKLIST.md` are Warm governance/planning
+references. They are not per-task Hot context.
+
 Cold context includes old audit reports, stage reports, old prompts,
 `docs/tasks/*`, `instructions/*`, old roadmap/version docs and generated data
 reports. Cold files are evidence/history and must not override Hot context.
@@ -38,10 +45,11 @@ reports. Cold files are evidence/history and must not override Hot context.
 - `docs/README.md` - human documentation entrypoint.
 - `docs/PROJECT_OS.md` - historical/superseded operational entrypoint; do not use for current state.
 - `docs/HANDOFF.md` - current state, next WP and do-not-do list.
-- `docs/PROJECT_CONTROL.md` - top source of truth.
+- `docs/PROJECT_CONTROL.md` - legacy project control file; current operating hierarchy starts with `AGENTS.md` and Hot context.
 - `docs/PROJECT_GOVERNANCE.md` - governance, WP gates, evidence policy.
 - `docs/CURRENT_STATUS.md` - current product state.
 - `docs/CURRENT_MILESTONE.md` - current/historical hardening milestone detail.
+- `docs/project_management/PROJECT_OPERATING_PROTOCOL.md` - Warm governance protocol for roles, WP lifecycle, blockers, reports and commit flow.
 
 ## Project Management
 
@@ -50,6 +58,7 @@ reports. Cold files are evidence/history and must not override Hot context.
 - `docs/project_management/ACCEPTANCE_MATRIX.md` - feature acceptance by version and guardian.
 - `docs/project_management/DOCS_MAP.md` - documentation ownership, source-of-truth and stale-risk map.
 - `docs/project_management/DOCS_INDEX.md` - this human navigation index.
+- `docs/project_management/MASTER_WP_CHECKLIST.md` - Warm/Cold human-readable full WP campaign map; registry remains canonical for status/dependencies/report paths.
 - `docs/ROADMAP.md` - older roadmap overview; use with `VERSION_ROADMAP.md`.
 - `docs/VERSION_MAP.md` - older version status map; contains stale-label risk.
 - `docs/RELEASE_CHECKLIST.md` - release/friends/public gate checklist.
