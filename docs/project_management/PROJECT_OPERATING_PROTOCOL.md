@@ -17,7 +17,9 @@ not lose context between sessions or work packages.
 
 `docs/project_management/AGENT_WORKFLOW.md` defines the repo-native role
 workflow Codex uses inside WP-level work. These agents are process roles, not a
-runtime agent platform.
+runtime agent platform. It also defines task type profiles, role invocation
+shortcuts, the standard Task Card contract and WP-level console output
+contract.
 
 ## 3. Source Of Truth Hierarchy
 
@@ -75,7 +77,7 @@ file is reconciled.
 | `docs/DECISIONS.md` | A durable process, product or architecture decision is made. |
 | `docs/project_management/MASTER_WP_CHECKLIST.md` | The high-level campaign plan changes or a WP is added, renamed or reordered. |
 | `docs/project_management/DOCS_INDEX.md` / `docs/project_management/DOCS_MAP.md` | Document roles or context levels change. |
-| `docs/project_management/AGENT_WORKFLOW.md` | WP role workflow, Documentation Steward triggers or closure gate rules change. |
+| `docs/project_management/AGENT_WORKFLOW.md` | WP role workflow, task type profiles, Task Card contract, Documentation Steward triggers or closure gate rules change. |
 | `docs/audit/WP_*.md` | A WP-level task report is required. |
 | Domain docs | The truth for that domain changes. |
 
@@ -90,6 +92,13 @@ file is reconciled.
 7. Do not silently renumber existing WPs.
 8. Do not consume reserved WP IDs.
 9. Mark out-of-band audits as out-of-band evidence.
+
+## 7.1 Task Routing And Prompt Contract
+
+Use `docs/project_management/AGENT_WORKFLOW.md` for task type profiles, role
+shortcuts and the standard Task Card. Future prompts should state task-specific
+scope, allowed changes, forbidden changes, acceptance constraints, report path
+and stop conditions instead of repeating generic workflow rules.
 
 ## 8. Blocker / Stuck Procedure
 

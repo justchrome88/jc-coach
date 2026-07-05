@@ -52,6 +52,10 @@ Cold context includes old audit reports, stage reports, old prompts,
 `docs/tasks/*`, `instructions/*`, old roadmap/version docs and generated data
 reports. Use Cold context only as evidence during investigation or audit.
 
+For task routing, task type profiles and standard prompt/report contracts, use
+`docs/project_management/AGENT_WORKFLOW.md` when the task calls for governance
+workflow context. This does not expand per-task Hot context.
+
 ## 3. Hard Safety Rules
 
 - Never commit `data/cs2_coach.db`.

@@ -119,7 +119,177 @@ Documentation Steward must run:
 Documentation Steward should not run a full project docs audit after every tiny
 task.
 
-## 7. Required Document Update Matrix
+## 7. Task Type Profiles
+
+### Tiny Task
+
+Example: typo, small docs wording or one-line config note.
+
+- Required roles: Implementation only; QA light if needed.
+- Documentation Steward: only if canonical docs, status docs or WP docs are
+  affected.
+- Report: no WP report unless requested.
+
+### Scoped Implementation Task
+
+- Required roles: PM / Orchestrator, Implementation, QA / Reviewer.
+- Documentation Steward: only if docs, status or product behavior changed.
+- Report: format depends on task size.
+
+### WP-Level Implementation Task
+
+- Required roles: PM / Orchestrator, Implementation, QA / Reviewer,
+  Documentation Steward.
+- Requires WP report.
+- Requires registry, status and handoff checks.
+
+### Promotion / Acceptance Task
+
+- Required roles: PM / Orchestrator, QA / Reviewer, Documentation Steward.
+- Implementation: only if documentation or status updates are required.
+- Required Warm docs category: acceptance matrix, roadmap/version docs, current
+  limitations and relevant recent reports.
+- Must produce `PASS`, `PASS_WITH_WARNINGS`, `FAIL` or `DEFERRED`.
+
+### Diagnostic / Investigation Task
+
+- Required roles: PM / Orchestrator, QA / Reviewer.
+- Implementation: only if repair is explicitly approved.
+- Report must separate facts, hypotheses, blockers and recommended next step.
+
+### Documentation / Governance Task
+
+- Required roles: PM / Orchestrator, Documentation Steward, QA / Reviewer.
+- Must not change product logic.
+- Must avoid creating duplicate docs.
+
+### Docs Currency Check
+
+Primary role: Documentation Steward.
+
+Modes:
+
+- `targeted`
+- `WP closure`
+- `promotion readiness`
+- `broad audit`
+
+Classify docs only within the requested scope unless broad audit is explicitly
+requested.
+
+### DB / Data Task
+
+- Requires explicit user approval before mutation.
+- Requires backup/SHA policy.
+- Requires DB/data guardian docs if relevant.
+- No mutation by default.
+
+### Import / Parser / Evaluator Task
+
+- Requires explicit approval before live import, parser or evaluator jobs.
+- Must respect Steam cap and current limitations.
+
+### Deploy / Runtime Task
+
+- Requires runtime/deploy Warm docs.
+- Must distinguish repo config from live system config.
+- No service/nginx changes without explicit authorization.
+
+### UI / Web Task
+
+- Requires relevant UI/web docs and route/template/static scope.
+- QA must check user-facing regression risks.
+
+### Recommendations / Coach Quality Task
+
+- Requires recommendations, metrics and AI coach docs.
+- Must distinguish evidence-backed claims from weak claims.
+
+## 8. Role Invocation Shortcuts
+
+| Phrase | Roles run | Expected output |
+|---|---|---|
+| `Use standard WP workflow.` | PM / Orchestrator, Implementation if changes are needed, QA / Reviewer, Documentation Steward | WP report, checks, changed files, required doc updates and next step. |
+| `Task type: promotion / acceptance.` | PM / Orchestrator, QA / Reviewer, Documentation Steward; Implementation only for docs/status updates | `PASS`, `PASS_WITH_WARNINGS`, `FAIL` or `DEFERRED` with evidence and limitations. |
+| `Task type: docs currency check.` | Documentation Steward, with PM / Orchestrator if scope must be clarified | Findings, classifications and minimal recommended actions inside scope. |
+| `Invoke Documentation Steward.` | Documentation Steward | Scope checked, stale/conflicting docs, duplicate instructions, required updates and no automatic deletion. |
+| `Run PM/Orchestrator planning only.` | PM / Orchestrator | Scope/options/risks/next-step proposal; no edits unless separately authorized. |
+| `Run QA/Reviewer only.` | QA / Reviewer | Review findings, risks, missing checks and PASS/PASS_WITH_WARNINGS/FAIL if enough evidence exists. |
+| `Tiny task, no full workflow unless needed.` | Implementation; QA light if needed; Documentation Steward only if canonical/status/WP docs are affected | Minimal change or answer, short summary, no WP report unless requested. |
+| `Stop at diagnosis; do not repair.` | PM / Orchestrator, QA / Reviewer | Facts, hypotheses, blocker status and recommended next step; no repair edits. |
+
+## 9. Standard Task Card Contract
+
+Future prompts should use a short Task Card and rely on `AGENTS.md` plus this
+workflow for generic rules. Do not repeat the full workflow in every prompt.
+
+```text
+Task:
+Task type:
+Goal:
+Scope:
+Allowed changes:
+Forbidden changes:
+Task-specific acceptance constraints:
+Report path, if WP-level:
+Stop conditions:
+```
+
+## 10. Standard WP Preflight
+
+Run:
+
+```bash
+pwd
+git status --short
+git branch --show-current
+git log --oneline -8 --decorate
+```
+
+If the worktree is dirty before a WP-level task, stop and report.
+
+## 11. Standard Output Contract
+
+For WP-level work, console output should include:
+
+1. Report path.
+2. Decision/result.
+3. Changed files.
+4. Short summary.
+5. `git status --short`.
+6. Confirmations:
+   - no code changed, if docs-only;
+   - no DB changed;
+   - no imports/parser/evaluator ran;
+   - no service/nginx changed;
+   - no `git add`/commit/push.
+
+The exact report path is task-specific and belongs in the Task Card.
+
+## 12. Documentation Steward Standalone Mode
+
+Example prompt:
+
+```text
+Invoke Documentation Steward.
+Mode: targeted docs currency check.
+Scope: governance docs.
+Do not edit files.
+Output: findings, classifications, recommended minimal actions.
+```
+
+Required output:
+
+- Scope checked.
+- Docs classified.
+- Stale/conflicting docs.
+- Duplicate instructions.
+- Unreferenced docs if checked.
+- Required updates.
+- Recommended actions.
+- Confirmation that no automatic deletion was performed.
+
+## 13. Required Document Update Matrix
 
 | Event | Required docs to check/update |
 |---|---|
@@ -134,7 +304,7 @@ task.
 | Document deprecated | `DOCS_INDEX.md`, `DOCS_MAP.md`, report, but no delete without approval |
 | Side-chat decision accepted | `DECISIONS.md` or relevant canonical doc |
 
-## 8. Docs Classification Model
+## 14. Docs Classification Model
 
 - `CANONICAL` - source of truth for a specific area.
 - `SUPPORTING` - useful reference but not source of truth.
@@ -150,7 +320,7 @@ Rules:
 - If docs conflict, the source-of-truth hierarchy in
   `PROJECT_OPERATING_PROTOCOL.md` wins.
 
-## 9. WP Closure Checklist
+## 15. WP Closure Checklist
 
 A WP can close only if:
 
@@ -164,7 +334,7 @@ A WP can close only if:
 - Next step recorded.
 - User/ChatGPT review completed before commit.
 
-## 10. How To Use This Workflow In Prompts
+## 16. How To Use This Workflow In Prompts
 
 ### Normal WP Prompt
 
