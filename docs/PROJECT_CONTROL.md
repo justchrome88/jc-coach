@@ -138,7 +138,7 @@ Until the current milestone closes, do not prioritize:
 
 Before task work, Codex must read:
 
-1. `AGENT.md`
+1. `AGENTS.md`
 2. `docs/PROJECT_CONTROL.md`
 3. `docs/PROJECT_OS.md`
 4. `docs/HANDOFF.md`
