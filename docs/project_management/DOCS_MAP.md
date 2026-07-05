@@ -26,7 +26,9 @@ must not override Hot context.
 
 `docs/project_management/PROJECT_OPERATING_PROTOCOL.md` and
 `docs/project_management/MASTER_WP_CHECKLIST.md` are not per-task Hot context.
-Read them only when governance, planning or audit scope requires them.
+`docs/project_management/AGENT_WORKFLOW.md` is also Warm governance context,
+not per-task Hot context. Read them only when governance, planning, WP role
+workflow or audit scope requires them.
 
 ## Project OS Layer
 
@@ -40,6 +42,7 @@ Read them only when governance, planning or audit scope requires them.
 | `docs/HANDOFF.md` | Current continuation state. | `PM_ORCHESTRATOR` | active/next WP | source-of-truth, must stay current |
 | `docs/PROJECT_GOVERNANCE.md` | Versioning, WP gates, roles, safety policy. | `PM_ORCHESTRATOR` | all WPs | Warm governance reference |
 | `docs/project_management/PROJECT_OPERATING_PROTOCOL.md` | Practical operating protocol for roles, source-of-truth hierarchy, WP lifecycle, blockers, reports, commits and chat policy. | `PM_ORCHESTRATOR` | all WPs | Warm governance reference |
+| `docs/project_management/AGENT_WORKFLOW.md` | Repo-native WP role workflow for PM, Implementation, QA and Documentation Steward checks. | `PM_ORCHESTRATOR` | all WPs | Warm governance reference; not per-task Hot context |
 | `docs/project_management/VERSION_ROADMAP.md` | Version-to-WP roadmap. | `PM_ORCHESTRATOR` | WP-012..WP-018 | source-of-truth for planned version sequence |
 | `docs/project_management/WORK_PACKAGE_BACKLOG.md` | WP objectives, guardians and exit criteria. | `PM_ORCHESTRATOR` | WP-012..WP-018 | source-of-truth for backlog wiring |
 | `docs/project_management/ACCEPTANCE_MATRIX.md` | Feature acceptance map. | `PM_ORCHESTRATOR`, domain guardians | WP-012..WP-018 | source-of-truth for acceptance wiring |

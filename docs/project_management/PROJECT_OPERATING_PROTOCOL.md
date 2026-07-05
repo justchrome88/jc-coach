@@ -15,6 +15,10 @@ not lose context between sessions or work packages.
 - Repository docs: source of truth for accepted project state.
 - Git: immutable technical history after user-approved commits.
 
+`docs/project_management/AGENT_WORKFLOW.md` defines the repo-native role
+workflow Codex uses inside WP-level work. These agents are process roles, not a
+runtime agent platform.
+
 ## 3. Source Of Truth Hierarchy
 
 1. `AGENTS.md` - Codex operating contract.
@@ -71,6 +75,7 @@ file is reconciled.
 | `docs/DECISIONS.md` | A durable process, product or architecture decision is made. |
 | `docs/project_management/MASTER_WP_CHECKLIST.md` | The high-level campaign plan changes or a WP is added, renamed or reordered. |
 | `docs/project_management/DOCS_INDEX.md` / `docs/project_management/DOCS_MAP.md` | Document roles or context levels change. |
+| `docs/project_management/AGENT_WORKFLOW.md` | WP role workflow, Documentation Steward triggers or closure gate rules change. |
 | `docs/audit/WP_*.md` | A WP-level task report is required. |
 | Domain docs | The truth for that domain changes. |
 
@@ -112,6 +117,10 @@ diff. ChatGPT PM may review the report and recommend a commit. User performs
 
 - Per task: read Hot context and show `git status --short`.
 - Per WP: create a report and update registry/status/handoff as needed.
+- Per WP: run the Documentation Steward check from
+  `docs/project_management/AGENT_WORKFLOW.md` before closure. This owns docs
+  currency checks and required doc updates, but does not require a full docs
+  audit for every tiny task.
 - Every 3-5 WPs, or when Hot docs grow too large: compact
   `CURRENT_STATUS.md` and `HANDOFF.md`.
 - Before promotion: run promotion readiness audit.
