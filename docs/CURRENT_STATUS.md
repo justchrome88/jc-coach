@@ -4,7 +4,7 @@ Last updated: 2026-07-05.
 
 Current Product Version: `v0.8`.
 
-Current WP: `WP-017G Data Integrity Acceptance`.
+Current WP: `WP-017H Performance Acceptance`.
 
 Next Target Version: `v0.9`.
 
@@ -64,6 +64,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - WP-017D post-batch diagnosis completed / `ACCEPT_WITH_REPAIR_REQUIRED`: WP-017C/C2 import/parser/storage evidence was accepted, but automatic post-import recommendation evaluation was not reliable in the Steam path because evaluation ran before exact Steam date truth was applied. Pending placeholder `#73` and cap raise were blocked until repair.
 - WP-017E auto-evaluation trigger repair completed / `REPAIRED`: Steam downloader imports now defer parser-side evaluation, apply/commit/refresh authoritative Steam date truth, then run targeted recommendation evaluation with compact metadata in demo download results. Tests cover exact-date auto-evaluation, batch-cap metadata, duplicate protection, legacy skip and non-exact gating. Pending `#73` is still unprocessed and cap remains `1` until the repaired path is proven live.
 - WP-017F controlled pending share code `#73` import completed / `PASS_PENDING_73_IMPORTED_AND_AUTO_EVALUATED`: one targeted pending-demo attempt processed `CSGO-owEoV-4o9Uj-kK5Fp-4zYKz-UqDZG`, downloaded/retained/parsed one Mirage demo as playable exact-date match `#76`, and automatic evaluation `#78` for recommendation `#5` was created with `metric_confidence`, moving progress to `3/10`. No manual evaluator ran, legacy `#3/#4` stayed unchanged, cap stayed `1`, schema stayed unchanged and `data/tmp` returned to `0` bytes. The narrow pending-demo path did not create a new parent `steam_import_all` job, so metadata is in the returned result and placeholder raw JSON rather than a new parent result JSON.
+- WP-017G post-batch data integrity acceptance completed / `ACCEPTED_WITH_WARNINGS`: the no-new path, batch-cap path and repaired pending-demo path are internally consistent; matches `#75/#76` have exact Steam dates, parser artifacts, retained demos and recommendation evaluations; `#5` has three evaluations / `3/10`; legacy `#1/#3/#4` received no evaluations for `#75/#76`. Warnings remain: no parent job metadata for the targeted pending-demo path, authenticated UI performance not accepted, match mode remains provenance-only, raw demos/backups are on root storage, 15 historical demo files are unreferenced by current DB/artifact paths, and cap remains `1`.
 - Observe-only demo storage reporting and manifest generation.
 
 ## Partial Or Risky
@@ -81,7 +82,7 @@ The project is past the original `v0.1` CSV MVP. It is usable as a personal Fast
 - Stage 9 is UI presentation over existing persisted state/services, not recommendation planner, ProblemSnapshot or engine work.
 - WP-015D warnings carried forward: direct post-restart authenticated browser timings were not captured by Codex; persistent report generation acceptance is deferred because it mutates DB; `/coach` artifact overview still loads many artifact ORM rows; weak metrics remain weak; `ImportJob.status` remains coarse; uploads/tmp remain on root filesystem.
 - `v0.8` accepts only the controlled primary survival recommendation loop. Legacy active `grenades` recommendation `#3` and `map` recommendation `#4` remain `needs_refresh` and are not accepted for hard progress.
-- `v0.9` is still not promoted. WP-017F proved the repaired automatic evaluation path on one live pending demo, but WP-017G still needs to review data integrity/runtime evidence before any cap raise or promotion.
+- `v0.9` is still not promoted. WP-017G accepted data integrity with warnings, but performance acceptance remains outstanding before any cap raise or promotion.
 - Recommendation progress summary wording remains rough after one green evaluation: it may say the goal is failing because the 10-match target progress score is still low after `1/10` completed matches. This is a UX/calibration warning, not a loop blocker.
 - Authenticated browser UI was not directly inspected by Codex for WP-016 because no authenticated session was available; unauthenticated smoke returned expected login redirects.
 - Recommendations are not yet consistently generated from the top verified problem snapshot.
