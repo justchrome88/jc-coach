@@ -56,6 +56,23 @@ For task routing, task type profiles and standard prompt/report contracts, use
 `docs/project_management/AGENT_WORKFLOW.md` when the task calls for governance
 workflow context. This does not expand per-task Hot context.
 
+## 2.2 External Documentation Policy
+
+For tasks involving external libraries, frameworks, APIs or tooling behavior,
+use Context7 MCP when available before changing code, config or docs that
+depend on those APIs. This includes FastAPI, SQLAlchemy, Alembic, pytest,
+Playwright, frontend libraries, Codex/MCP config and other
+dependency-specific behavior.
+
+If Context7 MCP is unavailable, state that MCP docs lookup was unavailable, use
+another current official source if available, and avoid confident
+version-specific API claims without evidence.
+
+This is not required for docs-only PM/process tasks that only modify internal
+project state. External docs never override this file, project source-of-truth
+docs or the active Task Card scope/allowed files. Executor reports should
+mention external documentation lookup only when it was relevant.
+
 ## 3. Hard Safety Rules
 
 - Never commit `data/cs2_coach.db`.
