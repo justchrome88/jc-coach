@@ -1,0 +1,106 @@
+# Commands Run
+
+Working directory: `/opt/jc-coach`.
+Audit date: 2026-07-06.
+
+## Mandatory / Inventory Commands
+
+- `git status --short`
+  - Result before audit report creation: pre-existing untracked `docs/audit/WP_018A_COACH_OUTPUT_QUALITY_DIAGNOSIS_REPORT.md`.
+- `pwd`
+  - `/opt/jc-coach`
+- `git branch --show-current`
+  - `main`
+- `git log --oneline -n 20`
+  - Captured in console; latest commit `677d74d Add control-plane protection policy`.
+- `find . -maxdepth 3 -type f | sort`
+  - Saved to `evidence/file_inventory.txt`.
+- `find . -maxdepth 4 -type d | sort`
+  - Run during inventory; output inspected in console.
+- `rg --files -g 'README*' -g '*PROJECT_INDEX*' -g '*AGENTS*' -g 'docs/**' -g 'tasks/**' -g 'decisions/**' -g 'evals/**' -g 'scripts/**'`
+  - Saved to `evidence/docs_inventory.txt`.
+- `rg --files -g 'package.json' -g 'pyproject.toml' -g 'requirements*.txt' -g 'Pipfile' -g 'poetry.lock' -g 'uv.lock' -g 'vite.config.*' -g 'tsconfig*.json' -g 'pytest.ini' -g 'tox.ini' -g 'ruff.toml' -g '.pre-commit-config.yaml' -g 'Dockerfile' -g 'docker-compose*.yml' -g '.github/**'`
+  - Found `Dockerfile`, `pyproject.toml`, `docker-compose.yml`, `tools/steam-gc/package.json`.
+- `rg "TODO|FIXME|HACK|deprecated|rollback|metric|recommendation|coach|cs2|faceit|steam|match|round|first death|trade|utility|ADR|Definition of Done|quality gate|AGENTS|PROJECT_INDEX" .`
+  - Run; output was very large and truncated in console. Used as signal for targeted inspection.
+- `rg --files app deploy Dockerfile docker-compose.yml pyproject.toml tools | sort`
+  - Saved to `evidence/architecture_inventory.txt`.
+- `rg --files app docs tests | rg 'metric|recommendation|coach|ai|match|round|steam|faceit|demo|parser|aim|utility|trade|death|duel|confidence' | sort`
+  - Saved to `evidence/metrics_inventory.txt`.
+- `rg --files tests docs | rg 'test|eval|quality|gate|acceptance|pytest|ruff|validator' | sort`
+  - Saved to `evidence/tests_inventory.txt`.
+
+## Files Read
+
+Hot context:
+
+- `AGENTS.md`
+- `docs/CURRENT_STATUS.md`
+- `docs/project_management/WP_REGISTRY.md`
+- `docs/HANDOFF.md`
+
+Warm context selected because audit scope required governance, roadmap, acceptance, deploy/service, testing, DB/data integrity, import/parser/evaluator, recommendations, UI/web routes and security:
+
+- `docs/project_management/AGENT_WORKFLOW.md`
+- `docs/project_management/PROJECT_OPERATING_PROTOCOL.md`
+- `docs/project_management/DOCS_INDEX.md`
+- `docs/project_management/DOCS_MAP.md`
+- `docs/project_management/VERSION_ROADMAP.md`
+- `docs/project_management/ACCEPTANCE_MATRIX.md`
+- `docs/ARCHITECTURE.md`
+- `docs/METRICS.md`
+- `docs/RECOMMENDATIONS.md`
+- `docs/AI_COACH.md`
+- `docs/TESTING.md`
+- `docs/SECURITY.md`
+- `docs/DEPLOYMENT.md`
+- `docs/MIGRATIONS.md`
+- `docs/BACKUP_RESTORE.md`
+- `docs/DECISIONS.md`
+- `docs/KNOWN_LIMITATIONS.md`
+- `docs/agents/roles/QA_REVIEWER.md`
+- `pyproject.toml`
+- `README.md`
+- `.gitignore`
+- `app/main.py`
+- `app/api/routes.py`
+- `app/web/routes.py`
+- `app/db/models.py`
+- `app/db/session.py`
+- `app/config.py`
+- `app/services/metric_truth.py`
+- `app/services/recommendation_tracking.py`
+- `app/services/ai_validator.py`
+- `tests/conftest.py`
+- `scripts/project_gate.py`
+
+## Secret Handling
+
+- `.env` was not printed.
+- Only variable names were listed via `awk -F= '/^[A-Za-z_][A-Za-z0-9_]*=/{print $1}' .env .env.example 2>/dev/null | sort -u`.
+- No secret values were included in this audit.
+
+## Verification Commands
+
+- `APP_ENV=test PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests -q -p no:cacheprovider`
+  - Result: `211 passed, 1 warning`.
+- `.venv/bin/ruff check . --no-cache`
+  - Result: `All checks passed!`
+- `git diff --check`
+  - Result: no output / pass.
+- `python scripts/project_gate.py changed`
+  - Result: failed, `/bin/bash: line 1: python: command not found`.
+- `.venv/bin/python scripts/project_gate.py changed`
+  - Result: passed; reported pre-existing untracked `docs/audit/WP_018A_COACH_OUTPUT_QUALITY_DIAGNOSIS_REPORT.md` and activated `PM_ORCHESTRATOR`, `UI_COACH_GUARDIAN`.
+- `sha256sum data/cs2_coach.db`
+  - Result: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33  data/cs2_coach.db`.
+
+## Commands Not Run
+
+- No live Steam/Valve import.
+- No parser jobs on production data.
+- No evaluator/manual evaluator jobs.
+- No migrations.
+- No deploy/service restart.
+- No package installation.
+- No `git add`, commit or push.

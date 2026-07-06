@@ -102,11 +102,28 @@ Promotion decision carried forward:
   task edits unless explicitly scoped by a governance/control-plane task.
 - Cap remains `1` unless a separate explicit cap-change WP authorizes a change.
 
+## Foundation Hardening Overlay
+
+The 2026-07-06 agentic-readiness audit is registered as a foundation hardening
+overlay, not as a replacement for a planned product WP.
+
+- Audit folder:
+  `docs/audits/2026-07-06-agentic-readiness-audit/`.
+- Recovery plan:
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/`.
+- Audit score: `66%` readiness (`3.30/5` across 106 rows).
+- Project status: `CONTINUE WITH RESTRICTED SCOPE`.
+- Major CS2 feature work, including unrestricted WP-018 expansion, is paused
+  until the recovery plan readiness gate passes.
+- Small/scoped work may continue only when it strengthens documentation,
+  tests/evals, gates, confidence/caveats or foundation readiness and does not
+  add unsupported CS2/domain claims.
+
 ## Future Version Registry
 
 | WP ID | Title | Version target | Status | Report path | Dependencies | Notes / warnings |
 |---|---|---|---|---|---|---|
-| `WP-018` | Coach Quality Calibration | `v0.10` | `planned` | TBD | `WP-017K` promotion, `WP-017Z1`/`WP-017Z2` governance workflow updates | Calibrate coach claims, progress scoring and weak-metric caveats. |
+| `WP-018` | Coach Quality Calibration | `v0.10` | `planned / restricted pending foundation readiness gate` | TBD | `WP-017K` promotion, `WP-017Z1`/`WP-017Z2` governance workflow updates, 2026-07-06 foundation hardening gate | Calibrate coach claims, progress scoring and weak-metric caveats. Major coach/domain expansion is paused until the foundation readiness gate passes. |
 | `WP-019` | Personal Daily Use UX | `v0.11` | `planned` | TBD | `WP-018` | Daily owner workflow polish without friends/public claims. |
 | `WP-020` | Deployment / Backup / Storage Hardening | `v0.12` | `planned` | TBD | `WP-019` | VPS operation, backup/restore and storage hardening. |
 | `WP-021` | Personal MVP Lock | `v1.0` | `planned` | TBD | `WP-020` | Controlled personal MVP lock; public/friends readiness remains separate. |

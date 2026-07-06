@@ -58,6 +58,7 @@ context.
 | `docs/project_management/MASTER_WP_CHECKLIST.md` | Human-readable full WP campaign map. | `PM_ORCHESTRATOR` | WP-011D..WP-021 | Warm/Cold planning map; registry wins for status/dependencies/report paths |
 | `docs/project_management/DOCS_MAP.md` | Documentation ownership map. | `PM_ORCHESTRATOR` | all WPs | source-of-truth for docs wiring |
 | `docs/project_management/DOCS_INDEX.md` | Human-readable documentation index. | `PM_ORCHESTRATOR` | all WPs | navigation index |
+| `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/` | Foundation hardening recovery plan and readiness gate after the 2026-07-06 agentic-readiness audit. | `PM_ORCHESTRATOR`, domain guardians | foundation hardening overlay before major WP-018 expansion | source-of-truth for restricted-scope hardening lane until gate PASS |
 
 ## Product Architecture Layer
 
@@ -129,6 +130,7 @@ context.
 | `docs/audit/DOCUMENT_DEPRECATION_PLAN.md` | Historical doc policy. | `PM_ORCHESTRATOR` | docs cleanup | source-of-truth for deprecation |
 | `docs/audit/FULL_PROJECT_AUDIT_*` | Full audits and draft tasks. | `PM_ORCHESTRATOR` | context for future WPs | supporting; may be stale after WP-011C |
 | `docs/audit/CS2_AI_COACH_AUDIT_2026-07-02.md` | Earlier project audit. | `PM_ORCHESTRATOR` | reference | supporting/historical |
+| `docs/audits/2026-07-06-agentic-readiness-audit/` | Read-only agentic-readiness audit with matrix, evidence, critical gaps and recommended tasks. | `PM_ORCHESTRATOR`, domain guardians | foundation hardening overlay | source evidence for 66% readiness recovery plan |
 
 ## Task Docs
 

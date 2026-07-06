@@ -68,6 +68,9 @@ reports. Cold files are evidence/history and must not override Hot context.
 - `docs/ROADMAP.md` - historical/archive-candidate roadmap overview; do not use as current roadmap truth.
 - `docs/VERSION_MAP.md` - historical/archive-candidate version status map; do not use as current version truth.
 - `docs/RELEASE_CHECKLIST.md` - release/friends/public gate checklist.
+- `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/` - current
+  foundation hardening recovery plan after the 2026-07-06 agentic-readiness
+  audit; governs restricted scope until its readiness gate passes.
 
 ## Agent Workflow And Guardians
 
@@ -127,6 +130,9 @@ reports. Cold files are evidence/history and must not override Hot context.
 
 ## Audit Evidence
 
+- `docs/audits/2026-07-06-agentic-readiness-audit/` - read-only
+  agentic-readiness audit evidence and matrix; produced the `66%` readiness
+  recovery lane.
 - `docs/audit/WP_011B_PROJECT_OS_IMPLEMENTATION_REPORT.md` - Project OS implementation evidence.
 - `docs/audit/WP_011C_ROADMAP_DOCS_WIRING_REPORT.md` - roadmap/docs wiring evidence.
 - `docs/audit/WP_011D_DOCUMENTATION_NAVIGATION_INDEX_REPORT.md` - documentation navigation index evidence.

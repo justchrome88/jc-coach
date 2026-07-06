@@ -5,11 +5,27 @@ Last updated: 2026-07-06.
 ## Snapshot
 
 - Product version: `v0.9`.
-- Current lane: `WP-018` Coach Quality Calibration for `v0.10`.
-- Current active WP: none; latest completed product WP is `WP-017K Real Data Onboarding Promotion to v0.9`.
-- Next product WP: `WP-018 Coach Quality Calibration`.
+- Current lane: Foundation Hardening / Readiness Recovery after the
+  2026-07-06 agentic-readiness audit.
+- Current active WP: none; latest completed product WP is `WP-017K Real Data
+  Onboarding Promotion to v0.9`.
+- Next product WP: `WP-018 Coach Quality Calibration`, restricted pending the
+  foundation readiness gate.
 - Promotion status: `v0.9` is promoted with warnings by WP-017K. Warnings and limitations must carry forward into WP-018.
-- Latest known production DB SHA: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33` from WP-017H evidence. Re-check before any WP that depends on current DB state.
+- Latest known production DB SHA: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33` from WP-017H evidence and the 2026-07-06 agentic-readiness audit. Re-check before any WP that depends on current DB state.
+
+## Foundation Hardening Status
+
+- 2026-07-06 read-only agentic-readiness audit result: `66%` readiness
+  (`3.30/5` across 106 audit rows).
+- Audit decision: `YES, BUT` - continue only small/scoped work while fixing
+  foundation P0/P1 items before major coach/domain expansion.
+- Recovery plan:
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/`.
+- Current project status for execution planning:
+  `CONTINUE WITH RESTRICTED SCOPE`.
+- `READY_FOR_MAJOR_CS2_FEATURE_WORK`: `NO` until the readiness gate in the
+  recovery plan passes.
 
 ## Runtime Basics
 
@@ -67,6 +83,9 @@ Last updated: 2026-07-06.
 - Do not mutate production DB, schema, production files or generated app reports unless the current WP explicitly authorizes them with backup/SHA evidence.
 - Do not raise `STEAM_IMPORT_MAX_DEMOS_PER_RUN` without an explicit cap-change WP.
 - Do not start or change WP-018 product work without an explicit WP-018 prompt.
+- Do not start major WP-018/CS2 feature expansion until the foundation
+  readiness gate passes; narrow evidence-backed calibration/docs/tests work is
+  allowed only when it does not worsen foundation readiness.
 - Do not run `git add`, commit or push without explicit user approval.
 
 ## Source Of Truth
@@ -83,4 +102,7 @@ Last updated: 2026-07-06.
   per-task Hot context.
 - Full human WP campaign map: `docs/project_management/MASTER_WP_CHECKLIST.md`.
 - Detailed evidence: relevant `docs/audit/WP_*.md` reports, read only when task-relevant.
+- Agentic-readiness audit and recovery plan:
+  `docs/audits/2026-07-06-agentic-readiness-audit/` and
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/`.
 - Roadmap/planning detail: `docs/project_management/VERSION_ROADMAP.md`, `docs/project_management/WORK_PACKAGE_BACKLOG.md`, `docs/project_management/ACCEPTANCE_MATRIX.md`.

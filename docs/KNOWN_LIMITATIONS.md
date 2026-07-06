@@ -17,5 +17,11 @@ Last updated: 2026-07-06.
 - Steam import is alpha and needs durable worker/retry/freshness hardening.
 - AI output validator exists for structured reports, but prompt versioning, provider-specific structured response mode and semantic entailment checks remain future work.
 - `/coach` is coach-first over current tracked recommendation, but it is not recommendation planner and does not identify a verified top problem yet.
+- 2026-07-06 agentic-readiness audit score is `66%`; major CS2 feature work is
+  restricted until the foundation recovery gate passes.
+- Migration baseline/schema gate is a foundation blocker before schema features.
+- Structured risk register, source trust/sample-size policy, prompt/payload
+  versioning, semantic AI evals and API contract/gate enforcement remain
+  foundation hardening items.
 - Raw `.dem` files are not deleted.
 - FACEIT, viewer, heatmaps, clips, payments and social features are deferred.
