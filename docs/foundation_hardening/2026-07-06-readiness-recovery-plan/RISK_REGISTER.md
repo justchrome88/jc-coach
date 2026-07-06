@@ -137,7 +137,7 @@ are marked closed or accepted by FH-010.
 | Risk ID | Title | Criticality | Layer / category | Owner role | Status | Target FH task or WP | Source evidence | Current impact | Required next action | Acceptance / exit condition | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | R-FH-P1-001 | Expand project gate pre/postflight | P1 | Agentic Core / Tests | TEST_GUARDIAN / Execution | Open | FH-P1-001 | AR-009; `06_TESTS_EVALS_QUALITY.md`; TASK-AUDIT-002 | Checks can be skipped or reported inconsistently. | Add explicit status, changed-file, required-check and postflight workflow. | Reports require gate output and local gate passes. | Supports later CI/local enforcement. |
-| R-FH-P1-002 | Create structured risk register | P1 | Agentic Core / Risk tracking | PM / Docs | Open | FH-P1-002 / FH-010 | AR-015; `03_DOCS_AND_CONTEXT.md`; TASK-AUDIT-003 | Risks lack owner/status/target WP/evidence in one canonical register. | Create and link this register; FH-012 owns source-of-truth links. | Register is linked from current docs and accepted by PM review. | FH-010 creates the artifact but does not close the risk by itself. |
+| R-FH-P1-002 | Create structured risk register | P1 | Agentic Core / Risk tracking | PM / Docs | Closed | FH-P1-002 / FH-010 / FH-012 | AR-015; `03_DOCS_AND_CONTEXT.md`; TASK-AUDIT-003; FH-010 report; FH-011 report; FH-012 report. | Risks now have owner/status/target WP/evidence in one canonical register linked from current docs. | Maintain the register links and update future risk status only through scoped task evidence. | Register is linked from current docs and accepted by PM review. | FH-010 created the artifact, FH-011 verified P0/P1 field coverage and FH-012 linked it from `CURRENT_STATUS.md`, `WP_REGISTRY.md`, `VERSION_ROADMAP.md` and `WORK_PACKAGE_BACKLOG.md`. |
 | R-FH-P1-003 | Add automated enforcement of agent rules | P1 | Agentic Core / CI | TEST_GUARDIAN / QA | Open | FH-P1-003 | AR-016; `07_AGENTIC_WORKFLOW_OPS_SECURITY.md` | Manual rules can be bypassed. | Add CI or mandatory local equivalent. | Failure blocks PASS claims. | Depends on FH-P1-001. |
 | R-FH-P1-004 | Expand architecture map | P1 | Web Core / Architecture | Architect / Runtime | Open | FH-P1-004 | AR-017; `04_ARCHITECTURE_CODEBASE.md` | Agents may mutate the wrong layer because boundaries are thin. | Document module, data-flow and mutation boundaries. | Boundaries are inspectable in architecture docs. | Docs-first unless a future task scopes code/tests. |
 | R-FH-P1-005 | Add API contract inventory/tests | P1 | Web Core / API contracts | Runtime / QA | Open | FH-P1-005 | AR-018; TASK-AUDIT-008 | Endpoint behavior can drift without contract tests. | Inventory core endpoints and add critical read/mutation contract tests. | Core contracts are tested. | Depends on FH-P1-004. |
@@ -180,10 +180,12 @@ task card.
 ## Review Notes For PM
 
 - All P0 risks are represented and remain `Open`.
-- All P1 risks from the current backlog are represented and remain `Open`.
-- `R-FH-P1-002` is still `Open` because FH-010 creates the register but FH-012
-  owns linking it from current source-of-truth docs, and PM review still has to
-  accept the artifact.
+- All P1 risks from the current backlog are represented. `R-FH-P1-002` is
+  `Closed` after FH-010/FH-011/FH-012 evidence; remaining P1 risks remain
+  `Open`.
+- `R-FH-P1-002` is `Closed` because FH-010 created the register, FH-011
+  verified P0/P1 field coverage and FH-012 linked it from current
+  source-of-truth and roadmap docs.
 - Major CS2 feature work remains blocked until `04_READINESS_GATE.md` evaluates
   to PASS.
 - Public/friends access, import cap raise, schema-changing product work and

@@ -12,6 +12,8 @@ This is the roadmap control view for versions after WP-011C. It links product ve
 - Next active WP: `WP-018 Coach Quality Calibration`, restricted pending the
   foundation readiness gate in
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/04_READINESS_GATE.md`.
+- Foundation risk register:
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
 
 ## Roadmap
 
@@ -37,6 +39,9 @@ This is the roadmap control view for versions after WP-011C. It links product ve
 - Major CS2 feature work must not move ahead of the 2026-07-06 foundation
   readiness gate:
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/04_READINESS_GATE.md`.
+- Current foundation risks, owners, statuses, targets and evidence are tracked
+  in
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
 - Historical stage docs remain evidence, but future planning should use `WORK_PACKAGE_BACKLOG.md` and `ACCEPTANCE_MATRIX.md`.
 - WP IDs must not be silently reused. Planned WPs that are skipped must be marked `deferred` or `superseded` with a reason in `docs/project_management/WP_REGISTRY.md`.
 - Promotion WPs must verify registry prerequisites before changing product version.

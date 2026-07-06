@@ -111,6 +111,8 @@ overlay, not as a replacement for a planned product WP.
   `docs/audits/2026-07-06-agentic-readiness-audit/`.
 - Recovery plan:
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/`.
+- Risk register:
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
 - Audit score: `66%` readiness (`3.30/5` across 106 rows).
 - Project status: `CONTINUE WITH RESTRICTED SCOPE`.
 - Major CS2 feature work, including unrestricted WP-018 expansion, is paused

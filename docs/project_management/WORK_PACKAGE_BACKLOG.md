@@ -4,6 +4,11 @@ Last updated: 2026-07-05.
 
 This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a governance artifact, not implementation approval. Each WP still needs an explicit user prompt before changes begin.
 
+Current foundation-hardening risks, owners, statuses, target tasks and evidence
+are tracked in
+`docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
+Major CS2 feature work remains restricted until the readiness gate passes.
+
 ## WP-012
 
 | Field | Value |

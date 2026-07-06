@@ -22,6 +22,8 @@ Last updated: 2026-07-06.
   foundation P0/P1 items before major coach/domain expansion.
 - Recovery plan:
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/`.
+- Foundation risk register:
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
 - Current project status for execution planning:
   `CONTINUE WITH RESTRICTED SCOPE`.
 - `READY_FOR_MAJOR_CS2_FEATURE_WORK`: `NO` until the readiness gate in the
@@ -105,4 +107,6 @@ Last updated: 2026-07-06.
 - Agentic-readiness audit and recovery plan:
   `docs/audits/2026-07-06-agentic-readiness-audit/` and
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/`.
+- Foundation risk register:
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
 - Roadmap/planning detail: `docs/project_management/VERSION_ROADMAP.md`, `docs/project_management/WORK_PACKAGE_BACKLOG.md`, `docs/project_management/ACCEPTANCE_MATRIX.md`.
