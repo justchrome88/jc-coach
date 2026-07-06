@@ -80,7 +80,7 @@ context.
 | Document | Role | Guardian | WP links | Status |
 |---|---|---|---|---|
 | `docs/CURRENT_STATUS.md` | Current product fact state. | `PM_ORCHESTRATOR` | active WP | source-of-truth |
-| `docs/CURRENT_MILESTONE.md` | Historical/current hardening milestone detail. | `PM_ORCHESTRATOR` | stages 0-9, WP-012 context | source-of-truth for stage evidence, stale version-label risk |
+| `docs/CURRENT_MILESTONE.md` | Historical/superseded hardening milestone evidence. | `PM_ORCHESTRATOR` | stages 0-9, WP-012 context | historical/supporting; not current roadmap or product-state truth |
 | `docs/ROADMAP.md` | Historical roadmap overview. | `PM_ORCHESTRATOR` | roadmap WPs | archive candidate; current sequence is `WP_REGISTRY.md` + `VERSION_ROADMAP.md` |
 | `docs/VERSION_MAP.md` | Historical version readiness map. | `PM_ORCHESTRATOR` | roadmap WPs | archive candidate; current version truth is `CURRENT_STATUS.md` + `WP_REGISTRY.md` |
 | `docs/CHANGELOG.md` | Curated change history. | `PM_ORCHESTRATOR` | all completed WPs/stages | supporting |
@@ -95,9 +95,9 @@ context.
 | `docs/agents/*_GUARDIAN.md` | Domain guardrails for DB, runtime, tests, import, metrics and UI work. | corresponding guardian | domain WPs | supporting domain guardrails |
 | `docs/FEATURES_RU.md` | Implemented feature summary. | `PM_ORCHESTRATOR` | reference | supporting, stale risk |
 | `docs/STEAM_IMPORT_ARCHITECTURE.md` | Deeper Steam architecture. | `IMPORT_GUARDIAN` | WP-014 | supporting |
-| `docs/STEAM_MATCH_DATES_RU.md` | Steam match date policy. | `IMPORT_GUARDIAN` | WP-014 | supporting |
-| `docs/DEMO_DEEP_PARSER_TZ_RU.md` | Parser requirements/context. | `IMPORT_GUARDIAN`, `METRICS_GUARDIAN` | WP-014, WP-015 | supporting |
-| `docs/DEMO_STORAGE_TZ.md` | Demo storage lifecycle plan. | `IMPORT_GUARDIAN`, `DB_GUARDIAN` | WP-014, later storage WP | supporting |
+| `docs/STEAM_MATCH_DATES_RU.md` | Steam/import date policy. | `IMPORT_GUARDIAN` | WP-014 | supporting; not current source-of-truth |
+| `docs/DEMO_DEEP_PARSER_TZ_RU.md` | Parser requirements/context. | `IMPORT_GUARDIAN`, `METRICS_GUARDIAN` | WP-014, WP-015 | historical/supporting; not current source-of-truth |
+| `docs/DEMO_STORAGE_TZ.md` | Demo storage lifecycle plan. | `IMPORT_GUARDIAN`, `DB_GUARDIAN` | WP-014, later storage WP | historical/supporting; not current source-of-truth |
 | `docs/MIGRATIONS.md` | Migration discipline and copy-check policy. | `DB_GUARDIAN` | WP-012 | source-of-truth |
 | `docs/PUBLIC_DEPLOYMENT_CHECKLIST.md` | Public deployment checklist. | `RUNTIME_GUARDIAN`, `PM_ORCHESTRATOR` | WP-017+ | supporting; blocked by security |
 
@@ -105,14 +105,14 @@ context.
 
 | Document | Role | Guardian | WP links | Status |
 |---|---|---|---|---|
-| `docs/PRODUCT_EXECUTION_STRATEGY.md` | Older product strategy. | `PM_ORCHESTRATOR` | reference only | stale risk / historical per deprecation plan |
-| `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md` | Older implementation plan. | `PM_ORCHESTRATOR` | reference only | stale risk / historical |
+| `docs/PRODUCT_EXECUTION_STRATEGY.md` | Older product strategy memo. | `PM_ORCHESTRATOR` | reference only | historical/superseded; not current source-of-truth |
+| `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md` | Older implementation plan. | `PM_ORCHESTRATOR` | reference only | historical/superseded; not current source-of-truth |
 | `docs/NON_STOP_DEVELOPMENT_PROMPTS.md` | Historical prompt library. | `PM_ORCHESTRATOR` | none unless reactivated | archive candidate; not active workflow |
 | `docs/AI_COACH_PROVIDER_ARCHITECTURE.md` | AI provider memo. | `METRICS_GUARDIAN` | WP-016+ | supporting/historical; canonical truth is `AI_COACH.md` |
-| `docs/AI_RECOMMENDATIONS_AIM_EXECUTION_PLAN_RU.md` | Older AI/recommendation plan. | `METRICS_GUARDIAN` | reference only | stale risk / historical |
+| `docs/AI_RECOMMENDATIONS_AIM_EXECUTION_PLAN_RU.md` | Older AI/recommendation plan. | `METRICS_GUARDIAN` | reference only | historical/completed; not current source-of-truth |
 | `docs/COMPETITOR_FEATURE_MATRIX.md` | Market comparison. | `PM_ORCHESTRATOR` | later product planning | supporting/historical |
-| `docs/FEATURE_ROADMAP_SCORING.md` | Feature scoring. | `PM_ORCHESTRATOR` | later planning | supporting/historical |
-| `docs/METRICS_ROADMAP_SCORING_RU.md` | Metric wishlist/scoring. | `METRICS_GUARDIAN` | WP-015 reference | supporting/historical |
+| `docs/FEATURE_ROADMAP_SCORING.md` | Feature scoring. | `PM_ORCHESTRATOR` | later planning | historical/supporting; not current roadmap truth |
+| `docs/METRICS_ROADMAP_SCORING_RU.md` | Metric wishlist/scoring. | `METRICS_GUARDIAN` | WP-015 reference | historical/supporting; not current source-of-truth |
 | `docs/feature_roadmap_scoring_ru.xlsx` | Spreadsheet source. | `PM_ORCHESTRATOR` | later planning | supporting artifact |
 | `docs/metrics_roadmap_scoring_ru.xlsx` | Spreadsheet source. | `METRICS_GUARDIAN` | WP-015 reference | supporting artifact |
 

@@ -1,5 +1,16 @@
 # Steam Match Dates
 
+> Status: Supporting Steam/import date policy; not current product, roadmap,
+> workflow or source-of-truth.
+> Use as task-relevant supporting context only. This file must not override
+> `AGENTS.md`, `docs/CURRENT_STATUS.md`,
+> `docs/project_management/WP_REGISTRY.md` or current Task Cards.
+> Current import and product state truth: `docs/STEAM_IMPORT.md`,
+> `docs/CURRENT_STATUS.md` and `docs/project_management/WP_REGISTRY.md`.
+> Current workflow truth: `docs/project_management/AGENT_WORKFLOW.md`.
+> Navigation/classification: `docs/project_management/DOCS_INDEX.md` and
+> `docs/project_management/DOCS_MAP.md`.
+
 ## Решение
 
 Для Steam matchmaking/premier матчей точная дата матча берется из Steam/CS2 Game Coordinator metadata, а не из `.dem` файла.

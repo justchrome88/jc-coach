@@ -1,5 +1,17 @@
 # Current Milestone
 
+> Status: Historical / superseded milestone evidence; not current product,
+> roadmap, workflow or source-of-truth.
+> Use as supporting history only. This file must not override `AGENTS.md`,
+> `docs/CURRENT_STATUS.md`, `docs/project_management/WP_REGISTRY.md` or current
+> Task Cards.
+> Current roadmap/version truth: `docs/CURRENT_STATUS.md`,
+> `docs/project_management/WP_REGISTRY.md` and
+> `docs/project_management/VERSION_ROADMAP.md`.
+> Current workflow truth: `docs/project_management/AGENT_WORKFLOW.md`.
+> Navigation/classification: `docs/project_management/DOCS_INDEX.md` and
+> `docs/project_management/DOCS_MAP.md`.
+
 Last updated: 2026-07-03.
 
 Фактический уровень продукта: `v0.4-alpha foundation`.

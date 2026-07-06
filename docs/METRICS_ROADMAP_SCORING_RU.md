@@ -1,6 +1,15 @@
-> СТАТУС: ВСПОМОГАТЕЛЬНЫЙ / ЧАСТИЧНО АКТУАЛЬНЫЙ / НЕ SOURCE OF TRUTH
-> Канонический источник: `docs/PROJECT_CONTROL.md` и `docs/METRICS.md`.
-> Не использовать этот файл как текущий план реализации, если `PROJECT_CONTROL` явно на него не ссылается.
+> Status: Supporting / historical metric scoring evidence; not current
+> product, roadmap, workflow or source-of-truth.
+> Use as supporting history only. This file must not override `AGENTS.md`,
+> `docs/CURRENT_STATUS.md`, `docs/project_management/WP_REGISTRY.md` or current
+> Task Cards.
+> Current metric truth: `docs/METRICS.md`.
+> Current roadmap/version truth: `docs/CURRENT_STATUS.md`,
+> `docs/project_management/WP_REGISTRY.md` and
+> `docs/project_management/VERSION_ROADMAP.md`.
+> Current workflow truth: `docs/project_management/AGENT_WORKFLOW.md`.
+> Navigation/classification: `docs/project_management/DOCS_INDEX.md` and
+> `docs/project_management/DOCS_MAP.md`.
 
 # Матрица метрик CS2
 
