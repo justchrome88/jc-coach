@@ -79,7 +79,11 @@ workflow context. This does not expand per-task Hot context.
 
 - Show `git status --short` before work.
 - Do not run `git add` unless explicitly asked.
-- Do not commit unless explicitly asked.
+- Executor Codex must not commit unless explicitly asked or a Task Card
+  explicitly authorizes it.
+- PM_ORCHESTRATOR may create local commits after an accepted PM review verifies
+  scope, acceptance, forbidden-action safety, required checks and that no user
+  decision is needed.
 - Do not push unless explicitly asked.
 - Commits, when authorized, must exclude DBs, backups, uploads and demos.
 - Commit only scoped reports, docs, code or tests.
