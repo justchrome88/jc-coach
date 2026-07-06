@@ -359,7 +359,33 @@ For WP-level work, console output should include:
 
 The exact report path is task-specific and belongs in the Task Card.
 
-## 16. Documentation Steward Standalone Mode
+## 16. Standard Report Docs Update Checklist
+
+Every WP-level, hardening or file-backed task report must include a docs update
+checklist, not only a free-form docs summary. The checklist is a scoped closure
+check for the task at hand; it does not require broad docs audits for tiny
+tasks and does not expand Hot context.
+
+The report checklist must state each item as `checked and updated`,
+`checked; no update required`, `not applicable`, or `deferred`, with a short
+reason whenever the answer is not `checked and updated`:
+
+- Hot/current status docs: whether `CURRENT_STATUS.md` and other Hot docs
+  needed updates.
+- WP registry/status/handoff docs: whether `WP_REGISTRY.md`, `HANDOFF.md` or
+  other active status/handoff docs needed updates.
+- Navigation docs: whether new or changed canonical/navigation docs required
+  `DOCS_INDEX.md` or `DOCS_MAP.md` updates.
+- Task-relevant domain docs: whether docs for the task's domain needed updates.
+- Documentation Steward: whether Documentation Steward review was required and
+  completed, or why it was not required.
+- Deferred docs follow-up: owner and target task, or `none`.
+
+The checklist must respect the Hot/Warm/Cold context policy and control-plane
+protection rules. A task may answer `not applicable` or `checked; no update
+required` only with a short reason tied to scope.
+
+## 17. Documentation Steward Standalone Mode
 
 Example prompt:
 
@@ -382,7 +408,7 @@ Required output:
 - Recommended actions.
 - Confirmation that no automatic deletion was performed.
 
-## 17. Required Document Update Matrix
+## 18. Required Document Update Matrix
 
 | Event | Required docs to check/update |
 |---|---|
@@ -397,7 +423,7 @@ Required output:
 | Document deprecated | `DOCS_INDEX.md`, `DOCS_MAP.md`, report, but no delete without approval |
 | Side-chat decision accepted | `DECISIONS.md` or relevant canonical doc |
 
-## 18. Docs Classification Model
+## 19. Docs Classification Model
 
 - `CANONICAL` - source of truth for a specific area.
 - `SUPPORTING` - useful reference but not source of truth.
@@ -413,7 +439,7 @@ Rules:
 - If docs conflict, the source-of-truth hierarchy in
   `PROJECT_OPERATING_PROTOCOL.md` wins.
 
-## 19. WP Closure Checklist
+## 20. WP Closure Checklist
 
 A WP can close only if:
 
@@ -422,12 +448,13 @@ A WP can close only if:
 - Documentation Steward check completed.
 - Required docs updated.
 - Report file created for WP-level work.
+- Report includes the standard docs update checklist.
 - Forbidden changes confirmed absent.
 - Blockers/warnings recorded.
 - Next step recorded.
 - User/ChatGPT review completed before commit.
 
-## 20. How To Use This Workflow In Prompts
+## 21. How To Use This Workflow In Prompts
 
 ### Normal WP Prompt
 

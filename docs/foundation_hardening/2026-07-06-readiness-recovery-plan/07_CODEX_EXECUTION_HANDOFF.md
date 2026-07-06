@@ -59,7 +59,9 @@ early so later execution has stronger controls.
 - No secret values in output.
 - Every task must include diff summary.
 - Every task must include tests/checks.
-- Every task must include docs update summary.
+- Every task must include the docs update checklist from
+  `docs/project_management/AGENT_WORKFLOW.md`, not only a free-form docs
+  summary.
 - Every task must include residual risks.
 
 ## Definition Of Done For Each Hardening Task
@@ -70,6 +72,9 @@ A task is done only when:
 - changed files are listed;
 - no unrelated files are changed;
 - required docs are updated or explicitly not needed;
+- the report's docs update checklist covers Hot/current status docs,
+  WP registry/status/handoff docs, navigation docs, task-relevant domain docs,
+  Documentation Steward applicability and deferred docs follow-up;
 - required tests/checks are run and reported;
 - DB/import/runtime/service safety is declared;
 - production DB SHA is reported for DB-impacting or DB-risk tasks;
@@ -90,7 +95,13 @@ Files changed:
 
 Diff summary:
 
-Docs updated:
+Docs update checklist:
+- Hot/current status docs:
+- WP registry/status/handoff docs:
+- Navigation docs:
+- Task-relevant domain docs:
+- Documentation Steward:
+- Deferred docs follow-up:
 
 Tests/checks run:
 
@@ -117,4 +128,3 @@ Stop and report `BLOCKED` if:
 - audit evidence conflicts with current Hot context;
 - secret values appear in any output;
 - main repo has unexplained unrelated changes before starting.
-
