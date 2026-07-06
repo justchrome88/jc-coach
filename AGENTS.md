@@ -143,6 +143,42 @@ mention external documentation lookup only when it was relevant.
   include the report path.
 - Be honest: use `PASS_WITH_WARNINGS` when warnings exist.
 
+## 8.1 Task Classes And Discovery Reporting
+
+Tasks may be either:
+
+- Execution task: performs a bounded change.
+- Audit / Review / Discovery task: inspects an area, reports findings,
+  estimates completeness, and may propose follow-up tasks.
+
+For Audit / Review / Discovery tasks, Executor Codex must perform only the
+requested inspection/review, report findings with evidence, estimate
+completeness when meaningful, and propose follow-up tasks if gaps are found.
+Do not execute follow-up work unless explicitly tasked. Do not create broad new
+scope by yourself.
+
+For Audit / Review / Discovery tasks, or when meaningful gaps are found, include
+this report block:
+
+```yaml
+discovery_result:
+  completeness_estimate: "<percentage or qualitative estimate>"
+  missing_items_found: true|false
+  followup_required: true|false
+  followup_tasks_recommended:
+    - proposed_id: "FH-115A-01"
+      title: "Short task title"
+      reason: "Why this task is needed"
+      risk: "P0|P1|P2|P3 or none"
+      suggested_scope: "docs-only|tests|code|config|unknown"
+      needs_user_decision: true|false
+```
+
+PM_ORCHESTRATOR owns backlog decomposition after review. The runtime runner
+only starts/resumes cycles and does not implement decomposition logic.
+Decomposition never overrides the active prompt, allowed files, stop conditions,
+DB safety, public-access restrictions or readiness gates.
+
 ## 9. Current Roadmap
 
 - `v0.8` accepted: recommendation loop.
