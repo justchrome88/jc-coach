@@ -104,7 +104,11 @@ WPs need it.
 1. Feature, request or problem appears.
 2. PM / Orchestrator checks if an existing WP covers it.
 3. If a new WP is needed, User approval is required.
-4. Worktree must be clean before WP starts.
+4. Worktree must be clean, or every dirty/untracked main-repo path must be
+   explained by the current Task Card, accepted unresolved prior task state or
+   explicit user/PM authorization, before WP-level or hardening Executor work
+   starts. Unexplained dirty or untracked pre-existing state is a stop
+   condition.
 5. PM defines scope, affected zones and needed Warm docs.
 6. Implementation Agent executes.
 7. QA / Reviewer checks diff, tests, acceptance and forbidden changes.
@@ -201,7 +205,7 @@ but cannot make it weaker than `AGENTS.md` or the active task type.
 | `diagnostic-only` | no, unless report allowed | only named diagnostic report | no repair edits | read-only only if scoped | no | no, unless explicitly diagnostic and safe | no | facts, hypotheses, blockers, next step | repair requested; mutation/live job needed; facts are ambiguous |
 | `implementation` | yes, only allowed files | yes, if requested/WP-level | yes only if explicitly allowed | read-only if needed | only with explicit DB/data authorization | only with explicit authorization | only with explicit authorization | changed files, checks, non-changes, risks | scope expansion; forbidden zone touched; approval missing |
 | `docs-currency` | docs only if allowed | yes, if requested/WP-level | no | no | no | no | no | classifications, stale/conflict findings, required updates | full audit needed but not requested; archive/delete/move needed |
-| `WP-level` | as task allows | required WP report | only if task allows | read-only if needed | only with explicit authorization, backup and SHA | only with explicit authorization | only with explicit authorization | WP report, checks, status/docs updates, next WP | dirty worktree before start; required approval/evidence missing |
+| `WP-level` | as task allows | required WP report | only if task allows | read-only if needed | only with explicit authorization, backup and SHA | only with explicit authorization | only with explicit authorization | WP report, checks, status/docs updates, next WP | unexplained dirty/untracked worktree before start; required approval/evidence missing |
 | `approval-required` | no until approved | planning/report only if allowed | no until approved | read-only only if safe and scoped | no until approved | no until approved | no until approved | approval request, risk, proposed command/change | user approval absent; risk cannot be bounded |
 
 ## 10. Output Modes
@@ -396,8 +400,27 @@ Run:
 The project gate is read-only. It reports working directory, branch, recent
 commits, full short git status including untracked files, governance file
 presence, production DB SHA, changed/untracked paths, activated guardians and
-the check expectations inferred from those guardians. If the worktree has
-unexplained unrelated changes before a WP-level task, stop and report.
+the check expectations inferred from those guardians.
+
+Before WP-level or hardening Executor work starts, compare `git status --short`
+and project-gate preflight state against the current Task Card, accepted
+unresolved prior task state and explicit user/PM authorization. Stop with
+`BLOCKED` if the main repo has dirty or untracked paths that are not explained
+by one of those sources. The `BLOCKED` report must include:
+
+- `git status --short` output.
+- Safe project-gate preflight evidence when it can run without touching the
+  unexplained paths.
+- Affected paths.
+- Why the paths are unexplained by the current Task Card, accepted unresolved
+  prior task state or explicit authorization.
+- Minimum next action, such as user/PM confirmation, a cleanup task, or a
+  scoped follow-up to reconcile the worktree.
+
+This stop condition applies to pre-existing worktree state before a clean or
+accepted preflight. It does not treat normal scoped edits made after that
+preflight as a blocker; those edits are instead reported through changed-files,
+postflight and `git diff --check` evidence.
 
 Run before closure:
 
