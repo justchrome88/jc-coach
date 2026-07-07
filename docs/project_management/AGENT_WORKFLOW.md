@@ -432,22 +432,30 @@ by `AGENTS.md`.
 Reports must include a checks evidence section with:
 
 - Required checks from the Task Card and this matrix.
-- Checks actually run, with command and result.
-- Checks not run, with exact reason.
-- Failed, stalled or timed-out checks, with residual risk, owner and target
-  follow-up when relevant.
+- Each required check's command, result status and relevant output excerpt or
+  artifact/log path. Long output may be summarized, but the report must include
+  enough concrete output or artifact/log pointers for PM review to verify the
+  claim; a bare statement such as "passed" is not enough.
+- Checks not run, with the exact reason and whether the skip was explicitly
+  authorized by the Task Card.
+- Failed, stalled or timed-out checks, with the exact failure, stall or timeout
+  summary plus residual risk, owner and target follow-up when relevant.
 - Any additional safe docs-only check indicated by `project_gate.py
   required-checks`, or the exact reason it was not run.
 
 For code, script or test changes, `.venv/bin/python scripts/local_quality_gate.py`
 is the accepted local CI-equivalent PASS gate. A report may not claim PASS for
 that class while silently replacing the local gate with a weaker check set.
-The local gate covers project gate preflight, changed, required-checks and
-postflight evidence; full safe pytest; Ruff; and `git diff --check`. If the
-known full-suite pytest stall or any other gate failure prevents a clean run,
-the report must name the failed, stalled or timed-out command and use the Task
-Card verdict rules. A docs-only task is not required to run pytest, Ruff or the
-local quality gate unless the Task Card or changed files require them.
+The local gate output may be reported as the covering gate evidence for project
+gate preflight, changed, required-checks and postflight evidence; full safe
+pytest; Ruff; and `git diff --check`, unless the Task Card asks for separate
+subcommand output. If the known full-suite pytest stall or any other gate
+failure prevents a clean run, the report must name the failed, stalled or
+timed-out command and use the Task Card verdict rules. A docs-only task is not
+required to run pytest, Ruff or the local quality gate unless the Task Card or
+changed files require them; its normal PASS evidence is the docs-safe project
+gate command output, `git diff --check`, allowed-file/scope review and any
+task-specific checks.
 
 ## 16. Standard Output Contract
 
@@ -458,10 +466,11 @@ For WP-level work, console output should include:
 3. Changed files.
 4. Short summary.
 5. `git status --short`.
-6. Required checks summary:
+6. Required checks and gate output evidence summary:
    - required checks;
-   - checks run;
-   - checks not run and why;
+   - commands run and result status;
+   - relevant output excerpts or artifact/log paths;
+   - checks not run, why and whether the skip was task-authorized;
    - failed, stalled or timed-out checks and residual risk.
 7. Confirmations:
    - no code changed, if docs-only;

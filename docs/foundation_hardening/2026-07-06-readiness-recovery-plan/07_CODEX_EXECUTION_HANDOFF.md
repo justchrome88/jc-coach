@@ -62,6 +62,14 @@ early so later execution has stronger controls.
 - Every task must include required checks, checks actually run, checks not run
   with exact reasons, failed/stalled/timed-out checks and residual risk/owner/
   target follow-up when relevant.
+- Every WP-level, hardening or file-backed Executor report must include gate
+  output evidence for each required check: command, result status and a relevant
+  output excerpt or artifact/log path. Long command output may be summarized,
+  but a bare "passed" statement is not enough for PM review.
+- If a required check is not run, the report must state the exact reason and
+  whether the skip was explicitly task-authorized. If a required check fails,
+  stalls or times out, the report must state the exact failure/stall/timeout
+  summary, residual risk, owner and target follow-up when relevant.
 - Every task must include the docs update checklist from
   `docs/project_management/AGENT_WORKFLOW.md`, not only a free-form docs
   summary.
@@ -71,7 +79,8 @@ early so later execution has stronger controls.
   for the restricted foundation-hardening lane.
 - For code, script or test changes, that local gate covers project gate
   preflight, changed, required-checks and postflight evidence; full safe
-  pytest; Ruff; and `git diff --check`.
+  pytest; Ruff; and `git diff --check`, unless the Task Card asks for separate
+  subcommand output.
 - Docs-only governance/status/report tasks are not required to run pytest, Ruff
   or the local quality gate unless the Task Card or changed files require them.
   Their PASS requirements remain docs-safe project gate commands,
@@ -121,6 +130,9 @@ A task is done only when:
 - required tests/checks are run and reported;
 - missing, skipped, failed, stalled or timed-out checks are reported with exact
   reasons and residual risk;
+- every required check has reviewable gate output evidence: command, status and
+  output excerpt or artifact/log path, with exact not-run/failure/stall/timeout
+  detail when applicable;
 - DB/import/runtime/service safety is declared;
 - production DB SHA is reported for DB-impacting or DB-risk tasks;
 - residual risks and follow-up tasks are listed;
@@ -144,6 +156,8 @@ Files changed:
 
 Diff summary:
 
+Gate output requirement summary:
+
 Mandatory PASS policy summary:
 
 Docs update checklist:
@@ -154,7 +168,12 @@ Docs update checklist:
 - Documentation Steward:
 - Deferred docs follow-up:
 
-Tests/checks run:
+Required checks and gate output evidence:
+- Required check:
+  Command:
+  Status:
+  Output excerpt or artifact/log path:
+  Notes:
 
 Checks not run and why:
 
