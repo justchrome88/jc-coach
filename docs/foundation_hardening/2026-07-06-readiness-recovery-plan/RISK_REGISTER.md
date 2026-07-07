@@ -44,7 +44,7 @@ Each risk entry uses these fields:
 | Criticality | P0, P1, P2 or P3. FH-010 seeds P0/P1 from the current backlog. |
 | Layer / category | Product, technical or governance layer affected by the risk. |
 | Owner role | Role expected to drive closure or acceptance. This is not an individual assignment. |
-| Status | Current conservative state: `Open`, `Hard-blocked`, `Accepted risk`, `Closed`, `Pending import`, `Superseded` or `Needs clarification`. |
+| Status | Current conservative state: `Open`, `Partially mitigated`, `Hard-blocked`, `Accepted risk`, `Closed`, `Pending import`, `Superseded` or `Needs clarification`. |
 | Target FH task or WP | The hardening task, WP or future task expected to resolve or decide the risk. |
 | Source evidence | Source row, document or audit reference that proves the risk exists. |
 | Current impact | Why the risk matters now. |
@@ -56,8 +56,12 @@ Each risk entry uses these fields:
 
 - No risk is marked `Closed` unless source evidence already proves closure.
 - No risk is marked `Accepted risk` unless an explicit acceptance source exists.
+- `Partially mitigated` means accepted hardening evidence reduced the risk, but
+  remaining work, final-gate verification or explicit acceptance is still
+  needed before the risk can be treated as closed for major CS2 feature work.
 - P0 risks must be closed or explicitly hard-blocked before the readiness gate
-  can pass.
+  can pass. A `Partially mitigated` P0 remains gate-blocking unless the final
+  readiness review explicitly accepts the remaining boundary.
 - P1 risks must be closed or have approved workaround and risk acceptance before
   the readiness gate can pass.
 - P2/P3 risks are intentionally not imported by FH-010; they remain covered by
@@ -87,13 +91,13 @@ passes or a stricter future source changes the state.
 | Criticality | P0 |
 | Layer / category | Web Application Core / Project Instance / DB safety |
 | Owner role | DB_GUARDIAN / Execution / QA |
-| Status | Open |
-| Target FH task or WP | FH-P0-001 |
-| Source evidence | `02_P0_P1_HARDENING_BACKLOG.md` FH-P0-001; audit matrix AR-019, AR-026, AR-067; audit `08_CRITICAL_GAPS.md`; `09_RECOMMENDED_TASKS.md` TASK-AUDIT-001. |
-| Current impact | Schema evolution relies on startup create/upgrade behavior. Future schema work could silently drift or mutate `data/cs2_coach.db` outside a controlled migration process. |
-| Required next action | Adopt Alembic or equivalent baseline, schema diff policy and production apply approval/SHA policy on a DB copy first. |
-| Acceptance / exit condition | Baseline matches current schema on a copy; production DB is untouched; startup helper receives no new schema changes; schema-changing WPs require explicit migration scope; task report includes checks and DB safety evidence. |
-| Notes | Major schema-changing product work remains blocked until this risk is closed or explicitly hard-blocked. Compatibility-boundary documentation does not authorize startup helper/runtime behavior changes, migration support, schema artifact edits, copied-DB experiments or production DB mutation. Future startup schema compatibility work must state rollback and compatibility expectations, allowed files/artifacts, required schema-gate evidence and production DB authorization status. FH-030, FH-031 and FH-032 did not adopt Alembic, add migration support, mutate the production DB or change startup schema behavior. |
+| Status | Partially mitigated |
+| Target FH task or WP | FH-P0-001 / FH-030 through FH-037 / future migration-engine or final-gate decision |
+| Source evidence | `02_P0_P1_HARDENING_BACKLOG.md` FH-P0-001; audit matrix AR-019, AR-026, AR-067; audit `08_CRITICAL_GAPS.md`; `09_RECOMMENDED_TASKS.md` TASK-AUDIT-001; FH-030 report and commit `ba74606`; FH-031 report and commit `f9d5a94`; FH-032 report and commit `0c37b40`; FH-033 report and commit `c04b03c`; FH-034 report and commit `de21f36`; FH-035 PM review and commit `4041c9a`; FH-036 PM review and commit `3a6990a`; FH-037 report and commit `65fa1f8`; `docs/MIGRATIONS.md`; `docs/BACKUP_RESTORE.md`. |
+| Current impact | Schema evolution is now constrained by a baseline, schema gate, approval policy, SHA discipline, copied-DB workflow and test guards, but JC Coach still has no adopted migration engine and no accepted production migration path. |
+| Required next action | Keep schema-changing product work blocked unless explicitly scoped. Before closure, adopt Alembic or another accepted migration engine, or have the final readiness gate explicitly accept the remaining scaffolded/no-engine boundary. |
+| Acceptance / exit condition | Baseline and schema gate remain current; production DB is untouched unless explicitly authorized with backup and before/after SHA evidence; startup helper receives no new schema changes; schema-changing WPs require explicit migration scope; copied-DB checks and task reports include required DB safety evidence; migration-engine adoption or an explicit final-gate boundary decision is accepted. |
+| Notes | This is intentionally not `Closed`. FH-030 through FH-037 mitigated the P0 boundary with scaffolding, policy, copied-DB checks and tests, but did not adopt Alembic, add migration support, mutate the production DB, change startup schema behavior or approve major schema-changing product work. Major schema-changing product work remains blocked until this risk is closed or explicitly hard-blocked/accepted by the final readiness gate. |
 
 ### R-FH-P0-002 - Keep Public/Friends Access Blocked Until Security Gate
 
@@ -136,9 +140,9 @@ are marked closed or accepted by FH-010.
 
 | Risk ID | Title | Criticality | Layer / category | Owner role | Status | Target FH task or WP | Source evidence | Current impact | Required next action | Acceptance / exit condition | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| R-FH-P1-001 | Expand project gate pre/postflight | P1 | Agentic Core / Tests | TEST_GUARDIAN / Execution | Open | FH-P1-001 | AR-009; `06_TESTS_EVALS_QUALITY.md`; TASK-AUDIT-002 | Checks can be skipped or reported inconsistently. | Add explicit status, changed-file, required-check and postflight workflow. | Reports require gate output and local gate passes. | Supports later CI/local enforcement. |
+| R-FH-P1-001 | Expand project gate pre/postflight | P1 | Agentic Core / Tests | TEST_GUARDIAN / Execution | Closed | FH-P1-001 / FH-020 / FH-022 / FH-025 | AR-009; `06_TESTS_EVALS_QUALITY.md`; TASK-AUDIT-002; FH-020 report and commit `17a2b69`; FH-022 report and commit `5e9686e`; FH-025 report and commit `0b7db63`. | Project gate preflight/changed/required-check/postflight evidence and report gate-output rules now exist. | Maintain the gate/report contract in future tasks. | Reports require gate output and local gate evidence according to task class. | Closed for the intended project-gate/reporting scope; enforcement and hosted CI remain covered by `R-FH-P1-003` and `R-FH-P1-029`. |
 | R-FH-P1-002 | Create structured risk register | P1 | Agentic Core / Risk tracking | PM / Docs | Closed | FH-P1-002 / FH-010 / FH-012 | AR-015; `03_DOCS_AND_CONTEXT.md`; TASK-AUDIT-003; FH-010 report; FH-011 report; FH-012 report. | Risks now have owner/status/target WP/evidence in one canonical register linked from current docs. | Maintain the register links and update future risk status only through scoped task evidence. | Register is linked from current docs and accepted by PM review. | FH-010 created the artifact, FH-011 verified P0/P1 field coverage and FH-012 linked it from `CURRENT_STATUS.md`, `WP_REGISTRY.md`, `VERSION_ROADMAP.md` and `WORK_PACKAGE_BACKLOG.md`. |
-| R-FH-P1-003 | Add automated enforcement of agent rules | P1 | Agentic Core / CI | TEST_GUARDIAN / QA | Open | FH-P1-003 | AR-016; `07_AGENTIC_WORKFLOW_OPS_SECURITY.md` | Manual rules can be bypassed. | Add CI or mandatory local equivalent. | Failure blocks PASS claims. | Depends on FH-P1-001. |
+| R-FH-P1-003 | Add automated enforcement of agent rules | P1 | Agentic Core / CI | TEST_GUARDIAN / QA | Partially mitigated | FH-P1-003 / FH-023 / FH-024 | AR-016; `07_AGENTIC_WORKFLOW_OPS_SECURITY.md`; FH-023 report and commit `25d2eb2`; FH-024 report and commit `a95fb3f`; current local gate evidence from FH-038/039 closure batch. | A mandatory local CI-equivalent gate is accepted and missing/failed/stalled required checks block PASS claims, but hosted CI/branch protection is not configured. | Keep the local gate mandatory; decide hosted CI separately if needed before final readiness. | Failure blocks PASS claims; final gate verifies enforcement is sufficient for the current lane or keeps hosted CI as accepted future scope. | Local enforcement is acceptable for restricted foundation hardening, not a hosted CI claim. |
 | R-FH-P1-004 | Expand architecture map | P1 | Web Core / Architecture | Architect / Runtime | Open | FH-P1-004 | AR-017; `04_ARCHITECTURE_CODEBASE.md` | Agents may mutate the wrong layer because boundaries are thin. | Document module, data-flow and mutation boundaries. | Boundaries are inspectable in architecture docs. | Docs-first unless a future task scopes code/tests. |
 | R-FH-P1-005 | Add API contract inventory/tests | P1 | Web Core / API contracts | Runtime / QA | Open | FH-P1-005 | AR-018; TASK-AUDIT-008 | Endpoint behavior can drift without contract tests. | Inventory core endpoints and add critical read/mutation contract tests. | Core contracts are tested. | Depends on FH-P1-004. |
 | R-FH-P1-006 | Harden owner/auth edge state | P1 | Web Core / Security | Security / Runtime | Open | FH-P1-006 | AR-020; `07_AGENTIC_WORKFLOW_OPS_SECURITY.md` | Single-owner assumptions remain fragile in edge config states. | Add owner state/config docs and tests or accepted limitation. | Edge cases are tested or explicitly accepted. | No public/friends access work. |
@@ -163,9 +167,9 @@ are marked closed or accepted by FH-010.
 | R-FH-P1-025 | Create source trust registry | P1 | Data / Metrics / Import | Metrics / Import | Open | FH-P1-025 | AR-072; TASK-AUDIT-004 | Weak sources can drive hard advice. | Define trust levels and usage rules for CSV, JSON, demo, Steam/Valve and FACEIT states. | Source trust is referenced by coach policy. | Key dependency for confidence/caveat risks. |
 | R-FH-P1-026 | Document aggregation rules | P1 | Data / Metrics | Metrics / QA | Open | FH-P1-026 | AR-073 | Aggregation semantics are incomplete. | Document rules and add representative fixtures. | Aggregation cases are tested. | Depends on R-FH-P1-024. |
 | R-FH-P1-027 | Version metric registry/prompt payload snapshots | P1 | Data / AI reproducibility | Metrics / Architect | Open | FH-P1-027 | AR-076 | Old AI outputs may not be reproducible. | Version metric registry and payload snapshots. | Versioned snapshots exist. | Depends on R-FH-P1-016. |
-| R-FH-P1-028 | Add global DB import-order smoke guard | P1 | Runtime / DB | DB / Runtime / QA | Open | FH-P1-028 | AR-081 | Careless scripts can hit production DB through global engine/settings hazards. | Reduce global binding or add import-order smoke tests. | Unsafe import order is guarded. | Depends on R-FH-P0-001. |
-| R-FH-P1-029 | Add CI quality gates | P1 | Tests / CI | TEST_GUARDIAN | Open | FH-P1-029 | AR-090 | Regressions can land unchecked without CI or equivalent. | Add CI or accepted mandatory local substitute. | Required checks are standard. | Depends on R-FH-P1-003. |
-| R-FH-P1-030 | Keep SHA in every DB-impacting WP | P1 | Ops / DB | DB / PM | Open | FH-P1-030 | AR-093 | DB impact can become unclear without SHA discipline. | Include DB SHA requirement in gate/report template. | Report template requires SHA for DB-impacting WPs. | Depends on R-FH-P1-001. |
+| R-FH-P1-028 | Add global DB import-order smoke guard | P1 | Runtime / DB | DB / Runtime / QA | Closed | FH-P1-028 / FH-036 | AR-081; FH-036 report and PM review; commit `3a6990a`. | A focused test-only subprocess smoke guard now checks DB/config/model import ordering against temp SQLite DBs. | Maintain the guard and keep production DB dependency out of import-order tests. | Unsafe import order is guarded by the accepted test. | Closed for the import-order smoke-guard scope. This does not close `R-FH-P0-001`; migration-engine/adoption risk remains partially mitigated. |
+| R-FH-P1-029 | Add CI quality gates | P1 | Tests / CI | TEST_GUARDIAN | Partially mitigated | FH-P1-029 / FH-023 / FH-024 / FH-038_039 | AR-090; FH-023 report and commit `25d2eb2`; FH-024 report and commit `a95fb3f`; FH-038/039 local gate rerun evidence. | Regressions are now checked by an accepted mandatory local CI-equivalent gate, but hosted CI is not configured. | Preserve local gate discipline; decide hosted CI/provider setup separately if final readiness requires it. | Required checks are standard and the final gate either accepts local CI-equivalent coverage or creates a hosted-CI follow-up. | Not a hosted CI claim. Current closure evidence shows `.venv/bin/python scripts/local_quality_gate.py` passes locally. |
+| R-FH-P1-030 | Keep SHA in every DB-impacting WP | P1 | Ops / DB | DB / PM | Closed | FH-P1-030 / FH-032 / FH-037 | AR-093; FH-032 report and commit `0c37b40`; FH-037 report and commit `65fa1f8`; `AGENTS.md`; `docs/project_management/AGENT_WORKFLOW.md`; `docs/BACKUP_RESTORE.md`. | DB-impact reporting policy now distinguishes ordinary tasks, DB/schema-risk no-touch tasks, read-only production inspection and authorized production DB mutation. | Maintain the policy in future DB-risk Task Cards and reports. | DB-impacting WPs require appropriate no-touch, read-only SHA or mutation before/after SHA evidence. | Closed for policy/reporting coverage. It does not authorize production DB mutation. |
 | R-FH-P1-031 | Add secret redaction command policy | P1 | Security / Command safety | Security | Open | FH-P1-031 | AR-095 | Command output can leak sensitive values if policy is vague. | Document allowed command reporting: names only, no values. | Reports forbid secret values. | No secret values should appear in task outputs. |
 | R-FH-P1-032 | Keep public-readiness rate-limit restriction | P1 | Security / Runtime | Security / Runtime | Open | FH-P1-032 | AR-097 | In-memory rate limiting is not public-grade. | Document no public readiness and later reverse-proxy/Redis limiter need. | Public claims are blocked. | Depends on R-FH-P0-002. |
 | R-FH-P1-033 | Add data privacy/retention policy before sharing | P1 | Security / Privacy | Security / PM | Open | FH-P1-033 | AR-098 | Sensitive data exposure risk remains before sharing/social features. | Define privacy/retention policy before any sharing feature. | Sharing is blocked pending policy. | Depends on R-FH-P0-002. |
@@ -179,10 +183,15 @@ task card.
 
 ## Review Notes For PM
 
-- All P0 risks are represented and remain `Open`.
-- All P1 risks from the current backlog are represented. `R-FH-P1-002` is
-  `Closed` after FH-010/FH-011/FH-012 evidence; remaining P1 risks remain
-  `Open`.
+- All P0 risks are represented. `R-FH-P0-001` is now `Partially mitigated`
+  after FH-030 through FH-037, but remains gate-blocking because no migration
+  engine or final accepted equivalent has been adopted.
+- All P1 risks from the current backlog are represented. `R-FH-P1-001`,
+  `R-FH-P1-002`, `R-FH-P1-028` and `R-FH-P1-030` are `Closed` by accepted
+  hardening evidence. `R-FH-P1-003` and `R-FH-P1-029` are `Partially
+  mitigated` by the accepted mandatory local CI-equivalent gate, while hosted CI
+  remains a future explicit decision if the final gate requires it. Remaining
+  P1 risks remain `Open`.
 - `R-FH-P1-002` is `Closed` because FH-010 created the register, FH-011
   verified P0/P1 field coverage and FH-012 linked it from current
   source-of-truth and roadmap docs.
