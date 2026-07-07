@@ -111,7 +111,10 @@ WPs need it.
 8. Documentation Steward checks required doc updates.
 9. WP report is created.
 10. ChatGPT PM / User review.
-11. User commits and pushes.
+11. Git resolution follows `AGENTS.md`: Executor does not commit or push
+    unless explicitly authorized; PM_ORCHESTRATOR may create local commits only
+    after accepted PM review under the active Git policy; push remains
+    user-only unless explicitly requested in a separate command.
 12. WP can be closed only after required docs and report are in place.
 
 ## 6. Documentation Steward Triggers
@@ -147,7 +150,10 @@ Standard handoffs:
 
 Rules:
 
-- No role may run `git add`, commit or push.
+- Executor must not run `git add`, commit or push unless explicitly
+  authorized. PM_ORCHESTRATOR local commits are allowed only after accepted PM
+  review and only under the active root/PM `AGENTS.md` Git policy. Push remains
+  forbidden unless the user explicitly asks for it in a separate command.
 - No role may expand scope without PM / Orchestrator and User approval.
 - No role may use old prompts, audits or plans as current truth.
 - Role cards are editable behavior contracts. Changes require explicit
@@ -355,7 +361,7 @@ For WP-level work, console output should include:
    - no DB changed;
    - no imports/parser/evaluator ran;
    - no service/nginx changed;
-   - no `git add`/commit/push.
+   - no unauthorized `git add`/commit and no push.
 
 The exact report path is task-specific and belongs in the Task Card.
 
@@ -463,7 +469,8 @@ Work according to AGENTS.md and AGENT_WORKFLOW.md.
 Task: ...
 Use Hot context. Read Warm docs only if needed.
 Run PM/Implementation/QA/Docs Steward roles for this WP.
-Do not git add/commit/push.
+Do not git add/commit/push unless the task explicitly authorizes local commit
+handling under `AGENTS.md`; never push without a separate explicit user request.
 ```
 
 ### Tiny Task Prompt
