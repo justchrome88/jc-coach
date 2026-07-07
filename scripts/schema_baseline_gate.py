@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import difflib
 import hashlib
 import json
@@ -44,6 +45,17 @@ def compact_json(payload: Any) -> str:
 
 def schema_hash(schema: dict[str, Any]) -> str:
     return "sha256:" + hashlib.sha256(compact_json(schema).encode("utf-8")).hexdigest()
+
+
+def comparison_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    comparable = copy.deepcopy(schema)
+    for table in comparable.get("tables", []):
+        indexes = table.get("indexes", [])
+        indexes.sort(key=lambda item: item["name"])
+        for seq, index in enumerate(indexes):
+            if "seq" in index:
+                index["seq"] = seq
+    return comparable
 
 
 def connect_readonly(db_path: Path) -> sqlite3.Connection:
@@ -204,20 +216,22 @@ def check_baseline(args: argparse.Namespace) -> int:
     baseline_path = Path(args.baseline)
     baseline = read_baseline(baseline_path)
     current = build_baseline(db_path)
-    baseline_hash = schema_hash(baseline["schema"])
-    current_hash = current["schema_hash"]
+    baseline_schema = comparison_schema(baseline["schema"])
+    current_schema = comparison_schema(current["schema"])
+    baseline_hash = schema_hash(baseline_schema)
+    current_hash = schema_hash(current_schema)
 
     print(f"SCHEMA_GATE_DB={db_path.resolve()}")
     print(f"SCHEMA_GATE_BASELINE={baseline_path.resolve()}")
     print(f"SCHEMA_GATE_BASELINE_HASH={baseline_hash}")
     print(f"SCHEMA_GATE_CURRENT_HASH={current_hash}")
-    if baseline["schema"] == current["schema"]:
+    if baseline_schema == current_schema:
         print("SCHEMA_GATE_RESULT=match")
         return 0
 
     print("SCHEMA_GATE_RESULT=mismatch")
-    baseline_lines = canonical_json(baseline["schema"]).splitlines(keepends=True)
-    current_lines = canonical_json(current["schema"]).splitlines(keepends=True)
+    baseline_lines = canonical_json(baseline_schema).splitlines(keepends=True)
+    current_lines = canonical_json(current_schema).splitlines(keepends=True)
     diff = difflib.unified_diff(
         baseline_lines,
         current_lines,

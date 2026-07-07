@@ -1,4 +1,5 @@
 import os
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -35,6 +36,26 @@ def _create_minimal_sqlite(path: Path) -> None:
         connection.close()
 
 
+def _write_post_copy_schema_baseline(source_db: Path, tmp_path: Path) -> Path:
+    target_db = tmp_path / f"{source_db.stem}-baseline-target.db"
+    baseline_path = tmp_path / f"{source_db.stem}-baseline.json"
+    shutil.copy2(source_db, target_db)
+    env = os.environ.copy()
+    env.update({"APP_ENV": "test", "DATABASE_URL": f"sqlite:///{target_db}"})
+    result = subprocess.run(
+        [sys.executable, "-c", "from app.db.session import init_db; init_db()"],
+        cwd=ROOT,
+        env=env,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    baseline = schema_baseline_gate.build_baseline(target_db)
+    baseline_path.write_text(schema_baseline_gate.canonical_json(baseline), encoding="utf-8")
+    return baseline_path
+
+
 def test_test_environment_rejects_production_database_url_for_migrations():
     settings = Settings(app_env="test", database_url=f"sqlite:///{PRODUCTION_DB_PATH}")
 
@@ -59,12 +80,17 @@ def test_migration_check_on_copy_runs_against_copy_and_keeps_source_unchanged(tm
     source_db = tmp_path / "source.db"
     target_db = tmp_path / "target.db"
     _create_minimal_sqlite(source_db)
+    baseline_path = _write_post_copy_schema_baseline(source_db, tmp_path)
     before = source_db.read_bytes()
 
-    result = _run_script("migration_check_on_copy.sh", {"SOURCE_DB": str(source_db), "TARGET_DB": str(target_db)})
+    result = _run_script(
+        "migration_check_on_copy.sh",
+        {"SOURCE_DB": str(source_db), "TARGET_DB": str(target_db), "SCHEMA_BASELINE": str(baseline_path)},
+    )
 
     assert result.returncode == 0, result.stderr
     assert "MIGRATION_COPY_CHECK_RESULT=ok" in result.stdout
+    assert "SCHEMA_GATE_RESULT=match" in result.stdout
     assert source_db.read_bytes() == before
     assert target_db.exists()
 
@@ -77,6 +103,21 @@ def test_migration_check_refuses_to_use_source_as_target(tmp_path):
 
     assert result.returncode == 3
     assert "target_must_not_equal_source" in result.stderr
+
+
+def test_migration_check_refuses_production_db_as_target(tmp_path):
+    source_db = tmp_path / "source.db"
+    _create_minimal_sqlite(source_db)
+    before = source_db.read_bytes()
+
+    result = _run_script(
+        "migration_check_on_copy.sh",
+        {"SOURCE_DB": str(source_db), "TARGET_DB": str(PRODUCTION_DB_PATH)},
+    )
+
+    assert result.returncode == 6
+    assert "target_must_not_be_production_db" in result.stderr
+    assert source_db.read_bytes() == before
 
 
 def test_migration_scripts_are_shell_parseable():
@@ -95,11 +136,42 @@ def test_migration_check_uses_explicit_temp_source_not_production_db(tmp_path):
     source_db = tmp_path / "source.db"
     target_db = tmp_path / "target.db"
     _create_minimal_sqlite(source_db)
+    baseline_path = _write_post_copy_schema_baseline(source_db, tmp_path)
 
-    result = _run_script("migration_check_on_copy.sh", {"SOURCE_DB": str(source_db), "TARGET_DB": str(target_db)})
+    result = _run_script(
+        "migration_check_on_copy.sh",
+        {"SOURCE_DB": str(source_db), "TARGET_DB": str(target_db), "SCHEMA_BASELINE": str(baseline_path)},
+    )
 
     assert result.returncode == 0, result.stderr
     assert f"MIGRATION_COPY_CHECK_SOURCE={source_db}" in result.stdout
+
+
+def test_migration_check_reports_schema_mismatch_from_copy(tmp_path):
+    source_db = tmp_path / "source.db"
+    target_db = tmp_path / "target.db"
+    _create_minimal_sqlite(source_db)
+    baseline_path = _write_post_copy_schema_baseline(source_db, tmp_path)
+
+    connection = sqlite3.connect(source_db)
+    try:
+        connection.execute("CREATE TABLE drift_table (id INTEGER PRIMARY KEY)")
+        connection.commit()
+    finally:
+        connection.close()
+    before = source_db.read_bytes()
+
+    result = _run_script(
+        "migration_check_on_copy.sh",
+        {"SOURCE_DB": str(source_db), "TARGET_DB": str(target_db), "SCHEMA_BASELINE": str(baseline_path)},
+    )
+
+    assert result.returncode == 1
+    assert "MIGRATION_COPY_CHECK_SOURCE_UNCHANGED=true" in result.stdout
+    assert "SCHEMA_GATE_RESULT=mismatch" in result.stdout
+    assert "SCHEMA_GATE_DIFF_BEGIN" in result.stdout
+    assert '"name": "drift_table"' in result.stdout
+    assert source_db.read_bytes() == before
 
 
 def _run_schema_gate(*args: str) -> subprocess.CompletedProcess[str]:

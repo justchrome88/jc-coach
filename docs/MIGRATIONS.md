@@ -69,7 +69,20 @@ The copy check:
 - copies source DB to target;
 - runs app `init_db()` only against target copy;
 - runs SQLite integrity check on target;
-- verifies source DB SHA did not change.
+- verifies source DB SHA did not change;
+- refuses `data/cs2_coach.db` as a target path;
+- runs the FH-030 schema baseline gate against the target copy and prints a
+  unified schema diff when the copy differs from the accepted baseline.
+
+The schema baseline defaults to:
+
+```text
+docs/foundation_hardening/2026-07-06-readiness-recovery-plan/current_schema_baseline.json
+```
+
+For isolated test fixtures or temporary experiments, pass an explicit
+`SCHEMA_BASELINE=/path/to/baseline.json`. Do not use that override to weaken
+production review evidence.
 
 Create the current schema baseline artifact:
 
@@ -79,18 +92,20 @@ Create the current schema baseline artifact:
   --output docs/foundation_hardening/2026-07-06-readiness-recovery-plan/current_schema_baseline.json
 ```
 
-Run the schema gate against the current baseline:
+Run the schema gate directly against a copied DB:
 
 ```bash
 .venv/bin/python scripts/schema_baseline_gate.py check \
-  --db-path data/cs2_coach.db \
+  --db-path /tmp/jc-coach-migration-check.db \
   --baseline docs/foundation_hardening/2026-07-06-readiness-recovery-plan/current_schema_baseline.json
 ```
 
 The schema gate opens the SQLite DB read-only, compares only schema structure,
 excludes row data and exits nonzero when the inspected schema differs from the
 baseline. The baseline includes tables, columns, foreign keys, indexes,
-schema SQL objects, `PRAGMA user_version` and `PRAGMA application_id`.
+schema SQL objects, `PRAGMA user_version` and `PRAGMA application_id`. During
+comparison, SQLite index-list ordinals are normalized so equivalent schemas do
+not fail because of non-semantic `PRAGMA index_list` ordering.
 
 ## Required Before Any Future Schema Change
 
