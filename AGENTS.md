@@ -122,6 +122,15 @@ mention external documentation lookup only when it was relevant.
   authorize the others.
 - Do not change schema, migration/baseline artifacts, schema behavior or any DB
   copy unless that exact scope is explicitly approved.
+- Documentation of schema compatibility boundaries is not authorization to
+  change runtime startup behavior, helper behavior, schema artifacts, migration
+  scripts, copied DBs or the production DB.
+- Startup schema compatibility work is schema-changing work. Future Task Cards
+  for that work must state the allowed files/artifacts, rollback and
+  compatibility expectations, required schema-gate evidence and production DB
+  authorization status.
+- FH-030, FH-031 and FH-032 did not adopt Alembic, add migration support, mutate
+  the production DB or change startup schema behavior.
 - Report DB evidence by task risk:
   - ordinary tasks with no DB, schema, import/parser/evaluator or production-data
     risk do not require a production DB SHA check unless the Task Card asks for

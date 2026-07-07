@@ -334,6 +334,19 @@ production DB mutation. Authorization for copied-DB work does not authorize
 production DB mutation. Production DB mutation still requires the explicit
 authorization, backup and SHA evidence required by `AGENTS.md`.
 
+Startup schema compatibility boundary:
+
+- Documenting compatibility boundaries does not authorize runtime startup
+  behavior changes, startup helper changes, migration support, schema artifact
+  edits, copied-DB experiments or production DB mutation.
+- Startup schema behavior changes are schema-changing work and require an
+  explicit Task Card scope before implementation.
+- Future startup schema compatibility Task Cards must state allowed
+  files/artifacts, required schema-gate evidence, rollback and compatibility
+  expectations and production DB authorization status.
+- FH-030, FH-031 and FH-032 did not adopt Alembic, add migration support,
+  mutate the production DB or change startup schema behavior.
+
 ### Import / Parser / Evaluator Task
 
 - Requires explicit approval before live import, parser or evaluator jobs.

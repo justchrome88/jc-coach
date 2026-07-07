@@ -93,7 +93,7 @@ passes or a stricter future source changes the state.
 | Current impact | Schema evolution relies on startup create/upgrade behavior. Future schema work could silently drift or mutate `data/cs2_coach.db` outside a controlled migration process. |
 | Required next action | Adopt Alembic or equivalent baseline, schema diff policy and production apply approval/SHA policy on a DB copy first. |
 | Acceptance / exit condition | Baseline matches current schema on a copy; production DB is untouched; startup helper receives no new schema changes; schema-changing WPs require explicit migration scope; task report includes checks and DB safety evidence. |
-| Notes | Major schema-changing product work remains blocked until this risk is closed or explicitly hard-blocked. |
+| Notes | Major schema-changing product work remains blocked until this risk is closed or explicitly hard-blocked. Compatibility-boundary documentation does not authorize startup helper/runtime behavior changes, migration support, schema artifact edits, copied-DB experiments or production DB mutation. Future startup schema compatibility work must state rollback and compatibility expectations, allowed files/artifacts, required schema-gate evidence and production DB authorization status. FH-030, FH-031 and FH-032 did not adopt Alembic, add migration support, mutate the production DB or change startup schema behavior. |
 
 ### R-FH-P0-002 - Keep Public/Friends Access Blocked Until Security Gate
 
