@@ -176,6 +176,29 @@ Do not run tests by invoking the app against the default runtime `.env` or `data
 - `TestClient(app)` must use the temp test DB created by pytest configuration, not `data/cs2_coach.db`.
 - For Python route/template changes, perform live smoke checks only when the task explicitly involves runtime behavior and it is safe to start/restart the app.
 
+## Endpoint Contract Test Rules
+
+Endpoint contract tests should stay small and critical-path focused. Prefer
+stable contracts: status/auth behavior, redirect targets, API-token versus
+browser CSRF behavior, and representative response/input fields.
+
+Required when endpoint behavior changes:
+
+- path, method, auth/owner boundary, CSRF/API-token behavior, status code,
+  redirect target, request input or response field semantics changed;
+- mutation route behavior changed, including DB writes, artifact writes,
+  recommendation updates, AI result/report persistence or settings writes;
+- import/parser/Steam/evaluator routes changed, with explicit task
+  authorization and isolated mocks/fixtures only.
+
+Not enough by itself:
+
+- broad UI smoke coverage without the changed contract assertion;
+- service tests that do not verify route translation for an HTTP contract
+  change;
+- tests pointed at `data/cs2_coach.db`, live Steam/Valve imports, parser jobs,
+  evaluator/manual-evaluator jobs or service/deploy state.
+
 ## Isolation Guarantees
 
 - Test runtime DB: `/tmp/jc-coach-pytest-<pid>/cs2_coach_test.db` by default.

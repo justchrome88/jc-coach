@@ -377,6 +377,26 @@ Expected test ownership:
 Do not use pytest, Ruff or the local quality gate for a docs-only task unless
 code, scripts or tests changed despite the intended scope.
 
+## Safe Architecture Rules For Future Agents
+
+Endpoint changes require tests at the same boundary that changes:
+
+- path, method, auth, CSRF/API-token behavior, status code, redirect target,
+  request input or representative response shape changes require focused
+  endpoint contract tests;
+- service behavior changes require service tests first, with route tests only
+  for HTTP translation, auth and serialization;
+- DB/session/model, startup schema behavior, migration/baseline or copied-DB
+  changes require explicit schema scope before edits and DB/SHA evidence under
+  `AGENTS.md`;
+- import, parser, Steam, evaluator or manual-evaluator behavior requires
+  explicit PM/user scope before live work, and tests must use isolated fixtures
+  or mocks rather than production data or jobs;
+- persistent report, AI handoff/result and demo-storage manifest routes must
+  prove temp-path isolation in tests or declare no artifact write;
+- route or service work must not add playlist, metric-confidence,
+  recommendation or AI claims beyond accepted persisted evidence and caveats.
+
 ## Read/Write And Sensitive Path Summary
 
 Read-oriented paths:

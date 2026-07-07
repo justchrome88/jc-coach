@@ -31,6 +31,21 @@ response shapes or mutation semantics requires explicit future task scope.
 - Response field summaries reflect current route serialization, not a complete
   schema promise.
 
+Endpoint contract test rule:
+
+- Any future change to endpoint path, method, authentication, owner/session
+  boundary, CSRF/API-token behavior, request parameter semantics, status code,
+  redirect target or representative response fields requires a focused endpoint
+  contract test in `tests/`.
+- Mutation endpoints require tests for the relevant auth/CSRF boundary and a
+  clear no-production-DB-touch declaration or DB/SHA evidence appropriate to
+  the task risk.
+- Import/parser/evaluator and Steam import endpoints require explicit PM/user
+  authorization before running live work; contract tests should use mocks,
+  temp files and temp DB fixtures only.
+- Schema/model/startup/migration changes are not implied by endpoint contract
+  edits and require separate explicit scope.
+
 Mutation classes:
 
 - `read`: no intended persistent mutation.
