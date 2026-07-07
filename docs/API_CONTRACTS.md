@@ -191,6 +191,14 @@ Their browser contract is template/redirect oriented rather than JSON oriented.
 | `GET` | `/api/steam/import/overview` | Owner session or API token. | None. | Import overview object plus serialized `current_job` or `null`. Exact overview fields are service-owned. | `read` |
 | `GET` | `/api/steam/demo-downloader/status` | Owner session or API token. | None. | `{"configured": true|false}`. | `read` |
 
+Import job result details are intentionally service-owned, but import reports
+and future API/UI labels must treat `ImportJob.status` as coarse and
+`ImportJob.result_json` as canonical for `overall_outcome`, `statuses`,
+`retryable`, source/context, progress and safety evidence. The current JSON
+shape expectation is documented in `docs/STEAM_IMPORT.md`; changing endpoint
+response fields or mutation semantics still requires explicit API contract
+scope and focused tests.
+
 ### Demo Storage
 
 | Method | Path | Auth/owner expectation | Request/input summary | Response/output summary | Mutation/read class |

@@ -300,6 +300,9 @@ Sensitive services:
 - `steam_integration.py` and `steam_demo_downloader.py` touch live Steam/Valve
   import paths, import jobs, demo download state, storage budgets and external
   helper execution. Do not run or change these paths without explicit scope.
+  `ImportJob.status` remains coarse; service behavior, UI/API labels and task
+  reports must use `result_json` for detailed outcome, retryability and safety
+  evidence.
 - `demo_parser.py` reads/stores DEM-derived facts and parser artifacts. Parser
   jobs on production data require explicit authorization.
 - `recommendation_tracking.py` writes recommendation evaluations and progress.
@@ -310,6 +313,10 @@ Sensitive services:
 - `demo_storage.py`, `demo_retention.py` and `steam_storage_guard.py` touch
   demo-file accounting and retention boundaries. Do not delete, move or
   compress raw demos without explicit storage scope.
+- Durable import workers, retry ledgers, queue runners, stale-job repair and
+  import cap changes are not general service refactors. They require explicit
+  import-worker/retry/cap scope, safety evidence and, when persistence changes
+  are needed, separate schema/data authorization.
 
 ## DB, Session And Model Layer
 
@@ -392,6 +399,8 @@ Endpoint changes require tests at the same boundary that changes:
 - import, parser, Steam, evaluator or manual-evaluator behavior requires
   explicit PM/user scope before live work, and tests must use isolated fixtures
   or mocks rather than production data or jobs;
+- import cap raises remain blocked until worker/retry/result safety is accepted
+  and a separate cap-change WP authorizes the change;
 - persistent report, AI handoff/result and demo-storage manifest routes must
   prove temp-path isolation in tests or declare no artifact write;
 - route or service work must not add playlist, metric-confidence,

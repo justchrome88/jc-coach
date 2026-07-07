@@ -351,6 +351,9 @@ Startup schema compatibility boundary:
 
 - Requires explicit approval before live import, parser or evaluator jobs.
 - Must respect Steam cap and current limitations.
+- Reports for any task involving import, parser, evaluator, manual evaluator,
+  import cap, production DB/import data, or worker/retry behavior must include
+  an import safety declaration.
 
 ### Deploy / Runtime Task
 
@@ -536,6 +539,18 @@ Reports must include a checks evidence section with:
 - Any additional safe docs-only check indicated by `project_gate.py
   required-checks`, or the exact reason it was not run.
 
+Import safety declaration requirement:
+
+- Future reports for tasks involving import, parser, evaluator, manual
+  evaluator, import cap, production DB/import data, or worker/retry behavior
+  must state whether live Steam/Valve calls ran; whether demo download,
+  decompression, parser, evaluator or manual evaluator jobs ran; whether a
+  worker, queue runner, retry path or stale-job repair ran; whether
+  `STEAM_IMPORT_MAX_DEMOS_PER_RUN` changed; whether production DB/import data,
+  Steam cursors or raw demos were touched; whether temp-directory requirements
+  applied; and whether tests used mocks/temp paths/temp DBs instead of
+  production data.
+
 For code, script or test changes, `.venv/bin/python scripts/local_quality_gate.py`
 is the accepted local CI-equivalent PASS gate. A report may not claim PASS for
 that class while silently replacing the local gate with a weaker check set.
@@ -570,6 +585,9 @@ For WP-level work, console output should include:
    - no DB changed, plus DB SHA evidence or no-production-DB-touch declaration
      appropriate to the task risk;
    - no imports/parser/evaluator ran;
+   - import safety declaration when the task touches import, parser, evaluator,
+     manual evaluator, import cap, production DB/import data, or worker/retry
+     behavior;
    - no service/nginx changed;
    - no unauthorized `git add`/commit and no push.
 
