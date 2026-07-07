@@ -64,6 +64,111 @@ confidence. Low-confidence metrics must remain caveated.
 
 ## Route Layers
 
+### Current Route Boundary Inventory
+
+This inventory describes the current route surface from `app/main.py`,
+`app/api/routes.py` and `app/web/routes.py`. It is descriptive only. Route
+restructuring, authentication boundary changes, request/response contract
+changes or mutation semantic changes require explicit future task scope.
+
+Mutation classes used below:
+
+- `read`: returns health, rendered pages or existing DB/config/filesystem facts.
+- `session-write`: changes browser session or cookies.
+- `db-write`: writes persisted application rows.
+- `artifact-write`: writes a generated handoff, report, manifest or similar
+  persisted artifact.
+- `import-parser-write`: imports CSV/JSON/DEM data or runs parser-backed
+  import logic.
+- `steam-import-write`: queues, runs or repairs Steam/Valve import work.
+
+Sensitive classes used below:
+
+- `public`: currently allowed without an authenticated owner session.
+- `owner`: requires an authenticated owner session, or for `/api/*` a valid API
+  bearer token according to `app/main.py` middleware.
+- `auth-sensitive`: login, registration, logout, CSRF, session or owner-linking
+  behavior.
+- `import-parser-sensitive`: CSV/JSON/DEM import, parser or inbox import path.
+- `steam-sensitive`: Steam OpenID, share-code, queued import or demo-download
+  path.
+- `recommendation-sensitive`: tracked recommendation state or evaluation
+  evidence path.
+- `report-ai-sensitive`: persistent coach report, AI handoff/result or provider
+  generation path.
+- `db-risk`: route can write DB rows when pointed at the production DB.
+- `artifact-risk`: route can write a persistent non-DB artifact.
+
+#### Application And Public Routes
+
+| Route | Boundary | Mutation class | Sensitive class |
+|---|---|---|---|
+| `GET /health` | Public JSON health response from `app/main.py`. | `read` | `public` |
+| `GET /robots.txt` | Public robots policy from `app/main.py`. | `read` | `public` |
+| `GET /static/*` | Static files mounted by `app/main.py`. | `read` | `public` |
+| `GET /` | Landing page, redirects authenticated users to `/dashboard`. | `read` | `public` |
+| `GET /login`, `POST /login` | Login page and credential submission. | `read`, `session-write` | `public`, `auth-sensitive` |
+| `GET /register`, `POST /register` | Registration page and owner/user creation flow. | `read`, `db-write`, `session-write` | `public`, `auth-sensitive`, `db-risk` |
+| `POST /logout` | Clears the browser session. | `session-write` | `owner`, `auth-sensitive` |
+| `GET /language/{locale}` | Sets locale cookie and redirects back. | `session-write` | `public` |
+| `GET /auth/steam/callback` | Steam OpenID callback. It is public at middleware level but requires a current owner session in the handler before linking. | `db-write` | `public`, `auth-sensitive`, `steam-sensitive`, `db-risk` |
+
+#### Web Read Routes
+
+| Route | Boundary | Mutation class | Sensitive class |
+|---|---|---|---|
+| `GET /dashboard` | Owner dashboard built from playable matches, analytics, aim stats and recommendation progress. | `read` | `owner` |
+| `GET /stats` | Owner stats page with range/date filters and metric confidence context. | `read` | `owner` |
+| `GET /coach` | Coach overview from analytics, mistakes, recommendation progress, reports and AI result history. | `read` | `owner`, `recommendation-sensitive`, `report-ai-sensitive` |
+| `GET /upload` | Upload page and inbox demo listing. | `read` | `owner`, `import-parser-sensitive` |
+| `GET /settings/imports` | Steam/import settings page and import job overview. | `read` | `owner`, `steam-sensitive` |
+| `GET /settings/storage` | Demo storage report page. | `read` | `owner` |
+| `GET /auth/steam` | Redirects owner to Steam OpenID login URL. | `read` | `owner`, `auth-sensitive`, `steam-sensitive` |
+| `GET /matches` | Match list with filters, pagination, evaluation status and date-truth labels. | `read` | `owner` |
+| `GET /matches/{match_id}` | Match detail with parser summary, mistake and recommendation evaluation context. | `read` | `owner`, `import-parser-sensitive`, `recommendation-sensitive` |
+| `GET /report` | Latest generated coach report page. | `read` | `owner`, `report-ai-sensitive` |
+
+#### Web Mutation Routes
+
+| Route | Boundary | Mutation class | Sensitive class |
+|---|---|---|---|
+| `POST /settings/storage/manifest` | Writes demo storage manifest through `write_demo_storage_manifest()`. | `artifact-write` | `owner`, `artifact-risk` |
+| `POST /settings/imports/steam-web-api-key` | Stores Steam Web API key in app settings. | `db-write` | `owner`, `steam-sensitive`, `db-risk` |
+| `POST /settings/imports/steam/{steam_account_id}/auth-code` | Stores match auth/latest share-code values for a Steam account. | `db-write` | `owner`, `steam-sensitive`, `db-risk` |
+| `POST /settings/imports/steam/{steam_account_id}/share-code` | Imports or queues a Steam share-code demo path. | `steam-import-write` | `owner`, `steam-sensitive`, `import-parser-sensitive`, `db-risk` |
+| `POST /settings/imports/steam/{steam_account_id}/sync` | Queues Steam match-history sync. | `steam-import-write` | `owner`, `steam-sensitive`, `db-risk` |
+| `POST /settings/imports/jobs/{job_id}/run` | Runs one queued Steam import job. | `steam-import-write` | `owner`, `steam-sensitive`, `db-risk` |
+| `POST /settings/imports/run-queued` | Processes queued Steam import jobs. | `steam-import-write` | `owner`, `steam-sensitive`, `db-risk` |
+| `POST /settings/imports/pull-all` | Queues all-match Steam import and may start a background task. | `steam-import-write` | `owner`, `steam-sensitive`, `db-risk` |
+| `POST /settings/imports/clear-demo-errors` | Clears old Steam demo download errors. | `db-write` | `owner`, `steam-sensitive`, `db-risk` |
+| `POST /upload` | Imports uploaded `.dem`, `.json` or CSV-like content. | `import-parser-write` | `owner`, `import-parser-sensitive`, `db-risk` |
+| `POST /upload/server-demo` | Imports a named inbox demo. | `import-parser-write` | `owner`, `import-parser-sensitive`, `db-risk` |
+| `POST /report/generate` | Generates and persists a coach report. | `db-write`, `artifact-write` | `owner`, `report-ai-sensitive`, `db-risk` |
+| `POST /coach/ai-handoff` | Creates an AI coach handoff artifact. | `artifact-write` | `owner`, `report-ai-sensitive`, `artifact-risk` |
+| `POST /coach/ai-result` | Saves submitted AI coach markdown as a persisted result. | `db-write` | `owner`, `report-ai-sensitive`, `db-risk` |
+| `POST /coach/ai-generate` | Calls configured AI provider and persists generated coach result. | `db-write`, `artifact-write` | `owner`, `report-ai-sensitive`, `db-risk` |
+| `POST /coach/recommendations/{recommendation_id}/status` | Updates tracked recommendation status. | `db-write` | `owner`, `recommendation-sensitive`, `db-risk` |
+| `POST /coach/recommendations/{recommendation_id}/extend` | Extends tracked recommendation target matches. | `db-write` | `owner`, `recommendation-sensitive`, `db-risk` |
+| `POST /coach/recommendations/category/{category}/restart` | Restarts a tracked recommendation category. | `db-write` | `owner`, `recommendation-sensitive`, `db-risk` |
+
+#### API Route Groups
+
+All `/api/*` routes are authenticated by middleware through either a current
+owner session or a configured `Authorization: Bearer <token>` API token. API
+state-changing methods are logged as API state changes. When a browser session
+is used without the API token, API writes also require the current CSRF token.
+
+| Route group | Routes | Mutation class | Sensitive class |
+|---|---|---|---|
+| Matches | `GET /api/matches` | `read` | `owner` |
+| Imports | `POST /api/import/csv`, `POST /api/import/json`, `POST /api/import/demo`, `GET /api/import/demo/inbox`, `POST /api/import/demo/inbox`, `GET /api/import/jobs` | `read`, `import-parser-write` | `owner`, `import-parser-sensitive`, `db-risk` for write routes |
+| Analytics | `GET /api/analytics/summary`, `GET /api/analytics/aim` | `read` | `owner` |
+| Recommendations | `GET /api/recommendations/active`, `GET /api/recommendations`, `GET /api/recommendations/history`, `GET /api/recommendations/categories`, `POST /api/recommendations/{recommendation_id}/status`, `POST /api/recommendations/{recommendation_id}/extend`, `POST /api/recommendations/categories/{category}/restart` | `read`, `db-write` | `owner`, `recommendation-sensitive`, `db-risk` for write routes |
+| Reports | `POST /api/reports/generate`, `GET /api/reports/latest` | `read`, `db-write`, `artifact-write` | `owner`, `report-ai-sensitive`, `db-risk` for generate |
+| AI coach | `GET /api/coach/ai/payload`, `POST /api/coach/ai/handoff`, `GET /api/coach/ai/handoff/latest`, `GET /api/coach/ai/provider/health`, `POST /api/coach/ai/generate`, `POST /api/coach/ai/result`, `GET /api/coach/ai/result/latest`, `GET /api/coach/ai/results` | `read`, `db-write`, `artifact-write` | `owner`, `report-ai-sensitive`, `db-risk` for persisted result/generate, `artifact-risk` for handoff |
+| Steam/import | `GET /api/steam/login-url`, `GET /api/steam/accounts`, `POST /api/steam/import/share-code`, `POST /api/steam/import/jobs/{job_id}/run`, `POST /api/steam/import/jobs/run-queued`, `POST /api/steam/import/all`, `GET /api/steam/import/overview`, `GET /api/steam/demo-downloader/status` | `read`, `steam-import-write`, `db-write` | `owner`, `steam-sensitive`, `db-risk` for write/import routes |
+| Demo storage | `GET /api/storage/demos`, `POST /api/storage/demos/manifest` | `read`, `artifact-write` | `owner`, `artifact-risk` for manifest |
+
 ### `app/main.py`
 
 `app/main.py` is the app composition layer. It may wire routers, middleware,
@@ -283,6 +388,7 @@ Production-DB-sensitive areas:
 
 ## Supporting Docs
 
+- API contracts: `docs/API_CONTRACTS.md`
 - Steam: `docs/STEAM_IMPORT.md`
 - AI: `docs/AI_COACH.md`
 - Metrics: `docs/METRICS.md`
