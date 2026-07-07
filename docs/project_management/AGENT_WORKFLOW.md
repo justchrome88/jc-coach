@@ -286,6 +286,37 @@ requested.
 - Requires DB/data guardian docs if relevant.
 - No mutation by default.
 
+### Schema-Changing WP Approval Policy
+
+Schema-changing work defaults to `approval-required`. It may proceed only when
+the Task Card explicitly names schema scope and allowed files/artifacts.
+
+Schema scope must distinguish:
+
+- read-only schema inspection;
+- schema definition/code or startup schema behavior changes;
+- schema baseline, migration artifact or migration script changes;
+- copied-DB experiments;
+- production DB mutation.
+
+Future schema-changing Task Cards must state, at minimum:
+
+- which schema scope category applies;
+- allowed schema files, scripts and artifacts;
+- whether production DB mutation is authorized;
+- required production DB backup plus before/after SHA evidence when production
+  DB mutation is authorized;
+- required schema baseline, diff or gate evidence from the FH-030 schema gate
+  or its accepted successor;
+- rollback and compatibility expectations, or an explicit reason they do not
+  apply.
+
+Authorization for read-only inspection does not authorize artifact edits,
+copied-DB experiments, migration execution, startup schema behavior changes or
+production DB mutation. Authorization for copied-DB work does not authorize
+production DB mutation. Production DB mutation still requires the explicit
+authorization, backup and SHA evidence required by `AGENTS.md`.
+
 ### Import / Parser / Evaluator Task
 
 - Requires explicit approval before live import, parser or evaluator jobs.
@@ -337,6 +368,11 @@ Report path, if file-backed or WP-level:
 Task-specific acceptance constraints, if needed:
 Stop conditions, only if task-specific:
 ```
+
+For schema-changing work, the Task Card must include the schema scope category,
+allowed schema files/scripts/artifacts, production DB mutation authorization,
+required FH-030 schema-gate or successor evidence, and rollback/compatibility
+expectations required by the schema approval policy.
 
 ## 14. Standard WP Preflight
 

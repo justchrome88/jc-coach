@@ -1,6 +1,6 @@
 # Project Operating Protocol
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-07.
 
 ## 1. Purpose
 
@@ -102,6 +102,11 @@ control-plane protection policy, invocation modes, output modes, role shortcuts
 and the standard Task Card. Future prompts should state task-specific scope,
 mode, output mode, report path and acceptance constraints instead of repeating
 generic workflow rules.
+
+Schema-changing WPs use the approval policy in
+`docs/project_management/AGENT_WORKFLOW.md`: schema scope, allowed
+files/artifacts, production DB mutation authorization, schema-gate evidence and
+rollback/compatibility expectations must be explicit before work starts.
 
 ## 8. Blocker / Stuck Procedure
 

@@ -112,7 +112,16 @@ mention external documentation lookup only when it was relevant.
 - For any authorized production DB mutation, record `sha256sum
   data/cs2_coach.db` before and after.
 - Back up the production DB before any authorized production mutation.
-- Do not change schema unless schema work is explicitly scoped.
+- Schema-changing work is `approval-required` unless the Task Card explicitly
+  names schema scope and allowed files.
+- Schema work includes schema definition/code, startup schema behavior,
+  migration or baseline artifacts, schema scripts, copied-DB experiments and
+  production DB mutation.
+- Read-only schema inspection, schema artifact edits, copied-DB experiments and
+  production DB mutation are distinct scopes. Authorization for one does not
+  authorize the others.
+- Do not change schema, migration/baseline artifacts, schema behavior or any DB
+  copy unless that exact scope is explicitly approved.
 
 ## 6. Steam And Import Rules
 
