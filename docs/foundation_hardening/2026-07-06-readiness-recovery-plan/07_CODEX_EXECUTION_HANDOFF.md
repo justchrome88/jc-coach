@@ -58,11 +58,18 @@ early so later execution has stronger controls.
 - No package installation unless explicitly approved.
 - No secret values in output.
 - Every task must include diff summary.
-- Every task must include tests/checks.
+- Every task must identify required checks before work starts.
+- Every task must include required checks, checks actually run, checks not run
+  with exact reasons, failed/stalled/timed-out checks and residual risk/owner/
+  target follow-up when relevant.
 - Every task must include the docs update checklist from
   `docs/project_management/AGENT_WORKFLOW.md`, not only a free-form docs
   summary.
 - Every task must include residual risks.
+- For code, script or test changes, `.venv/bin/python
+  scripts/local_quality_gate.py` is the standard local PASS gate.
+- Docs-only tasks must not run live app, service, import, parser, evaluator or
+  manual evaluator commands unless a Task Card explicitly authorizes them.
 
 ## Definition Of Done For Each Hardening Task
 
@@ -76,6 +83,8 @@ A task is done only when:
   WP registry/status/handoff docs, navigation docs, task-relevant domain docs,
   Documentation Steward applicability and deferred docs follow-up;
 - required tests/checks are run and reported;
+- missing, skipped, failed, stalled or timed-out checks are reported with exact
+  reasons and residual risk;
 - DB/import/runtime/service safety is declared;
 - production DB SHA is reported for DB-impacting or DB-risk tasks;
 - residual risks and follow-up tasks are listed;
@@ -95,6 +104,8 @@ Files changed:
 
 Diff summary:
 
+Required-checks policy summary:
+
 Docs update checklist:
 - Hot/current status docs:
 - WP registry/status/handoff docs:
@@ -104,6 +115,10 @@ Docs update checklist:
 - Deferred docs follow-up:
 
 Tests/checks run:
+
+Checks not run and why:
+
+Failed/stalled/timed-out checks:
 
 DB/import/runtime/service safety:
 

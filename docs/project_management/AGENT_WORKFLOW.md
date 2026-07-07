@@ -336,6 +336,12 @@ Stop conditions, only if task-specific:
 
 ## 14. Standard WP Preflight
 
+Every Executor task must know its required checks before work starts. The Task
+Card may make these defaults stricter, add targeted checks or forbid otherwise
+safe checks. The stricter instruction wins. Missing, skipped, failed, stalled or
+timed-out checks must be reported with the exact reason and cannot be hidden in
+the summary.
+
 For implementation tasks that touch code, scripts or tests, run the standard
 mandatory local quality gate before claiming PASS:
 
@@ -375,7 +381,40 @@ required-check summary, governance file presence and production DB SHA for the
 task report. It does not replace the task card's required tests, Ruff or
 `git diff --check`.
 
-## 15. Standard Output Contract
+## 15. Required Checks Matrix
+
+These are generic minimum expectations for Executor reports. They do not grant
+permission to perform risky actions. DB mutation, schema work, live import,
+parser/evaluator jobs, service changes, deploy changes and production data work
+still require explicit Task Card authorization plus the safety evidence required
+by `AGENTS.md`.
+
+| Task/change class | Required checks before claiming PASS | May skip only with exact reason |
+|---|---|---|
+| Docs-only governance/status/report tasks | `git status --short` before edits, `.venv/bin/python scripts/project_gate.py changed`, `.venv/bin/python scripts/project_gate.py required-checks`, `.venv/bin/python scripts/project_gate.py postflight`, `git diff --check`, plus review against allowed files and control-plane scope | Runtime/app smoke, service actions, imports, parser/evaluator jobs and production DB access when not explicitly scoped |
+| Code, script or test changes | `.venv/bin/python scripts/local_quality_gate.py`, plus any task-specific focused tests or evidence commands | Individual pytest/Ruff/project-gate subcommands only when the local gate ran and its output covers them, unless the Task Card asks for separate output |
+| DB/schema-risk tasks | Explicit DB/schema authorization, preflight/status evidence, DB backup/SHA evidence when mutation is authorized, migration/schema checks named by the Task Card, relevant DB tests, `git diff --check`, project gate postflight | Production DB mutation when not authorized; full suite only if the Task Card accepts a narrower DB-specific check set with owner/risk |
+| Import/parser/evaluator-risk tasks | Explicit authorization before any live import, parser, evaluator or manual evaluator job; cap/temp-dir/safety evidence when relevant; targeted import/parser/evaluator tests or dry-run/read-only diagnostics; project gate evidence; `git diff --check` | Live Steam/Valve/import/parser/evaluator/manual evaluator commands when not explicitly authorized |
+| Runtime/deploy/service-risk tasks | Explicit service/deploy authorization before start/stop/restart/config changes; repo-vs-live config diff/evidence; targeted runtime tests or smoke checks named by the Task Card; project gate evidence; `git diff --check` | Service/nginx/systemd/deploy actions when not explicitly authorized |
+| UI/web route/template/static tasks | Relevant route/template/static tests, safe web smoke or screenshot checks when explicitly useful and safe, full local gate if code/tests changed, project gate evidence, `git diff --check` | Live service smoke when the task forbids service use or when test-mode coverage is sufficient and documented |
+| Recommendation/coach/metrics/AI tasks | Relevant recommendation, metric truth, confidence, AI validator or semantic eval checks; full local gate if code/tests changed; project gate evidence; `git diff --check`; explicit caveat/source-confidence review for hard advice claims | External AI/provider calls, production report generation or weak-metric hard claims unless explicitly authorized and evidenced |
+| Audit/review/discovery tasks | `git status --short`, scoped read-only evidence commands named by the Task Card, project gate evidence when requested, report findings with completeness and follow-up recommendations if gaps are found | Repair edits, broad follow-up execution or risky commands outside the review scope |
+
+Reports must include a checks evidence section with:
+
+- Required checks from the Task Card and this matrix.
+- Checks actually run, with command and result.
+- Checks not run, with exact reason.
+- Failed, stalled or timed-out checks, with residual risk, owner and target
+  follow-up when relevant.
+- Any additional safe docs-only check indicated by `project_gate.py
+  required-checks`, or the exact reason it was not run.
+
+For code, script or test changes, `.venv/bin/python scripts/local_quality_gate.py`
+is the standard PASS gate. A report may not claim PASS for that class while
+silently replacing the local gate with a weaker check set.
+
+## 16. Standard Output Contract
 
 For WP-level work, console output should include:
 
@@ -384,7 +423,12 @@ For WP-level work, console output should include:
 3. Changed files.
 4. Short summary.
 5. `git status --short`.
-6. Confirmations:
+6. Required checks summary:
+   - required checks;
+   - checks run;
+   - checks not run and why;
+   - failed, stalled or timed-out checks and residual risk.
+7. Confirmations:
    - no code changed, if docs-only;
    - no DB changed;
    - no imports/parser/evaluator ran;
@@ -393,7 +437,7 @@ For WP-level work, console output should include:
 
 The exact report path is task-specific and belongs in the Task Card.
 
-## 16. Standard Report Docs Update Checklist
+## 17. Standard Report Docs Update Checklist
 
 Every WP-level, hardening or file-backed task report must include a docs update
 checklist, not only a free-form docs summary. The checklist is a scoped closure
@@ -419,7 +463,7 @@ The checklist must respect the Hot/Warm/Cold context policy and control-plane
 protection rules. A task may answer `not applicable` or `checked; no update
 required` only with a short reason tied to scope.
 
-## 17. Documentation Steward Standalone Mode
+## 18. Documentation Steward Standalone Mode
 
 Example prompt:
 
@@ -442,7 +486,7 @@ Required output:
 - Recommended actions.
 - Confirmation that no automatic deletion was performed.
 
-## 18. Required Document Update Matrix
+## 19. Required Document Update Matrix
 
 | Event | Required docs to check/update |
 |---|---|
@@ -457,7 +501,7 @@ Required output:
 | Document deprecated | `DOCS_INDEX.md`, `DOCS_MAP.md`, report, but no delete without approval |
 | Side-chat decision accepted | `DECISIONS.md` or relevant canonical doc |
 
-## 19. Docs Classification Model
+## 20. Docs Classification Model
 
 - `CANONICAL` - source of truth for a specific area.
 - `SUPPORTING` - useful reference but not source of truth.
@@ -473,7 +517,7 @@ Rules:
 - If docs conflict, the source-of-truth hierarchy in
   `PROJECT_OPERATING_PROTOCOL.md` wins.
 
-## 20. WP Closure Checklist
+## 21. WP Closure Checklist
 
 A WP can close only if:
 
@@ -483,12 +527,14 @@ A WP can close only if:
 - Required docs updated.
 - Report file created for WP-level work.
 - Report includes the standard docs update checklist.
+- Report includes required checks, checks actually run, checks not run with
+  exact reasons, failed/stalled/timed-out checks and residual risk/follow-up.
 - Forbidden changes confirmed absent.
 - Blockers/warnings recorded.
 - Next step recorded.
 - User/ChatGPT review completed before commit.
 
-## 21. How To Use This Workflow In Prompts
+## 22. How To Use This Workflow In Prompts
 
 ### Normal WP Prompt
 

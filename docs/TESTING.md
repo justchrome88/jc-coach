@@ -63,6 +63,29 @@ For code, test or script changes, task reports should include the project gate
 commands, the focused relevant tests, the full safe test suite, Ruff and
 `git diff --check` unless the task card gives stricter instructions.
 
+## Required Checks By Task Class
+
+Task Cards can add stricter checks. Reports must list required checks, checks
+actually run, checks not run with exact reasons, failed or stalled checks and
+any residual risk/owner/target follow-up.
+
+Minimum check expectations:
+
+| Task/change class | Minimum checks |
+|---|---|
+| Docs-only governance/status/report tasks | `git status --short` before edits, project gate `changed`, project gate `required-checks`, project gate `postflight`, `git diff --check` and scope/allowed-file review. Do not run live app, service, import, parser, evaluator or manual evaluator commands unless explicitly authorized. |
+| Code, script or test changes | `.venv/bin/python scripts/local_quality_gate.py` plus any focused tests required by the Task Card. This is the standard local PASS gate for this class. |
+| DB/schema-risk tasks | Explicit DB/schema authorization first; DB backup/SHA evidence when mutation is authorized; migration/schema checks and DB tests named by the Task Card; project gate evidence; `git diff --check`. |
+| Import/parser/evaluator-risk tasks | Explicit authorization before live import, parser, evaluator or manual evaluator commands; cap/temp-dir/safety evidence when relevant; targeted safe checks or dry-run/read-only diagnostics; project gate evidence; `git diff --check`. |
+| Runtime/deploy/service-risk tasks | Explicit authorization before service/deploy changes; targeted runtime checks or smoke checks named by the Task Card; project gate evidence; `git diff --check`. |
+| UI/web route/template/static tasks | Relevant route/template/static tests; safe smoke or screenshot checks when scoped; local quality gate if code/tests changed; project gate evidence; `git diff --check`. |
+| Recommendation/coach/metrics/AI tasks | Relevant recommendation, metric truth, confidence, AI validator or semantic eval checks; local quality gate if code/tests changed; project gate evidence; `git diff --check`; no unsupported hard claims. |
+| Audit/review/discovery tasks | Read-only evidence commands named by the Task Card, `git status --short`, project gate evidence when requested and a report with findings, completeness and follow-up recommendations when gaps are found. |
+
+Skipped or failed checks are not accepted silently. If a check cannot run, the
+report must state the command, exact reason, residual risk and whether the task
+is `BLOCKED`, `FAIL` or `PASS_WITH_WARNINGS`.
+
 Migration discipline checks:
 
 ```bash
