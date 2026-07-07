@@ -75,6 +75,23 @@ required/recommended checks, governance file presence, diff stat and the
 production DB SHA. It does not run services, imports, parser jobs, evaluator
 jobs, package installs or DB mutations.
 
+PASS verdict policy:
+
+- Code, script or test changes require a passing `.venv/bin/python
+  scripts/local_quality_gate.py` before Executor may claim `PASS`, unless a
+  stricter Task Card requires additional checks.
+- Docs-only governance/status/report tasks are not required to run pytest, Ruff
+  or the local quality gate unless the Task Card or changed files require them.
+  Their PASS requirements remain the docs-safe project gate commands,
+  `git diff --check`, scope/allowed-file review and any stricter Task Card
+  checks.
+- `PASS` is forbidden when a required check is missing, failed, stalled, timed
+  out or skipped without explicit task authorization.
+- `PASS_WITH_WARNINGS` must not be used to imply that a mandatory gate passed
+  when it did not. Use `FAIL` when required acceptance checks fail after work
+  completes, and `BLOCKED` when a stop condition or missing authorization
+  prevents safe completion.
+
 For code, test or script changes, task reports should include the project gate
 commands, the focused relevant tests, the full safe test suite, Ruff and
 `git diff --check` unless the task card gives stricter instructions.
@@ -89,8 +106,8 @@ Minimum check expectations:
 
 | Task/change class | Minimum checks |
 |---|---|
-| Docs-only governance/status/report tasks | `git status --short` before edits, project gate `changed`, project gate `required-checks`, project gate `postflight`, `git diff --check` and scope/allowed-file review. Do not run live app, service, import, parser, evaluator or manual evaluator commands unless explicitly authorized. |
-| Code, script or test changes | `.venv/bin/python scripts/local_quality_gate.py` plus any focused tests required by the Task Card. This is the accepted local CI-equivalent PASS gate for this class. |
+| Docs-only governance/status/report tasks | `git status --short` before edits, project gate `preflight`, project gate `changed`, project gate `required-checks`, project gate `postflight`, `git diff --check` and scope/allowed-file review. Do not run live app, service, import, parser, evaluator or manual evaluator commands unless explicitly authorized. Do not run pytest, Ruff or the local quality gate unless the Task Card or changed files require them. |
+| Code, script or test changes | `.venv/bin/python scripts/local_quality_gate.py` plus any focused tests required by the Task Card. This is the accepted local CI-equivalent PASS gate for this class and covers project gate preflight/changed/required-checks/postflight evidence, full safe pytest, Ruff and `git diff --check`. |
 | DB/schema-risk tasks | Explicit DB/schema authorization first; DB backup/SHA evidence when mutation is authorized; migration/schema checks and DB tests named by the Task Card; project gate evidence; `git diff --check`. |
 | Import/parser/evaluator-risk tasks | Explicit authorization before live import, parser, evaluator or manual evaluator commands; cap/temp-dir/safety evidence when relevant; targeted safe checks or dry-run/read-only diagnostics; project gate evidence; `git diff --check`. |
 | Runtime/deploy/service-risk tasks | Explicit authorization before service/deploy changes; targeted runtime checks or smoke checks named by the Task Card; project gate evidence; `git diff --check`. |
@@ -98,9 +115,12 @@ Minimum check expectations:
 | Recommendation/coach/metrics/AI tasks | Relevant recommendation, metric truth, confidence, AI validator or semantic eval checks; local quality gate if code/tests changed; project gate evidence; `git diff --check`; no unsupported hard claims. |
 | Audit/review/discovery tasks | Read-only evidence commands named by the Task Card, `git status --short`, project gate evidence when requested and a report with findings, completeness and follow-up recommendations when gaps are found. |
 
-Skipped or failed checks are not accepted silently. If a check cannot run, the
-report must state the command, exact reason, residual risk and whether the task
-is `BLOCKED`, `FAIL` or `PASS_WITH_WARNINGS`.
+Skipped or failed checks are not accepted silently. If a required check cannot
+run or does not pass, the report must state the command, exact reason, residual
+risk and whether the task is `BLOCKED` or `FAIL`. A task-authorized skipped
+check can still be reported as not run, but it is not a missing mandatory check.
+`PASS_WITH_WARNINGS` is reserved for passed required checks with non-blocking
+warnings or residual risks.
 
 Migration discipline checks:
 

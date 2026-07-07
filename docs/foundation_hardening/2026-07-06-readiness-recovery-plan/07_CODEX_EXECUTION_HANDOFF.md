@@ -69,6 +69,18 @@ early so later execution has stronger controls.
 - For code, script or test changes, `.venv/bin/python
   scripts/local_quality_gate.py` is the accepted local CI-equivalent PASS gate
   for the restricted foundation-hardening lane.
+- For code, script or test changes, that local gate covers project gate
+  preflight, changed, required-checks and postflight evidence; full safe
+  pytest; Ruff; and `git diff --check`.
+- Docs-only governance/status/report tasks are not required to run pytest, Ruff
+  or the local quality gate unless the Task Card or changed files require them.
+  Their PASS requirements remain docs-safe project gate commands,
+  `git diff --check`, scope/allowed-file review and task-specific checks.
+- `PASS` is forbidden when a required task/change-class check is missing,
+  failed, stalled, timed out or skipped without explicit task authorization.
+- `PASS_WITH_WARNINGS` must not be used to imply that a mandatory gate passed
+  when it did not; use `FAIL` for completed work with failed required checks
+  and `BLOCKED` for stop conditions or checks that cannot safely run.
 - Docs-only tasks must not run live app, service, import, parser, evaluator or
   manual evaluator commands unless a Task Card explicitly authorizes them.
 
@@ -93,8 +105,7 @@ This local gate also does not prove final readiness by itself. The known
 full-suite pytest stall in
 `tests/test_coach_first_ui.py::test_coach_page_renders_for_authenticated_owner_with_empty_state`
 remains an unresolved residual quality-gate risk, not a resolved condition and
-not final-readiness evidence. FH-024 mandatory PASS enforcement remains
-separate future quality-gate scope.
+not final-readiness evidence.
 
 ## Definition Of Done For Each Hardening Task
 
@@ -114,6 +125,10 @@ A task is done only when:
 - production DB SHA is reported for DB-impacting or DB-risk tasks;
 - residual risks and follow-up tasks are listed;
 - `git diff --check` passes.
+- the final verdict follows the mandatory PASS policy: required checks passed
+  for `PASS`, passed with non-blocking risks for `PASS_WITH_WARNINGS`, failed
+  required checks for `FAIL` or unsafe/unavailable required checks for
+  `BLOCKED`.
 
 ## Standard Task Handoff Format
 
@@ -129,7 +144,7 @@ Files changed:
 
 Diff summary:
 
-Required-checks policy summary:
+Mandatory PASS policy summary:
 
 Docs update checklist:
 - Hot/current status docs:

@@ -90,12 +90,28 @@ Gate PASS requires all:
 
 - Mandatory local gate or CI runs pytest, Ruff, `git diff --check` and project
   gate.
+- For code, script or test changes, the accepted local CI-equivalent PASS gate
+  is `.venv/bin/python scripts/local_quality_gate.py`, which covers project
+  gate preflight, changed, required-checks and postflight evidence; full safe
+  pytest; Ruff; and `git diff --check`.
+- Docs-only governance/status/report tasks are not required to run pytest, Ruff
+  or the local quality gate unless the Task Card or changed files require them.
+  Their PASS requirements are the docs-safe project gate commands,
+  `git diff --check`, scope/allowed-file review and any stricter Task Card
+  checks.
+- No task may claim `PASS` when a required check for its task/change class is
+  missing, failed, stalled, timed out or skipped without explicit task
+  authorization. `PASS_WITH_WARNINGS` must not be used to imply that a
+  mandatory gate passed when it did not.
 - Latest required command outputs are in the final hardening report.
 - Full test suite passes or failures are explicitly accepted as unrelated with
   owner and target WP.
 - Ruff passes.
 - `git diff --check` passes.
 - Contract/eval/golden metric tests added during hardening pass.
+- The known full-suite pytest stall remains visible as an unresolved residual
+  quality-gate risk until fixed or explicitly accepted for the final readiness
+  gate.
 
 ## Required Agent Workflow Conditions
 
@@ -146,4 +162,3 @@ Gate PASS only when:
 - Hardening report proves checks, docs, safety and residual risks.
 - Project status can change from `CONTINUE WITH RESTRICTED SCOPE` to
   `READY_FOR_MAJOR_CS2_FEATURE_WORK`.
-

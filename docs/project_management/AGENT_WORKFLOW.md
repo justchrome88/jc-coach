@@ -342,6 +342,22 @@ safe checks. The stricter instruction wins. Missing, skipped, failed, stalled or
 timed-out checks must be reported with the exact reason and cannot be hidden in
 the summary.
 
+PASS verdict policy:
+
+- `PASS` is allowed only when every required check for the task/change class
+  and Task Card has passed, or when the Task Card explicitly authorizes a
+  narrower check set and the report names the authorization.
+- `PASS` is forbidden when any required check is missing, failed, stalled,
+  timed out or skipped without explicit task authorization.
+- `PASS_WITH_WARNINGS` is allowed only for completed work where required checks
+  passed but non-blocking warnings or residual risks remain. It must not be used
+  to imply that a mandatory gate passed when it did not.
+- `FAIL` is the expected verdict when the scoped work completed but required
+  acceptance checks failed.
+- `BLOCKED` is the expected verdict when a required check cannot safely run, a
+  stop condition is hit or completion would require authorization outside the
+  Task Card.
+
 For implementation tasks that touch code, scripts or tests, run the accepted
 local CI-equivalent gate before claiming PASS:
 
@@ -361,8 +377,7 @@ separately when a task card asks for individual gate output.
 The local CI-equivalent gate is not hosted CI, does not configure branch
 protection, secrets, external accounts or provider workflows, and does not by
 itself prove final readiness. Hosted CI remains a separate future policy and
-configuration task if the user chooses it. Mandatory PASS enforcement beyond
-this reporting policy remains separate FH-024 scope.
+configuration task if the user chooses it.
 
 Known residual quality-gate risk: full-suite pytest currently stalls in
 `tests/test_coach_first_ui.py::test_coach_page_renders_for_authenticated_owner_with_empty_state`.
@@ -405,7 +420,7 @@ by `AGENTS.md`.
 
 | Task/change class | Required checks before claiming PASS | May skip only with exact reason |
 |---|---|---|
-| Docs-only governance/status/report tasks | `git status --short` before edits, `.venv/bin/python scripts/project_gate.py changed`, `.venv/bin/python scripts/project_gate.py required-checks`, `.venv/bin/python scripts/project_gate.py postflight`, `git diff --check`, plus review against allowed files and control-plane scope | Runtime/app smoke, service actions, imports, parser/evaluator jobs and production DB access when not explicitly scoped |
+| Docs-only governance/status/report tasks | `git status --short` before edits, `.venv/bin/python scripts/project_gate.py preflight`, `.venv/bin/python scripts/project_gate.py changed`, `.venv/bin/python scripts/project_gate.py required-checks`, `.venv/bin/python scripts/project_gate.py postflight`, `git diff --check`, plus review against allowed files and control-plane scope | Runtime/app smoke, service actions, imports, parser/evaluator jobs, local quality gate, full pytest, Ruff and production DB access when not explicitly scoped |
 | Code, script or test changes | `.venv/bin/python scripts/local_quality_gate.py`, the accepted local CI-equivalent gate, plus any task-specific focused tests or evidence commands | Individual pytest/Ruff/project-gate subcommands only when the local gate ran and its output covers them, unless the Task Card asks for separate output |
 | DB/schema-risk tasks | Explicit DB/schema authorization, preflight/status evidence, DB backup/SHA evidence when mutation is authorized, migration/schema checks named by the Task Card, relevant DB tests, `git diff --check`, project gate postflight | Production DB mutation when not authorized; full suite only if the Task Card accepts a narrower DB-specific check set with owner/risk |
 | Import/parser/evaluator-risk tasks | Explicit authorization before any live import, parser, evaluator or manual evaluator job; cap/temp-dir/safety evidence when relevant; targeted import/parser/evaluator tests or dry-run/read-only diagnostics; project gate evidence; `git diff --check` | Live Steam/Valve/import/parser/evaluator/manual evaluator commands when not explicitly authorized |
@@ -427,9 +442,12 @@ Reports must include a checks evidence section with:
 For code, script or test changes, `.venv/bin/python scripts/local_quality_gate.py`
 is the accepted local CI-equivalent PASS gate. A report may not claim PASS for
 that class while silently replacing the local gate with a weaker check set.
-If the known full-suite pytest stall or any other gate failure prevents a clean
-run, the report must name the failed, stalled or timed-out command and use the
-Task Card verdict rules.
+The local gate covers project gate preflight, changed, required-checks and
+postflight evidence; full safe pytest; Ruff; and `git diff --check`. If the
+known full-suite pytest stall or any other gate failure prevents a clean run,
+the report must name the failed, stalled or timed-out command and use the Task
+Card verdict rules. A docs-only task is not required to run pytest, Ruff or the
+local quality gate unless the Task Card or changed files require them.
 
 ## 16. Standard Output Contract
 
