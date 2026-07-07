@@ -1,6 +1,6 @@
 # Master WP Checklist
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-07.
 
 This checklist is a human-readable planning map for the full WP campaign.
 `docs/project_management/WP_REGISTRY.md` remains canonical for status,
@@ -9,6 +9,13 @@ registry wins until the checklist is reconciled.
 
 This file is not per-task Hot context. Use it as Warm context for planning or
 audit, and treat it as Cold for ordinary execution.
+
+Roadmap pause state as of 2026-07-07: the active lane is Foundation Hardening /
+Readiness Recovery. Unrestricted major WP-018 / CS2 feature expansion is paused
+until final readiness gate `PASS`. After gate `PASS`, current status and
+roadmap docs must be updated by an appropriate task before a focused WP-018
+restart task card resumes the canonical WP-018 sequence from the preserved
+WP-018B context, unless later accepted work changes that.
 
 ```text
 WP-011D → закрываем навигацию по документации

@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-07.
 
 ## Purpose
 
@@ -10,9 +10,11 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 - Project: JC Coach, a personal AI coach for CS2.
 - Current product version: `v0.9`.
-- Current lane: `WP-018` Coach Quality Calibration targeting `v0.10`.
+- Current lane: Foundation Hardening / Readiness Recovery after the 2026-07-06
+  agentic-readiness audit.
 - Current active WP: none; latest completed product WP is `WP-017K Real Data Onboarding Promotion to v0.9`.
-- Next product WP after WP-017K: `WP-018 Coach Quality Calibration`.
+- Next unrestricted product WP after the readiness gate: `WP-018 Coach Quality
+  Calibration` targeting `v0.10`.
 - Runtime: FastAPI / Uvicorn service `jc-coach.service` on `127.0.0.1:8010`.
 - Production DB: `data/cs2_coach.db`.
 
@@ -62,12 +64,25 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - Match mode labels accepted for `v0.9`: `mode_unknown`, `provenance_demo`, `provenance_valve_matchmaking`, `exact_date_source=steam_gc_match_time`.
 - Playlist-specific labels and recommendations are not accepted for `v0.9`.
 
+## Current Pause / Resume State
+
+- Project status: `CONTINUE WITH RESTRICTED SCOPE`.
+- `READY_FOR_MAJOR_CS2_FEATURE_WORK`: `NO`.
+- Unrestricted major WP-018 / CS2 feature expansion is paused until final
+  readiness gate `PASS`.
+- Narrow evidence, caveat, calibration, docs or tests work may continue only
+  when it improves readiness and does not add unsupported claims.
+- Docs-only roadmap edits do not change the readiness flag; only final
+  readiness gate `PASS` can authorize updating
+  `READY_FOR_MAJOR_CS2_FEATURE_WORK` to `YES`.
+
 ## Next Safe Step
 
-After WP-017K is reviewed and committed by the user if accepted, continue to
-`WP-018 Coach Quality Calibration` only with explicit user/ChatGPT approval.
-WP-018 must carry forward WP-017K warnings and must not claim playlist-specific
-mode labels or friends/public readiness.
+Continue the foundation hardening sequence until the final readiness review
+passes. After gate `PASS`, an appropriate task can update current
+status/roadmap docs and create a focused WP-018 restart task card. The resume
+target is the canonical WP-018 sequence using the preserved WP-018B context from
+the existing WP-018A diagnosis, unless later accepted work changes that.
 
 ## Forbidden Without Explicit WP Authorization
 

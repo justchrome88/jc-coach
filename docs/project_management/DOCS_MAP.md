@@ -1,6 +1,6 @@
 # Docs Map
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-07.
 
 This map connects project docs to the Project OS layer, architecture/product
 layers, guardian ownership, work packages and freshness risk. Current operating
@@ -58,7 +58,7 @@ context.
 | `docs/project_management/MASTER_WP_CHECKLIST.md` | Human-readable full WP campaign map. | `PM_ORCHESTRATOR` | WP-011D..WP-021 | Warm/Cold planning map; registry wins for status/dependencies/report paths |
 | `docs/project_management/DOCS_MAP.md` | Documentation ownership map. | `PM_ORCHESTRATOR` | all WPs | source-of-truth for docs wiring |
 | `docs/project_management/DOCS_INDEX.md` | Human-readable documentation index. | `PM_ORCHESTRATOR` | all WPs | navigation index |
-| `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/` | Foundation hardening recovery plan and readiness gate after the 2026-07-06 agentic-readiness audit. | `PM_ORCHESTRATOR`, domain guardians | foundation hardening overlay before major WP-018 expansion | source-of-truth for restricted-scope hardening lane until gate PASS |
+| `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/` | Foundation hardening recovery plan, readiness gate and roadmap pause/resume state after the 2026-07-06 agentic-readiness audit. | `PM_ORCHESTRATOR`, domain guardians | foundation hardening overlay before major WP-018 expansion | source-of-truth for restricted-scope hardening lane until gate PASS |
 
 ## Product Architecture Layer
 

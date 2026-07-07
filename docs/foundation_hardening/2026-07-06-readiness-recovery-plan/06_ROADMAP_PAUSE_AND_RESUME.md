@@ -15,6 +15,8 @@ Historical roadmap source:
 
 ## Temporarily Frozen CS2 Tasks
 
+- Unrestricted major WP-018 / CS2 feature expansion until final readiness gate
+  `PASS`.
 - Major WP-018 coach quality expansion beyond narrow evidence/caveat work.
 - Recommendation planner implementation before design and data/AI contracts.
 - New schema features before migration baseline/schema gate.
@@ -31,8 +33,9 @@ AR-033, AR-047, AR-049, AR-051, AR-097, AR-098.
 ## Allowed To Continue
 
 - Foundation-hardening docs, tests, gate, risk and architecture work.
-- Narrow WP-018 calibration only when it improves wording, caveats, confidence,
-  metric truth or eval safety and does not add unsupported claims.
+- Narrow WP-018 evidence, caveat, calibration, docs or tests work only when it
+  improves readiness, wording, caveats, confidence, metric truth or eval safety
+  and does not add unsupported claims.
 - Read-only diagnostics and QA reviews.
 - Docs-only design work for durable worker/retry ledger.
 
@@ -49,9 +52,11 @@ Evidence: audit `00_EXECUTIVE_SUMMARY.md`, "Continue Feature Development?".
 
 ## Revisit After Hardening
 
-- WP-018 remaining slices: category quality, survival/aim/utility/map
-  calibration, weak metric suppression, explanation/actionability repair and
-  real usage acceptance.
+- WP-018 remaining slices: resume from the preserved WP-018B context recorded
+  by the existing WP-018A diagnosis unless later accepted work changes that,
+  then continue category quality, survival/aim/utility/map calibration, weak
+  metric suppression, explanation/actionability repair and real usage
+  acceptance.
 - WP-019 daily UX after foundation gate PASS.
 - WP-020 deployment/backup/storage hardening after current foundation blockers
   are resolved or explicitly carried.
@@ -61,8 +66,10 @@ Evidence: audit `00_EXECUTIVE_SUMMARY.md`, "Continue Feature Development?".
 
 1. Run final readiness review against `04_READINESS_GATE.md`.
 2. If PASS, update current status and roadmap docs from restricted lane back to
-   normal WP-018 sequence.
-3. Create a focused WP-018 restart Task Card.
+   the normal WP-018 sequence. Docs-only roadmap edits before this final gate
+   do not set `READY_FOR_MAJOR_CS2_FEATURE_WORK` to `YES`.
+3. Create a focused WP-018 restart Task Card using the preserved WP-018B
+   context unless later accepted work changes the sequence.
 4. Keep all carried risks in the risk register with owner/status/target WP.
 5. Do not retroactively mark deferred features as implemented.
 
@@ -90,4 +97,3 @@ Evidence: audit `00_EXECUTIVE_SUMMARY.md`, "Continue Feature Development?".
   Canonical equivalents are `docs/CURRENT_STATUS.md`,
   `docs/project_management/VERSION_ROADMAP.md` and
   `docs/KNOWN_LIMITATIONS.md`.
-

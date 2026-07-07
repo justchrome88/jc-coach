@@ -1,6 +1,6 @@
 # WP Registry
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-07.
 
 This is the canonical work-package registry for JC Coach. It preserves WP
 history and prevents silent WP ID reuse, skipped prerequisites or promotion
@@ -117,6 +117,13 @@ overlay, not as a replacement for a planned product WP.
 - Project status: `CONTINUE WITH RESTRICTED SCOPE`.
 - Major CS2 feature work, including unrestricted WP-018 expansion, is paused
   until the recovery plan readiness gate passes.
+- Final readiness gate `PASS`, not docs-only roadmap edits, is required before
+  `READY_FOR_MAJOR_CS2_FEATURE_WORK` can become `YES`.
+- Resume path after gate `PASS`: update current status/roadmap docs through an
+  appropriate task, then create a focused WP-018 restart task card using the
+  preserved canonical WP-018 sequence. The restart context begins from the
+  WP-018B context recorded by the existing WP-018A diagnosis unless later
+  accepted work changes that.
 - Small/scoped work may continue only when it strengthens documentation,
   tests/evals, gates, confidence/caveats or foundation readiness and does not
   add unsupported CS2/domain claims.
@@ -125,7 +132,7 @@ overlay, not as a replacement for a planned product WP.
 
 | WP ID | Title | Version target | Status | Report path | Dependencies | Notes / warnings |
 |---|---|---|---|---|---|---|
-| `WP-018` | Coach Quality Calibration | `v0.10` | `planned / restricted pending foundation readiness gate` | TBD | `WP-017K` promotion, `WP-017Z1`/`WP-017Z2` governance workflow updates, 2026-07-06 foundation hardening gate | Calibrate coach claims, progress scoring and weak-metric caveats. Major coach/domain expansion is paused until the foundation readiness gate passes. |
+| `WP-018` | Coach Quality Calibration | `v0.10` | `planned / restricted pending foundation readiness gate` | TBD | `WP-017K` promotion, `WP-017Z1`/`WP-017Z2` governance workflow updates, 2026-07-06 foundation hardening gate | Calibrate coach claims, progress scoring and weak-metric caveats. Major coach/domain expansion is paused until the foundation readiness gate passes. After gate `PASS`, resume through a focused WP-018 restart task card using the preserved WP-018B context unless later accepted work changes the sequence. |
 | `WP-019` | Personal Daily Use UX | `v0.11` | `planned` | TBD | `WP-018` | Daily owner workflow polish without friends/public claims. |
 | `WP-020` | Deployment / Backup / Storage Hardening | `v0.12` | `planned` | TBD | `WP-019` | VPS operation, backup/restore and storage hardening. |
 | `WP-021` | Personal MVP Lock | `v1.0` | `planned` | TBD | `WP-020` | Controlled personal MVP lock; public/friends readiness remains separate. |

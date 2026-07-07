@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-07.
 
 Human-readable navigation map. This file does not replace `AGENTS.md`,
 `docs/CURRENT_STATUS.md`, `docs/project_management/WP_REGISTRY.md` or
@@ -71,6 +71,8 @@ reports. Cold files are evidence/history and must not override Hot context.
 - `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/` - current
   foundation hardening recovery plan after the 2026-07-06 agentic-readiness
   audit; governs restricted scope until its readiness gate passes.
+- `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/06_ROADMAP_PAUSE_AND_RESUME.md` - roadmap pause/resume control note for the restricted
+  foundation hardening lane and WP-018 resume path.
 
 ## Agent Workflow And Guardians
 

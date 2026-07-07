@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-07.
 
 ## Snapshot
 
@@ -9,8 +9,11 @@ Last updated: 2026-07-06.
   2026-07-06 agentic-readiness audit.
 - Current active WP: none; latest completed product WP is `WP-017K Real Data
   Onboarding Promotion to v0.9`.
-- Next product WP: `WP-018 Coach Quality Calibration`, restricted pending the
-  foundation readiness gate.
+- Next unrestricted product WP: `WP-018 Coach Quality Calibration`, paused
+  pending final readiness gate `PASS`.
+- Allowed interim WP-018 work is limited to narrow evidence, caveat,
+  calibration, docs or tests work that improves readiness and does not add
+  unsupported coach/domain claims.
 - Promotion status: `v0.9` is promoted with warnings by WP-017K. Warnings and limitations must carry forward into WP-018.
 - Latest known production DB SHA: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33` from WP-017H evidence and the 2026-07-06 agentic-readiness audit. Re-check before any WP that depends on current DB state.
 
@@ -28,6 +31,13 @@ Last updated: 2026-07-06.
   `CONTINUE WITH RESTRICTED SCOPE`.
 - `READY_FOR_MAJOR_CS2_FEATURE_WORK`: `NO` until the readiness gate in the
   recovery plan passes.
+- Docs-only roadmap edits cannot set `READY_FOR_MAJOR_CS2_FEATURE_WORK` to
+  `YES`; only final readiness gate `PASS` can authorize that status change.
+- After gate `PASS`, an appropriate follow-up task must update current
+  status/roadmap docs and create a focused WP-018 restart task card. The
+  preserved resume context is the canonical WP-018 sequence beginning from the
+  WP-018B context recorded by the existing WP-018A diagnosis, unless later
+  accepted work changes that.
 
 ## Runtime Basics
 

@@ -1,6 +1,6 @@
 # Version Roadmap
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-07.
 
 This is the roadmap control view for versions after WP-011C. It links product versions to work packages, guardians and acceptance evidence. `docs/PROJECT_CONTROL.md` remains the top source of truth; this file owns the version-to-WP roadmap table.
 
@@ -8,10 +8,13 @@ This is the roadmap control view for versions after WP-011C. It links product ve
 
 - Current Product Version: `v0.9`
 - Current status: v0.9 Real Data Onboarding / Bulk Demo Usage is promoted with warnings by WP-017K. Current accepted scope is controlled personal one-demo-capped onboarding with 76 total matches, 22 playable demo matches, 20 exact playable dates, 22 parser artifacts and recommendation `#5` progress `3/10`. Exact playlist mode remains unknown/provenance-only, cap remains `1`, friends/public readiness is not claimed, and performance/storage warnings carry forward. The 2026-07-06 agentic-readiness audit added a foundation-hardening overlay with `66%` readiness and status `CONTINUE WITH RESTRICTED SCOPE`.
-- Next active target: `v0.10`
-- Next active WP: `WP-018 Coach Quality Calibration`, restricted pending the
-  foundation readiness gate in
+- Current active lane: Foundation Hardening / Readiness Recovery.
+- Next unrestricted product target after gate `PASS`: `v0.10`.
+- Next unrestricted product WP after gate `PASS`: `WP-018 Coach Quality
+  Calibration`, restricted pending the foundation readiness gate in
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/04_READINESS_GATE.md`.
+- Narrow evidence, caveat, calibration, docs or tests work may continue only
+  when it improves readiness and does not add unsupported claims.
 - Foundation risk register:
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
 
@@ -39,6 +42,13 @@ This is the roadmap control view for versions after WP-011C. It links product ve
 - Major CS2 feature work must not move ahead of the 2026-07-06 foundation
   readiness gate:
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/04_READINESS_GATE.md`.
+- Docs-only roadmap edits do not change readiness status. Only final readiness
+  gate `PASS` can authorize changing `READY_FOR_MAJOR_CS2_FEATURE_WORK` to
+  `YES`.
+- After gate `PASS`, current status and roadmap docs must be updated by an
+  appropriate task before a focused WP-018 restart task card resumes the
+  canonical WP-018 sequence from the preserved WP-018B context, unless later
+  accepted work changes that sequence.
 - Current foundation risks, owners, statuses, targets and evidence are tracked
   in
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
