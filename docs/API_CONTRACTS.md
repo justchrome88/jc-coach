@@ -41,6 +41,62 @@ Mutation classes:
 - `import-parser-write`: CSV/JSON/DEM import or parser-backed import.
 - `steam-import-write`: Steam/Valve import queue or run path.
 
+Endpoint safety classes:
+
+- `read-only`: `GET` routes whose intended behavior is to return health,
+  rendered pages, existing DB facts, existing filesystem/config state or
+  service-owned derived summaries. These routes still require focused tests
+  when they expose owner-only facts, report/AI content, recommendation evidence
+  or parser-derived detail.
+- `write/mutation`: routes with `session-write`, `db-write` or
+  `artifact-write` behavior. Future work touching these routes needs focused
+  auth/CSRF and side-effect tests. Production DB SHA evidence is required only
+  when the task inspects or mutates `data/cs2_coach.db` under `AGENTS.md`.
+- `import/parser/evaluator-risk`: routes with `import-parser-write` or
+  `steam-import-write`, plus any route that can run Steam import, demo import,
+  parser-backed import or queued import work. These require explicit task
+  authorization before import/parser execution, and tests should use isolated
+  fixtures or mocks rather than production data.
+- `auth/owner-sensitive`: public auth/session routes, Steam owner-linking and
+  all owner-only web/API routes. Future changes need focused owner-boundary,
+  CSRF and API-token/session tests.
+- `DB/schema-risk`: routes that can write persisted rows are DB-risk. They are
+  not schema-changing by themselves, but future changes that alter models,
+  startup schema behavior, migrations/baselines or copied DBs require explicit
+  schema scope.
+- `unknown`: route behavior, validation or side effects that cannot be proven
+  from route code and canonical docs. Treat unknowns as follow-up candidates,
+  not as accepted safe behavior.
+
+Route-level validation inventory:
+
+- Global middleware in `app/main.py` currently owns public-vs-owner route
+  gating, `/api/*` session/API-token auth, CSRF checks for browser-backed
+  writes, API state-change logging and coarse rate-limit buckets for mutation
+  groups.
+- FastAPI parameter binding currently validates declared path/query/form/file
+  types such as integer IDs, uploaded files and form/query fields. Where no
+  explicit bound, clamp or enum exists in the route, stronger validation is a
+  follow-up candidate.
+- Route handlers explicitly validate some cases: `/api/import/demo` requires a
+  `.dem` filename; parser failures map to `422`; service `ValueError` failures
+  usually map to `400` in JSON API routes or redirect messages in web routes;
+  missing latest recommendation/report/AI resources map to `404` where the
+  handler checks for absence.
+- Several validations are service-owned rather than route-owned, including
+  registration/credential rules, Steam OpenID/share-code/auth-code validation,
+  recommendation status/extend/restart constraints, AI result persistence
+  validation, app-setting validation and inbox-demo path safety. Future work
+  should test the service rule and the route translation separately when
+  behavior changes.
+- Current practical gaps are conservative follow-up candidates: stronger route
+  enum validation for filters/sort/direction/status/category where applicable,
+  explicit min/max validation for recommendation extension counts beyond
+  service checks, explicit route-level constraints for free-text AI/report
+  inputs, clearer web error status conventions for invalid dates or service
+  validation failures, and explicit tests that API-token writes bypass browser
+  CSRF only when a valid configured token is present.
+
 ## Public And Web Boundary Contracts
 
 | Method | Path | Auth/owner expectation | Request/input summary | Response/output summary | Mutation/read class |

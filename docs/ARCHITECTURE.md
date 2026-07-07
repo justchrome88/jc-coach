@@ -99,6 +99,45 @@ Sensitive classes used below:
 - `db-risk`: route can write DB rows when pointed at the production DB.
 - `artifact-risk`: route can write a persistent non-DB artifact.
 
+Validation responsibility classes used below:
+
+- `middleware-owned`: auth, API token, CSRF, rate-limit and public-path checks
+  enforced before route handlers.
+- `framework-owned`: FastAPI/Starlette request parsing and declared type
+  binding for path/query/form/file parameters.
+- `route-owned`: explicit handler checks or exception translation visible in
+  `app/api/routes.py` or `app/web/routes.py`.
+- `service-owned`: validation delegated to service functions, usually reported
+  through `ValueError`, domain exceptions or service result payloads.
+- `implicit/follow-up`: behavior currently accepted by broad defaults, free
+  text, redirects or unenumerated strings. Treat these as candidates for future
+  focused tests or stricter validation, not as complete validation coverage.
+
+### Endpoint Safety Classes And Review Expectations
+
+| Endpoint class | Current route groups | Required future review/check focus |
+|---|---|---|
+| `read-only` | Health/robots/static, public page reads, owner page reads, analytics/matches/recommendation/report/AI/storage overview reads. | Confirm no persistent side effects, owner/API auth where applicable, and service-owned caveats for parser, metric confidence, recommendations and AI payloads. Focused route smoke tests are usually enough unless service behavior changes. |
+| `write/mutation` | Login/register/logout, locale cookie, settings writes, storage manifest, report generation, AI handoff/result/generate, recommendation status/extend/restart. | Require auth/owner and CSRF/API-token checks, focused side-effect tests and explicit no-production-DB-touch or DB SHA evidence according to task risk. |
+| `import/parser/evaluator-risk` | CSV/JSON/DEM upload, inbox demo import, Steam share-code/import job/run-queued/pull-all paths. | Require explicit authorization before running import/parser work, isolated fixture or mocked tests, no production parser/import/evaluator jobs unless the task card explicitly permits them. |
+| `auth/owner-sensitive` | Login/register/logout, Steam callback/linking, all owner web routes and all `/api/*` routes. | Require owner-boundary, non-owner rejection, API-token/session split and CSRF tests when changed. Steam callback remains public at middleware level but handler-gated by current owner session before linking. |
+| `DB/schema-risk` | Any route that calls services writing users, settings, Steam accounts/jobs, matches/imports, recommendations, coach reports or storage manifests. | Route writes are not schema changes by themselves. Schema/model/startup/migration/baseline/copy work remains approval-required and outside ordinary route documentation tasks. |
+| `unknown` | Any route or service side effect not proven by handler code plus canonical docs. | Mark as follow-up. Do not assume safe checks or complete validation without targeted evidence. |
+
+### Route-Level Validation Inventory
+
+| Route area | Current validation/auth behavior | Conservative follow-up candidates |
+|---|---|---|
+| Middleware boundary | `app/main.py` enforces `/api/*` owner session or configured bearer token, CSRF for browser-backed writes, owner redirects for non-public web routes, public-path exceptions and mutation rate-limit buckets. | Add/maintain focused tests for API token vs browser CSRF paths, public path exceptions, non-owner session rejection and mutation rate-limit buckets when these boundaries change. |
+| Public auth/session routes | Login/register inputs are form-bound; auth/register services validate credentials and owner policy; logout clears session; locale is normalized through `normalize_locale()`. | Stronger route-level documentation/tests for invalid locale redirects and public POST CSRF coverage if behavior changes. |
+| Web reads and filters | Matches/stats pages use FastAPI type binding for integer pagination and local date parsing/filtering. Match detail redirects when the match is missing or not playable. | Invalid date strings, unrecognized sort/direction/filter values and page/per-page edge cases are practical follow-up candidates for explicit route validation or tests. |
+| API import/parser routes | Upload fields are framework-bound; `/api/import/demo` checks `.dem`; parser failures map to `422`; JSON/service validation failures map to `400` where caught. | Explicit file size/content-type expectations, inbox filename safety at route boundary and parser error shape tests remain follow-up candidates unless service tests already cover the behavior. |
+| Web upload/import routes | Upload extension selects DEM/JSON/CSV-like import path; parser errors render messages; inbox demo import delegates filename validation to service code. | Invalid file extension/content handling and web status/message conventions are implicit and should be tested before behavior is treated as locked. |
+| Recommendations | Path IDs/categories and form/query values are type-bound; status/extend/restart validation is service-owned and surfaced as `400` in API routes or redirect messages in web routes. | Explicit route constraints for allowed statuses/categories and min/max extension counts are follow-up candidates. |
+| Reports and AI coach | Latest resources return `404` on JSON API reads where explicitly checked; generation/result save delegates provider/runtime/content validation to services. | Free-text report/AI result input size/format expectations and provider failure response conventions need focused tests if changed. |
+| Steam/import jobs | Share-code parsing, auth-code validation, job state checks and queue/run behavior are service-owned; API routes map selected `ValueError`s to `400`, web routes redirect with messages. | Stronger route-level tests for malformed share codes, wrong job IDs, queued-job state transitions and API-token access should precede any route behavior change. |
+| Storage manifest | Auth/CSRF comes from middleware; write behavior delegates to `write_demo_storage_manifest()`. | Tests should confirm manifest writes use isolated paths and do not touch raw demos; delete/move/compress behavior remains forbidden without storage scope. |
+
 #### Application And Public Routes
 
 | Route | Boundary | Mutation class | Sensitive class |
