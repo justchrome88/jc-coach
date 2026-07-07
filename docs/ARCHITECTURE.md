@@ -62,6 +62,13 @@ AI and recommendations must consume persisted or derived deterministic facts.
 They must not invent parser data, playlist mode, match dates or hard metric
 confidence. Low-confidence metrics must remain caveated.
 
+CS2 domain claims are bounded by `docs/CS2_DOMAIN_CONTRACT.md`. Economy,
+positioning and clutch models are unavailable; side metrics are display-only;
+hard trade recommendations are blocked before parser hardening; map labels are
+source-provided until a canonical map registry is accepted. Coach, report,
+recommendation and AI surfaces must keep these source limitations visible
+instead of implying unsupported certainty.
+
 ## Route Layers
 
 ### Current Route Boundary Inventory

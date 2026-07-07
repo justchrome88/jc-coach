@@ -1,6 +1,6 @@
 # Known Limitations
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-08.
 
 - Not secure for friends/public use yet.
 - `v0.9` Real Data Onboarding is promoted with warnings for controlled
@@ -9,6 +9,11 @@ Last updated: 2026-07-06.
 - Match playlist mode is not accepted as exact in `v0.9`; current data can use
   provenance/limitation labels only, not Premier/Competitive/Wingman/Casual/
   Deathmatch/FACEIT/custom claims.
+- CS2 domain boundaries are conservative in `docs/CS2_DOMAIN_CONTRACT.md`:
+  economy, positioning and clutch models are unavailable; current map labels
+  are source-provided until a canonical map registry is accepted; side metrics
+  are display-only; hard trade recommendations are blocked before parser
+  hardening; coach output must keep these source limitations visible.
 - Authenticated owner-browser timing was not captured by Codex for WP-017H.
 - `/coach` artifact overview is acceptable at 22 demos but should be optimized
   before materially larger demo volume.

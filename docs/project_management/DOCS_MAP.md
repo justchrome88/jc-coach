@@ -1,6 +1,6 @@
 # Docs Map
 
-Last updated: 2026-07-07.
+Last updated: 2026-07-08.
 
 This map connects project docs to the Project OS layer, architecture/product
 layers, guardian ownership, work packages and freshness risk. Current operating
@@ -65,6 +65,7 @@ context.
 | Document | Layer | Guardian | WP links | Status |
 |---|---|---|---|---|
 | `docs/ARCHITECTURE.md` | System shape and boundaries. | `RUNTIME_GUARDIAN`, `PM_ORCHESTRATOR` | WP-013..WP-018 | source-of-truth |
+| `docs/CS2_DOMAIN_CONTRACT.md` | CS2 match/round domain boundaries, glossary, unavailable model rules, visible source-limit contract and map-registry plan. | `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `PM_ORCHESTRATOR` | foundation hardening / FH-060-FH-069, WP-018+ | source-of-truth |
 | `docs/SECURITY.md` | Auth/security readiness. | `DB_GUARDIAN`, `RUNTIME_GUARDIAN` | WP-012, WP-013, WP-017 | source-of-truth |
 | `docs/METRICS.md` | Runtime metric truth contract. | `METRICS_GUARDIAN` | WP-015, WP-016 | source-of-truth |
 | `docs/STEAM_IMPORT.md` | Steam import current truth. | `IMPORT_GUARDIAN` | WP-014 | source-of-truth |

@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last updated: 2026-07-07.
+Last updated: 2026-07-08.
 
 Human-readable navigation map. This file does not replace `AGENTS.md`,
 `docs/CURRENT_STATUS.md`, `docs/project_management/WP_REGISTRY.md` or
@@ -93,6 +93,8 @@ reports. Cold files are evidence/history and must not override Hot context.
 ## Product Architecture
 
 - `docs/ARCHITECTURE.md` - system shape and boundaries.
+- `docs/CS2_DOMAIN_CONTRACT.md` - CS2 match/round domain boundaries,
+  glossary, source limits, unavailable model rules and map-registry plan.
 - `docs/FEATURES_RU.md` - implemented features summary, supporting.
 - `docs/DECISIONS.md` - current decisions.
 - `docs/KNOWN_LIMITATIONS.md` - known non-readiness areas.

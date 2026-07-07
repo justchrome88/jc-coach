@@ -30,6 +30,12 @@ response shapes or mutation semantics requires explicit future task scope.
   contracts.
 - Response field summaries reflect current route serialization, not a complete
   schema promise.
+- CS2 domain output follows `docs/CS2_DOMAIN_CONTRACT.md`: current map labels
+  are source-provided, playlist/mode remains unknown unless future reliable
+  metadata proves it, side metrics are display-only, economy/positioning/clutch
+  models are unavailable and hard trade recommendations are blocked before
+  parser hardening. API responses and AI/coach payloads must not imply stronger
+  certainty than those limitations allow.
 
 Endpoint contract test rule:
 
@@ -136,7 +142,7 @@ Their browser contract is template/redirect oriented rather than JSON oriented.
 
 | Method | Path | Auth/owner expectation | Request/input summary | Response/output summary | Mutation/read class |
 |---|---|---|---|---|---|
-| `GET` | `/api/matches` | Owner session or API token. | None. | List of match dictionaries from playable matches. Fields include IDs, source, played date/source, map/mode/result, score and current metrics such as kills, deaths, ADR, KAST and utility values. | `read` |
+| `GET` | `/api/matches` | Owner session or API token. | None. | List of match dictionaries from playable matches. Fields include IDs, source, played date/source, source-provided map/mode/result, score and current metrics such as kills, deaths, ADR, KAST and utility values. Playlist/mode certainty remains limited by the CS2 domain contract. | `read` |
 | `GET` | `/api/analytics/summary` | Owner session or API token. | None. | Object with `summary`, `comparison` and `map_stats` from analytics services. Exact nested schema is service-owned. | `read` |
 | `GET` | `/api/analytics/aim` | Owner session or API token. | None. | Aim profile object from `get_aim_profile()`. Exact nested schema is service-owned. | `read` |
 
@@ -177,6 +183,11 @@ Their browser contract is template/redirect oriented rather than JSON oriented.
 | `POST` | `/api/coach/ai/result` | Owner session plus CSRF, or API token. | Parameters `report_markdown` and optional `source_ref`. | `{"ok": true, "id": ..., "created_at": ...}` or `400` for validation failure. | `db-write` |
 | `GET` | `/api/coach/ai/result/latest` | Owner session or API token. | None. | Serialized latest AI coach report or `404` when absent. | `read` |
 | `GET` | `/api/coach/ai/results` | Owner session or API token. | Optional `limit`, clamped to `1..50`, default `10`. | List of serialized AI coach reports. | `read` |
+
+AI coach payload/result consumers must preserve the source limitations carried
+by Metric Truth and `docs/CS2_DOMAIN_CONTRACT.md`. Unavailable economy,
+positioning and clutch models, display-only side metrics and weak trade
+semantics cannot be upgraded into confident API-level coach advice.
 
 ### Steam And Import Jobs
 

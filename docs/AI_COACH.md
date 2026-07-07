@@ -1,6 +1,6 @@
 # AI Coach
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-08.
 
 ## Current Truth
 
@@ -14,6 +14,12 @@ Stage 6 parser payloads add clearer warnings for early-death timing, KAST trade 
 
 Stage 8 adds AI Output Validator without schema changes and without live AI calls. Structured AI output is validated before persistence/display; invalid or free-form output is replaced by safe fallback Markdown and validation metadata is stored in `coach_reports.report_json`.
 
+CS2 domain boundaries are defined in `docs/CS2_DOMAIN_CONTRACT.md`. AI coach
+payloads and results must keep those source limitations visible: playlist/mode
+is not exact in `v0.9`, economy/positioning/clutch models are unavailable, side
+metrics are display-only, current map labels are source-provided and hard trade
+recommendations are blocked before parser hardening.
+
 ## Rules
 
 - AI consumes structured facts; it does not parse demos.
@@ -22,6 +28,8 @@ Stage 8 adds AI Output Validator without schema changes and without live AI call
 - AI must not turn `suppressed` Metric Truth entries into confident diagnosis or recommendations.
 - AI must present `warn` metrics as approximate/contextual, not as fully trusted facts.
 - AI recommendations are subordinate to verified metrics and the recommendation planner.
+- AI must not infer economy, positioning, clutch, exact playlist/mode,
+  canonical map identity or reliable trade semantics from adjacent metrics.
 - AI output must follow the Stage 8 schema: `summary`, `diagnoses[]`, `recommendations[]`, `warnings[]`, `evidence[]`, `confidence`.
 - Unknown metric ids are rejected.
 - Suppressed or unavailable metrics cannot support diagnosis/recommendation claims.
