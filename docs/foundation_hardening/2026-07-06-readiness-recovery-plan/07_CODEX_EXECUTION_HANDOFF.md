@@ -1,6 +1,6 @@
 # Codex Execution Handoff
 
-Date: 2026-07-06.
+Date: 2026-07-07.
 
 ## Context
 
@@ -67,9 +67,34 @@ early so later execution has stronger controls.
   summary.
 - Every task must include residual risks.
 - For code, script or test changes, `.venv/bin/python
-  scripts/local_quality_gate.py` is the standard local PASS gate.
+  scripts/local_quality_gate.py` is the accepted local CI-equivalent PASS gate
+  for the restricted foundation-hardening lane.
 - Docs-only tasks must not run live app, service, import, parser, evaluator or
   manual evaluator commands unless a Task Card explicitly authorizes them.
+
+## Accepted Local CI-Equivalent Gate
+
+The accepted repo-local CI-equivalent gate is:
+
+```bash
+.venv/bin/python scripts/local_quality_gate.py
+```
+
+Use this gate before claiming PASS for code, script or test changes, subject to
+stricter Task Card requirements. It is accepted as the local CI-equivalent path
+until a future explicit task chooses and configures hosted CI or another
+external provider.
+
+This is not hosted CI and does not authorize `.github` workflow files, external
+accounts, secrets, package installation, branch protection or provider setup.
+Hosted CI remains a separate future user decision and configuration task.
+
+This local gate also does not prove final readiness by itself. The known
+full-suite pytest stall in
+`tests/test_coach_first_ui.py::test_coach_page_renders_for_authenticated_owner_with_empty_state`
+remains an unresolved residual quality-gate risk, not a resolved condition and
+not final-readiness evidence. FH-024 mandatory PASS enforcement remains
+separate future quality-gate scope.
 
 ## Definition Of Done For Each Hardening Task
 

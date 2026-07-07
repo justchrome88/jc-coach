@@ -1,6 +1,6 @@
 # Testing
 
-Last updated: 2026-07-04.
+Last updated: 2026-07-07.
 
 ## Current Truth
 
@@ -30,18 +30,34 @@ Static check:
 .venv/bin/ruff check . --no-cache
 ```
 
-Mandatory local quality gate command:
+Accepted local CI-equivalent gate command:
 
 ```bash
 .venv/bin/python scripts/local_quality_gate.py
 ```
 
-`scripts/local_quality_gate.py` is the standard local command to run before an
-Executor claims PASS on code, script or test changes. It runs project gate
-preflight, changed and required-checks evidence; the full safe pytest command
-with `APP_ENV=test` and `PYTHONDONTWRITEBYTECODE=1`; Ruff; `git diff --check`;
-and project gate postflight. The command returns non-zero if any required
+`scripts/local_quality_gate.py` is the accepted local CI-equivalent gate for JC
+Coach during the restricted foundation-hardening lane. It is the standard local
+command to run before an Executor claims PASS on code, script or test changes,
+subject to stricter Task Card requirements. It runs project gate preflight,
+changed and required-checks evidence; the full safe pytest command with
+`APP_ENV=test` and `PYTHONDONTWRITEBYTECODE=1`; Ruff; `git diff --check`; and
+project gate postflight. The command returns non-zero if any required
 subcommand fails.
+
+This local CI-equivalent gate is not hosted CI. It does not add provider
+configuration, `.github` workflow files, secrets, external accounts, package
+installation or branch protection. Hosted CI remains a separate future policy
+and configuration decision if the user explicitly approves it. The local gate
+also does not by itself prove the final readiness gate.
+
+Known residual quality-gate risk: the full safe pytest suite currently stalls
+in
+`tests/test_coach_first_ui.py::test_coach_page_renders_for_authenticated_owner_with_empty_state`
+when run as part of the full suite. This must remain visible as an open risk;
+reports must not claim a green full-suite state or final readiness based on the
+local gate policy alone. Fixing or final-risk-accepting that stall is separate
+future work.
 
 Project gate preflight/postflight commands:
 
@@ -74,7 +90,7 @@ Minimum check expectations:
 | Task/change class | Minimum checks |
 |---|---|
 | Docs-only governance/status/report tasks | `git status --short` before edits, project gate `changed`, project gate `required-checks`, project gate `postflight`, `git diff --check` and scope/allowed-file review. Do not run live app, service, import, parser, evaluator or manual evaluator commands unless explicitly authorized. |
-| Code, script or test changes | `.venv/bin/python scripts/local_quality_gate.py` plus any focused tests required by the Task Card. This is the standard local PASS gate for this class. |
+| Code, script or test changes | `.venv/bin/python scripts/local_quality_gate.py` plus any focused tests required by the Task Card. This is the accepted local CI-equivalent PASS gate for this class. |
 | DB/schema-risk tasks | Explicit DB/schema authorization first; DB backup/SHA evidence when mutation is authorized; migration/schema checks and DB tests named by the Task Card; project gate evidence; `git diff --check`. |
 | Import/parser/evaluator-risk tasks | Explicit authorization before live import, parser, evaluator or manual evaluator commands; cap/temp-dir/safety evidence when relevant; targeted safe checks or dry-run/read-only diagnostics; project gate evidence; `git diff --check`. |
 | Runtime/deploy/service-risk tasks | Explicit authorization before service/deploy changes; targeted runtime checks or smoke checks named by the Task Card; project gate evidence; `git diff --check`. |
