@@ -71,6 +71,27 @@ The copy check:
 - runs SQLite integrity check on target;
 - verifies source DB SHA did not change.
 
+Create the current schema baseline artifact:
+
+```bash
+.venv/bin/python scripts/schema_baseline_gate.py write-baseline \
+  --db-path data/cs2_coach.db \
+  --output docs/foundation_hardening/2026-07-06-readiness-recovery-plan/current_schema_baseline.json
+```
+
+Run the schema gate against the current baseline:
+
+```bash
+.venv/bin/python scripts/schema_baseline_gate.py check \
+  --db-path data/cs2_coach.db \
+  --baseline docs/foundation_hardening/2026-07-06-readiness-recovery-plan/current_schema_baseline.json
+```
+
+The schema gate opens the SQLite DB read-only, compares only schema structure,
+excludes row data and exits nonzero when the inspected schema differs from the
+baseline. The baseline includes tables, columns, foreign keys, indexes,
+schema SQL objects, `PRAGMA user_version` and `PRAGMA application_id`.
+
 ## Required Before Any Future Schema Change
 
 1. Create runtime backup:
@@ -98,7 +119,10 @@ scripts/migration_check_on_copy.sh
 
 4. Record DB SHA before and after.
 
-5. Only then implement schema changes through an explicit migration file/process.
+5. Run the schema gate and investigate unexpected drift before touching
+   production data.
+
+6. Only then implement schema changes through an explicit migration file/process.
 
 ## How To Inspect Current Schema
 

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from app.config import PRODUCTION_DB_PATH, Settings, _assert_safe_test_settings
+from scripts import schema_baseline_gate
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -99,3 +100,68 @@ def test_migration_check_uses_explicit_temp_source_not_production_db(tmp_path):
 
     assert result.returncode == 0, result.stderr
     assert f"MIGRATION_COPY_CHECK_SOURCE={source_db}" in result.stdout
+
+
+def _run_schema_gate(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "schema_baseline_gate.py"), *args],
+        cwd=ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+
+def test_schema_baseline_is_deterministic_and_excludes_row_data(tmp_path):
+    db_path = tmp_path / "schema.db"
+    _create_minimal_sqlite(db_path)
+    first = schema_baseline_gate.build_baseline(db_path)
+
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.execute("INSERT INTO existing_table (value) VALUES ('row data excluded')")
+        connection.commit()
+    finally:
+        connection.close()
+
+    second = schema_baseline_gate.build_baseline(db_path)
+
+    assert first == second
+    assert "row data excluded" not in schema_baseline_gate.canonical_json(second)
+
+
+def test_schema_gate_matches_written_baseline(tmp_path):
+    db_path = tmp_path / "schema.db"
+    baseline_path = tmp_path / "baseline.json"
+    _create_minimal_sqlite(db_path)
+
+    write_result = _run_schema_gate("write-baseline", "--db-path", str(db_path), "--output", str(baseline_path))
+    check_result = _run_schema_gate("check", "--db-path", str(db_path), "--baseline", str(baseline_path))
+
+    assert write_result.returncode == 0, write_result.stderr
+    assert "SCHEMA_BASELINE_RESULT=written" in write_result.stdout
+    assert check_result.returncode == 0, check_result.stderr
+    assert "SCHEMA_GATE_RESULT=match" in check_result.stdout
+
+
+def test_schema_gate_exits_nonzero_on_schema_mismatch(tmp_path):
+    db_path = tmp_path / "schema.db"
+    baseline_path = tmp_path / "baseline.json"
+    _create_minimal_sqlite(db_path)
+
+    write_result = _run_schema_gate("write-baseline", "--db-path", str(db_path), "--output", str(baseline_path))
+    assert write_result.returncode == 0, write_result.stderr
+
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.execute("ALTER TABLE existing_table ADD COLUMN drift TEXT")
+        connection.commit()
+    finally:
+        connection.close()
+
+    check_result = _run_schema_gate("check", "--db-path", str(db_path), "--baseline", str(baseline_path))
+
+    assert check_result.returncode == 1
+    assert "SCHEMA_GATE_RESULT=mismatch" in check_result.stdout
+    assert "SCHEMA_GATE_DIFF_BEGIN" in check_result.stdout
+    assert '"name": "drift"' in check_result.stdout
