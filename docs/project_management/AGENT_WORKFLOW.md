@@ -286,6 +286,23 @@ requested.
 - Requires DB/data guardian docs if relevant.
 - No mutation by default.
 
+DB SHA evidence policy:
+
+- Ordinary tasks with no DB, schema, import/parser/evaluator or production-data
+  risk do not require production DB SHA checks unless the Task Card asks for
+  them.
+- DB/schema-risk tasks with no production DB touch must report that
+  `data/cs2_coach.db` was not touched and state which DB/schema scope was
+  intentionally avoided.
+- Read-only production DB inspection must include the observed `sha256sum
+  data/cs2_coach.db`, the command or gate evidence that captured it, and a
+  statement that no mutation was performed.
+- Authorized production DB mutation must include explicit authorization,
+  backup evidence, before SHA and after SHA for `data/cs2_coach.db`.
+- Read-only SHA inspection is distinct from production DB mutation, copied-DB
+  work, schema artifact changes, migration/baseline changes and startup schema
+  behavior changes. Evidence for one category does not authorize another.
+
 ### Schema-Changing WP Approval Policy
 
 Schema-changing work defaults to `approval-required`. It may proceed only when
@@ -481,7 +498,7 @@ by `AGENTS.md`.
 |---|---|---|
 | Docs-only governance/status/report tasks | `git status --short` before edits, `.venv/bin/python scripts/project_gate.py preflight`, `.venv/bin/python scripts/project_gate.py changed`, `.venv/bin/python scripts/project_gate.py required-checks`, `.venv/bin/python scripts/project_gate.py postflight`, `git diff --check`, plus review against allowed files and control-plane scope | Runtime/app smoke, service actions, imports, parser/evaluator jobs, local quality gate, full pytest, Ruff and production DB access when not explicitly scoped |
 | Code, script or test changes | `.venv/bin/python scripts/local_quality_gate.py`, the accepted local CI-equivalent gate, plus any task-specific focused tests or evidence commands | Individual pytest/Ruff/project-gate subcommands only when the local gate ran and its output covers them, unless the Task Card asks for separate output |
-| DB/schema-risk tasks | Explicit DB/schema authorization, preflight/status evidence, DB backup/SHA evidence when mutation is authorized, migration/schema checks named by the Task Card, relevant DB tests, `git diff --check`, project gate postflight | Production DB mutation when not authorized; full suite only if the Task Card accepts a narrower DB-specific check set with owner/risk |
+| DB/schema-risk tasks | Explicit DB/schema authorization, preflight/status evidence, appropriate production DB SHA evidence or explicit no-production-DB-touch declaration, DB backup plus before/after SHA evidence when mutation is authorized, migration/schema checks named by the Task Card, relevant DB tests, `git diff --check`, project gate postflight | Production DB mutation when not authorized; full suite only if the Task Card accepts a narrower DB-specific check set with owner/risk |
 | Import/parser/evaluator-risk tasks | Explicit authorization before any live import, parser, evaluator or manual evaluator job; cap/temp-dir/safety evidence when relevant; targeted import/parser/evaluator tests or dry-run/read-only diagnostics; project gate evidence; `git diff --check` | Live Steam/Valve/import/parser/evaluator/manual evaluator commands when not explicitly authorized |
 | Runtime/deploy/service-risk tasks | Explicit service/deploy authorization before start/stop/restart/config changes; repo-vs-live config diff/evidence; targeted runtime tests or smoke checks named by the Task Card; project gate evidence; `git diff --check` | Service/nginx/systemd/deploy actions when not explicitly authorized |
 | UI/web route/template/static tasks | Relevant route/template/static tests, safe web smoke or screenshot checks when explicitly useful and safe, full local gate if code/tests changed, project gate evidence, `git diff --check` | Live service smoke when the task forbids service use or when test-mode coverage is sufficient and documented |
@@ -495,6 +512,10 @@ Reports must include a checks evidence section with:
   artifact/log path. Long output may be summarized, but the report must include
   enough concrete output or artifact/log pointers for PM review to verify the
   claim; a bare statement such as "passed" is not enough.
+- Production DB SHA evidence or an explicit no-production-DB-touch declaration
+  appropriate to the task risk. Ordinary tasks with no DB, schema,
+  import/parser/evaluator or production-data risk may state that no SHA check
+  was required.
 - Checks not run, with the exact reason and whether the skip was explicitly
   authorized by the Task Card.
 - Failed, stalled or timed-out checks, with the exact failure, stall or timeout
@@ -533,7 +554,8 @@ For WP-level work, console output should include:
    - failed, stalled or timed-out checks and residual risk.
 7. Confirmations:
    - no code changed, if docs-only;
-   - no DB changed;
+   - no DB changed, plus DB SHA evidence or no-production-DB-touch declaration
+     appropriate to the task risk;
    - no imports/parser/evaluator ran;
    - no service/nginx changed;
    - no unauthorized `git add`/commit and no push.

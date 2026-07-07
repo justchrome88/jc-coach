@@ -122,6 +122,19 @@ mention external documentation lookup only when it was relevant.
   authorize the others.
 - Do not change schema, migration/baseline artifacts, schema behavior or any DB
   copy unless that exact scope is explicitly approved.
+- Report DB evidence by task risk:
+  - ordinary tasks with no DB, schema, import/parser/evaluator or production-data
+    risk do not require a production DB SHA check unless the Task Card asks for
+    one;
+  - DB/schema-risk tasks that do not touch `data/cs2_coach.db` must explicitly
+    declare no production DB touch instead of implying mutation evidence;
+  - read-only production DB inspection must record the observed `sha256sum
+    data/cs2_coach.db` and the read-only command/evidence used;
+  - authorized production DB mutation must record backup evidence plus before
+    and after `sha256sum data/cs2_coach.db`.
+- A read-only SHA check is evidence collection only. It does not authorize or
+  imply production DB mutation, copied-DB work, schema artifact changes,
+  migration/baseline changes or startup schema behavior changes.
 
 ## 6. Steam And Import Rules
 
@@ -147,7 +160,8 @@ mention external documentation lookup only when it was relevant.
 
 - Each WP must create a `docs/audit/WP_*` report.
 - The report must include result, evidence, files changed, safety declarations,
-  DB SHA, blockers and next WP.
+  DB SHA evidence or an explicit no-production-DB-touch declaration appropriate
+  to the task risk, blockers and next WP.
 - Long reports must be written to a file; console output should stay short and
   include the report path.
 - Be honest: use `PASS_WITH_WARNINGS` when warnings exist.
