@@ -15,7 +15,7 @@ Standalone `TestClient` snippets are forbidden unless `APP_ENV=test`, `DATABASE_
 Recommended full safe test command:
 
 ```bash
-APP_ENV=test .venv/bin/pytest tests -q
+APP_ENV=test PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests -q -p no:cacheprovider
 ```
 
 Targeted safe command while working on test isolation:
@@ -27,8 +27,21 @@ APP_ENV=test .venv/bin/pytest tests/test_config.py tests/test_web_smoke.py -q
 Static check:
 
 ```bash
-ruff check .
+.venv/bin/ruff check . --no-cache
 ```
+
+Mandatory local quality gate command:
+
+```bash
+.venv/bin/python scripts/local_quality_gate.py
+```
+
+`scripts/local_quality_gate.py` is the standard local command to run before an
+Executor claims PASS on code, script or test changes. It runs project gate
+preflight, changed and required-checks evidence; the full safe pytest command
+with `APP_ENV=test` and `PYTHONDONTWRITEBYTECODE=1`; Ruff; `git diff --check`;
+and project gate postflight. The command returns non-zero if any required
+subcommand fails.
 
 Project gate preflight/postflight commands:
 

@@ -336,6 +336,20 @@ Stop conditions, only if task-specific:
 
 ## 14. Standard WP Preflight
 
+For implementation tasks that touch code, scripts or tests, run the standard
+mandatory local quality gate before claiming PASS:
+
+```bash
+.venv/bin/python scripts/local_quality_gate.py
+```
+
+This wrapper runs project gate preflight, changed, required-checks and
+postflight evidence plus the full safe pytest suite, Ruff and
+`git diff --check`. It returns non-zero if any required subcommand fails.
+`scripts/project_gate.py` remains the read-only evidence helper used inside the
+local gate and may still be run separately when a task card asks for individual
+gate output.
+
 Run:
 
 ```bash
