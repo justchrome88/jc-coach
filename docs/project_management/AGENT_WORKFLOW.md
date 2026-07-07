@@ -339,13 +339,27 @@ Stop conditions, only if task-specific:
 Run:
 
 ```bash
-pwd
-git status --short
-git branch --show-current
-git log --oneline -8 --decorate
+.venv/bin/python scripts/project_gate.py preflight
+.venv/bin/python scripts/project_gate.py changed
+.venv/bin/python scripts/project_gate.py required-checks
 ```
 
-If the worktree is dirty before a WP-level task, stop and report.
+The project gate is read-only. It reports working directory, branch, recent
+commits, full short git status including untracked files, governance file
+presence, production DB SHA, changed/untracked paths, activated guardians and
+the check expectations inferred from those guardians. If the worktree has
+unexplained unrelated changes before a WP-level task, stop and report.
+
+Run before closure:
+
+```bash
+.venv/bin/python scripts/project_gate.py postflight
+```
+
+Postflight reports diff stat, changed/untracked paths, activated guardians,
+required-check summary, governance file presence and production DB SHA for the
+task report. It does not replace the task card's required tests, Ruff or
+`git diff --check`.
 
 ## 15. Standard Output Contract
 

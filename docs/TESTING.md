@@ -30,6 +30,26 @@ Static check:
 ruff check .
 ```
 
+Project gate preflight/postflight commands:
+
+```bash
+.venv/bin/python scripts/project_gate.py preflight
+.venv/bin/python scripts/project_gate.py changed
+.venv/bin/python scripts/project_gate.py required-checks
+.venv/bin/python scripts/project_gate.py postflight
+```
+
+`project_gate.py` is a read-only report helper. It records task-start and
+task-close evidence such as working directory, branch, recent commits,
+`git status --short -uall`, changed/untracked files, inferred guardians,
+required/recommended checks, governance file presence, diff stat and the
+production DB SHA. It does not run services, imports, parser jobs, evaluator
+jobs, package installs or DB mutations.
+
+For code, test or script changes, task reports should include the project gate
+commands, the focused relevant tests, the full safe test suite, Ruff and
+`git diff --check` unless the task card gives stricter instructions.
+
 Migration discipline checks:
 
 ```bash
