@@ -1,3 +1,4 @@
+import ast
 import os
 import shutil
 import sqlite3
@@ -11,6 +12,36 @@ from app.config import PRODUCTION_DB_PATH, Settings, _assert_safe_test_settings
 from scripts import schema_baseline_gate
 
 ROOT = Path(__file__).resolve().parents[1]
+
+LEGACY_STARTUP_SCHEMA_SQL = {
+    "ALTER TABLE matches ADD COLUMN early_deaths INTEGER",
+    "ALTER TABLE matches ADD COLUMN swing_score FLOAT",
+    "ALTER TABLE coach_reports ADD COLUMN report_type VARCHAR(50) DEFAULT 'rule_based' NOT NULL",
+    "ALTER TABLE coach_reports ADD COLUMN source_ref VARCHAR(500)",
+    "ALTER TABLE users ADD COLUMN email VARCHAR(255)",
+    "ALTER TABLE users ADD COLUMN password_hash VARCHAR(500)",
+    "ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1 NOT NULL",
+    "ALTER TABLE users ADD COLUMN last_login_at DATETIME",
+    "ALTER TABLE coach_recommendations ADD COLUMN start_after_match_id INTEGER",
+}
+
+
+def _startup_schema_mutation_sql() -> set[str]:
+    source_path = ROOT / "app" / "db" / "session.py"
+    module = ast.parse(source_path.read_text(encoding="utf-8"))
+    upgrade_function = next(
+        node
+        for node in module.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_upgrade_sqlite_schema"
+    )
+    sql = set()
+    for node in ast.walk(upgrade_function):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            statement = " ".join(node.value.split())
+            statement_upper = statement.upper()
+            if "ALTER TABLE" in statement_upper or "CREATE TABLE" in statement_upper:
+                sql.add(statement)
+    return sql
 
 
 def _run_script(script: str, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
@@ -61,6 +92,13 @@ def test_test_environment_rejects_production_database_url_for_migrations():
 
     with pytest.raises(RuntimeError):
         _assert_safe_test_settings(settings)
+
+
+def test_startup_schema_helper_only_contains_accepted_legacy_sql():
+    assert _startup_schema_mutation_sql() == LEGACY_STARTUP_SCHEMA_SQL, (
+        "Do not add startup schema mutations to app/db/session.py::_upgrade_sqlite_schema() "
+        "without an explicit schema-changing WP approval."
+    )
 
 
 def test_migration_status_reads_temp_db_without_mutating(tmp_path):
