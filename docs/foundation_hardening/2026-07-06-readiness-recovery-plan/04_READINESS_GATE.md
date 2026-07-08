@@ -110,9 +110,9 @@ Gate PASS requires all:
 - Ruff passes.
 - `git diff --check` passes.
 - Contract/eval/golden metric tests added during hardening pass.
-- The known full-suite pytest stall remains visible as an unresolved residual
-  quality-gate risk until fixed or explicitly accepted for the final readiness
-  gate.
+- The H1 full-suite pytest stall remains visible as failed-gate history until
+  H1 is rerun and accepted. Recovery diagnostics that prove non-reproducibility
+  do not by themselves make the final readiness gate PASS.
 
 ## Required Agent Workflow Conditions
 

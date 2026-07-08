@@ -60,13 +60,14 @@ installation or branch protection. Hosted CI remains a separate future policy
 and configuration decision if the user explicitly approves it. The local gate
 also does not by itself prove the final readiness gate.
 
-Known residual quality-gate risk: the full safe pytest suite currently stalls
-in
-`tests/test_coach_first_ui.py::test_coach_page_renders_for_authenticated_owner_with_empty_state`
-when run as part of the full suite. This must remain visible as an open risk;
-reports must not claim a green full-suite state or final readiness based on the
-local gate policy alone. Fixing or final-risk-accepting that stall is separate
-future work.
+Known residual quality-gate risk: H1 final readiness evidence recorded a
+full-suite pytest stall during
+`APP_ENV=test PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests -q -p no:cacheprovider`.
+FH-124R-01 bounded recovery diagnostics did not reproduce the stall: verbose
+full-suite pytest, the original H1 full-suite command and
+`scripts/local_quality_gate.py` passed. This recovery evidence does not by
+itself make H1 a readiness PASS; reports must keep the H1 failed-gate history
+visible until H1 is rerun and accepted.
 
 Project gate preflight/postflight commands:
 
