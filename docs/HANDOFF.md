@@ -40,6 +40,7 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 7. Read Warm docs only when the task requires them, and state which files are needed and why before reading them.
 8. Treat old audit reports, prompts, stage reports and generated data reports as evidence/history only.
 9. For governance, planning, task routing, prompt contract or WP role workflow scope, `docs/project_management/PROJECT_OPERATING_PROTOCOL.md`, `docs/project_management/MASTER_WP_CHECKLIST.md`, `docs/project_management/AGENT_WORKFLOW.md` and invoked `docs/agents/roles/*` role cards are Warm references, not per-task Hot context.
+10. For future ChatGPT-generated Codex prompts, use `docs/project_management/PROMPT_PLAYBOOK.md` as the prompt-template guide after Hot docs.
 
 ## Current State Summary
 
