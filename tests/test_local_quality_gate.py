@@ -18,6 +18,8 @@ def test_local_quality_gate_runs_required_commands_in_order(monkeypatch):
         (".venv/bin/python", "scripts/project_gate.py", "preflight"),
         (".venv/bin/python", "scripts/project_gate.py", "changed"),
         (".venv/bin/python", "scripts/project_gate.py", "required-checks"),
+        (".venv/bin/pytest", "tests/test_semantic_ai_eval.py", "-q", "-p", "no:cacheprovider"),
+        (".venv/bin/pytest", "tests/test_metrics_c2_fixtures.py", "-q", "-p", "no:cacheprovider"),
         (".venv/bin/pytest", "tests", "-q", "-p", "no:cacheprovider"),
         (".venv/bin/ruff", "check", ".", "--no-cache"),
         ("git", "diff", "--check"),
@@ -39,13 +41,14 @@ def test_local_quality_gate_sets_safe_pytest_environment(monkeypatch):
 
     assert local_quality_gate.main() == 0
 
-    pytest_call = next(
+    pytest_calls = [
         kwargs
         for command, kwargs in calls
-        if command == (".venv/bin/pytest", "tests", "-q", "-p", "no:cacheprovider")
-    )
-    assert pytest_call["env"]["APP_ENV"] == "test"
-    assert pytest_call["env"]["PYTHONDONTWRITEBYTECODE"] == "1"
+        if command[0] == ".venv/bin/pytest"
+    ]
+    assert len(pytest_calls) == 3
+    assert all(call["env"]["APP_ENV"] == "test" for call in pytest_calls)
+    assert all(call["env"]["PYTHONDONTWRITEBYTECODE"] == "1" for call in pytest_calls)
 
 
 def test_local_quality_gate_returns_nonzero_when_any_command_fails(monkeypatch, capsys):

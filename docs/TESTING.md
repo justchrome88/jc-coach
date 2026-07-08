@@ -40,10 +40,13 @@ Accepted local CI-equivalent gate command:
 Coach during the restricted foundation-hardening lane. It is the standard local
 command to run before an Executor claims PASS on code, script or test changes,
 subject to stricter Task Card requirements. It runs project gate preflight,
-changed and required-checks evidence; the full safe pytest command with
+changed and required-checks evidence; deterministic semantic AI eval fixtures;
+golden metric readiness fixtures; the full safe pytest command with
 `APP_ENV=test` and `PYTHONDONTWRITEBYTECODE=1`; Ruff; `git diff --check`; and
 project gate postflight. The command returns non-zero if any required
-subcommand fails.
+subcommand fails. The focused fixture checks are intentionally named in the gate
+output so AI/recommendation/final-readiness review cannot miss them by relying
+only on inferred full-suite coverage.
 
 This local CI-equivalent gate is not hosted CI. It does not add provider
 configuration, `.github` workflow files, secrets, external accounts, package
@@ -175,6 +178,18 @@ AI Output Validator checks:
 ```bash
 APP_ENV=test .venv/bin/pytest tests/test_ai_validator.py -q
 APP_ENV=test .venv/bin/pytest tests/test_metric_truth.py tests/test_ai_validator.py -q
+```
+
+Semantic AI eval gate checks:
+
+```bash
+APP_ENV=test PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests/test_semantic_ai_eval.py -q -p no:cacheprovider
+```
+
+Golden metric readiness fixture checks:
+
+```bash
+APP_ENV=test PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests/test_metrics_c2_fixtures.py -q -p no:cacheprovider
 ```
 
 Coach-first UI checks:

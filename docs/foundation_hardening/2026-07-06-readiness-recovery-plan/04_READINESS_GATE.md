@@ -92,8 +92,9 @@ Gate PASS requires all:
   gate.
 - For code, script or test changes, the accepted local CI-equivalent PASS gate
   is `.venv/bin/python scripts/local_quality_gate.py`, which covers project
-  gate preflight, changed, required-checks and postflight evidence; full safe
-  pytest; Ruff; and `git diff --check`.
+  gate preflight, changed, required-checks and postflight evidence; focused
+  deterministic semantic AI eval fixtures; focused golden metric readiness
+  fixtures; full safe pytest; Ruff; and `git diff --check`.
 - Docs-only governance/status/report tasks are not required to run pytest, Ruff
   or the local quality gate unless the Task Card or changed files require them.
   Their PASS requirements are the docs-safe project gate commands,
@@ -143,6 +144,8 @@ Run before declaring PASS:
 ```bash
 git status --short
 .venv/bin/python scripts/project_gate.py changed
+APP_ENV=test PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests/test_semantic_ai_eval.py -q -p no:cacheprovider
+APP_ENV=test PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests/test_metrics_c2_fixtures.py -q -p no:cacheprovider
 APP_ENV=test PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests -q -p no:cacheprovider
 .venv/bin/ruff check . --no-cache
 git diff --check

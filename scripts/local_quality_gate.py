@@ -9,6 +9,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SAFE_PYTEST_ENV = {
+    "APP_ENV": "test",
+    "PYTHONDONTWRITEBYTECODE": "1",
+}
 
 
 @dataclass(frozen=True)
@@ -32,6 +36,28 @@ COMMANDS: tuple[CommandSpec, ...] = (
         command=(".venv/bin/python", "scripts/project_gate.py", "required-checks"),
     ),
     CommandSpec(
+        name="semantic AI eval fixtures",
+        command=(
+            ".venv/bin/pytest",
+            "tests/test_semantic_ai_eval.py",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+        ),
+        env=SAFE_PYTEST_ENV,
+    ),
+    CommandSpec(
+        name="golden metric readiness fixtures",
+        command=(
+            ".venv/bin/pytest",
+            "tests/test_metrics_c2_fixtures.py",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+        ),
+        env=SAFE_PYTEST_ENV,
+    ),
+    CommandSpec(
         name="full safe pytest",
         command=(
             ".venv/bin/pytest",
@@ -40,10 +66,7 @@ COMMANDS: tuple[CommandSpec, ...] = (
             "-p",
             "no:cacheprovider",
         ),
-        env={
-            "APP_ENV": "test",
-            "PYTHONDONTWRITEBYTECODE": "1",
-        },
+        env=SAFE_PYTEST_ENV,
     ),
     CommandSpec(
         name="ruff",
