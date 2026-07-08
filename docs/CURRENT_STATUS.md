@@ -7,7 +7,8 @@ Last updated: 2026-07-09.
 - Product identity: JC Coach remains the primary product. Do not build JC
   Forge unless a future explicit task changes product scope.
 - Current organizational mini-phase: `LEAN_DOCS_CLEANUP` /
-  `CODEX_NATIVE_SIMPLIFICATION`.
+  `CODEX_NATIVE_SIMPLIFICATION`, closed by `LEAN-DOCS-06`; return to scoped
+  JC Coach product work.
 - One Codex workspace convention: start the main Codex working session from
   `/opt/jc-coach`.
 - Codex PM, Executor, Reviewer and Documentation Steward are prompt roles in

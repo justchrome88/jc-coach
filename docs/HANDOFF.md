@@ -14,8 +14,8 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - JC Forge is not the active product and must not be built unless a future
   explicit task changes product scope.
 - Current organizational mini-phase: `LEAN_DOCS_CLEANUP` /
-  `CODEX_NATIVE_SIMPLIFICATION`; return to JC Coach product work after this
-  cleanup is complete.
+  `CODEX_NATIVE_SIMPLIFICATION`, closed by `LEAN-DOCS-06`; return to scoped
+  JC Coach product work.
 - Current product version: `v0.9`.
 - Current lane: `POST_FOUNDATION_AUDIT_AND_STABILIZATION` after foundation
   hardening closure.
