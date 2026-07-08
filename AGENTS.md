@@ -1,232 +1,138 @@
-# AGENTS.md - JC Coach Project Contract
+# AGENTS.md - JC Coach Root Contract
 
-This repository is the controlled personal CS2 coach project `JC Coach`.
-Codex must treat this file as the only root operating contract for every work
-package unless the current explicit user WP prompt is stricter. The older
-`AGENT.md` file is superseded and must not be used as the active contract.
+This file is the lean root operating contract for Codex work in this
+repository. The current explicit user task controls the immediate scope and can
+be stricter than this file. Do not broaden a task to make progress.
 
-## 1. Roles
+## 1. Project Identity
 
-- Codex is the executor/engineer: inspect, edit, verify and report within scope.
-- The human/user is the operator and approval authority.
-- ChatGPT/PM prompts and project docs define the active WP scope.
-- Do not broaden a WP. Stop and report `BLOCKED` instead of improvising unsafe
-  work.
+- JC Coach is the primary product: a controlled personal AI coach for CS2.
+- This repository is the canonical product repository for JC Coach.
+- JC Forge is not the active product unless a future explicit task says so.
+- Codex may inspect, edit, verify and report only within the current task scope.
+- Stop and report `BLOCKED` instead of improvising around missing authority,
+  unsafe side effects or source-of-truth conflicts.
 
-## 2. Source Of Truth Order
+## 2. Source Of Truth And Context Policy
 
-When sources conflict, use this order:
+Use this source-of-truth order when sources conflict:
 
-1. Explicit current user WP prompt.
+1. Current explicit user task, for scope and stricter constraints.
 2. This root `AGENTS.md`.
 3. `docs/CURRENT_STATUS.md`.
 4. `docs/HANDOFF.md`.
-5. `docs/PROJECT_CONTROL.md`.
-6. `docs/project_management/*`.
-7. Relevant `docs/audit/*` reports.
-8. Code and tests.
+5. `docs/project_management/WP_REGISTRY.md`.
+6. Task-relevant Warm docs.
+7. Code, tests and task-relevant historical evidence.
 
-Old audit reports, stage reports, task prompts and generated app reports are
-evidence/history. They must not override the current control docs above.
+Do not read all docs by default.
 
-## 2.1 Context Reading Policy
+Hot context for ordinary tasks: `AGENTS.md`, `docs/CURRENT_STATUS.md`,
+`docs/HANDOFF.md` and `docs/project_management/WP_REGISTRY.md`.
 
-Do not read all documentation by default.
+Read Warm docs only when task-relevant, such as roadmap, acceptance, workflow,
+DB/data safety, import/parser/evaluator, recommendation, UI, service,
+deployment, testing, security or historical WP review context. Old reports,
+prompts, audits and generated app reports are evidence/history only; they must
+not override this contract or Hot docs.
 
-Per-task Hot context:
+For external library, framework, API or tooling behavior, use Context7 MCP or
+official current docs when the task depends on that behavior. External docs
+never override project source-of-truth docs or the active task scope.
 
-1. `AGENTS.md`
-2. `docs/CURRENT_STATUS.md`
-3. `docs/project_management/WP_REGISTRY.md`
+## 3. Universal Safety Rules
 
-New-session Hot context additionally includes:
-
-4. `docs/HANDOFF.md`
-
-Read Warm context only when the task requires that domain, such as roadmap,
-acceptance, deploy/service, testing, DB/data integrity, import/parser/evaluator,
-recommendations, UI/web routes, security or historical WP review. Before
-reading Warm docs, state which files are needed and why.
-
-Cold context includes old audit reports, stage reports, old prompts,
-`docs/tasks/*`, `instructions/*`, old roadmap/version docs and generated data
-reports. Use Cold context only as evidence during investigation or audit.
-
-For task routing, task type profiles and standard prompt/report contracts, use
-`docs/project_management/AGENT_WORKFLOW.md` when the task calls for governance
-workflow context. This does not expand per-task Hot context.
-
-## 2.2 External Documentation Policy
-
-For tasks involving external libraries, frameworks, APIs or tooling behavior,
-use Context7 MCP when available before changing code, config or docs that
-depend on those APIs. This includes FastAPI, SQLAlchemy, Alembic, pytest,
-Playwright, frontend libraries, Codex/MCP config and other
-dependency-specific behavior.
-
-If Context7 MCP is unavailable, state that MCP docs lookup was unavailable, use
-another current official source if available, and avoid confident
-version-specific API claims without evidence.
-
-This is not required for docs-only PM/process tasks that only modify internal
-project state. External docs never override this file, project source-of-truth
-docs or the active Task Card scope/allowed files. Executor reports should
-mention external documentation lookup only when it was relevant.
-
-## 3. Hard Safety Rules
-
-- Never commit `data/cs2_coach.db`.
-- Never commit `data/manual_backups`.
-- Never commit `data/uploads`.
-- Never commit `.dem` or `.dem.bz2` files.
-- Never commit `__pycache__`.
-- Do not mutate the production DB without explicit WP authorization, backup,
-  SHA evidence and report.
-- Do not run live Steam/Valve import without explicit WP authorization.
-- Do not run parser jobs on production data without explicit WP authorization.
-- Do not run the manual evaluator on the production DB without explicit WP
-  authorization.
-- Do not delete, move or compress raw demos without explicit storage WP
-  authorization.
-- Do not raise `STEAM_IMPORT_MAX_DEMOS_PER_RUN` without an explicit cap-change
-  WP.
+- Do not mutate DB, schema, data files, imports, parser/evaluator/manual
+  evaluator jobs, services, deployment config, package/dependency config or raw
+  demos unless the current task explicitly scopes that risk.
+- Do not run live Steam/Valve import unless explicitly authorized.
+- Do not run parser, evaluator or manual evaluator jobs unless explicitly
+  authorized.
+- Do not restart services or change systemd/nginx/deploy/runtime config unless
+  explicitly authorized.
+- Do not install packages or change package/dependency files unless explicitly
+  authorized.
+- Do not delete, move, compress or rewrite raw demos without explicit storage
+  scope.
 - Do not generate persistent app reports unless explicitly authorized.
+- Do not print secret values.
+- If risky work is authorized, keep it narrow and report the requested safety
+  evidence.
 
 ## 4. Git Rules
 
 - Show `git status --short` before work.
-- Do not run `git add` unless explicitly asked.
-- Executor Codex must not commit unless explicitly asked or a Task Card
-  explicitly authorizes it.
-- PM_ORCHESTRATOR may create local commits after an accepted PM review verifies
-  scope, acceptance, forbidden-action safety, required checks and that no user
-  decision is needed.
-- Do not push unless explicitly asked.
-- Commits, when authorized, must exclude DBs, backups, uploads and demos.
-- Commit only scoped reports, docs, code or tests.
-- Run `git diff --check` before report/commit.
+- Stop on unexplained dirty or untracked files.
+- Do not run `git add` unless explicitly authorized.
+- Do not commit unless explicitly authorized.
+- Do not push unless explicitly authorized.
+- Never commit DBs, backups, uploads, demos, `.dem`, `.dem.bz2` or
+  `__pycache__`.
+- Run `git diff --check` before final report when files changed.
 
-## 5. Production DB Rules
+## 5. Current Product Guardrails
 
-- `data/cs2_coach.db` is the production DB.
-- For any authorized production DB mutation, record `sha256sum
-  data/cs2_coach.db` before and after.
-- Back up the production DB before any authorized production mutation.
-- Schema-changing work is `approval-required` unless the Task Card explicitly
-  names schema scope and allowed files.
-- Schema work includes schema definition/code, startup schema behavior,
-  migration or baseline artifacts, schema scripts, copied-DB experiments and
-  production DB mutation.
-- Read-only schema inspection, schema artifact edits, copied-DB experiments and
-  production DB mutation are distinct scopes. Authorization for one does not
-  authorize the others.
-- Do not change schema, migration/baseline artifacts, schema behavior or any DB
-  copy unless that exact scope is explicitly approved.
-- Documentation of schema compatibility boundaries is not authorization to
-  change runtime startup behavior, helper behavior, schema artifacts, migration
-  scripts, copied DBs or the production DB.
-- Startup schema compatibility work is schema-changing work. Future Task Cards
-  for that work must state the allowed files/artifacts, rollback and
-  compatibility expectations, required schema-gate evidence and production DB
-  authorization status.
-- FH-030, FH-031 and FH-032 did not adopt Alembic, add migration support, mutate
-  the production DB or change startup schema behavior.
-- Report DB evidence by task risk:
-  - ordinary tasks with no DB, schema, import/parser/evaluator or production-data
-    risk do not require a production DB SHA check unless the Task Card asks for
-    one;
-  - DB/schema-risk tasks that do not touch `data/cs2_coach.db` must explicitly
-    declare no production DB touch instead of implying mutation evidence;
-  - read-only production DB inspection must record the observed `sha256sum
-    data/cs2_coach.db` and the read-only command/evidence used;
-  - authorized production DB mutation must record backup evidence plus before
-    and after `sha256sum data/cs2_coach.db`.
-- A read-only SHA check is evidence collection only. It does not authorize or
-  imply production DB mutation, copied-DB work, schema artifact changes,
-  migration/baseline changes or startup schema behavior changes.
-
-## 6. Steam And Import Rules
-
-- For shell service calls, set `TMPDIR`, `TEMP` and `TMP` to
-  `/opt/jc-coach/data/tmp`.
-- `STEAM_IMPORT_MAX_DEMOS_PER_RUN` remains `1` unless changed by explicit WP.
-- `ImportJob.status` is coarse; `result_json` is canonical for detailed import
-  outcomes.
-- Match mode is unknown for Premier/Competitive/Wingman unless reliable
-  persisted metadata proves the mode.
-
-## 7. Recommendation Rules
-
-- Recommendation `#5` survival is the current accepted active recommendation.
+- Product version is `v0.9` with accepted warnings unless Hot docs say a later
+  accepted task changed it.
+- Recommendation `#5` remains the current accepted active hard recommendation
+  unless a future accepted task changes it.
 - Legacy recommendations `#1`, `#3` and `#4` must not receive new hard
   evaluations unless explicitly refreshed.
-- Recommendation evaluations must include `metric_confidence`.
-- Weak metrics must remain caveated.
-- Do not use manual evaluation as a substitute for a broken automatic loop
-  unless explicitly authorized.
+- `STEAM_IMPORT_MAX_DEMOS_PER_RUN` remains `1` unless an explicit cap-change
+  task changes it.
+- Playlist/mode remains unknown or provenance-only unless reliable persisted
+  metadata exists; do not claim exact playlist labels without accepted evidence.
+- Weak metrics stay caveated, and recommendation evaluations must preserve
+  metric-confidence limitations.
+- WP-018 and major CS2 product work remain paused unless explicitly authorized
+  by the current user task and Hot docs.
+- Public/friends readiness remains blocked.
 
-## 8. Reporting Rules
+## 6. Task Execution Defaults
 
-- Each WP must create a `docs/audit/WP_*` report.
-- The report must include result, evidence, files changed, safety declarations,
-  DB SHA evidence or an explicit no-production-DB-touch declaration appropriate
-  to the task risk, blockers and next WP.
-- Long reports must be written to a file; console output should stay short and
-  include the report path.
-- Be honest: use `PASS_WITH_WARNINGS` when warnings exist.
+- Keep changes small, scoped and reversible.
+- Prefer existing project patterns and canonical docs.
+- Do not perform broad cleanup, archive, deletion, renumbering or roadmap
+  rewriting unless explicitly scoped.
+- Do not mark deferred, paused or failed work as implemented.
+- Do not close blockers silently.
+- Use task-relevant Warm docs for detailed workflow or safety mechanics instead
+  of carrying old Foundation-era bureaucracy into every ordinary task.
 
-## 8.1 Task Classes And Discovery Reporting
+## 7. Reporting Defaults
 
-Tasks may be either:
+For small tasks, keep console output compact:
 
-- Execution task: performs a bounded change.
-- Audit / Review / Discovery task: inspects an area, reports findings,
-  estimates completeness, and may propose follow-up tasks.
+- Summary
+- Changed files
+- Checks
+- Risks / blockers
+- Next step
 
-For Audit / Review / Discovery tasks, Executor Codex must perform only the
-requested inspection/review, report findings with evidence, estimate
-completeness when meaningful, and propose follow-up tasks if gaps are found.
-Do not execute follow-up work unless explicitly tasked. Do not create broad new
-scope by yourself.
+Use a long file-backed report only when requested, when a report path is
+provided, or when risk/evidence volume genuinely requires it. Be honest with
+`PASS`, `PASS_WITH_WARNINGS` or `BLOCKED`.
 
-For Audit / Review / Discovery tasks, or when meaningful gaps are found, include
-this report block:
+## 8. Stop Conditions
 
-```yaml
-discovery_result:
-  completeness_estimate: "<percentage or qualitative estimate>"
-  missing_items_found: true|false
-  followup_required: true|false
-  followup_tasks_recommended:
-    - proposed_id: "FH-115A-01"
-      title: "Short task title"
-      reason: "Why this task is needed"
-      risk: "P0|P1|P2|P3 or none"
-      suggested_scope: "docs-only|tests|code|config|unknown"
-      needs_user_decision: true|false
-```
+Stop and report `BLOCKED` when:
 
-PM_ORCHESTRATOR owns backlog decomposition after review. The runtime runner
-only starts/resumes cycles and does not implement decomposition logic.
-Decomposition never overrides the active prompt, allowed files, stop conditions,
-DB safety, public-access restrictions or readiness gates.
+- Worktree is dirty or has unexplained untracked files before work.
+- Required authorization is missing.
+- Source-of-truth docs conflict in a way that affects the task outcome.
+- The task would cause unsafe DB/schema/data/import/parser/evaluator/service/
+  deploy/package/raw-demo side effects.
+- Required evidence or checks cannot be produced.
+- The requested change would broaden into unscoped cleanup or product work.
 
-## 9. Current Roadmap
+## 9. Reference Map
 
-- `v0.8` accepted: recommendation loop.
-- `v0.9` target: real data onboarding.
-- Next after `v0.9`: `v0.10` coach quality calibration.
-- Then `v0.11` daily UX, `v0.12` hardening and `v1.0` personal MVP.
-
-## 10. Style
-
-- Keep changes small and scoped.
-- Prefer existing project patterns and docs.
-- Do not change product logic during governance cleanup.
-- Do not perform hidden runtime, DB, import, parser, evaluator or report-writing
-  side effects.
-- Do not silently renumber WPs.
-- Do not silently close blockers.
-- Do not mark deferred or failed features as implemented.
-- Do not create new docs when an existing canonical doc should be updated.
-- If safe completion is not possible inside the WP, stop and report `BLOCKED`.
+- Hot status: `docs/CURRENT_STATUS.md`; handoff: `docs/HANDOFF.md`; WP order
+  and gates: `docs/project_management/WP_REGISTRY.md`.
+- Warm governance/process references: `docs/project_management/PROJECT_OPERATING_PROTOCOL.md`,
+  `docs/project_management/AGENT_WORKFLOW.md`,
+  `docs/project_management/MASTER_WP_CHECKLIST.md` and `docs/agents/roles/*`.
+- Warm roadmap/planning references: `docs/project_management/VERSION_ROADMAP.md`,
+  `docs/project_management/WORK_PACKAGE_BACKLOG.md` and
+  `docs/project_management/ACCEPTANCE_MATRIX.md`.
+- Historical reports and audits are task-relevant evidence only.
