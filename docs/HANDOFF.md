@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-09.
 
 ## Purpose
 
@@ -9,6 +9,13 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 ## Project Identity
 
 - Project: JC Coach, a personal AI coach for CS2.
+- Primary workspace convention: start future Codex sessions from
+  `/opt/jc-coach`.
+- JC Forge is not the active product and must not be built unless a future
+  explicit task changes product scope.
+- Current organizational mini-phase: `LEAN_DOCS_CLEANUP` /
+  `CODEX_NATIVE_SIMPLIFICATION`; return to JC Coach product work after this
+  cleanup is complete.
 - Current product version: `v0.9`.
 - Current lane: `POST_FOUNDATION_AUDIT_AND_STABILIZATION` after foundation
   hardening closure.
@@ -25,9 +32,14 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 2. Read `docs/CURRENT_STATUS.md`.
 3. Read `docs/project_management/WP_REGISTRY.md`.
 4. For a new long session or chat handoff, also read this file.
-5. Read Warm docs only when the task requires them, and state which files are needed and why before reading them.
-6. Treat old audit reports, prompts, stage reports and generated data reports as evidence/history only.
-7. For governance, planning, task routing, prompt contract or WP role workflow scope, `docs/project_management/PROJECT_OPERATING_PROTOCOL.md`, `docs/project_management/MASTER_WP_CHECKLIST.md`, `docs/project_management/AGENT_WORKFLOW.md` and invoked `docs/agents/roles/*` role cards are Warm references, not per-task Hot context.
+5. Use `/opt/jc-coach-pm` only as PM memory, archive or reference when the
+   active task explicitly needs that context. It is not the primary Codex
+   launch workspace.
+6. Treat Codex PM, Executor, Reviewer and Documentation Steward as prompt
+   roles, not mandatory separate Codex windows.
+7. Read Warm docs only when the task requires them, and state which files are needed and why before reading them.
+8. Treat old audit reports, prompts, stage reports and generated data reports as evidence/history only.
+9. For governance, planning, task routing, prompt contract or WP role workflow scope, `docs/project_management/PROJECT_OPERATING_PROTOCOL.md`, `docs/project_management/MASTER_WP_CHECKLIST.md`, `docs/project_management/AGENT_WORKFLOW.md` and invoked `docs/agents/roles/*` role cards are Warm references, not per-task Hot context.
 
 ## Current State Summary
 

@@ -1,9 +1,18 @@
 # Current Status
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-09.
 
 ## Snapshot
 
+- Product identity: JC Coach remains the primary product. Do not build JC
+  Forge unless a future explicit task changes product scope.
+- Current organizational mini-phase: `LEAN_DOCS_CLEANUP` /
+  `CODEX_NATIVE_SIMPLIFICATION`.
+- One Codex workspace convention: start the main Codex working session from
+  `/opt/jc-coach`.
+- Codex PM, Executor, Reviewer and Documentation Steward are prompt roles in
+  the same product workspace unless a future explicit task asks for separate
+  windows. They are not mandatory separate Codex sessions.
 - Product version: `v0.9`.
 - Current lane: Foundation Hardening is closed pending post-foundation audit
   after the 2026-07-06 agentic-readiness audit recovery sequence.
@@ -82,6 +91,9 @@ Last updated: 2026-07-08.
 
 ## Current Blockers And Limitations
 
+- The lean docs cleanup is organizational work only. It does not authorize JC
+  Forge work, WP-018 restart, major CS2 product work, public/friends access or
+  a `v1.0` claim.
 - Foundation hardening is closed only as
   `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
 - `READY_FOR_MAJOR_CS2_FEATURE_WORK` is not `YES`; major CS2 feature work and
