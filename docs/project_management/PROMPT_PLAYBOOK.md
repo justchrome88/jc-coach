@@ -28,17 +28,27 @@ not introduce JC Forge.
   evaluator jobs, service restarts and package installs are forbidden or
   explicitly authorized.
 
+## Language Policy
+
+- Direct ChatGPT-to-user explanations should stay Russian by default.
+- Codex task prompts may be written in English to reduce token cost.
+- Codex console output and internal technical reports may be English.
+- Short user-facing assistant comments may stay Russian when helpful.
+- Human-facing product documentation should be Russian when it is meant for direct user reading.
+- Long internal technical docs/reports may be English if that reduces token cost and keeps meaning clear.
+- Language choice must not change scope, safety rules, source-of-truth order or authorization requirements.
+
 ## 3. Task Type Router
 
 | Task type | When to use | Required Warm docs | Required safety gates | Usual allowed files | Usual forbidden actions | Minimum checks |
 |---|---|---|---|---|---|---|
-| `POST_FOUNDATION_AUDIT` | Defect, warning and stabilization planning after foundation hardening closure. | Relevant foundation hardening recovery plan, risk register and final closure report. | Read-only unless a specific remediation is scoped; do not restart WP-018 or major CS2 work. | Audit/stabilization reports and explicitly scoped status docs. | Product feature work, DB/schema changes, imports, parser/evaluator jobs, runtime/deploy changes. | `git diff --check`, `git status --short`, evidence list of reviewed warnings. |
+| `POST_FOUNDATION_AUDIT` | Defect, warning and stabilization planning after foundation hardening closure. | Current Hot docs, current risk/closure summaries, and only task-relevant archived foundation evidence when needed. | Read-only unless a specific remediation is scoped; do not restart WP-018 or major CS2 work. | Audit/stabilization reports and explicitly scoped status docs. | Product feature work, DB/schema changes, imports, parser/evaluator jobs, runtime/deploy changes. | `git diff --check`, `git status --short`, evidence list of reviewed warnings. |
 | `PARSER` | Demo parser, parser artifacts, import-to-parser handoff, parser reliability. | Parser/import docs, DB/data safety docs, relevant historical parser reports. | No production parser jobs unless explicitly authorized; use fixtures or copied DB only if scoped. | Parser code/tests/fixtures only when explicitly listed. | Live imports, production parser jobs, raw demo deletion/move/rewrite, DB mutation without scoped backup/SHA. | Targeted parser tests, fixture validation, `git diff --check`, `git status --short`. |
 | `METRICS` | Metric truth, metric calculation, weak metric caveats, metric confidence. | Metrics/evaluation docs and relevant acceptance reports. | Preserve weak-metric caveats and metric confidence limitations. | Metric code/tests/docs explicitly listed. | Unsupported precision claims, hard-evaluating legacy recommendations without refresh. | Targeted metric tests, sample evidence, `git diff --check`, `git status --short`. |
 | `RECOMMENDATION_ENGINE` | Recommendation loop, planner, evaluation routing or recommendation state. | Recommendation and evaluator docs, acceptance matrix, relevant WP reports. | Recommendation `#5` remains active hard recommendation unless explicitly changed. | Recommendation code/tests/docs explicitly listed. | New hard evaluations for legacy `#1`, `#3`, `#4`; evaluator jobs without authorization. | Targeted recommendation tests, state/evidence review, `git diff --check`, `git status --short`. |
 | `AI_COACH_QUALITY` | WP-018-related coach quality, calibration, output caveats. | WP-018 context, coach quality docs, acceptance matrix. | Major WP-018 work remains paused until post-foundation audit/stabilization authorizes restart. | Narrow coach docs/tests/code only if explicitly scoped. | Unsupported CS2/domain claims, broad coach expansion, v1.0/public readiness claims. | Targeted tests or snapshot checks, caveat review, `git diff --check`, `git status --short`. |
 | `UI_WEB` | Dashboard, settings, owner workflow and frontend views. | UI/workflow docs and relevant product acceptance docs. | Do not weaken playlist/mode caveats or public/friends blockers. | UI code/tests/docs explicitly listed. | Backend DB/schema/import/runtime changes unless separately scoped. | Targeted UI tests or screenshots when applicable, `git diff --check`, `git status --short`. |
-| `STEAM_IMPORT` | Steam/Valve import planning, guarded live import, share-code processing. | Import runbooks, DB/data safety docs, latest status and relevant import reports. | Live Steam/Valve import requires explicit authorization; cap remains `1` unless explicitly changed. | Import docs/code/tests only when listed; live evidence report if authorized. | Unscoped live import, cap raise, demo download, parser/evaluator jobs, DB mutation without safety evidence. | Pre/post DB SHA if scoped, import logs/evidence if authorized, `git diff --check`, `git status --short`. |
+| `STEAM_IMPORT` | Steam/Valve import planning, guarded live import, share-code processing. | Import runbooks, DB/data safety docs, latest status and relevant import reports. | Live Steam/Valve import requires explicit authorization; cap remains `1` unless explicitly changed. | Import docs/code/tests only when listed; live evidence report if authorized. | Unscoped live import, cap raise, unscoped demo download/storage mutation, parser/evaluator jobs, DB mutation without safety evidence. | Pre/post DB SHA if scoped, import logs/evidence if authorized, `git diff --check`, `git status --short`. |
 | `DB_SCHEMA` | Database schema, migrations, data integrity and storage safety. | DB/data safety docs, migration docs, acceptance matrix. | Explicit backup/SHA and rollback scope required for any production DB/schema mutation. | Migration files/tests/docs only when listed. | Production DB mutation without explicit authorization, broad data rewrites, uploads/raw demo changes. | Migration tests, schema diff/evidence, backup/SHA evidence if authorized, `git diff --check`, `git status --short`. |
 | `TESTING_QA` | Test stabilization, targeted QA, quality gates. | Testing docs, affected area docs, recent failure reports. | Do not broaden into feature work; avoid DB/import/parser/evaluator side effects unless scoped. | Tests and narrow code fixes explicitly listed. | Package installs, broad refactors, service restarts, production data mutation. | Relevant test command(s), `git diff --check`, `git status --short`. |
 | `DOCS_ONLY` | Documentation cleanup, reports, handoff, governance clarification. | Only task-relevant Warm docs. | Do not change product behavior or source-of-truth state beyond scope. | Explicit docs/report paths. | Code/tests/scripts/tools/data/deploy/package/DB changes, broad archive/delete without scope. | `git diff --check`, `git status --short`, link/path sanity check when relevant. |
@@ -282,9 +292,8 @@ Task type: POST_FOUNDATION_AUDIT
 
 Read first:
 - Hot docs.
-- Relevant foundation hardening recovery plan, risk register and final closure
-  report.
-- Only task-relevant historical audit evidence.
+- Current risk/closure summaries.
+- Only task-relevant archived foundation evidence when needed.
 
 Safety:
 - Audit first; do not fix everything.
