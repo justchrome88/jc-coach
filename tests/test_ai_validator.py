@@ -1,8 +1,9 @@
 import json
 
-from app.services.ai_coach import save_ai_coach_result, serialize_ai_coach_report
+from app.services.ai_coach import AI_COACH_PROMPT_VERSION, save_ai_coach_result, serialize_ai_coach_report
 from app.services.ai_validator import validate_ai_coach_output
 from app.services.importer import import_rows
+from app.services.metric_truth import METRIC_REGISTRY_VERSION
 
 
 def _valid_output(**overrides):
@@ -141,6 +142,8 @@ def test_invalid_provider_output_does_not_crash_and_saves_safe_fallback(db, samp
     assert "AI output rejected by validator" in report.report_markdown
     assert serialized["metadata"]["ai_validation"]["valid"] is False
     assert serialized["metadata"]["ai_validation"]["fallback_used"] is True
+    assert serialized["metadata"]["ai_coach_prompt_version"] == AI_COACH_PROMPT_VERSION
+    assert serialized["metadata"]["metric_registry_version"] == METRIC_REGISTRY_VERSION
 
 
 def test_valid_json_output_is_rendered_and_metadata_keeps_structured_output(db, sample_rows):

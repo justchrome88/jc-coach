@@ -25,10 +25,19 @@ from app.services.metric_confidence import (
     metric_confidence_map,
     metric_context,
 )
-from app.services.metric_truth import metric_truth_payload, suppressed_metrics_for_usage
+from app.services.metric_truth import (
+    METRIC_REGISTRY_VERSION,
+    metric_truth_payload,
+    suppressed_metrics_for_usage,
+)
 from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_all_recommendation_progress
 from app.services.report_generator import _serialize_recommendation_progress
+
+AI_COACH_PROMPT_VERSION = "ai-coach-prompt-v1"
+AI_COACH_PAYLOAD_SCHEMA_VERSION = "ai-coach-payload-v1"
+AI_COACH_SNAPSHOT_CONTRACT_VERSION = "ai-coach-snapshot-v1"
+AI_COACH_SNAPSHOT_GENERATED_BY = "app.services.ai_coach"
 
 
 class AIProvider(Protocol):
@@ -61,6 +70,7 @@ class CodexCliHandoffProvider:
             "provider": self.name,
             "status": "handoff_ready",
             "created_at": datetime.now(UTC).isoformat(),
+            **_ai_coach_contract_snapshot(payload),
             "prompt_path": str(prompt_path),
             "payload_path": str(payload_path),
             "result_path": str(result_path),
@@ -276,6 +286,7 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
     return {
         "product": "CS2 Personal Coach",
         "ai_role": "AI coach over structured CS2 analytics, not raw demo parser",
+        "contract_snapshot": _ai_coach_contract_snapshot(),
         "summary": summary,
         "dashboard_status": get_dashboard_status(matches, context=context),
         "aim_profile": get_aim_profile(matches, context=context),
@@ -286,6 +297,7 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
         "coach_categories": category_scorecard(structured_mistakes),
         "coach_focus": focus,
         "metric_truth": {
+            "metric_registry_version": METRIC_REGISTRY_VERSION,
             "definitions": metric_truth_payload(
                 (
                     "adr",
@@ -395,12 +407,15 @@ def _ai_report_metadata(
 ) -> dict[str, Any]:
     payload_json = json.dumps(payload_snapshot, ensure_ascii=False, sort_keys=True, default=str)
     provider = (latest_handoff or {}).get("provider") or _provider().name
+    contract_snapshot = _ai_coach_contract_snapshot(payload_snapshot)
     return {
         "type": "ai_coach",
         "status": "saved",
         "provider": provider,
         "source_ref": source_ref,
         "handoff": latest_handoff,
+        **contract_snapshot,
+        "contract_snapshot": contract_snapshot,
         "payload_hash": hashlib.sha256(payload_json.encode("utf-8")).hexdigest()[:16],
         "payload_summary": {
             "matches_count": (payload_snapshot.get("summary") or {}).get("matches_count"),
@@ -422,6 +437,22 @@ def _json_loads(value: str | None) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return loaded if isinstance(loaded, dict) else {}
+
+
+def _ai_coach_contract_snapshot(payload: dict[str, Any] | None = None) -> dict[str, str]:
+    snapshot = payload.get("contract_snapshot") if isinstance(payload, dict) else None
+    snapshot = snapshot if isinstance(snapshot, dict) else {}
+    return {
+        "ai_coach_prompt_version": str(snapshot.get("ai_coach_prompt_version") or AI_COACH_PROMPT_VERSION),
+        "ai_coach_payload_schema_version": str(
+            snapshot.get("ai_coach_payload_schema_version") or AI_COACH_PAYLOAD_SCHEMA_VERSION
+        ),
+        "metric_registry_version": str(snapshot.get("metric_registry_version") or METRIC_REGISTRY_VERSION),
+        "snapshot_generated_by": str(snapshot.get("snapshot_generated_by") or AI_COACH_SNAPSHOT_GENERATED_BY),
+        "snapshot_contract_version": str(
+            snapshot.get("snapshot_contract_version") or AI_COACH_SNAPSHOT_CONTRACT_VERSION
+        ),
+    }
 
 
 def _post_json(url: str, payload: dict[str, Any], timeout: int) -> dict[str, Any]:

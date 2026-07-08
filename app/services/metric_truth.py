@@ -8,6 +8,7 @@ MetricUsage = Literal["display", "diagnosis", "recommendation", "ai"]
 UsageDecision = Literal["allowed", "warn", "suppressed"]
 
 USAGES: tuple[MetricUsage, ...] = ("display", "diagnosis", "recommendation", "ai")
+METRIC_REGISTRY_VERSION = "metric-truth-v1"
 
 
 @dataclass(frozen=True)

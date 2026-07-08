@@ -6,16 +6,22 @@ import pytest
 
 from app.db.models import Match
 from app.services.ai_coach import (
+    AI_COACH_PAYLOAD_SCHEMA_VERSION,
+    AI_COACH_PROMPT_VERSION,
+    AI_COACH_SNAPSHOT_CONTRACT_VERSION,
+    AI_COACH_SNAPSHOT_GENERATED_BY,
     CodexCliHandoffProvider,
     LocalLLMProvider,
     ai_provider_health,
     build_ai_coach_payload,
+    build_ai_coach_prompt,
     latest_ai_coach_report,
     list_ai_coach_reports,
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
 from app.services.importer import import_rows
+from app.services.metric_truth import METRIC_REGISTRY_VERSION
 
 
 def test_build_ai_coach_payload_uses_structured_match_data(db, sample_rows):
@@ -29,6 +35,42 @@ def test_build_ai_coach_payload_uses_structured_match_data(db, sample_rows):
     assert len(payload["recent_matches"]) == 2
     assert payload["metric_confidence"]["metrics"]["grenade_rating"]["level"] == "unavailable"
     assert payload["metric_confidence"]["metrics"]["traded_deaths"]["level"] == "unavailable"
+
+
+def test_ai_coach_payload_includes_deterministic_contract_snapshot(db, sample_rows):
+    import_rows(db, sample_rows, source="test")
+
+    first = build_ai_coach_payload(db)
+    second = build_ai_coach_payload(db)
+
+    expected = {
+        "ai_coach_prompt_version": AI_COACH_PROMPT_VERSION,
+        "ai_coach_payload_schema_version": AI_COACH_PAYLOAD_SCHEMA_VERSION,
+        "metric_registry_version": METRIC_REGISTRY_VERSION,
+        "snapshot_generated_by": AI_COACH_SNAPSHOT_GENERATED_BY,
+        "snapshot_contract_version": AI_COACH_SNAPSHOT_CONTRACT_VERSION,
+    }
+    assert first["contract_snapshot"] == expected
+    assert second["contract_snapshot"] == expected
+    assert first["contract_snapshot"] == second["contract_snapshot"]
+    assert first["metric_truth"]["metric_registry_version"] == METRIC_REGISTRY_VERSION
+
+
+def test_ai_coach_prompt_carries_contract_snapshot_without_removing_caveats(db, sample_rows):
+    import_rows(db, sample_rows, source="test")
+
+    payload = build_ai_coach_payload(db)
+    prompt = build_ai_coach_prompt(payload)
+    payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
+
+    assert AI_COACH_PROMPT_VERSION in prompt
+    assert METRIC_REGISTRY_VERSION in prompt
+    assert "crosshair_placement" in payload["metric_truth"]["suppressed_for_diagnosis"]
+    assert "crosshair_placement" in payload["metric_truth"]["suppressed_for_recommendation"]
+    assert payload["metric_confidence"]["metrics"]["crosshair_placement"]["level"] == "unavailable"
+    assert "trade_kills" in payload["metric_truth"]["suppressed_for_recommendation"]
+    for unsupported_mode in ("Premier", "Competitive", "Wingman", "Casual", "Deathmatch", "FACEIT"):
+        assert unsupported_mode not in payload_json
 
 
 def test_ai_payload_uses_exact_recent_matches_and_reports_exclusions(db):
@@ -78,6 +120,11 @@ def test_codex_handoff_provider_writes_prompt_and_payload(monkeypatch, tmp_path)
 
     assert result["status"] == "handoff_ready"
     assert result["provider"] == "codex_cli_handoff"
+    assert result["ai_coach_prompt_version"] == AI_COACH_PROMPT_VERSION
+    assert result["ai_coach_payload_schema_version"] == AI_COACH_PAYLOAD_SCHEMA_VERSION
+    assert result["metric_registry_version"] == METRIC_REGISTRY_VERSION
+    assert result["snapshot_generated_by"] == AI_COACH_SNAPSHOT_GENERATED_BY
+    assert result["snapshot_contract_version"] == AI_COACH_SNAPSHOT_CONTRACT_VERSION
     assert "codex exec" in result["command"]
     assert list(tmp_path.glob("*/codex_prompt.md"))
     assert list(tmp_path.glob("*/coach_payload.json"))
@@ -97,6 +144,15 @@ def test_save_ai_coach_result_persists_ai_report(db, sample_rows):
     assert serialized["status"] == "saved"
     assert serialized["payload_hash"]
     assert serialized["payload_matches_count"] == 2
+    assert serialized["metadata"]["ai_coach_prompt_version"] == AI_COACH_PROMPT_VERSION
+    assert serialized["metadata"]["ai_coach_payload_schema_version"] == AI_COACH_PAYLOAD_SCHEMA_VERSION
+    assert serialized["metadata"]["metric_registry_version"] == METRIC_REGISTRY_VERSION
+    assert serialized["metadata"]["snapshot_generated_by"] == AI_COACH_SNAPSHOT_GENERATED_BY
+    assert serialized["metadata"]["snapshot_contract_version"] == AI_COACH_SNAPSHOT_CONTRACT_VERSION
+    assert (
+        serialized["metadata"]["contract_snapshot"]
+        == serialized["metadata"]["payload_snapshot"]["contract_snapshot"]
+    )
 
 
 def test_ai_coach_report_history_is_newest_first(db, sample_rows):
