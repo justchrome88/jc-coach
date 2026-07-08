@@ -1,0 +1,166 @@
+repo,path,bucket,proposed_action,risk,reason
+jc-coach,AGENTS.md,HOT,KEEP_HOT,LOW,Root operating contract and first source of truth after active task.
+jc-coach,docs/CURRENT_STATUS.md,HOT,KEEP_HOT,LOW,Current product and organizational state.
+jc-coach,docs/HANDOFF.md,HOT,KEEP_HOT,LOW,Compact new-session bootstrap for one-workspace operation.
+jc-coach,docs/project_management/WP_REGISTRY.md,HOT,KEEP_HOT,LOW,Canonical WP order dependencies and promotion gate registry.
+jc-coach,docs/ARCHITECTURE.md,WARM_PRODUCT,KEEP_WARM,LOW,Protected product architecture reference.
+jc-coach,docs/API_CONTRACTS.md,WARM_PRODUCT,KEEP_WARM,LOW,Task-relevant API contract reference.
+jc-coach,docs/METRICS.md,WARM_PRODUCT,KEEP_WARM,LOW,Protected metrics truth reference.
+jc-coach,docs/CS2_DOMAIN_CONTRACT.md,WARM_PRODUCT,KEEP_WARM,LOW,Protected CS2 domain boundary reference.
+jc-coach,docs/RECOMMENDATIONS.md,WARM_PRODUCT,KEEP_WARM,LOW,Protected recommendation behavior reference.
+jc-coach,docs/AI_COACH.md,WARM_PRODUCT,KEEP_WARM,LOW,Protected AI coach behavior reference.
+jc-coach,docs/AI_COACH_PROVIDER_ARCHITECTURE.md,WARM_PRODUCT,KEEP_WARM,LOW,AI provider architecture reference.
+jc-coach,docs/STEAM_IMPORT.md,WARM_PRODUCT,KEEP_WARM,LOW,Protected Steam import reference.
+jc-coach,docs/STEAM_IMPORT_ARCHITECTURE.md,WARM_PRODUCT,KEEP_WARM,LOW,Steam import architecture reference.
+jc-coach,docs/BACKUP_RESTORE.md,WARM_PRODUCT,KEEP_WARM,LOW,Backup and restore reference for storage tasks.
+jc-coach,docs/DEPLOYMENT.md,WARM_PRODUCT,KEEP_WARM,LOW,Deployment reference for explicitly authorized deploy tasks.
+jc-coach,docs/MIGRATIONS.md,WARM_PRODUCT,KEEP_WARM,LOW,Migration discipline reference for schema tasks.
+jc-coach,docs/SECURITY.md,WARM_PRODUCT,KEEP_WARM,LOW,Security reference for auth/public-readiness tasks.
+jc-coach,docs/TESTING.md,WARM_PRODUCT,KEEP_WARM,LOW,Testing and quality reference.
+jc-coach,docs/KNOWN_LIMITATIONS.md,WARM_PRODUCT,KEEP_WARM,LOW,Accepted product limitations and caveat reference.
+jc-coach,docs/DEMO_STORAGE_TZ.md,WARM_PRODUCT,KEEP_WARM,MEDIUM,Task-relevant demo storage historical spec; review before archive.
+jc-coach,docs/DEMO_DEEP_PARSER_TZ_RU.md,WARM_PRODUCT,KEEP_WARM,MEDIUM,Task-relevant parser historical spec; review before archive.
+jc-coach,docs/STEAM_MATCH_DATES_RU.md,WARM_PRODUCT,KEEP_WARM,MEDIUM,Task-relevant match date history; review before archive.
+jc-coach,docs/project_management/PROJECT_OPERATING_PROTOCOL.md,WARM_PROCESS,KEEP_WARM,LOW,Warm governance/process reference from Hot docs.
+jc-coach,docs/project_management/AGENT_WORKFLOW.md,WARM_PROCESS,KEEP_WARM,LOW,Warm repo-native agent workflow reference from Hot docs.
+jc-coach,docs/project_management/MASTER_WP_CHECKLIST.md,WARM_PROCESS,KEEP_WARM,LOW,Warm human WP checklist reference from Hot docs.
+jc-coach,docs/project_management/ACCEPTANCE_MATRIX.md,WARM_PROCESS,KEEP_WARM,LOW,Warm acceptance planning reference.
+jc-coach,docs/project_management/VERSION_ROADMAP.md,WARM_PROCESS,KEEP_WARM,LOW,Warm roadmap reference.
+jc-coach,docs/project_management/WORK_PACKAGE_BACKLOG.md,WARM_PROCESS,KEEP_WARM,LOW,Warm backlog reference.
+jc-coach,docs/project_management/DOCS_INDEX.md,WARM_PROCESS,KEEP_WARM,MEDIUM,Docs routing index; review during archive link updates.
+jc-coach,docs/project_management/DOCS_MAP.md,WARM_PROCESS,KEEP_WARM,MEDIUM,Docs map; review during archive link updates.
+jc-coach,docs/agents/roles/*,WARM_PROCESS,KEEP_WARM,LOW,Warm prompt role cards for task-relevant role invocation.
+jc-coach,docs/agents/*.md,WARM_PROCESS,KEEP_WARM,MEDIUM,Older agent guard docs; keep warm until role-card consolidation is explicitly scoped.
+jc-coach,docs/audit/WP_017K_REAL_DATA_ONBOARDING_PROMOTION_REPORT.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Latest promotion evidence; historical but important for v0.9 acceptance.
+jc-coach,docs/audit/WP_017G_POST_BATCH_DATA_INTEGRITY_ACCEPTANCE_REPORT.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Accepted warning evidence carried into v0.9.
+jc-coach,docs/audit/WP_017H_POST_BATCH_PERFORMANCE_ACCEPTANCE_REPORT.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Accepted warning evidence carried into v0.9.
+jc-coach,docs/audit/WP_017I_MATCH_MODE_CLASSIFICATION_DIAGNOSIS_REPORT.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Playlist-mode deferral source evidence.
+jc-coach,docs/audit/WP_017J_MATCH_MODE_EXPLICIT_DEFERRAL_REPORT.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Playlist-mode deferral acceptance evidence.
+jc-coach,docs/audit/WP_017S_GOVERNANCE_ENTRYPOINT_REPAIR_REPORT.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Governance entrypoint repair evidence referenced by registry.
+jc-coach,docs/audit/WP_017T_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Recent lean Hot-doc compaction evidence; keep until lean cleanup closes.
+jc-coach,docs/audit/WP_017U_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Recent process docs evidence; keep until lean cleanup closes.
+jc-coach,docs/audit/WP_017V_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Recent agent workflow evidence; keep until lean cleanup closes.
+jc-coach,docs/audit/WP_017W_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Recent task-profile evidence; keep until lean cleanup closes.
+jc-coach,docs/audit/WP_017X_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Prior legacy docs inventory evidence; keep until archive execution.
+jc-coach,docs/audit/WP_017Y_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Pointer cleanup evidence; keep until archive execution.
+jc-coach,docs/audit/WP_017Z*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Recent role and control-plane evidence; keep until lean cleanup closes.
+jc-coach,docs/audit/WP_018A_COACH_OUTPUT_QUALITY_DIAGNOSIS_REPORT.md,COLD_HISTORY,ARCHIVE_LATER,HIGH,Preserved WP-018 restart context; do not batch archive without product restart review.
+jc-coach,docs/audit/WP_018_DOCUMENTATION_GOVERNANCE_AUDIT_REPORT.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Out-of-band governance audit evidence; not planned WP-018 product work.
+jc-coach,docs/audit/WP_011*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older accepted WP evidence; read only when task-relevant.
+jc-coach,docs/audit/WP_012*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older accepted WP evidence; read only when task-relevant.
+jc-coach,docs/audit/WP_013*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older accepted WP evidence; read only when task-relevant.
+jc-coach,docs/audit/WP_014*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older import/storage WP evidence; avoid Batch 1 due import safety history.
+jc-coach,docs/audit/WP_015*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older metrics WP evidence; avoid Batch 1 due metric truth history.
+jc-coach,docs/audit/WP_016*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older recommendation WP evidence; avoid Batch 1 due recommendation acceptance history.
+jc-coach,docs/audit/WP_017A*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older v0.9 onboarding evidence; preserve until archive link review.
+jc-coach,docs/audit/WP_017B*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older v0.9 onboarding evidence; preserve until archive link review.
+jc-coach,docs/audit/WP_017C*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older v0.9 onboarding evidence; preserve until archive link review.
+jc-coach,docs/audit/WP_017D*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older v0.9 onboarding evidence; preserve until archive link review.
+jc-coach,docs/audit/WP_017E*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older v0.9 onboarding evidence; preserve until archive link review.
+jc-coach,docs/audit/WP_017F*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Older v0.9 onboarding evidence; preserve until archive link review.
+jc-coach,docs/audit/WP_017I0*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Root AGENTS creation evidence; historical after AGENTS is current.
+jc-coach,docs/audit/WP_017R*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,WP registry repair evidence; historical after registry is current.
+jc-coach,docs/audit/STAGE_*.md,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Old stabilization/Foundation reports; not active source of truth.
+jc-coach,docs/audit/FULL_PROJECT_*.md,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Old full-project audit drafts/reports; historical evidence only.
+jc-coach,docs/audit/INSTRUCTIONS_*.md,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Old instruction inventory/validation reports.
+jc-coach,docs/audit/DOCUMENT_*.md,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Old document conflict/deprecation reports superseded by Hot docs.
+jc-coach,docs/audit/BUGFIX_*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Specific historical diagnosis; preserve until link review.
+jc-coach,docs/audit/*_INVENTORY.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,May contain useful area evidence; review before archive.
+jc-coach,docs/audits/2026-07-06-agentic-readiness-audit/*,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Historical readiness audit evidence; referenced by Hot docs.
+jc-coach,docs/audits/2026-07-06-agentic-readiness-audit/evidence/*,COLD_HISTORY,ARCHIVE_LATER,LOW,Raw audit evidence; preserve with audit package.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md,WARM_PROCESS,KEEP_WARM,HIGH,Foundation risk register is referenced by Hot docs.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/00_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Recovery-plan narrative; review links before archive.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/01_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Recovery-plan narrative; review links before archive.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/02_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Recovery-plan backlog; review links before archive.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/03_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Recovery-plan triage; review links before archive.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/04_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Readiness gate history; review links before archive.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/05_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Execution plan history; review links before archive.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/06_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Roadmap pause/resume history; review links before archive.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/07_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Codex handoff history; review links before archive.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/08_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Next-action history; review links before archive.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/09_*.md,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,PM summary history; review links before archive.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/current_schema_baseline.json,DO_NOT_TOUCH,DO_NOT_TOUCH,HIGH,Schema baseline evidence; do not move in docs cleanup without schema-task scope.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/task_reports/FH-*.md,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,MEDIUM,Old Foundation Hardening task reports; preserve links/provenance during archive.
+jc-coach,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/task_reports/POST-FOUNDATION-*.md,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,MEDIUM,Old post-foundation task reports after current state summary.
+jc-coach,docs/tasks/*,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Old task prompts/TZ files superseded by current task and Hot docs.
+jc-coach,instructions/*,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Old prompts/specs/sample material; not current source of truth.
+jc-coach,docs/refactor/LEAN-DOCS-01_*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Recent lean-docs report; keep until lean cleanup series closes.
+jc-coach,docs/refactor/LEAN-DOCS-02_*.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Recent lean-docs report; keep until lean cleanup series closes.
+jc-coach,docs/refactor/LEAN_ROOT_CONTRACT_TRIAGE.md,COLD_HISTORY,ARCHIVE_LATER,LOW,Recent lean contract triage evidence.
+jc-coach,docs/archive/README.md,WARM_PROCESS,KEEP_WARM,LOW,Archive destination/index guidance.
+jc-coach,docs/README.md,WARM_PROCESS,KEEP_WARM,LOW,Docs entrypoint; review during link cleanup.
+jc-coach,docs/CHANGELOG.md,WARM_PRODUCT,KEEP_WARM,MEDIUM,Product history reference.
+jc-coach,docs/FEATURES_RU.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,May be stale product-facing doc; needs content review.
+jc-coach,docs/COMPETITOR_FEATURE_MATRIX.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,LOW,Likely historical planning; review before archive.
+jc-coach,docs/AI_RECOMMENDATIONS_AIM_EXECUTION_PLAN_RU.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,Potentially stale product plan; review before archive.
+jc-coach,docs/FEATURE_ROADMAP_SCORING.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,Potentially stale roadmap/scoring doc.
+jc-coach,docs/METRICS_ROADMAP_SCORING_RU.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,Potentially stale roadmap/scoring doc.
+jc-coach,docs/CURRENT_MILESTONE.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,HIGH,Name implies current but Hot docs may supersede it.
+jc-coach,docs/PROJECT_CONTROL.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,HIGH,Registry says it must stay aligned; review before archive.
+jc-coach,docs/PROJECT_GOVERNANCE.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,HIGH,Governance semantics may be superseded but require review.
+jc-coach,docs/PROJECT_OS.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,HIGH,Older process/control doc; review before archive.
+jc-coach,docs/ROADMAP.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,HIGH,Could conflict with VERSION_ROADMAP; review before archive.
+jc-coach,docs/VERSION_MAP.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,May be stale version metadata.
+jc-coach,docs/RELEASE_CHECKLIST.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,Release process doc; review before archive.
+jc-coach,docs/PUBLIC_DEPLOYMENT_CHECKLIST.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,HIGH,Public/friends readiness remains blocked; review carefully.
+jc-coach,docs/PRODUCT_EXECUTION_STRATEGY.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,Potentially stale planning doc.
+jc-coach,docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,HIGH,May overclaim beyond current v0.9 state.
+jc-coach,docs/NON_STOP_DEVELOPMENT_PROMPTS.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,Prompt/process mass candidate but needs content review.
+jc-coach,docs/feature_roadmap_scoring_ru.xlsx,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,Binary planning artifact; content not audited.
+jc-coach,docs/metrics_roadmap_scoring_ru.xlsx,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,Binary planning artifact; content not audited.
+jc-coach,AGENT.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,HIGH,Potential old agent instruction singular; review before archive.
+jc-coach,LATER.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,LOW,Likely backlog note; review before archive.
+jc-coach,WORKLOG.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,Work history; review before archive.
+jc-coach,README.md,WARM_PRODUCT,KEEP_WARM,MEDIUM,Product entrypoint; keep unless explicitly superseded.
+jc-coach,.gitignore,DO_NOT_TOUCH,DO_NOT_TOUCH,LOW,Repo config.
+jc-coach,.env.example,DO_NOT_TOUCH,DO_NOT_TOUCH,HIGH,Environment template; not archive material.
+jc-coach,Dockerfile,DO_NOT_TOUCH,DO_NOT_TOUCH,HIGH,Runtime/deploy config excluded from archive batch.
+jc-coach,docker-compose.yml,DO_NOT_TOUCH,DO_NOT_TOUCH,HIGH,Runtime/deploy config excluded from archive batch.
+jc-coach,pyproject.toml,DO_NOT_TOUCH,DO_NOT_TOUCH,HIGH,Package/dependency config excluded from docs cleanup.
+jc-coach,app/*,DO_NOT_TOUCH,DO_NOT_TOUCH,HIGH,Source code excluded from archive batch.
+jc-coach,tests/*,DO_NOT_TOUCH,DO_NOT_TOUCH,HIGH,Tests and fixtures excluded from archive batch.
+jc-coach,scripts/*,DO_NOT_TOUCH,DO_NOT_TOUCH,HIGH,Quality/runtime tools excluded from archive batch.
+jc-coach,tools/*,DO_NOT_TOUCH,DO_NOT_TOUCH,HIGH,Tooling and dependency files excluded from archive batch.
+jc-coach,deploy/*,DO_NOT_TOUCH,DO_NOT_TOUCH,HIGH,Service/deploy config excluded from archive batch.
+jc-coach,data/*,DO_NOT_TOUCH,DO_NOT_TOUCH,HIGH,DB/data/uploads/raw-demo area excluded from archive batch.
+jc-coach-pm,AGENTS.md,WARM_PROCESS,KEEP_WARM,MEDIUM,PM repo contract; PM repo is reference only for current product workspace.
+jc-coach-pm,PM_STATE.md,WARM_PROCESS,KEEP_WARM,MEDIUM,PM memory current-state file; do not archive from product task.
+jc-coach-pm,ACTIVE_PLAN.md,WARM_PROCESS,KEEP_WARM,MEDIUM,PM active plan; do not archive from product task.
+jc-coach-pm,memory/*,WARM_PROCESS,KEEP_WARM,MEDIUM,PM memory compacts; reference only when task explicitly needs PM memory.
+jc-coach-pm,indexes/*,WARM_PROCESS,KEEP_WARM,MEDIUM,PM context indexes; do not archive from product task.
+jc-coach-pm,docs/pm_memory/*,WARM_PROCESS,KEEP_WARM,MEDIUM,PM memory architecture/process docs.
+jc-coach-pm,config/model_policy.json,WARM_PROCESS,KEEP_WARM,MEDIUM,PM model routing policy; not product active context.
+jc-coach-pm,tools/*,WARM_PROCESS,KEEP_WARM,MEDIUM,PM tooling; do not modify from product docs cleanup.
+jc-coach-pm,archive/completed_outbox/*,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Completed task cards/outbox are historical process mass.
+jc-coach-pm,archive/superseded_task_cards/*,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Superseded task cards are safe archive candidates.
+jc-coach-pm,archive/superseded_outbox/*,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Superseded outbox is historical process mass.
+jc-coach-pm,archive/blocked_outbox/*,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,MEDIUM,Blocked outbox should be archived after confirming no active task remains.
+jc-coach-pm,archive/blocked_reports/*,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,MEDIUM,Blocked reports should be archived after confirming no active task remains.
+jc-coach-pm,archive/accepted_plans/*,COLD_HISTORY,ARCHIVE_LATER,MEDIUM,Accepted plan package already archived; keep as history unless PM cleanup is scoped.
+jc-coach-pm,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/task_cards/*,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Completed/superseded PM task cards; not active context.
+jc-coach-pm,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/task_reports/.gitkeep,DO_NOT_TOUCH,DO_NOT_TOUCH,LOW,Placeholder only.
+jc-coach-pm,docs/foundation_hardening/2026-07-06-readiness-recovery-plan/*.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,Top-level PM tracker/ledger/plan docs require content review before archive.
+jc-coach-pm,reviews/2026-07-06_*.md,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Old PM reviews from Foundation sequence.
+jc-coach-pm,reviews/2026-07-07_*.md,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Old PM reviews and process reports.
+jc-coach-pm,reviews/2026-07-08_FH-*.md,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Old Foundation review batches.
+jc-coach-pm,reviews/2026-07-08_POST-FOUNDATION-*.md,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,MEDIUM,Old post-foundation PM reviews after current-state summary.
+jc-coach-pm,reviews/*CHECKPOINT*.md,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,MEDIUM,Stale checkpoint docs; archive after confirming no active blocker.
+jc-coach-pm,runtime_snapshots/*,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Runtime snapshots are historical process artifacts.
+jc-coach-pm,summaries/tasks/*,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Duplicate task summaries after current compacts/indexes.
+jc-coach-pm,prompts/*,ARCHIVE_CANDIDATE,ARCHIVE_BATCH_1,LOW,Old PM/Executor launch prompts; no longer active per one-workspace convention.
+jc-coach-pm,sync/*,COLD_HISTORY,ARCHIVE_LATER,LOW,PM sync history; not active product context.
+jc-coach-pm,templates/*,WARM_PROCESS,KEEP_WARM,LOW,Reusable PM templates; not active product context.
+jc-coach-pm,checklists/*,WARM_PROCESS,KEEP_WARM,LOW,PM checklists; reference only when PM task needs them.
+jc-coach-pm,backlog/*,WARM_PROCESS,KEEP_WARM,LOW,PM idea backlog; not product active context.
+jc-coach-pm,logs/*,ARCHIVE_CANDIDATE,ARCHIVE_LATER,LOW,PM logs and token usage evidence; archive later unless PM cleanup scoped.
+jc-coach-pm,indexes/token_usage/*,ARCHIVE_CANDIDATE,ARCHIVE_LATER,LOW,Token usage history; archive later unless PM cleanup scoped.
+jc-coach-pm,README.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,PM repo entrypoint; review before changing.
+jc-coach-pm,COMMANDS.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,PM command reference; review before archive.
+jc-coach-pm,USAGE.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,PM usage reference; review before archive.
+jc-coach-pm,TASK_LOG.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,PM task log may duplicate summaries but needs review.
+jc-coach-pm,PM_DECISIONS_LOG.md,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,PM decisions log may be historical but needs review.
+jc-coach-pm,JC_Coach_PM_Repository_Workflow_Guide.docx,UNKNOWN_REVIEW,REVIEW_MANUALLY,MEDIUM,Binary workflow doc; content not audited.
+jc-coach-pm,inbox/.gitkeep,DO_NOT_TOUCH,DO_NOT_TOUCH,LOW,Placeholder only.
+jc-coach-pm,outbox/.gitkeep,DO_NOT_TOUCH,DO_NOT_TOUCH,LOW,Placeholder only.
+jc-coach-pm,exports/.gitkeep,DO_NOT_TOUCH,DO_NOT_TOUCH,LOW,Placeholder only.
+jc-coach-pm,archive/.gitkeep,DO_NOT_TOUCH,DO_NOT_TOUCH,LOW,Placeholder only.
