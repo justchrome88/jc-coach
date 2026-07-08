@@ -150,7 +150,7 @@
 - 2026-07-01: исправлен runtime rollout:
   - после изменения templates/context сервис был перезапущен;
   - live-smoke с authenticated session показал 200 для `/dashboard`, `/stats`, `/coach`, `/matches`, `/settings/imports`, `/settings/storage`, `/upload`, `/report`;
-  - правило restart + authenticated live-smoke добавлено в `instructions/03_CODEX_AGENT_RULES.md`.
+  - правило restart + authenticated live-smoke добавлено в archived historical evidence `docs/archive/lean-docs-2026-07-09/from-root/instructions/03_CODEX_AGENT_RULES.md`.
 
 ## Что нужно от пользователя
 

@@ -68,7 +68,7 @@ project state.
 - `docs/agents/`: guardian role docs and required checks by ownership domain.
 - `docs/project_management/`: roadmap, WP backlog, acceptance matrix, docs map and human navigation.
 - `docs/audit/`: stage/WP evidence, inventories, reviews, incident diagnoses and deprecation/conflict reports.
-- `docs/tasks/`: historical task prompts and stage specs; useful evidence, not the active roadmap.
+- `docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/`: archived historical task prompts and stage specs; useful evidence, not the active roadmap.
 - `docs/archive/`: archived/supporting material.
 
 ## Historical / Supporting Docs

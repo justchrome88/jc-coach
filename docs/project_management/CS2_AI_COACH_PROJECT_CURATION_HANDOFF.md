@@ -151,7 +151,7 @@ docs/audit/FULL_PROJECT_AUDIT_NEXT_TZ_DRAFT.md
 docs/audit/STAGE_1_SECURITY_P0_REVIEW.md
 ```
 
-Старые `instructions/*`, roadmap scoring, competitor matrix, old prompts — historical/supporting only. Они не являются текущим планом.
+Старые archived instruction artifacts, roadmap scoring, competitor matrix, old prompts — historical/supporting only. Они не являются текущим планом.
 
 ---
 

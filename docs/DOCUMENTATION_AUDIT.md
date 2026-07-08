@@ -18,7 +18,7 @@ This file is the summary audit. Detailed audit artifacts now live in:
 3. `WORKLOG.md` - chronological implementation journal; factual history, not current-state contract.
 4. Current supporting docs in `docs/` - architecture/spec/roadmap references under `PROJECT_CONTROL`.
 5. `docs/audit/*` - point-in-time audits; useful evidence, not automatically current after later work.
-6. `instructions/*` - historical prompts/TZ/agent notes unless explicitly reactivated.
+6. `docs/archive/lean-docs-2026-07-09/from-root/instructions/*` - archived historical prompts/TZ/agent notes unless explicitly reactivated.
 
 ## Inventory
 
@@ -42,20 +42,20 @@ This file is the summary audit. Detailed audit artifacts now live in:
 | `docs/COMPETITOR_FEATURE_MATRIX.md` | Competitor reference | Mark historical because implementation statuses are stale. |
 | `docs/NON_STOP_DEVELOPMENT_PROMPTS.md` | Prompt library | Mark historical; some instructions conflict with current no-code/no-jobs tasks. |
 | `docs/PUBLIC_DEPLOYMENT_CHECKLIST.md` | Deployment checklist | Keep as operational reference; security readiness still governed by control doc. |
-| `instructions/00_PROJECT_BRIEF.md` | Original brief | Mark historical. |
-| `instructions/01_OVERNIGHT_MVP_TASK.md` | Original MVP task | Mark historical. |
-| `instructions/02_FULL_PERSONAL_PRODUCT_TZ.md` | Original full TZ | Mark historical. |
-| `instructions/03_CODEX_AGENT_RULES.md` | Agent rules | Update to read `PROJECT_CONTROL` first and treat older instructions as historical. |
-| `instructions/04_DATA_AND_METRICS_SPEC.md` | Original metric wish-list/spec | Mark historical until replaced by runtime metric spec. |
-| `instructions/05_AI_COACH_PROMPT.md` | Prompt reference | Mark historical; runtime prompt lives in code. |
-| `instructions/06_STEAM_AND_DEMO_IMPORT_NOTES.md` | Early Steam notes | Mark historical; superseded by Steam architecture docs. |
-| `instructions/07_ROADMAP.md` | Early roadmap | Mark historical; superseded by control/backlog. |
-| `instructions/08_TASKS_FOR_GPT55_AND_SPARK.md` | Agent division notes | Mark historical. |
-| `instructions/09_READY_TO_PASTE_COMMANDS.md` | Old prompt commands | Mark historical. |
-| `instructions/10_MINIMAL_SAMPLE_DATA.csv` | Sample data | Keep. |
-| `instructions/11_REWRITTEN_USER_REQUEST_FOR_OTHER_CHAT.md` | Chat handoff prompt | Mark historical. |
-| `instructions/12_COACH_RECOMMENDATION_TRACKING_TZ.md` | Recommendation tracking TZ | Mark historical reference; runtime behavior is in current code/control doc. |
-| `instructions/1.txt` | Empty/placeholder-like artifact | Mark as deprecation candidate after owner confirmation. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/00_PROJECT_BRIEF.md` | Original brief | Mark historical. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/01_OVERNIGHT_MVP_TASK.md` | Original MVP task | Mark historical. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/02_FULL_PERSONAL_PRODUCT_TZ.md` | Original full TZ | Mark historical. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/03_CODEX_AGENT_RULES.md` | Agent rules | Update to read `PROJECT_CONTROL` first and treat older instructions as historical. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/04_DATA_AND_METRICS_SPEC.md` | Original metric wish-list/spec | Mark historical until replaced by runtime metric spec. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/05_AI_COACH_PROMPT.md` | Prompt reference | Mark historical; runtime prompt lives in code. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/06_STEAM_AND_DEMO_IMPORT_NOTES.md` | Early Steam notes | Mark historical; superseded by Steam architecture docs. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/07_ROADMAP.md` | Early roadmap | Mark historical; superseded by control/backlog. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/08_TASKS_FOR_GPT55_AND_SPARK.md` | Agent division notes | Mark historical. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/09_READY_TO_PASTE_COMMANDS.md` | Old prompt commands | Mark historical. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/10_MINIMAL_SAMPLE_DATA.csv` | Sample data | Keep as archived historical evidence. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/11_REWRITTEN_USER_REQUEST_FOR_OTHER_CHAT.md` | Chat handoff prompt | Mark historical. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/12_COACH_RECOMMENDATION_TRACKING_TZ.md` | Recommendation tracking TZ | Mark historical reference; runtime behavior is in current code/control doc. |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/1.txt` | Empty/placeholder-like artifact | Archived historical evidence. |
 
 ## Conflict Audit
 
@@ -70,8 +70,8 @@ This file is the summary audit. Detailed audit artifacts now live in:
 | Recommendation lifecycle not implemented | older prompt/roadmap docs | Lifecycle actions exist; planner/problem linkage is the remaining gap. |
 | Aim stats very partial | older scoring/plan docs | Aim profile exists, but advanced aim metrics remain data gaps. |
 | Raw demo deletion target may read as near-term | storage docs/plans | Delete policy is explicitly off until parsed payload verification is implemented. |
-| Agent rules say inspect all root `.md` files only | `instructions/03_CODEX_AGENT_RULES.md` | Agents must read `docs/PROJECT_CONTROL.md`, README, WORKLOG and relevant docs/instructions for the task. |
-| Prompt libraries require commit/push/test/jobs | `docs/NON_STOP_DEVELOPMENT_PROMPTS.md`, `instructions/09_READY_TO_PASTE_COMMANDS.md` | Those are historical prompts. Current user instructions override them; do not run jobs or commit/push unless asked. |
+| Agent rules say inspect all root `.md` files only | `docs/archive/lean-docs-2026-07-09/from-root/instructions/03_CODEX_AGENT_RULES.md` | Agents must read `docs/PROJECT_CONTROL.md`, README, WORKLOG and relevant docs/instructions for the task. |
+| Prompt libraries require commit/push/test/jobs | `docs/NON_STOP_DEVELOPMENT_PROMPTS.md`, `docs/archive/lean-docs-2026-07-09/from-root/instructions/09_READY_TO_PASTE_COMMANDS.md` | Those are historical prompts. Current user instructions override them; do not run jobs or commit/push unless asked. |
 
 ## Deprecation Plan
 
@@ -79,7 +79,7 @@ No historical documents were deleted in this consolidation.
 
 1. Add historical/deprecated notices to stale plans, original TZs and prompt libraries.
 2. Keep all historical files for at least one review cycle while `PROJECT_CONTROL` proves sufficient.
-3. In a later docs-only cleanup, either move stale `instructions/*` and old prompt docs under an archive folder or remove them with explicit owner approval.
+3. Later docs-only cleanup moved stale instruction artifacts under `docs/archive/lean-docs-2026-07-09/from-root/` as archived historical evidence.
 4. Before deleting any document, verify that unique current information has been migrated into `PROJECT_CONTROL` or a supporting doc.
 5. Keep `WORKLOG.md` and dated audit files permanently unless the project adopts a formal changelog/archive policy.
 

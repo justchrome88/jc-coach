@@ -20,9 +20,9 @@ Per-task Hot context:
 New-session Hot context additionally includes `docs/HANDOFF.md`.
 
 Warm context is task-domain specific. Cold context includes old audit reports,
-stage reports, old prompts, `docs/tasks/*`, `instructions/*`, old
-roadmap/version docs and generated data reports. Cold context is evidence and
-must not override Hot context.
+stage reports, old prompts, archived historical task prompts, archived
+historical instruction artifacts, old roadmap/version docs and generated data
+reports. Cold context is evidence and must not override Hot context.
 
 `docs/project_management/PROJECT_OPERATING_PROTOCOL.md` and
 `docs/project_management/MASTER_WP_CHECKLIST.md` are not per-task Hot context.
@@ -137,10 +137,10 @@ context.
 
 | Pattern / Document | Role | Guardian | WP links | Status |
 |---|---|---|---|---|
-| `docs/tasks/STABILIZATION_STAGE_0_*` through `docs/tasks/STABILIZATION_STAGE_9_*` | Historical stage task prompts. | corresponding guardian + `PM_ORCHESTRATOR` | stages 0-9 | archive candidate/source evidence for what was asked; not active workflow |
-| `docs/tasks/FULL_PROJECT_AUDIT_AFTER_DOCS_TASK.md` | Earlier audit task. | `PM_ORCHESTRATOR` | docs cleanup | archive candidate/supporting historical evidence |
-| `docs/tasks/INSTRUCTIONS_CONSOLIDATION_TASK.md` | Earlier consolidation task. | `PM_ORCHESTRATOR` | docs cleanup | archive candidate/supporting historical evidence |
-| `instructions/*` | Original prompts/specs/sample artifacts. | `PM_ORCHESTRATOR` | historical | archive candidate/supporting historical evidence; not active workflow |
+| `docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/STABILIZATION_STAGE_0_*` through `docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/STABILIZATION_STAGE_9_*` | Historical stage task prompts. | corresponding guardian + `PM_ORCHESTRATOR` | stages 0-9 | archived source evidence for what was asked; not active workflow |
+| `docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/FULL_PROJECT_AUDIT_AFTER_DOCS_TASK.md` | Earlier audit task. | `PM_ORCHESTRATOR` | docs cleanup | archived supporting historical evidence |
+| `docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/INSTRUCTIONS_CONSOLIDATION_TASK.md` | Earlier consolidation task. | `PM_ORCHESTRATOR` | docs cleanup | archived supporting historical evidence |
+| `docs/archive/lean-docs-2026-07-09/from-root/instructions/*` | Original prompts/specs/sample artifacts. | `PM_ORCHESTRATOR` | historical | archived supporting historical evidence; not active workflow |
 
 ## Archive
 

@@ -101,7 +101,7 @@ docs/audit/STAGE_2_OWNERSHIP_REVIEW.md
 ```text
 docs/audit/STAGE_N_*_IMPLEMENTATION_REPORT.md
 docs/audit/STAGE_N_*_REVIEW.md
-docs/tasks/STABILIZATION_STAGE_N_*_TZ_CS2_AI_COACH.md
+docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/STABILIZATION_STAGE_N_*_TZ_CS2_AI_COACH.md
 ```
 
 ---
@@ -152,8 +152,8 @@ sha256sum data/cs2_coach.db
 ```text
 Начни Stage <N>: <NAME>.
 
-Главный файл задания:
-docs/tasks/STABILIZATION_STAGE_<N>_<NAME>_TZ_CS2_AI_COACH.md
+Главный архивный исторический файл задания:
+docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/STABILIZATION_STAGE_<N>_<NAME>_TZ_CS2_AI_COACH.md
 
 Перед работой обязательно прочитай:
 - AGENT.md
@@ -958,8 +958,8 @@ Current repo status:
 <paste git status --short>
 <paste latest relevant stage review>
 
-Create a markdown task file:
-docs/tasks/STABILIZATION_STAGE_<N>_<NAME>_TZ_CS2_AI_COACH.md
+Historical archived stage task examples live under:
+docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/STABILIZATION_STAGE_<N>_<NAME>_TZ_CS2_AI_COACH.md
 
 It must include:
 - status before stage

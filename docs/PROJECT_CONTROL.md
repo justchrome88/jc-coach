@@ -174,7 +174,7 @@ Governance gate:
 - If a planned WP is skipped, it must be marked `deferred` or `superseded` in the registry with the reason.
 - `v0.9` promotion may proceed only through WP-017K. WP-017I is complete and WP-017J accepted explicit deferral with documented limitation: Match playlist mode is not accepted as exact in v0.9. Current persisted data distinguishes parser/import provenance (`demo`) and generic Valve share-code provenance (`Valve Matchmaking`), but it does not reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom modes. No playlist-specific claims, filters or recommendations are accepted in v0.9 unless future WPs capture reliable mode metadata.
 
-Older `instructions/*`, roadmap, prompt and audit files are historical/supporting unless explicitly reactivated here.
+Archived historical instruction artifacts, older roadmap, prompt and audit files are historical/supporting unless explicitly reactivated here.
 
 ## 7. Definition Of Done
 
@@ -337,6 +337,6 @@ Use these files as supporting docs under this control file:
 - Update this file when supporting governance/product-control context changes.
 - README should stay an operator/user entrypoint and link to Hot context and docs navigation for current truth, not duplicate all strategy.
 - `WORKLOG.md` records chronological engineering actions; it is not a current-state contract.
-- `instructions/*` are historical prompt/TZ artifacts unless explicitly reactivated in this file.
+- Archived instruction prompt/TZ artifacts are historical unless explicitly reactivated in this file.
 - Roadmap/scoring docs can rank ideas, but their percentages are subordinate to current Hot context and task-relevant canonical Warm docs.
 - Any old document that contradicts current Hot context should receive a historical/deprecated notice, not be deleted immediately.

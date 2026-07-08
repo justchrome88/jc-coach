@@ -38,9 +38,10 @@ contract reference, including the control-plane protection policy.
 `docs/agents/roles/*` are Warm role definitions. These files are not per-task
 Hot context.
 
-Cold context includes old audit reports, stage reports, old prompts,
-`docs/tasks/*`, `instructions/*`, old roadmap/version docs and generated data
-reports. Cold files are evidence/history and must not override Hot context.
+Cold context includes old audit reports, stage reports, old prompts, archived
+historical task prompts, archived historical instruction artifacts, old
+roadmap/version docs and generated data reports. Cold files are
+evidence/history and must not override Hot context.
 
 ## Project OS / Control
 
@@ -149,10 +150,10 @@ reports. Cold files are evidence/history and must not override Hot context.
 
 ## Task Specs
 
-- `docs/tasks/STABILIZATION_STAGE_0_TZ_CS2_AI_COACH.md` through `docs/tasks/STABILIZATION_STAGE_9_COACH_FIRST_UI_TZ_CS2_AI_COACH.md` - historical/archive-candidate stage task specs; not active workflow.
-- `docs/tasks/FULL_PROJECT_AUDIT_AFTER_DOCS_TASK.md` - historical/archive-candidate earlier audit task.
-- `docs/tasks/INSTRUCTIONS_CONSOLIDATION_TASK.md` - historical/archive-candidate earlier docs consolidation task.
-- `instructions/*` - historical/archive-candidate original prompts/specs; not active workflow or current source of truth.
+- `docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/STABILIZATION_STAGE_0_TZ_CS2_AI_COACH.md` through `docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/STABILIZATION_STAGE_9_COACH_FIRST_UI_TZ_CS2_AI_COACH.md` - archived historical stage task specs; not active workflow.
+- `docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/FULL_PROJECT_AUDIT_AFTER_DOCS_TASK.md` - archived historical earlier audit task.
+- `docs/archive/lean-docs-2026-07-09/from-root/docs/tasks/INSTRUCTIONS_CONSOLIDATION_TASK.md` - archived historical earlier docs consolidation task.
+- `docs/archive/lean-docs-2026-07-09/from-root/instructions/*` - archived historical original prompts/specs; not active workflow or current source of truth.
 
 ## Historical / Supporting
 
