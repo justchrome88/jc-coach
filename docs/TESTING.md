@@ -48,6 +48,12 @@ subcommand fails. The focused fixture checks are intentionally named in the gate
 output so AI/recommendation/final-readiness review cannot miss them by relying
 only on inferred full-suite coverage.
 
+Each local gate subcommand logs a timestamped start and end marker, emits a
+heartbeat for long-running steps, and has a per-step timeout. A timed-out
+subcommand fails the gate; timeout handling is diagnostic only and does not skip
+or weaken semantic eval fixtures, golden metric fixtures, full safe pytest,
+Ruff, `git diff --check` or project-gate checks.
+
 This local CI-equivalent gate is not hosted CI. It does not add provider
 configuration, `.github` workflow files, secrets, external accounts, package
 installation or branch protection. Hosted CI remains a separate future policy
