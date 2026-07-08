@@ -8,6 +8,11 @@ This backlog accounts for every P0/P1 row in `01_AUDIT_MATRIX.csv`. Closely
 duplicated schema rows are grouped only where they describe the same execution
 unit. Every task remains separately executable by Codex Execution.
 
+Status note: this file preserves the original P0/P1 task definitions and
+acceptance intent. Current reconciled risk statuses after H1, FH-124R-01 and
+FH-125A-01 are tracked in `RISK_REGISTER.md`; this backlog is not the live
+status register and does not claim final readiness.
+
 ## P0 Tasks
 
 ### FH-P0-001 - Create Migration Baseline And Schema Gate
@@ -153,4 +158,3 @@ unit. Every task remains separately executable by Codex Execution.
 - AR-095 is implemented as FH-P1-031.
 - AR-097 is implemented as FH-P1-032.
 - AR-098 is implemented as FH-P1-033.
-

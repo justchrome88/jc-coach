@@ -34,6 +34,27 @@ Gate FAIL if any item is true:
 Evidence basis: audit `00_EXECUTIVE_SUMMARY.md`, "Do Not Touch Until Fixed Or
 Explicitly Scoped"; audit `08_CRITICAL_GAPS.md`; root `AGENTS.md`.
 
+## Current H1 Recovery State
+
+H1 produced a valid failed final-readiness gate result on 2026-07-08. That
+failure remains current failed-gate history until H1 is rerun and accepted.
+
+FH-124R-01 recovered the current test path by proving that the verbose full
+suite, original H1 full-suite command and local quality gate pass in bounded
+diagnostics. That recovery evidence supports a future H1 rerun; it does not
+retroactively make H1 or this readiness gate `PASS`.
+
+FH-125A-01 reconciles P0/P1 risk-register state for rerun readiness. The
+no-engine migration scaffold is an explicit visible limitation: no Alembic or
+equivalent production migration engine is adopted, production migration
+capability is not claimed and schema-changing product work remains blocked
+unless separately authorized.
+
+After FH-125A-01 is accepted, H1 may be rerun by a future explicitly scoped
+task. H2 remains blocked until a rerun H1/final gate path is accepted and H2 is
+separately authorized. `WL-FH-000-036` remains open, and
+`READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`.
+
 ## Required Docs
 
 Gate PASS requires all:
