@@ -25,6 +25,79 @@ comparison semantics are defined in `docs/METRICS.md`. AI coach output must not
 turn mixed, missing, low-sample, low-trust or suppressed metrics into hard
 diagnosis or recommendations.
 
+## AI Coach Contract
+
+The accepted generic AI coach archetype is an evidence-bound analyst and
+wording assistant. It may summarize verified facts, explain caveats, propose
+questions for review and format coach output. It is not an authority over the
+metric registry, recommendation planner, parser, source-trust policy or CS2
+domain boundaries.
+
+Accepted AI coach advice must obey this chain:
+
+```text
+problem -> metric -> match -> recommendation
+```
+
+Every confident diagnosis or recommendation must be traceable through that
+chain:
+
+- `problem`: the verified weakness or opportunity being discussed.
+- `metric`: accepted metric ids and Metric Truth usage decisions behind the
+  claim.
+- `match`: match ids, windows or aggregate sample coverage behind the metric.
+- `recommendation`: the active or proposed recommendation that follows from
+  the evidence.
+
+If any link is missing, weak, suppressed, unavailable, low-sample or only
+approximate, AI output must either avoid hard advice or label the advice as
+low-confidence context. It must not fill missing links with inference.
+
+## Advice Confidence Contract
+
+Advice confidence is the minimum supported confidence across metric
+reliability, source trust, sample size, aggregation/window quality and CS2
+domain availability. AI output may not upgrade the weakest link in the evidence
+chain.
+
+| Confidence | Allowed meaning | Required behavior |
+|---|---|---|
+| `high` | All supporting facts are accepted for the claim, sample thresholds pass and no material caveat changes the advice. | May use direct action wording, but still cite evidence. |
+| `medium` | Core evidence is usable, but a limitation such as parser/source coverage, mixed sources or moderate sample size affects certainty. | Use bounded action wording and visible caveats. |
+| `low` | Evidence is weak, approximate, sparse, source-limited or exploratory. | Use review/context wording only; do not present as hard advice or success/failure. |
+
+Progress wording must stay calibrated:
+
+- strong wording such as "you improved", "this is working" or "the main issue
+  is" requires accepted samples, compatible windows and hard-usable metrics;
+- small-sample or mixed-source evidence should say "early signal",
+  "limited evidence", "possible pattern" or "needs more matches";
+- weak metrics may describe context but must not produce hard progress,
+  failure or priority claims.
+
+Unsupported hard advice from weak metrics is blocked. This includes hard
+advice from `warn`, `low`, `suppressed` or `unavailable` metrics; unavailable
+economy, positioning or clutch models; display-only side metrics; weak trade
+semantics; exact playlist/mode assumptions; and samples below the thresholds
+defined in `docs/METRICS.md`.
+
+## Versioning And Snapshot Contract
+
+Any AI coach payload, prompt or persisted AI result used for accepted confident
+advice must identify the contract versions that shaped it:
+
+- `prompt_version`: the prompt/instruction contract used to ask for output.
+- `payload_version`: the payload schema/field contract supplied to AI.
+- `metric_registry_version`: the Metric Truth registry version or snapshot
+  identifier used to classify included and suppressed metrics.
+
+The versioned snapshot plan is contract-level only in this task. A future
+implementation task may store or generate prompt-payload snapshots, but this
+document does not create runtime snapshots, schema changes or files. A future
+snapshot should preserve enough evidence to review the advice later: included
+metric definitions, suppressed/unavailable metric ids, source-trust caveats,
+sample/window metadata, evidence links and the prompt/payload versions.
+
 ## Rules
 
 - AI consumes structured facts; it does not parse demos.
@@ -39,6 +112,11 @@ diagnosis or recommendations.
   `docs/METRICS.md`: insufficient samples, incompatible source mixes, missing
   values and approximate date sources require caveats or suppression.
 - AI output must follow the Stage 8 schema: `summary`, `diagnoses[]`, `recommendations[]`, `warnings[]`, `evidence[]`, `confidence`.
+- Accepted confident advice must preserve the evidence chain
+  `problem -> metric -> match -> recommendation`.
+- `prompt_version`, `payload_version` and the metric-registry snapshot/version
+  must be present before future AI advice can be treated as accepted
+  versioned evidence.
 - Unknown metric ids are rejected.
 - Suppressed or unavailable metrics cannot support diagnosis/recommendation claims.
 - Approximate/warn metrics require explicit `caveats`.
@@ -75,12 +153,18 @@ Free-form Markdown is no longer accepted as confident coach advice. It is stored
 
 ## Gaps
 
-- Prompt and payload version tracking must be explicit.
+- Prompt and payload version tracking is documented as a contract above, but
+  runtime generation/persistence is still future work.
+- Versioned metric-registry and prompt-payload snapshots are documented as a
+  contract plan only; no runtime snapshots have been generated by this docs
+  task.
 - Provider-specific structured response enforcement is still shallow; current prompt asks for JSON, and validator rejects invalid output after generation/paste.
 - Validation metadata is stored inside existing `coach_reports.report_json`; there is no separate structured AI output table.
 
 ## Next Work
 
-- Prompt and payload version tracking.
+- Runtime prompt and payload version tracking.
+- Runtime metric-registry / prompt-payload snapshot generation and persistence,
+  after explicit scoped implementation approval.
 - Richer provider-specific structured response mode.
 - Recommendation planner integration after verified problem snapshots exist.

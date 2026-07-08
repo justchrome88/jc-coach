@@ -1,6 +1,6 @@
 # Recommendations
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-08.
 
 ## Current Truth
 
@@ -22,12 +22,67 @@ The remaining product gap is planning. The system must choose one primary active
 verified problem -> evidence -> primary recommendation -> next matches -> evaluation -> progress/change
 ```
 
+## Primary Focus And Evidence Contract
+
+The accepted focus rule is one primary active recommendation at a time. The
+primary recommendation must come from the top verified problem snapshot that
+has hard-usable evidence under `docs/METRICS.md` and accepted CS2 domain
+boundaries under `docs/CS2_DOMAIN_CONTRACT.md`.
+
+Secondary goals may exist only as supporting context for the primary focus.
+They must not compete with the primary recommendation, create separate hard
+progress claims or dilute the evaluation window unless a future planner task
+explicitly accepts that behavior.
+
+Every primary recommendation and every hard evaluation must preserve the
+evidence link model:
+
+```text
+problem -> metric -> match -> recommendation
+```
+
+Required evidence fields at contract level:
+
+- problem id or problem label;
+- metric ids and Metric Truth usage decisions;
+- match ids, aggregate windows or sample counts behind the metrics;
+- recommendation id and active evaluation window;
+- `metric_confidence` for recommendation/evaluation evidence where applicable;
+- caveats for weak, approximate, mixed-source, missing or low-sample evidence.
+
+`metric_confidence` remains mandatory anywhere recommendation creation,
+evaluation or AI coach advice uses metric evidence for a hard claim. Missing
+`metric_confidence` means the evidence can be displayed as context only and
+must not create a hard success, failure, priority or progress claim.
+
+## Progress And Weak-Evidence Wording
+
+Progress language must match evidence strength:
+
+- hard progress wording requires accepted metrics, `metric_confidence`,
+  compatible windows and enough samples;
+- weak or small-sample evidence may say "early signal", "limited evidence",
+  "possible pattern" or "not enough matches yet";
+- warning-only metrics may explain context but must not be the sole reason for
+  extending, completing, failing or replacing a recommendation;
+- unavailable or suppressed metrics must not appear as recommendation evidence.
+
+Unsupported hard advice from weak metrics is blocked. Trade, side, economy,
+positioning, clutch, exact playlist/mode and other unavailable or display-only
+concepts cannot drive recommendation priority or evaluation until future
+parser/source/domain work explicitly upgrades them.
+
 ## Rules
 
 - Do not create a primary recommendation from unreliable metrics.
 - Do not use `low` or `unavailable` metrics for hard recommendation decisions.
 - Use `approximate` metrics only with warning semantics unless a later parser-confidence stage upgrades them.
 - AI-generated recommendation output must pass validator checks before it is accepted as confident coach advice.
+- Keep exactly one primary active focus unless a future accepted planner task
+  changes the focus model.
+- Require `metric_confidence` for hard recommendation and evaluation evidence.
+- Preserve evidence links from problem to metric to match/window to
+  recommendation.
 - Keep secondary category goals only when they support the main focus.
 - Preserve the baseline used to create a goal.
 - Separate read-only recommendation summaries from write/evaluation side effects.
@@ -40,5 +95,5 @@ verified problem -> evidence -> primary recommendation -> next matches -> evalua
 - Diagnosis registry.
 - Top verified problem selection.
 - Planner that creates one primary recommendation with evidence and confidence.
-- Evidence links from recommendation to matches/metrics/problems.
+- Runtime evidence links from recommendation to matches/metrics/problems.
 - Planner integration with Metric Truth Layer.

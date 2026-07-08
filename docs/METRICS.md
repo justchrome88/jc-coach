@@ -68,6 +68,26 @@ Usage decision:
 - Side split metrics must not drive diagnosis/recommendation until parser confidence improves.
 - Match date truth follows the same confidence rule: exact match date for primary Steam import means Steam GC `match_time` / `steam_gc_match_time`. Demo header or file modified time must not be treated as exact for Steam import freshness, diagnosis windows or UI claims.
 
+## Metric Confidence Evidence Contract
+
+`metric_confidence` is mandatory when a metric is used as recommendation,
+evaluation or AI coach evidence for a hard claim. It must reflect the combined
+confidence of Metric Truth reliability, source trust, sample size, aggregation
+quality, date/window quality and CS2 domain availability.
+
+Contract meanings:
+
+| `metric_confidence` | Meaning | Hard-advice behavior |
+|---|---|---|
+| `high` | Metric and source are accepted for the claim, samples/windows pass and no material domain caveat weakens the result. | May support hard diagnosis, recommendation or progress when all other evidence links exist. |
+| `medium` | Metric is usable but source coverage, parser coverage, mixed-source aggregation or sample size requires a caveat. | May support bounded advice with visible caveats; should not be the sole basis for strong progress wording. |
+| `low` | Metric is approximate, sparse, source-limited, display-only or otherwise weak for the claim. | Context only; blocked from hard diagnosis, recommendation, evaluation success/failure or confident AI advice. |
+| `unavailable` | Metric/model/source is unavailable or suppressed for the claim. | Suppressed from hard advice and evidence arrays. |
+
+Missing `metric_confidence` is equivalent to insufficient evidence for hard
+advice. It may be shown as context only if the surrounding surface makes the
+limitation visible.
+
 ## Source Trust And Aggregation Policy
 
 This section is the accepted docs/design policy for mixed metric sources. It
