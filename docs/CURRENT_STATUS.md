@@ -15,17 +15,20 @@ Last updated: 2026-07-09.
   the same product workspace unless a future explicit task asks for separate
   windows. They are not mandatory separate Codex sessions.
 - Product version: `v0.9`.
-- Current lane: Foundation Hardening is closed pending post-foundation audit
-  after the 2026-07-06 agentic-readiness audit recovery sequence.
-- Required next lane: `POST_FOUNDATION_AUDIT_AND_STABILIZATION`.
+- Current lane: scoped WP-018 restart preparation after
+  `POST_FOUNDATION_AUDIT_AND_STABILIZATION` produced `PASS_WITH_WARNINGS`.
+- Post-foundation audit/stabilization result:
+  `POST-FOUNDATION-01_DEFECT_WARNING_AUDIT_AND_STABILIZATION_PLAN` produced
+  `PASS_WITH_WARNINGS`; no broad product/runtime remediation is required before
+  a narrow WP-018 restart.
 - Current active WP: none; latest completed product WP is `WP-017K Real Data
   Onboarding Promotion to v0.9`.
-- Next unrestricted product WP: `WP-018 Coach Quality Calibration`, paused
-  pending post-foundation audit and stabilization. Do not restart WP-018 from
-  foundation closure alone.
-- Allowed interim WP-018 work is limited to narrow evidence, caveat,
-  calibration, docs or tests work that improves readiness and does not add
-  unsupported coach/domain claims.
+- Next product lane: `WP-018 Coach Quality Calibration`, restart-authorized
+  only for narrow AI coach quality, calibration and output-quality scope. This
+  is not authorization for broad WP-018 expansion or major CS2 product work.
+- Allowed WP-018 work is limited to narrow evidence, caveat, calibration,
+  output-quality, docs or tests work that improves coach quality and does not
+  add unsupported coach/domain claims.
 - Promotion status: `v0.9` is promoted with warnings by WP-017K. Warnings and limitations must carry forward into WP-018.
 - Latest known production DB SHA: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33` from read-only project-gate evidence. Re-check before any WP that depends on current DB state.
 
@@ -50,8 +53,9 @@ Last updated: 2026-07-09.
   handoff state, not as product-development authorization.
 - Docs-only roadmap edits, H1 PASS evidence and H2 closure do not set
   `READY_FOR_MAJOR_CS2_FEATURE_WORK` to `YES`.
-- After H2, the next appropriate task must run a post-foundation defect/warning
-  audit and stabilization pass before any WP-018 restart task card is created.
+- POST-FOUNDATION-01 completed the post-foundation defect/warning audit and
+  stabilization pass with `PASS_WITH_WARNINGS`; PF-STAB-01 scope-locks the
+  narrow WP-018 restart path.
 
 ## Runtime Basics
 
@@ -97,8 +101,10 @@ Last updated: 2026-07-09.
   a `v1.0` claim.
 - Foundation hardening is closed only as
   `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
+- Post-foundation audit/stabilization has passed with warnings and authorizes
+  only a scoped WP-018 restart for AI coach quality/calibration/output quality.
 - `READY_FOR_MAJOR_CS2_FEATURE_WORK` is not `YES`; major CS2 feature work and
-  WP-018 remain paused/blocked pending post-foundation audit and stabilization.
+  unrestricted WP-018 expansion remain paused/blocked.
 - System `v1.0` is not claimed. It remains gated behind future post-foundation
   audit/remediation, later roadmap WPs and explicit acceptance.
 
@@ -119,10 +125,10 @@ Last updated: 2026-07-09.
 - Do not mutate production DB, schema, production files or generated app reports unless the current WP explicitly authorizes them with backup/SHA evidence.
 - Do not raise `STEAM_IMPORT_MAX_DEMOS_PER_RUN` without an explicit cap-change WP.
 - Do not start or change WP-018 product work without an explicit WP-018 prompt.
-- Do not start major WP-018/CS2 feature expansion until post-foundation audit
-  and stabilization authorize a product restart; narrow evidence-backed
-  calibration/docs/tests work remains allowed only when explicitly scoped and
-  it does not add unsupported claims or weaken foundation readiness.
+- Do not start major WP-018/CS2 feature expansion. WP-018 restart is authorized
+  only for narrow AI coach quality/calibration/output-quality work when
+  explicitly scoped, and it must not add unsupported claims or weaken foundation
+  readiness.
 - Do not run `git add`, commit or push without explicit user approval.
 
 ## Source Of Truth

@@ -17,12 +17,12 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
   `CODEX_NATIVE_SIMPLIFICATION`, closed by `LEAN-DOCS-06`; return to scoped
   JC Coach product work.
 - Current product version: `v0.9`.
-- Current lane: `POST_FOUNDATION_AUDIT_AND_STABILIZATION` after foundation
-  hardening closure.
+- Current lane: scoped WP-018 restart preparation after
+  `POST_FOUNDATION_AUDIT_AND_STABILIZATION` produced `PASS_WITH_WARNINGS`.
 - Current active WP: none; latest completed product WP is `WP-017K Real Data Onboarding Promotion to v0.9`.
-- Next unrestricted product WP: `WP-018 Coach Quality Calibration` targeting
-  `v0.10`, paused pending post-foundation audit and stabilization. Do not
-  restart WP-018 from foundation closure alone.
+- Next product lane: `WP-018 Coach Quality Calibration` targeting `v0.10`,
+  restart-authorized only for narrow AI coach quality, calibration and
+  output-quality scope. This is not a broad product expansion.
 - Runtime: FastAPI / Uvicorn service `jc-coach.service` on `127.0.0.1:8010`.
 - Production DB: `data/cs2_coach.db`.
 
@@ -67,6 +67,10 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - WP-017Z2 added control-plane protection so ordinary product/code/DB/import/
   runtime/UI/recommendation tasks do not edit governance rules to make work
   easier.
+- POST-FOUNDATION-01 completed the defect/warning audit and stabilization plan
+  with `PASS_WITH_WARNINGS`.
+- PF-STAB-01 closed the restart authorization/scope-lock gate for narrow
+  WP-018 AI coach quality/calibration/output-quality work only.
 
 ## Data And Product Facts To Carry Forward
 
@@ -87,21 +91,23 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
   `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
 - FH-124R-03 accepted H1 final-readiness rerun evidence: full-suite pytest and
   the local quality gate passed.
-- Unrestricted major WP-018 / CS2 feature expansion remains paused pending
-  post-foundation audit and stabilization.
-- Narrow evidence, caveat, calibration, docs or tests work may continue only
-  when it improves readiness and does not add unsupported claims.
+- Unrestricted major WP-018 / CS2 feature expansion remains paused.
+- Narrow WP-018 AI coach quality, calibration, output-quality, evidence,
+  caveat, docs or tests work may proceed only when explicitly scoped and when
+  it improves readiness without adding unsupported claims.
 - Docs-only roadmap edits, H1 PASS evidence and H2 closure do not change the
   readiness flag; `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`.
 
 ## Next Safe Step
 
-Run the post-foundation defect/warning audit and stabilization lane. That lane
-must review remaining warnings, accepted risks, source-of-truth status, and
-stabilization needs before any product restart. Only a later explicitly
-authorized task may update status/roadmap docs for product restart and create a
-focused WP-018 restart task card using the preserved WP-018B context from the
-existing WP-018A diagnosis, unless later accepted work changes that.
+Proceed to the first narrow WP-018 task:
+`WP-018-01_AI_COACH_QUALITY_BASELINE_AND_GAP_MAP`.
+
+That task should be an audit/design baseline for AI coach quality, accepted
+caveats and output-quality gaps. It should not implement broad product
+features, claim major CS2 readiness or change DB/import/parser/evaluator/
+runtime/deploy/package behavior unless a later prompt explicitly scopes that
+risk.
 
 ## Forbidden Without Explicit WP Authorization
 
