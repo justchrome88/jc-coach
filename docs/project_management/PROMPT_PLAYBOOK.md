@@ -31,12 +31,12 @@ not introduce JC Forge.
 ## Language Policy
 
 - Direct ChatGPT-to-user explanations should stay Russian by default.
-- Codex task prompts may be written in English to reduce token cost.
+- Codex task prompts may be written in English.
 - Codex console output and internal technical reports may be English.
-- Short user-facing assistant comments may stay Russian when helpful.
+- Short user-facing notes may be Russian when helpful.
 - Human-facing product documentation should be Russian when it is meant for direct user reading.
-- Long internal technical docs/reports may be English if that reduces token cost and keeps meaning clear.
-- Language choice must not change scope, safety rules, source-of-truth order or authorization requirements.
+- Long internal technical reports/docs may be English if that reduces token cost and keeps meaning clear.
+- Language choice must not change scope, safety rules, source-of-truth order, or authorization requirements.
 
 ## 3. Task Type Router
 

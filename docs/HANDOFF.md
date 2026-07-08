@@ -42,6 +42,7 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 9. For governance, planning, task routing, prompt contract or WP role workflow scope, `docs/project_management/PROJECT_OPERATING_PROTOCOL.md`, `docs/project_management/MASTER_WP_CHECKLIST.md`, `docs/project_management/AGENT_WORKFLOW.md` and invoked `docs/agents/roles/*` role cards are Warm references, not per-task Hot context.
 10. For future ChatGPT-generated Codex prompts, use `docs/project_management/PROMPT_PLAYBOOK.md` as the prompt-template guide after Hot docs.
 11. Prompt language policy: use `docs/project_management/PROMPT_PLAYBOOK.md`; Codex prompts/reports may be English, while direct ChatGPT user discussion remains Russian.
+
 ## Current State Summary
 
 - `v0.8` Recommendation Loop Acceptance is promoted for controlled personal use.
