@@ -142,7 +142,7 @@ Last updated: 2026-07-09.
   `docs/audits/2026-07-06-agentic-readiness-audit/` and
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/`.
 - Final foundation closure / post-foundation handoff report:
-  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/task_reports/FH-125_128_final-foundation-closure-post-foundation-audit-handoff_report.md`.
+  `docs/archive/lean-docs-2026-07-09/from-root/docs/foundation_hardening/2026-07-06-readiness-recovery-plan/task_reports/FH-125_128_final-foundation-closure-post-foundation-audit-handoff_report.md`.
 - Foundation risk register:
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
 - Roadmap/planning detail: `docs/project_management/VERSION_ROADMAP.md`, `docs/project_management/WORK_PACKAGE_BACKLOG.md`, `docs/project_management/ACCEPTANCE_MATRIX.md`.
