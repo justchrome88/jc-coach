@@ -125,6 +125,16 @@ Gate PASS requires all:
   missing, failed, stalled, timed out or skipped without explicit task
   authorization. `PASS_WITH_WARNINGS` must not be used to imply that a
   mandatory gate passed when it did not.
+- PM review may accept an Executor `BLOCKED` or `FAIL` cycle after PM-owned
+  rerun evidence only under the PM rerun acceptance policy in
+  `docs/project_management/AGENT_WORKFLOW.md`: same reviewed diff, same required
+  command or authorized equivalent, full owner/command/status/output evidence,
+  original Executor verdict preserved and no better than `PASS_WITH_WARNINGS`.
+  This review-time recovery does not weaken the final readiness gate and cannot
+  turn a failed final readiness result into readiness `PASS`.
+- Gate stalls, timeouts, interruptions and manual reruns must remain recorded
+  with owner, command, timeout/exit status, output evidence and follow-up owner
+  until an accepted later rerun or repair supersedes them.
 - Latest required command outputs are in the final hardening report.
 - Full test suite passes or failures are explicitly accepted as unrelated with
   owner and target WP.

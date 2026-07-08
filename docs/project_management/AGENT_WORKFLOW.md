@@ -1,6 +1,6 @@
 # Agent Workflow
 
-Last updated: 2026-07-07.
+Last updated: 2026-07-08.
 
 ## 1. Purpose
 
@@ -430,6 +430,47 @@ PASS verdict policy:
 - `BLOCKED` is the expected verdict when a required check cannot safely run, a
   stop condition is hit or completion would require authorization outside the
   Task Card.
+
+PM rerun acceptance policy:
+
+- PM review may accept an Executor `BLOCKED` or `FAIL` task cycle after PM-owned
+  rerun evidence only when the original blocker was a required gate stall,
+  timeout, interruption or transient local execution failure, and not a
+  forbidden action, missing authorization, unsafe scope expansion, product
+  correctness failure, unresolved dirty worktree, DB/schema/import/runtime
+  safety issue or incomplete task implementation.
+- The PM-owned rerun must use the same required command or a Task-Card-authorized
+  equivalent from the same main-repo HEAD and same reviewed diff. If HEAD,
+  changed files, environment assumptions or required commands changed, the
+  result needs a new Executor task or explicit follow-up instead of review-time
+  acceptance.
+- PM-owned rerun evidence must record owner, command, working directory,
+  environment assumptions when relevant, timeout, exit status, timestamp or
+  review time, output excerpt or artifact/log path and the PM review/report path
+  that owns the evidence.
+- PM review must preserve the original Executor verdict as reported and record a
+  separate PM rerun verdict. If the rerun clears the only gate blocker, the
+  review may accept the task no better than `PASS_WITH_WARNINGS`, with the
+  warning that acceptance depends on PM-owned rerun evidence.
+- If the PM rerun fails, stalls, times out, is partial, uses a weaker check set
+  without explicit authorization or cannot prove it covered the same reviewed
+  diff, the cycle remains `FAIL` or `BLOCKED` and follow-up is required.
+- A PM rerun may accept a report as a valid failed/blocked outcome, but it must
+  not convert a failed final readiness gate, product safety issue or forbidden
+  action into readiness `PASS`.
+
+Gate stall and manual rerun recording:
+
+- A gate stall record must name the stalled command, timeout or interruption
+  owner, exit status if any, last meaningful output, whether a process/session
+  was left running and the minimum follow-up owner.
+- Manual reruns must be labeled by owner: `Executor`, `PM`, `User` or
+  `external`. PM/User/external reruns are review or operator evidence, not
+  Executor evidence, unless a later Executor task explicitly adopts that
+  evidence.
+- Failed, stalled or manually recovered gate history remains visible in the
+  task report/review chain until a later accepted rerun or repair report names
+  it as superseded. Do not delete or summarize it away as a clean PASS.
 
 For implementation tasks that touch code, scripts or tests, run the accepted
 local CI-equivalent gate before claiming PASS:

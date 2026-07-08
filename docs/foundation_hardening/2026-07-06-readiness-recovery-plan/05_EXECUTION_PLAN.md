@@ -106,7 +106,11 @@ Source audit: `docs/audits/2026-07-06-agentic-readiness-audit`.
   `PASS` requires all mandatory checks for the task/change class to pass,
   `PASS_WITH_WARNINGS` cannot stand in for a failed mandatory gate, `FAIL`
   covers completed work with failed required checks, and `BLOCKED` covers stop
-  conditions or checks that cannot safely run.
+  conditions or checks that cannot safely run. PM review may accept an
+  Executor `BLOCKED` or `FAIL` cycle after PM-owned rerun evidence only under
+  the workflow policy for same-diff, same-command-or-authorized-equivalent
+  reruns with full owner/command/status/output evidence, original Executor
+  verdict preserved and no better than `PASS_WITH_WARNINGS`.
 - Checks to run: docs diff check, project gate changed.
 - Stop and ask human when: workflow changes conflict with root `AGENTS.md`.
 
