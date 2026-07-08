@@ -144,6 +144,25 @@ APP_ENV=test .venv/bin/pytest tests/test_parser_facts_confidence.py -q
 APP_ENV=test .venv/bin/pytest tests/test_metric_truth.py tests/test_parser_facts_confidence.py -q
 ```
 
+C2 metric fixture and null/empty regression checks:
+
+```bash
+APP_ENV=test .venv/bin/pytest tests/test_metrics_c2_fixtures.py -q
+APP_ENV=test .venv/bin/pytest tests/test_metric_truth.py tests/test_parser_facts_confidence.py tests/test_metrics_c2_fixtures.py -q
+```
+
+Null/empty metric regression policy:
+
+- Empty match windows must produce `unavailable` confidence, not `exact`,
+  `partial` or hard advice evidence.
+- A metric with only `null`/missing values must keep `present_count=0`,
+  `coverage=0.0` and a visible no-populated-values reason.
+- Missing metric values must not be imputed from adjacent stats, parser payload
+  warnings, map/source filters or aggregate math.
+- Static regression fixtures must be synthetic or sanitized and must not include
+  raw demos, uploads, production DB rows, secrets, tokens, real Steam IDs or
+  personally sensitive values.
+
 Steam cursor truth checks:
 
 ```bash

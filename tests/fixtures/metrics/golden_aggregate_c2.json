@@ -1,0 +1,156 @@
+{
+  "description": "Synthetic C2 golden aggregate fixture. No production rows or personal identifiers.",
+  "matches": [
+    {
+      "source": "demo",
+      "external_match_id": "synthetic-c2-001",
+      "played_at": "2026-07-01T20:00:00",
+      "map_name": "de_mirage",
+      "result": "win",
+      "rounds_for": 13,
+      "rounds_against": 8,
+      "kills": 21,
+      "deaths": 14,
+      "assists": 4,
+      "kd": 1.5,
+      "adr": 92.0,
+      "kast": 76.0,
+      "rating": 1.18,
+      "entry_kills": 3,
+      "entry_deaths": 1,
+      "utility_damage": 110,
+      "flash_assists": 2,
+      "raw": {
+        "match_date_status": "exact_match_date_available",
+        "match_date_source": "steam_gc_match_time",
+        "played_at_source": "steam_gc_match_time",
+        "parser": "demoparser2",
+        "parser_confidence": "high",
+        "metric_confidence": {
+          "adr": "high",
+          "kast": "medium",
+          "entry_duels": "medium",
+          "utility": "medium",
+          "flash": "medium"
+        }
+      }
+    },
+    {
+      "source": "demo",
+      "external_match_id": "synthetic-c2-002",
+      "played_at": "2026-07-02T20:00:00",
+      "map_name": "de_mirage",
+      "result": "loss",
+      "rounds_for": 10,
+      "rounds_against": 13,
+      "kills": 17,
+      "deaths": 19,
+      "assists": 3,
+      "kd": 0.89,
+      "adr": 71.0,
+      "kast": 67.0,
+      "rating": 0.91,
+      "entry_kills": 1,
+      "entry_deaths": 3,
+      "utility_damage": 45,
+      "flash_assists": 0,
+      "raw": {
+        "match_date_status": "exact_match_date_available",
+        "match_date_source": "steam_gc_match_time",
+        "played_at_source": "steam_gc_match_time",
+        "parser": "demoparser2",
+        "parser_confidence": "medium",
+        "metric_confidence": {
+          "adr": "medium",
+          "kast": "medium",
+          "entry_duels": "medium",
+          "utility": "medium",
+          "flash": "low"
+        }
+      }
+    },
+    {
+      "source": "json",
+      "external_match_id": "synthetic-c2-003",
+      "played_at": "2026-07-03T20:00:00",
+      "map_name": "de_ancient",
+      "result": "win",
+      "rounds_for": 13,
+      "rounds_against": 11,
+      "kills": 19,
+      "deaths": 16,
+      "assists": 6,
+      "kd": 1.19,
+      "adr": 84.0,
+      "kast": 72.0,
+      "rating": 1.08,
+      "entry_kills": 2,
+      "entry_deaths": 2,
+      "utility_damage": 85,
+      "flash_assists": 1,
+      "raw": {
+        "match_date_status": "exact_match_date_available",
+        "match_date_source": "steam_gc_match_time",
+        "played_at_source": "steam_gc_match_time"
+      }
+    },
+    {
+      "source": "csv",
+      "external_match_id": "synthetic-c2-004",
+      "played_at": "2026-07-04T20:00:00",
+      "map_name": "de_ancient",
+      "result": "loss",
+      "rounds_for": 6,
+      "rounds_against": 13,
+      "kills": 12,
+      "deaths": 21,
+      "assists": 2,
+      "kd": 0.57,
+      "adr": 58.0,
+      "kast": 61.0,
+      "rating": 0.72,
+      "entry_kills": 0,
+      "entry_deaths": 4,
+      "utility_damage": 20,
+      "flash_assists": 0,
+      "raw": {
+        "match_date_status": "approximate_match_date",
+        "match_date_source": "file_modified_fallback",
+        "played_at_source": "file_modified_fallback"
+      }
+    }
+  ],
+  "expected": {
+    "summary": {
+      "matches_count": 4,
+      "winrate": 50.0,
+      "avg_kd": 1.04,
+      "avg_adr": 76.25,
+      "avg_kast": 69.0,
+      "entry_diff": -4,
+      "round_diff": -3,
+      "date_window_confidence": "low_confidence",
+      "excluded_from_exact_windows": 1
+    },
+    "period_comparison": {
+      "current_n": 2,
+      "previous_n": 1,
+      "confidence": "exact",
+      "adr_delta": -14.5
+    },
+    "map_stats": [
+      {
+        "map_name": "de_mirage",
+        "matches_count": 2,
+        "sample_confidence": "unavailable",
+        "winrate": 50.0
+      },
+      {
+        "map_name": "de_ancient",
+        "matches_count": 2,
+        "sample_confidence": "unavailable",
+        "winrate": 50.0
+      }
+    ]
+  }
+}

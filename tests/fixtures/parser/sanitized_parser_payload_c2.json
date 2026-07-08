@@ -1,0 +1,127 @@
+{
+  "description": "Synthetic sanitized parser payload fixture for C2 regression tests.",
+  "payload": {
+    "status": "parsed",
+    "parser": "demoparser2",
+    "parser_version": "synthetic-test-version",
+    "payload_version": "synthetic-c2",
+    "file": "synthetic-c2.dem",
+    "demo_sha1": "0000000000000000000000000000000000000000",
+    "played_at": "2026-07-05T20:00:00",
+    "played_at_source": "steam_gc_match_time",
+    "match_date_status": "exact_match_date_available",
+    "match_date_source": "steam_gc_match_time",
+    "player": {
+      "name": "Synthetic Player",
+      "steamid": "SYNTHETIC_STEAM_ID"
+    },
+    "available_players": [
+      {
+        "name": "Synthetic Player",
+        "steamid": "SYNTHETIC_STEAM_ID"
+      },
+      {
+        "name": "Synthetic Teammate",
+        "steamid": "SYNTHETIC_TEAMMATE_ID"
+      }
+    ],
+    "match": {
+      "source": "demo",
+      "external_match_id": "synthetic-parser-c2",
+      "played_at": "2026-07-05T20:00:00",
+      "played_at_source": "steam_gc_match_time",
+      "match_date_status": "exact_match_date_available",
+      "match_date_source": "steam_gc_match_time",
+      "map_name": "de_inferno",
+      "mode": "demo",
+      "result": "win",
+      "rounds_for": 13,
+      "rounds_against": 10,
+      "kills": 20,
+      "deaths": 16,
+      "assists": 5,
+      "kd": 1.25,
+      "adr": 86.5,
+      "kast": 73.9,
+      "rating": null,
+      "swing_score": 4.25,
+      "headshot_percent": 42.0,
+      "entry_kills": 2,
+      "entry_deaths": 2,
+      "early_deaths": 1,
+      "flash_assists": 1,
+      "utility_damage": 74,
+      "enemies_flashed": 4,
+      "clutches_won": null,
+      "clutches_lost": null,
+      "side_t_rounds_won": null,
+      "side_t_rounds_lost": null,
+      "side_ct_rounds_won": null,
+      "side_ct_rounds_lost": null
+    },
+    "event_counts": {
+      "rounds": 23,
+      "player_death": 36,
+      "player_hurt": 144,
+      "weapon_fire": 210,
+      "grenade_events": 24,
+      "player_blind": 18,
+      "round_end": 23,
+      "player_team": 0
+    },
+    "metric_confidence": {
+      "adr": "medium",
+      "kast": "medium",
+      "kast_trade_component": "low",
+      "trade_kills": "low",
+      "traded_deaths": "unavailable",
+      "entry_duels": "medium",
+      "early_deaths": "medium",
+      "utility": "medium",
+      "flash": "medium",
+      "weapon_accuracy": "medium",
+      "side_stats": "low",
+      "swing": "medium"
+    },
+    "parser_confidence": "medium",
+    "warnings": [
+      "Trade and side facts are synthetic low-confidence parser context.",
+      "No economy, positioning or clutch model is present in this fixture."
+    ],
+    "aim_summary": {
+      "damage_per_death": 126
+    },
+    "weapon_breakdown": {
+      "ak47": {
+        "shots": 40,
+        "hits": 12,
+        "kills": 8,
+        "damage": 540
+      }
+    },
+    "swing_summary": {
+      "formula": "jc_swing_v1"
+    },
+    "deep": {
+      "rounds": [
+        {
+          "round_number": 1,
+          "winner_side": "T",
+          "raw_json": {
+            "synthetic": true
+          }
+        }
+      ],
+      "player_rounds": [],
+      "weapon_stats": [],
+      "damage_events": [],
+      "duels": [],
+      "grenade_events": []
+    },
+    "aim_data_gaps": [],
+    "header": {
+      "map_name": "de_inferno"
+    },
+    "message": "Synthetic sanitized parser confidence metadata."
+  }
+}
