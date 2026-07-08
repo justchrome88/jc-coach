@@ -1,6 +1,6 @@
 # WP Registry
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-08.
 
 This is the canonical work-package registry for JC Coach. It preserves WP
 history and prevents silent WP ID reuse, skipped prerequisites or promotion
@@ -111,10 +111,26 @@ overlay, not as a replacement for a planned product WP.
   `docs/audits/2026-07-06-agentic-readiness-audit/`.
 - Recovery plan:
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/`.
+- Risk register:
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
 - Audit score: `66%` readiness (`3.30/5` across 106 rows).
-- Project status: `CONTINUE WITH RESTRICTED SCOPE`.
+- Project status: `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
+- FH-124R-03 accepted H1 final-readiness rerun evidence: full-suite pytest
+  passed, the local quality gate passed and project-gate checks passed.
+- FH-125_128 H2 closes the foundation-hardening sequence into a handoff state,
+  not product-development authorization.
 - Major CS2 feature work, including unrestricted WP-018 expansion, is paused
-  until the recovery plan readiness gate passes.
+  pending post-foundation audit and stabilization.
+- `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`; docs-only roadmap edits, H1
+  PASS evidence and H2 closure do not set it to `YES`.
+- Required next lane after H2:
+  `POST_FOUNDATION_AUDIT_AND_STABILIZATION`.
+- Resume path after post-foundation audit/stabilization: only a later
+  explicitly authorized task may update status/roadmap docs for product
+  restart and create a focused WP-018 restart task card using the preserved
+  canonical WP-018 sequence. The restart context begins from the WP-018B
+  context recorded by the existing WP-018A diagnosis unless later accepted work
+  changes that.
 - Small/scoped work may continue only when it strengthens documentation,
   tests/evals, gates, confidence/caveats or foundation readiness and does not
   add unsupported CS2/domain claims.
@@ -123,7 +139,7 @@ overlay, not as a replacement for a planned product WP.
 
 | WP ID | Title | Version target | Status | Report path | Dependencies | Notes / warnings |
 |---|---|---|---|---|---|---|
-| `WP-018` | Coach Quality Calibration | `v0.10` | `planned / restricted pending foundation readiness gate` | TBD | `WP-017K` promotion, `WP-017Z1`/`WP-017Z2` governance workflow updates, 2026-07-06 foundation hardening gate | Calibrate coach claims, progress scoring and weak-metric caveats. Major coach/domain expansion is paused until the foundation readiness gate passes. |
+| `WP-018` | Coach Quality Calibration | `v0.10` | `planned / paused pending post-foundation audit and stabilization` | TBD | `WP-017K` promotion, `WP-017Z1`/`WP-017Z2` governance workflow updates, 2026-07-06 foundation hardening closure, post-foundation audit/stabilization authorization | Calibrate coach claims, progress scoring and weak-metric caveats. Major coach/domain expansion remains paused after H2; foundation closure is not WP-018 restart authorization. Resume only through a later focused WP-018 restart task card after post-foundation audit/stabilization permits product work. |
 | `WP-019` | Personal Daily Use UX | `v0.11` | `planned` | TBD | `WP-018` | Daily owner workflow polish without friends/public claims. |
 | `WP-020` | Deployment / Backup / Storage Hardening | `v0.12` | `planned` | TBD | `WP-019` | VPS operation, backup/restore and storage hardening. |
 | `WP-021` | Personal MVP Lock | `v1.0` | `planned` | TBD | `WP-020` | Controlled personal MVP lock; public/friends readiness remains separate. |

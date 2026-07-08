@@ -1,6 +1,6 @@
 # Roadmap Pause And Resume
 
-Date: 2026-07-06.
+Date: 2026-07-08.
 
 Canonical roadmap sources:
 
@@ -13,8 +13,24 @@ Historical roadmap source:
 - `docs/ROADMAP.md` is explicitly historical/archive-candidate and must not be
   used as current roadmap truth.
 
+## Current Post-H2 State
+
+```text
+FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT
+READY_FOR_MAJOR_CS2_FEATURE_WORK: NO
+NEXT_LANE: POST_FOUNDATION_AUDIT_AND_STABILIZATION
+```
+
+Accepted FH-124R-03 H1 evidence passed the full-suite pytest command, local
+quality gate and project-gate checks. H2 uses that evidence to close the
+foundation-hardening sequence into a post-foundation audit handoff. It does not
+restart WP-018, unlock major CS2 feature work, expose public/friends access or
+claim system `v1.0`.
+
 ## Temporarily Frozen CS2 Tasks
 
+- Unrestricted major WP-018 / CS2 feature expansion until post-foundation audit
+  and stabilization explicitly authorize product restart.
 - Major WP-018 coach quality expansion beyond narrow evidence/caveat work.
 - Recommendation planner implementation before design and data/AI contracts.
 - New schema features before migration baseline/schema gate.
@@ -30,15 +46,16 @@ AR-033, AR-047, AR-049, AR-051, AR-097, AR-098.
 
 ## Allowed To Continue
 
-- Foundation-hardening docs, tests, gate, risk and architecture work.
-- Narrow WP-018 calibration only when it improves wording, caveats, confidence,
-  metric truth or eval safety and does not add unsupported claims.
+- Post-foundation defect/warning audit and stabilization work.
+- Narrow evidence, caveat, calibration, docs or tests work only when explicitly
+  scoped and when it improves readiness, wording, caveats, confidence, metric
+  truth or eval safety without adding unsupported claims.
 - Read-only diagnostics and QA reviews.
 - Docs-only design work for durable worker/retry ledger.
 
 Evidence: audit `00_EXECUTIVE_SUMMARY.md`, "Continue Feature Development?".
 
-## Requires Foundation-Hardening Before Continuing
+## Requires Post-Foundation Audit Before Continuing
 
 - WP-018 planner-like work requires diagnosis registry/planner design,
   source-trust/sample-size policy and semantic evals.
@@ -47,26 +64,33 @@ Evidence: audit `00_EXECUTIVE_SUMMARY.md`, "Continue Feature Development?".
   explicit implementation WP.
 - Any public/friends work requires security/privacy/observability/release gate.
 
-## Revisit After Hardening
+## Revisit After Post-Foundation Audit And Stabilization
 
-- WP-018 remaining slices: category quality, survival/aim/utility/map
-  calibration, weak metric suppression, explanation/actionability repair and
-  real usage acceptance.
-- WP-019 daily UX after foundation gate PASS.
+- WP-018 remaining slices: resume from the preserved WP-018B context recorded
+  by the existing WP-018A diagnosis unless later accepted work changes that,
+  then continue category quality, survival/aim/utility/map calibration, weak
+  metric suppression, explanation/actionability repair and real usage
+  acceptance.
+- WP-019 daily UX after WP-018 resumes and completes under later product
+  authorization.
 - WP-020 deployment/backup/storage hardening after current foundation blockers
   are resolved or explicitly carried.
-- WP-021 personal MVP lock after WP-020 and gate evidence.
+- WP-021 personal MVP lock after WP-020 and later acceptance evidence.
 
 ## Resume Process
 
-1. Run final readiness review against `04_READINESS_GATE.md`.
-2. If PASS, update current status and roadmap docs from restricted lane back to
-   normal WP-018 sequence.
-3. Create a focused WP-018 restart Task Card.
-4. Keep all carried risks in the risk register with owner/status/target WP.
-5. Do not retroactively mark deferred features as implemented.
+1. Run the post-foundation defect/warning audit and stabilization task.
+2. Reconcile remaining warnings, accepted risks, source-of-truth status and
+   stabilization gaps without starting product work.
+3. If that later audit/stabilization lane explicitly authorizes product
+   restart, update current status and roadmap docs through a focused task.
+4. Create a focused WP-018 restart Task Card only after that authorization,
+   using the preserved WP-018B context unless later accepted work changes the
+   sequence.
+5. Keep all carried risks in the risk register with owner/status/target WP.
+6. Do not retroactively mark deferred features as implemented.
 
-## Forbidden Additions Before Readiness Gate
+## Forbidden Additions Before Post-Foundation Audit Authorization
 
 - New DB schema features.
 - Cap raise above `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`.
@@ -90,4 +114,3 @@ Evidence: audit `00_EXECUTIVE_SUMMARY.md`, "Continue Feature Development?".
   Canonical equivalents are `docs/CURRENT_STATUS.md`,
   `docs/project_management/VERSION_ROADMAP.md` and
   `docs/KNOWN_LIMITATIONS.md`.
-

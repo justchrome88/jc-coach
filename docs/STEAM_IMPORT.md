@@ -1,6 +1,6 @@
 # Steam Import
 
-Last updated: 2026-07-04.
+Last updated: 2026-07-08.
 
 Canonical supporting docs:
 
@@ -67,6 +67,15 @@ Standardized result statuses:
 
 `ImportJob.status` still has only `queued`, `running`, `succeeded` and `failed`. Clean `success`, `no_new` and `duplicate_skipped` outcomes may use `succeeded`. Partial success is represented in `result_json.overall_outcome/statuses` and persisted as `failed` to avoid clean-success overclaim until a future schema/status migration is explicitly approved.
 
+Import cap status: `STEAM_IMPORT_MAX_DEMOS_PER_RUN` remains `1`. Larger Steam
+demo batches remain blocked until the import outcome taxonomy, `result_json`
+schema, durable worker plan and retry ledger plan are accepted by the
+foundation-hardening review, and until a separate explicit cap-change WP
+authorizes the cap change. This contract does not approve a cap raise.
+Warning-ledger carry-in `WL-FH-000-028` remains preserved for this blocker
+until PM review accepts the worker/retry/result safety contract or creates a
+successor warning.
+
 WP-014B2 repaired exact match-date truth without changing schema or demo cleanup lifecycle. For the primary Steam/Valve path, `Match.played_at` is exact only when Steam GC metadata provides valid `match_time` with source `steam_gc_match_time`. If Steam GC `match_time` is missing, primary Steam import records `exact_match_date_unavailable`, clears the imported match `played_at` instead of retaining parser/file-mtime fallback as a match date, and records date truth in `raw_json`/`result_json`. Steam freshness comparison now uses only exact imported Steam dates; manual/file-mtime fallback dates do not silently block new Steam imports.
 
 WP-014B3 made demo retention explicit without enabling deletion. Current policy is `retain_raw_for_parser_development`; successful imports record `retained_for_parser_dev`, parser failures record `retained_after_failure` or `cleanup_needed`, and result/raw JSON include raw demo path/size when available. `delete_after_success` remains disabled by default and is future production mode after parser acceptance.
@@ -128,6 +137,270 @@ Stage 7 Steam cursor truth hardening documents and tests deterministic cursor tr
 
 These names describe Steam share-code collection state, not guaranteed demo parser/import completion. Demo download and parser import remain separate explicit steps.
 
+## Import Job Outcome Contract
+
+This section is the contract-level target for import-related work. It documents
+the expected shape and safety rules only. It does not change database schema,
+runtime behavior, worker behavior, import cap, live Steam access, parser
+execution or production DB state.
+
+`ImportJob.status` is a coarse lifecycle field:
+
+- `queued`: work is waiting for an explicitly authorized runner.
+- `running`: a runner has claimed the job and must keep reviewable progress in
+  `result_json.progress` when the path supports checkpoints.
+- `succeeded`: the job reached a clean terminal outcome such as `success`,
+  `no_new` or `duplicate_skipped`.
+- `failed`: the job reached a terminal problem, partial-success boundary,
+  interruption, cancellation or safety stop.
+
+`result_json` is the canonical outcome field. Operators, PM reviews, UI labels,
+tests and future worker logic must read `result_json.overall_outcome`,
+`result_json.statuses`, `result_json.retryable` and evidence fields before
+claiming success or deciding retry behavior. A coarse `failed` row can still be
+an expected safety result, for example `batch_cap_reached` after a bounded
+successful one-demo import.
+
+### Outcome Taxonomy
+
+Outcome names are stable report vocabulary. Implementation can add service
+specific detail, but it must not collapse retryable, terminal and partial
+outcomes into ambiguous strings.
+
+| Outcome/status | Class | Retryability | Required meaning |
+|---|---|---|---|
+| `success` | terminal clean | no | Requested import work completed without safety caveats beyond documented source limits. |
+| `no_new` | terminal clean | no | Steam/share-code sync found no new work and did not mutate demo/match data beyond expected job metadata. |
+| `duplicate_skipped` | terminal clean | no | Candidate was already represented and no duplicate match was created. |
+| `need_code` | terminal operator action | no automatic retry | Owner/operator must provide or refresh Game Authentication Code or latest share-code cursor. |
+| `steam_not_connected` | terminal operator action | no automatic retry | Owner Steam account is absent or not linked for the requested Steam import path. |
+| `rate_limited` | transient external | retryable with backoff | Steam/Valve or local throttle rejected the request; cursor must not advance on failed external or local writes. |
+| `download_failed` | transient or terminal external/storage | conditional | Demo download failed. Retry only if evidence says URL, network, space and cap state make retry safe. |
+| `parser_failed` | terminal until parser/data issue is reviewed | no automatic retry | Downloaded demo could not be parsed or imported. Raw retention and cleanup status must be explicit. |
+| `partial_success` | terminal with warnings | no automatic retry without review | Some work persisted and some failed. `ImportJob.status` should remain conservative and `result_json` must identify persisted and failed parts. |
+| `exact_match_date_available` | evidence tag | not applicable | Steam GC `match_time` was persisted as exact match date source. |
+| `exact_match_date_unavailable` | evidence tag | not applicable | Exact Steam GC match date was missing or invalid; no approximate date may be presented as exact. |
+| `approximate_match_date` | evidence tag | not applicable | A non-exact date exists only as caveated fallback evidence. |
+| `disk_budget_exceeded` | safety stop | retryable after operator/storage action | Storage guard stopped work before exceeding configured budget. |
+| `batch_cap_reached` | safety stop | no automatic retry | Per-run cap stopped the batch as designed. It does not authorize a larger cap. |
+| `demo_too_large` | safety stop | no automatic retry without explicit review | A candidate exceeded per-demo size limits. |
+| `storage_preflight_failed` | safety stop | retryable after operator/storage action | Preflight found insufficient or unsafe storage/temp state before download/parser work. |
+| `interrupted` | safety stop | conditional | Process shutdown, stale repair or operator interruption ended the job. Retry requires stale-state review. |
+| `cancelled` | terminal operator action | no automatic retry | Operator intentionally cancelled queued/running work. Future implementation must preserve reviewable evidence. |
+| `worker_lost` | safety stop | retryable only after lease/stale review | Durable worker heartbeat or lease expired before terminal outcome. |
+| `worker_conflict` | safety stop | no automatic retry until conflict cleared | Single-flight or idempotency guard found another active runner for the same import unit. |
+| `invalid_request` | terminal input/config | no automatic retry | Request payload, job type or required context was invalid. |
+| `unauthorized` | terminal auth/safety | no automatic retry | Owner/auth/API boundary failed or the task lacked explicit live/import/parser/evaluator authorization. |
+| `schema_or_contract_mismatch` | terminal implementation | no automatic retry | Runtime payload did not match current model/schema/contract; requires implementation review. |
+
+### Expected `result_json` Shape
+
+Future import paths should preserve the existing fields and add compatible
+structured fields rather than replacing them. Schema-changing persistence is a
+separate approval-required scope; this shape is a JSON contract only.
+
+Required top-level fields for terminal import outcomes:
+
+```json
+{
+  "schema_version": 1,
+  "job_type": "steam_import_all",
+  "overall_outcome": "batch_cap_reached",
+  "statuses": ["success", "batch_cap_reached", "exact_match_date_available"],
+  "clean_success": false,
+  "retryable": false,
+  "error": null,
+  "source": {
+    "provider": "steam",
+    "steam_account_id": 1,
+    "share_code": "redacted-or-omitted",
+    "cursor_source": "steam_account.last_share_code"
+  },
+  "context": {
+    "cap": 1,
+    "tmpdir": "/opt/jc-coach/data/tmp",
+    "worker": "background_task",
+    "idempotency_key": "job-type/source/candidate"
+  },
+  "progress": [
+    {"phase": "started", "status": "ok"},
+    {"phase": "storage_preflight", "status": "ok"}
+  ],
+  "attempt": {
+    "number": 1,
+    "max_attempts": 1,
+    "next_retry_at": null,
+    "backoff_seconds": null
+  },
+  "evidence": {
+    "created_match_ids": [],
+    "updated_match_ids": [],
+    "retained_demo_paths": [],
+    "raw_demo_bytes": 0,
+    "match_date_source": "steam_gc_match_time"
+  },
+  "safety": {
+    "cursor_advanced": false,
+    "production_db_touched": true,
+    "live_steam_calls": true,
+    "parser_ran": true,
+    "manual_evaluator_ran": false
+  }
+}
+```
+
+Field expectations:
+
+- `schema_version` identifies the JSON contract version, not a DB migration.
+- `overall_outcome` is one primary value from the outcome taxonomy.
+- `statuses` is a list of outcome/evidence tags. It can include both work
+  result and safety/evidence statuses.
+- `clean_success` is `true` only when the outcome can be safely summarized as
+  complete success without partial/safety caveats.
+- `retryable` must be explicit for every terminal problem or safety stop.
+- `error` should be `null` for clean outcomes; otherwise it should include
+  `code`, `message`, `stage`, `retryable` and a redacted `detail` when useful.
+- `source` records provider and safe context. It must not include secrets,
+  Steam auth-code values, refresh tokens, passwords or full sensitive payloads.
+- `context` records cap, temp-directory, worker mode and idempotency context.
+- `progress` records reviewable checkpoints for long-running paths.
+- `attempt` is present even before a durable retry ledger exists, with
+  operator-driven attempts recorded as best available evidence.
+- `evidence` links to persisted rows, retained raw demos, byte counts and date
+  truth without exposing secret values.
+- `safety` states which high-risk side effects actually happened.
+
+Minimum required fields for non-terminal checkpoints:
+
+```json
+{
+  "schema_version": 1,
+  "job_type": "steam_import_all",
+  "overall_outcome": "running",
+  "statuses": ["running"],
+  "clean_success": false,
+  "retryable": null,
+  "progress": [{"phase": "download", "status": "running"}],
+  "safety": {
+    "cursor_advanced": false,
+    "live_steam_calls": true,
+    "parser_ran": false
+  }
+}
+```
+
+## Durable Worker Contract Plan
+
+A future durable import worker must be designed and accepted before any import
+cap raise or larger batch operation. The current `BackgroundTasks` path remains
+acceptable only for controlled personal one-demo-capped work.
+
+Contract-level worker requirements:
+
+- Queue/resume: import work must be represented by durable job rows before
+  Steam, download, parser or evaluator work begins. A worker restart must be
+  able to identify `queued`, `running`, stale, terminal and cancelled jobs.
+- Single-flight: at most one runner may process a logical import unit at a
+  time. Logical units include job ID, Steam account, share-code candidate,
+  retained demo path and idempotency key.
+- Idempotency: retries and resumes must not duplicate match rows, parser
+  artifacts, raw demo copies, cursor advancement or recommendation/evaluation
+  side effects. Cursor advancement can happen only after successful local
+  persistence for the relevant step.
+- Concurrency: default personal deployment should use one active Steam/demo
+  import worker unless a future task proves storage, rate-limit, parser memory
+  and DB safety for more.
+- Lease/heartbeat: running jobs need reviewable heartbeat or lease evidence so
+  stale workers can be distinguished from active work.
+- Cancellation/shutdown: cancellation must stop before starting new risky
+  phases when possible, preserve retained demo evidence, avoid deleting raw
+  demos and write a terminal `cancelled` or `interrupted` result.
+- Operator visibility: overview surfaces and reports must show current phase,
+  outcome, retryability, cap/safety stop, retained files, cursor mutation and
+  whether live Steam/download/parser/evaluator work happened.
+- Authorization: a worker implementation does not weaken AGENTS.md. Live Steam,
+  parser, evaluator, manual evaluator, service/deploy and production DB work
+  still require explicit task authorization.
+
+This plan does not adopt a worker technology, daemon, scheduler, queue library,
+service unit, schema change, migration or production deployment.
+
+## Retry Ledger Contract Plan
+
+A future retry ledger must be accepted before cap raise or larger durable
+worker operation. It may be implemented in DB schema, JSON, files or another
+durable store only through a separate explicit implementation task with the
+appropriate schema/data safety scope.
+
+Contract-level retry ledger requirements:
+
+- Attempt tracking: record attempt number, runner identity or mode, started
+  time, finished time, outcome, retryability, error code and redacted detail.
+- Backoff: retryable external/storage/rate-limit failures require bounded
+  backoff with `next_retry_at`; terminal input/parser/schema/auth failures
+  must not auto-retry.
+- Idempotency keys: every retryable unit must have a stable key derived from
+  safe context such as job type, Steam account ID, share-code, demo URL or raw
+  demo content identity. Secrets must not be embedded in keys.
+- Failure retention: terminal failures must retain enough evidence for operator
+  review, including retained raw demo status when a demo exists.
+- Cursor safety: failed external calls or failed local persistence must not
+  advance Steam cursors. Duplicate-only and no-new outcomes must record their
+  cursor decision explicitly.
+- Observability: reports and UI/API surfaces must be able to show attempt
+  history, last error code, next retry time, current cap and whether the next
+  action is automatic, operator-driven or blocked.
+- Cleanup boundary: retry ledger work must not delete, move or compress raw
+  demos without an explicit storage WP.
+
+Until this ledger is implemented and accepted, retries remain operator-driven
+and the one-demo cap remains in force.
+
+## Live Import / Parser / Evaluator Stop Conditions
+
+Stop and report `BLOCKED` before running any command, route, background task or
+script if completion would require any of the following without explicit task
+authorization:
+
+- live Steam/Valve API, Game Coordinator or demo URL calls;
+- demo download, `.dem.bz2` decompression, raw demo copy or parser-backed DEM
+  import on production data;
+- CSV/JSON/manual upload import into the production DB;
+- automatic evaluator or manual evaluator against the production DB;
+- import worker, retry worker, queue runner or stale-job repair on production
+  data;
+- production DB mutation, copied-DB experiment, schema/model/startup/migration
+  change or schema artifact update;
+- raw demo deletion, movement, compression or cleanup policy change;
+- service, systemd, nginx, deploy or runtime configuration change;
+- raising `STEAM_IMPORT_MAX_DEMOS_PER_RUN` or bypassing storage/cap guards.
+
+When live import/parser/evaluator work is explicitly authorized, the task must
+also specify the allowed path, cap, production DB authorization status,
+backup/SHA requirements, temp directory requirements and report evidence. Shell
+service calls that touch Steam/import temp storage must set `TMPDIR`, `TEMP`
+and `TMP` to `/opt/jc-coach/data/tmp`.
+
+## Import Safety Declaration For Reports
+
+Any future task involving import, parser, evaluator, manual evaluator, import
+cap, production DB/import data, or worker/retry behavior must include an import
+safety declaration in its report:
+
+- whether live Steam/Valve calls ran;
+- whether demo download, decompression or parser jobs ran;
+- whether automatic evaluator or manual evaluator ran;
+- whether a worker, queue runner, retry path or stale-job repair ran;
+- whether `STEAM_IMPORT_MAX_DEMOS_PER_RUN` changed;
+- whether the production DB was touched, with DB SHA evidence when required by
+  `AGENTS.md`;
+- whether Steam cursors advanced;
+- whether raw demos were created, retained, deleted, moved or compressed;
+- whether `TMPDIR`, `TEMP` and `TMP` were required and what safe value was used;
+- whether tests used mocks, temp paths and temp DBs instead of production
+  data;
+- if any item is not applicable, the reason tied to task scope.
+
 ## Retry / Backoff Policy
 
 Stage 7 does not add a durable scheduler or retry ledger. Current retry policy is operator-driven:
@@ -143,8 +416,9 @@ Stage 7 does not add a durable scheduler or retry ledger. Current retry policy i
 - `knowncode=0` is only an initial sentinel when no saved cursor exists; it is not a valid substitute for a latest cursor and can fail.
 - Stale cursor can point behind already imported history.
 - Valve replay URLs can expire or return transient 502/404/410.
-- Durable retry/backoff, scheduler behavior and a sync ledger still need hardening.
+- Durable retry/backoff, scheduler behavior and a sync ledger still need implementation and acceptance before any cap raise.
 - One-button live import is accepted for controlled personal use, but `ImportJob.status` remains coarse; use `result_json.overall_outcome/statuses` as the canonical outcome.
+- `STEAM_IMPORT_MAX_DEMOS_PER_RUN` remains `1` until worker/retry/result safety is accepted and a separate explicit cap-change WP authorizes the change.
 - Uploads/temp still live on root filesystem; a dedicated volume remains recommended.
 - Raw demos are retained by policy under `retain_raw_for_parser_development`.
 - Parser memory peak should be watched during real demo imports.

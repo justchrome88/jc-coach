@@ -1,6 +1,6 @@
 # Agent Workflow
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-08.
 
 ## 1. Purpose
 
@@ -104,14 +104,21 @@ WPs need it.
 1. Feature, request or problem appears.
 2. PM / Orchestrator checks if an existing WP covers it.
 3. If a new WP is needed, User approval is required.
-4. Worktree must be clean before WP starts.
+4. Worktree must be clean, or every dirty/untracked main-repo path must be
+   explained by the current Task Card, accepted unresolved prior task state or
+   explicit user/PM authorization, before WP-level or hardening Executor work
+   starts. Unexplained dirty or untracked pre-existing state is a stop
+   condition.
 5. PM defines scope, affected zones and needed Warm docs.
 6. Implementation Agent executes.
 7. QA / Reviewer checks diff, tests, acceptance and forbidden changes.
 8. Documentation Steward checks required doc updates.
 9. WP report is created.
 10. ChatGPT PM / User review.
-11. User commits and pushes.
+11. Git resolution follows `AGENTS.md`: Executor does not commit or push
+    unless explicitly authorized; PM_ORCHESTRATOR may create local commits only
+    after accepted PM review under the active Git policy; push remains
+    user-only unless explicitly requested in a separate command.
 12. WP can be closed only after required docs and report are in place.
 
 ## 6. Documentation Steward Triggers
@@ -147,7 +154,10 @@ Standard handoffs:
 
 Rules:
 
-- No role may run `git add`, commit or push.
+- Executor must not run `git add`, commit or push unless explicitly
+  authorized. PM_ORCHESTRATOR local commits are allowed only after accepted PM
+  review and only under the active root/PM `AGENTS.md` Git policy. Push remains
+  forbidden unless the user explicitly asks for it in a separate command.
 - No role may expand scope without PM / Orchestrator and User approval.
 - No role may use old prompts, audits or plans as current truth.
 - Role cards are editable behavior contracts. Changes require explicit
@@ -195,7 +205,7 @@ but cannot make it weaker than `AGENTS.md` or the active task type.
 | `diagnostic-only` | no, unless report allowed | only named diagnostic report | no repair edits | read-only only if scoped | no | no, unless explicitly diagnostic and safe | no | facts, hypotheses, blockers, next step | repair requested; mutation/live job needed; facts are ambiguous |
 | `implementation` | yes, only allowed files | yes, if requested/WP-level | yes only if explicitly allowed | read-only if needed | only with explicit DB/data authorization | only with explicit authorization | only with explicit authorization | changed files, checks, non-changes, risks | scope expansion; forbidden zone touched; approval missing |
 | `docs-currency` | docs only if allowed | yes, if requested/WP-level | no | no | no | no | no | classifications, stale/conflict findings, required updates | full audit needed but not requested; archive/delete/move needed |
-| `WP-level` | as task allows | required WP report | only if task allows | read-only if needed | only with explicit authorization, backup and SHA | only with explicit authorization | only with explicit authorization | WP report, checks, status/docs updates, next WP | dirty worktree before start; required approval/evidence missing |
+| `WP-level` | as task allows | required WP report | only if task allows | read-only if needed | only with explicit authorization, backup and SHA | only with explicit authorization | only with explicit authorization | WP report, checks, status/docs updates, next WP | unexplained dirty/untracked worktree before start; required approval/evidence missing |
 | `approval-required` | no until approved | planning/report only if allowed | no until approved | read-only only if safe and scoped | no until approved | no until approved | no until approved | approval request, risk, proposed command/change | user approval absent; risk cannot be bounded |
 
 ## 10. Output Modes
@@ -276,10 +286,74 @@ requested.
 - Requires DB/data guardian docs if relevant.
 - No mutation by default.
 
+DB SHA evidence policy:
+
+- Ordinary tasks with no DB, schema, import/parser/evaluator or production-data
+  risk do not require production DB SHA checks unless the Task Card asks for
+  them.
+- DB/schema-risk tasks with no production DB touch must report that
+  `data/cs2_coach.db` was not touched and state which DB/schema scope was
+  intentionally avoided.
+- Read-only production DB inspection must include the observed `sha256sum
+  data/cs2_coach.db`, the command or gate evidence that captured it, and a
+  statement that no mutation was performed.
+- Authorized production DB mutation must include explicit authorization,
+  backup evidence, before SHA and after SHA for `data/cs2_coach.db`.
+- Read-only SHA inspection is distinct from production DB mutation, copied-DB
+  work, schema artifact changes, migration/baseline changes and startup schema
+  behavior changes. Evidence for one category does not authorize another.
+
+### Schema-Changing WP Approval Policy
+
+Schema-changing work defaults to `approval-required`. It may proceed only when
+the Task Card explicitly names schema scope and allowed files/artifacts.
+
+Schema scope must distinguish:
+
+- read-only schema inspection;
+- schema definition/code or startup schema behavior changes;
+- schema baseline, migration artifact or migration script changes;
+- copied-DB experiments;
+- production DB mutation.
+
+Future schema-changing Task Cards must state, at minimum:
+
+- which schema scope category applies;
+- allowed schema files, scripts and artifacts;
+- whether production DB mutation is authorized;
+- required production DB backup plus before/after SHA evidence when production
+  DB mutation is authorized;
+- required schema baseline, diff or gate evidence from the FH-030 schema gate
+  or its accepted successor;
+- rollback and compatibility expectations, or an explicit reason they do not
+  apply.
+
+Authorization for read-only inspection does not authorize artifact edits,
+copied-DB experiments, migration execution, startup schema behavior changes or
+production DB mutation. Authorization for copied-DB work does not authorize
+production DB mutation. Production DB mutation still requires the explicit
+authorization, backup and SHA evidence required by `AGENTS.md`.
+
+Startup schema compatibility boundary:
+
+- Documenting compatibility boundaries does not authorize runtime startup
+  behavior changes, startup helper changes, migration support, schema artifact
+  edits, copied-DB experiments or production DB mutation.
+- Startup schema behavior changes are schema-changing work and require an
+  explicit Task Card scope before implementation.
+- Future startup schema compatibility Task Cards must state allowed
+  files/artifacts, required schema-gate evidence, rollback and compatibility
+  expectations and production DB authorization status.
+- FH-030, FH-031 and FH-032 did not adopt Alembic, add migration support,
+  mutate the production DB or change startup schema behavior.
+
 ### Import / Parser / Evaluator Task
 
 - Requires explicit approval before live import, parser or evaluator jobs.
 - Must respect Steam cap and current limitations.
+- Reports for any task involving import, parser, evaluator, manual evaluator,
+  import cap, production DB/import data, or worker/retry behavior must include
+  an import safety declaration.
 
 ### Deploy / Runtime Task
 
@@ -328,20 +402,211 @@ Task-specific acceptance constraints, if needed:
 Stop conditions, only if task-specific:
 ```
 
+For schema-changing work, the Task Card must include the schema scope category,
+allowed schema files/scripts/artifacts, production DB mutation authorization,
+required FH-030 schema-gate or successor evidence, and rollback/compatibility
+expectations required by the schema approval policy.
+
 ## 14. Standard WP Preflight
+
+Every Executor task must know its required checks before work starts. The Task
+Card may make these defaults stricter, add targeted checks or forbid otherwise
+safe checks. The stricter instruction wins. Missing, skipped, failed, stalled or
+timed-out checks must be reported with the exact reason and cannot be hidden in
+the summary.
+
+PASS verdict policy:
+
+- `PASS` is allowed only when every required check for the task/change class
+  and Task Card has passed, or when the Task Card explicitly authorizes a
+  narrower check set and the report names the authorization.
+- `PASS` is forbidden when any required check is missing, failed, stalled,
+  timed out or skipped without explicit task authorization.
+- `PASS_WITH_WARNINGS` is allowed only for completed work where required checks
+  passed but non-blocking warnings or residual risks remain. It must not be used
+  to imply that a mandatory gate passed when it did not.
+- `FAIL` is the expected verdict when the scoped work completed but required
+  acceptance checks failed.
+- `BLOCKED` is the expected verdict when a required check cannot safely run, a
+  stop condition is hit or completion would require authorization outside the
+  Task Card.
+
+PM rerun acceptance policy:
+
+- PM review may accept an Executor `BLOCKED` or `FAIL` task cycle after PM-owned
+  rerun evidence only when the original blocker was a required gate stall,
+  timeout, interruption or transient local execution failure, and not a
+  forbidden action, missing authorization, unsafe scope expansion, product
+  correctness failure, unresolved dirty worktree, DB/schema/import/runtime
+  safety issue or incomplete task implementation.
+- The PM-owned rerun must use the same required command or a Task-Card-authorized
+  equivalent from the same main-repo HEAD and same reviewed diff. If HEAD,
+  changed files, environment assumptions or required commands changed, the
+  result needs a new Executor task or explicit follow-up instead of review-time
+  acceptance.
+- PM-owned rerun evidence must record owner, command, working directory,
+  environment assumptions when relevant, timeout, exit status, timestamp or
+  review time, output excerpt or artifact/log path and the PM review/report path
+  that owns the evidence.
+- PM review must preserve the original Executor verdict as reported and record a
+  separate PM rerun verdict. If the rerun clears the only gate blocker, the
+  review may accept the task no better than `PASS_WITH_WARNINGS`, with the
+  warning that acceptance depends on PM-owned rerun evidence.
+- If the PM rerun fails, stalls, times out, is partial, uses a weaker check set
+  without explicit authorization or cannot prove it covered the same reviewed
+  diff, the cycle remains `FAIL` or `BLOCKED` and follow-up is required.
+- A PM rerun may accept a report as a valid failed/blocked outcome, but it must
+  not convert a failed final readiness gate, product safety issue or forbidden
+  action into readiness `PASS`.
+
+Gate stall and manual rerun recording:
+
+- A gate stall record must name the stalled command, timeout or interruption
+  owner, exit status if any, last meaningful output, whether a process/session
+  was left running and the minimum follow-up owner.
+- Manual reruns must be labeled by owner: `Executor`, `PM`, `User` or
+  `external`. PM/User/external reruns are review or operator evidence, not
+  Executor evidence, unless a later Executor task explicitly adopts that
+  evidence.
+- Failed, stalled or manually recovered gate history remains visible in the
+  task report/review chain until a later accepted rerun or repair report names
+  it as superseded. Do not delete or summarize it away as a clean PASS.
+
+For implementation tasks that touch code, scripts or tests, run the accepted
+local CI-equivalent gate before claiming PASS:
+
+```bash
+.venv/bin/python scripts/local_quality_gate.py
+```
+
+This wrapper is the current repo-local CI-equivalent gate for JC Coach during
+the restricted foundation-hardening lane. It is accepted until a future explicit
+task chooses and configures hosted CI or another external provider. The command
+runs project gate preflight, changed, required-checks and postflight evidence
+plus the full safe pytest suite, Ruff and `git diff --check`. It returns
+non-zero if any required subcommand fails. `scripts/project_gate.py` remains the
+read-only evidence helper used inside the local gate and may still be run
+separately when a task card asks for individual gate output.
+
+The local CI-equivalent gate is not hosted CI, does not configure branch
+protection, secrets, external accounts or provider workflows, and does not by
+itself prove final readiness. Hosted CI remains a separate future policy and
+configuration task if the user chooses it.
+
+Known residual quality-gate risk: full-suite pytest currently stalls in
+`tests/test_coach_first_ui.py::test_coach_page_renders_for_authenticated_owner_with_empty_state`.
+This is open and must not be described as resolved, green full-suite evidence
+or accepted final-readiness evidence until a future task fixes or explicitly
+accepts it for the final readiness gate.
 
 Run:
 
 ```bash
-pwd
-git status --short
-git branch --show-current
-git log --oneline -8 --decorate
+.venv/bin/python scripts/project_gate.py preflight
+.venv/bin/python scripts/project_gate.py changed
+.venv/bin/python scripts/project_gate.py required-checks
 ```
 
-If the worktree is dirty before a WP-level task, stop and report.
+The project gate is read-only. It reports working directory, branch, recent
+commits, full short git status including untracked files, governance file
+presence, production DB SHA, changed/untracked paths, activated guardians and
+the check expectations inferred from those guardians.
 
-## 15. Standard Output Contract
+Before WP-level or hardening Executor work starts, compare `git status --short`
+and project-gate preflight state against the current Task Card, accepted
+unresolved prior task state and explicit user/PM authorization. Stop with
+`BLOCKED` if the main repo has dirty or untracked paths that are not explained
+by one of those sources. The `BLOCKED` report must include:
+
+- `git status --short` output.
+- Safe project-gate preflight evidence when it can run without touching the
+  unexplained paths.
+- Affected paths.
+- Why the paths are unexplained by the current Task Card, accepted unresolved
+  prior task state or explicit authorization.
+- Minimum next action, such as user/PM confirmation, a cleanup task, or a
+  scoped follow-up to reconcile the worktree.
+
+This stop condition applies to pre-existing worktree state before a clean or
+accepted preflight. It does not treat normal scoped edits made after that
+preflight as a blocker; those edits are instead reported through changed-files,
+postflight and `git diff --check` evidence.
+
+Run before closure:
+
+```bash
+.venv/bin/python scripts/project_gate.py postflight
+```
+
+Postflight reports diff stat, changed/untracked paths, activated guardians,
+required-check summary, governance file presence and production DB SHA for the
+task report. It does not replace the task card's required tests, Ruff or
+`git diff --check`.
+
+## 15. Required Checks Matrix
+
+These are generic minimum expectations for Executor reports. They do not grant
+permission to perform risky actions. DB mutation, schema work, live import,
+parser/evaluator jobs, service changes, deploy changes and production data work
+still require explicit Task Card authorization plus the safety evidence required
+by `AGENTS.md`.
+
+| Task/change class | Required checks before claiming PASS | May skip only with exact reason |
+|---|---|---|
+| Docs-only governance/status/report tasks | `git status --short` before edits, `.venv/bin/python scripts/project_gate.py preflight`, `.venv/bin/python scripts/project_gate.py changed`, `.venv/bin/python scripts/project_gate.py required-checks`, `.venv/bin/python scripts/project_gate.py postflight`, `git diff --check`, plus review against allowed files and control-plane scope | Runtime/app smoke, service actions, imports, parser/evaluator jobs, local quality gate, full pytest, Ruff and production DB access when not explicitly scoped |
+| Code, script or test changes | `.venv/bin/python scripts/local_quality_gate.py`, the accepted local CI-equivalent gate, plus any task-specific focused tests or evidence commands | Individual pytest/Ruff/project-gate subcommands only when the local gate ran and its output covers them, unless the Task Card asks for separate output |
+| DB/schema-risk tasks | Explicit DB/schema authorization, preflight/status evidence, appropriate production DB SHA evidence or explicit no-production-DB-touch declaration, DB backup plus before/after SHA evidence when mutation is authorized, migration/schema checks named by the Task Card, relevant DB tests, `git diff --check`, project gate postflight | Production DB mutation when not authorized; full suite only if the Task Card accepts a narrower DB-specific check set with owner/risk |
+| Import/parser/evaluator-risk tasks | Explicit authorization before any live import, parser, evaluator or manual evaluator job; cap/temp-dir/safety evidence when relevant; targeted import/parser/evaluator tests or dry-run/read-only diagnostics; project gate evidence; `git diff --check` | Live Steam/Valve/import/parser/evaluator/manual evaluator commands when not explicitly authorized |
+| Runtime/deploy/service-risk tasks | Explicit service/deploy authorization before start/stop/restart/config changes; repo-vs-live config diff/evidence; targeted runtime tests or smoke checks named by the Task Card; project gate evidence; `git diff --check` | Service/nginx/systemd/deploy actions when not explicitly authorized |
+| UI/web route/template/static tasks | Relevant route/template/static tests, safe web smoke or screenshot checks when explicitly useful and safe, full local gate if code/tests changed, project gate evidence, `git diff --check` | Live service smoke when the task forbids service use or when test-mode coverage is sufficient and documented |
+| Recommendation/coach/metrics/AI tasks | Relevant recommendation, metric truth, confidence, AI validator or semantic eval checks; full local gate if code/tests changed; project gate evidence; `git diff --check`; explicit caveat/source-confidence review for hard advice claims | External AI/provider calls, production report generation or weak-metric hard claims unless explicitly authorized and evidenced |
+| Audit/review/discovery tasks | `git status --short`, scoped read-only evidence commands named by the Task Card, project gate evidence when requested, report findings with completeness and follow-up recommendations if gaps are found | Repair edits, broad follow-up execution or risky commands outside the review scope |
+
+Reports must include a checks evidence section with:
+
+- Required checks from the Task Card and this matrix.
+- Each required check's command, result status and relevant output excerpt or
+  artifact/log path. Long output may be summarized, but the report must include
+  enough concrete output or artifact/log pointers for PM review to verify the
+  claim; a bare statement such as "passed" is not enough.
+- Production DB SHA evidence or an explicit no-production-DB-touch declaration
+  appropriate to the task risk. Ordinary tasks with no DB, schema,
+  import/parser/evaluator or production-data risk may state that no SHA check
+  was required.
+- Checks not run, with the exact reason and whether the skip was explicitly
+  authorized by the Task Card.
+- Failed, stalled or timed-out checks, with the exact failure, stall or timeout
+  summary plus residual risk, owner and target follow-up when relevant.
+- Any additional safe docs-only check indicated by `project_gate.py
+  required-checks`, or the exact reason it was not run.
+
+Import safety declaration requirement:
+
+- Future reports for tasks involving import, parser, evaluator, manual
+  evaluator, import cap, production DB/import data, or worker/retry behavior
+  must state whether live Steam/Valve calls ran; whether demo download,
+  decompression, parser, evaluator or manual evaluator jobs ran; whether a
+  worker, queue runner, retry path or stale-job repair ran; whether
+  `STEAM_IMPORT_MAX_DEMOS_PER_RUN` changed; whether production DB/import data,
+  Steam cursors or raw demos were touched; whether temp-directory requirements
+  applied; and whether tests used mocks/temp paths/temp DBs instead of
+  production data.
+
+For code, script or test changes, `.venv/bin/python scripts/local_quality_gate.py`
+is the accepted local CI-equivalent PASS gate. A report may not claim PASS for
+that class while silently replacing the local gate with a weaker check set.
+The local gate output may be reported as the covering gate evidence for project
+gate preflight, changed, required-checks and postflight evidence; full safe
+pytest; Ruff; and `git diff --check`, unless the Task Card asks for separate
+subcommand output. If the known full-suite pytest stall or any other gate
+failure prevents a clean run, the report must name the failed, stalled or
+timed-out command and use the Task Card verdict rules. A docs-only task is not
+required to run pytest, Ruff or the local quality gate unless the Task Card or
+changed files require them; its normal PASS evidence is the docs-safe project
+gate command output, `git diff --check`, allowed-file/scope review and any
+task-specific checks.
+
+## 16. Standard Output Contract
 
 For WP-level work, console output should include:
 
@@ -350,16 +615,52 @@ For WP-level work, console output should include:
 3. Changed files.
 4. Short summary.
 5. `git status --short`.
-6. Confirmations:
+6. Required checks and gate output evidence summary:
+   - required checks;
+   - commands run and result status;
+   - relevant output excerpts or artifact/log paths;
+   - checks not run, why and whether the skip was task-authorized;
+   - failed, stalled or timed-out checks and residual risk.
+7. Confirmations:
    - no code changed, if docs-only;
-   - no DB changed;
+   - no DB changed, plus DB SHA evidence or no-production-DB-touch declaration
+     appropriate to the task risk;
    - no imports/parser/evaluator ran;
+   - import safety declaration when the task touches import, parser, evaluator,
+     manual evaluator, import cap, production DB/import data, or worker/retry
+     behavior;
    - no service/nginx changed;
-   - no `git add`/commit/push.
+   - no unauthorized `git add`/commit and no push.
 
 The exact report path is task-specific and belongs in the Task Card.
 
-## 16. Documentation Steward Standalone Mode
+## 17. Standard Report Docs Update Checklist
+
+Every WP-level, hardening or file-backed task report must include a docs update
+checklist, not only a free-form docs summary. The checklist is a scoped closure
+check for the task at hand; it does not require broad docs audits for tiny
+tasks and does not expand Hot context.
+
+The report checklist must state each item as `checked and updated`,
+`checked; no update required`, `not applicable`, or `deferred`, with a short
+reason whenever the answer is not `checked and updated`:
+
+- Hot/current status docs: whether `CURRENT_STATUS.md` and other Hot docs
+  needed updates.
+- WP registry/status/handoff docs: whether `WP_REGISTRY.md`, `HANDOFF.md` or
+  other active status/handoff docs needed updates.
+- Navigation docs: whether new or changed canonical/navigation docs required
+  `DOCS_INDEX.md` or `DOCS_MAP.md` updates.
+- Task-relevant domain docs: whether docs for the task's domain needed updates.
+- Documentation Steward: whether Documentation Steward review was required and
+  completed, or why it was not required.
+- Deferred docs follow-up: owner and target task, or `none`.
+
+The checklist must respect the Hot/Warm/Cold context policy and control-plane
+protection rules. A task may answer `not applicable` or `checked; no update
+required` only with a short reason tied to scope.
+
+## 18. Documentation Steward Standalone Mode
 
 Example prompt:
 
@@ -382,7 +683,7 @@ Required output:
 - Recommended actions.
 - Confirmation that no automatic deletion was performed.
 
-## 17. Required Document Update Matrix
+## 19. Required Document Update Matrix
 
 | Event | Required docs to check/update |
 |---|---|
@@ -397,7 +698,7 @@ Required output:
 | Document deprecated | `DOCS_INDEX.md`, `DOCS_MAP.md`, report, but no delete without approval |
 | Side-chat decision accepted | `DECISIONS.md` or relevant canonical doc |
 
-## 18. Docs Classification Model
+## 20. Docs Classification Model
 
 - `CANONICAL` - source of truth for a specific area.
 - `SUPPORTING` - useful reference but not source of truth.
@@ -413,7 +714,7 @@ Rules:
 - If docs conflict, the source-of-truth hierarchy in
   `PROJECT_OPERATING_PROTOCOL.md` wins.
 
-## 19. WP Closure Checklist
+## 21. WP Closure Checklist
 
 A WP can close only if:
 
@@ -422,12 +723,15 @@ A WP can close only if:
 - Documentation Steward check completed.
 - Required docs updated.
 - Report file created for WP-level work.
+- Report includes the standard docs update checklist.
+- Report includes required checks, checks actually run, checks not run with
+  exact reasons, failed/stalled/timed-out checks and residual risk/follow-up.
 - Forbidden changes confirmed absent.
 - Blockers/warnings recorded.
 - Next step recorded.
 - User/ChatGPT review completed before commit.
 
-## 20. How To Use This Workflow In Prompts
+## 22. How To Use This Workflow In Prompts
 
 ### Normal WP Prompt
 
@@ -436,7 +740,8 @@ Work according to AGENTS.md and AGENT_WORKFLOW.md.
 Task: ...
 Use Hot context. Read Warm docs only if needed.
 Run PM/Implementation/QA/Docs Steward roles for this WP.
-Do not git add/commit/push.
+Do not git add/commit/push unless the task explicitly authorizes local commit
+handling under `AGENTS.md`; never push without a separate explicit user request.
 ```
 
 ### Tiny Task Prompt

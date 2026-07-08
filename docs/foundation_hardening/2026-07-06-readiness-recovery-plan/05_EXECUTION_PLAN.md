@@ -80,7 +80,12 @@ Source audit: `docs/audits/2026-07-06-agentic-readiness-audit`.
   commits.
 - Expected output: one standard quality gate for Executor reports.
 - Acceptance criteria: gate runs pytest/Ruff/diff/project_gate and failures
-  block PASS claims.
+  block PASS claims. Code, script or test changes require a passing
+  `.venv/bin/python scripts/local_quality_gate.py` before Executor may claim
+  `PASS`; docs-only governance/status/report tasks require docs-safe project
+  gate commands, `git diff --check`, scope/allowed-file review and
+  task-specific checks unless the Task Card or changed files require pytest,
+  Ruff or the local quality gate.
 - Checks to run: the new gate, full pytest, Ruff, diff check.
 - Stop and ask human when: CI provider choice or repository policy is unclear.
 
@@ -97,6 +102,15 @@ Source audit: `docs/audits/2026-07-06-agentic-readiness-audit`.
 - Expected output: every task has preflight, acceptance, checks and residual risk
   reporting.
 - Acceptance criteria: Execution handoff can be used without extra decisions.
+  `PASS`, `PASS_WITH_WARNINGS`, `FAIL` and `BLOCKED` are distinguished clearly:
+  `PASS` requires all mandatory checks for the task/change class to pass,
+  `PASS_WITH_WARNINGS` cannot stand in for a failed mandatory gate, `FAIL`
+  covers completed work with failed required checks, and `BLOCKED` covers stop
+  conditions or checks that cannot safely run. PM review may accept an
+  Executor `BLOCKED` or `FAIL` cycle after PM-owned rerun evidence only under
+  the workflow policy for same-diff, same-command-or-authorized-equivalent
+  reruns with full owner/command/status/output evidence, original Executor
+  verdict preserved and no better than `PASS_WITH_WARNINGS`.
 - Checks to run: docs diff check, project gate changed.
 - Stop and ask human when: workflow changes conflict with root `AGENTS.md`.
 
@@ -132,4 +146,3 @@ Source audit: `docs/audits/2026-07-06-agentic-readiness-audit`.
 - Checks to run: final audit commands from `04_READINESS_GATE.md`.
 - Stop and ask human when: any P0 remains unresolved without accepted blocker
   status or any P1 needs risk acceptance.
-

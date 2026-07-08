@@ -1,14 +1,21 @@
 # Known Limitations
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-08.
 
-- Not secure for friends/public use yet.
+- Not secure for friends/public use yet; public/friends access remains blocked
+  until the explicit gate in `docs/SECURITY.md` and deploy verification in
+  `docs/DEPLOYMENT.md` pass in a future authorized task.
 - `v0.9` Real Data Onboarding is promoted with warnings for controlled
   personal one-demo-capped use only.
 - `STEAM_IMPORT_MAX_DEMOS_PER_RUN` remains `1` until a separate cap-change WP.
 - Match playlist mode is not accepted as exact in `v0.9`; current data can use
   provenance/limitation labels only, not Premier/Competitive/Wingman/Casual/
   Deathmatch/FACEIT/custom claims.
+- CS2 domain boundaries are conservative in `docs/CS2_DOMAIN_CONTRACT.md`:
+  economy, positioning and clutch models are unavailable; current map labels
+  are source-provided until a canonical map registry is accepted; side metrics
+  are display-only; hard trade recommendations are blocked before parser
+  hardening; coach output must keep these source limitations visible.
 - Authenticated owner-browser timing was not captured by Codex for WP-017H.
 - `/coach` artifact overview is acceptable at 22 demos but should be optimized
   before materially larger demo volume.
@@ -23,5 +30,8 @@ Last updated: 2026-07-06.
 - Structured risk register, source trust/sample-size policy, prompt/payload
   versioning, semantic AI evals and API contract/gate enforcement remain
   foundation hardening items.
+- Current rate limiting is in-memory and not public-grade; privacy/retention,
+  incident/log taxonomy and safe environment-reference policies are documented
+  but not accepted as public operations readiness.
 - Raw `.dem` files are not deleted.
 - FACEIT, viewer, heatmaps, clips, payments and social features are deferred.

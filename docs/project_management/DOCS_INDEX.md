@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-08.
 
 Human-readable navigation map. This file does not replace `AGENTS.md`,
 `docs/CURRENT_STATUS.md`, `docs/project_management/WP_REGISTRY.md` or
@@ -52,7 +52,7 @@ reports. Cold files are evidence/history and must not override Hot context.
 - `docs/PROJECT_CONTROL.md` - supporting governance/product control reference; current operating hierarchy starts with `AGENTS.md` and Hot context.
 - `docs/PROJECT_GOVERNANCE.md` - governance, WP gates, evidence policy.
 - `docs/CURRENT_STATUS.md` - current product state.
-- `docs/CURRENT_MILESTONE.md` - current/historical hardening milestone detail.
+- `docs/CURRENT_MILESTONE.md` - historical/superseded milestone evidence; not current roadmap or product-state truth.
 - `docs/project_management/PROJECT_OPERATING_PROTOCOL.md` - Warm governance protocol for roles, WP lifecycle, blockers, reports and commit flow.
 - `docs/project_management/AGENT_WORKFLOW.md` - Warm repo-native WP role workflow, control-plane protection policy, invocation modes, output modes, task type profiles, Task Card prompt contract and Documentation Steward / Docs Currency Agent checks; not per-task Hot context.
 
@@ -71,6 +71,8 @@ reports. Cold files are evidence/history and must not override Hot context.
 - `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/` - current
   foundation hardening recovery plan after the 2026-07-06 agentic-readiness
   audit; governs restricted scope until its readiness gate passes.
+- `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/06_ROADMAP_PAUSE_AND_RESUME.md` - roadmap pause/resume control note for the restricted
+  foundation hardening lane and WP-018 resume path.
 
 ## Agent Workflow And Guardians
 
@@ -91,6 +93,8 @@ reports. Cold files are evidence/history and must not override Hot context.
 ## Product Architecture
 
 - `docs/ARCHITECTURE.md` - system shape and boundaries.
+- `docs/CS2_DOMAIN_CONTRACT.md` - CS2 match/round domain boundaries,
+  glossary, source limits, unavailable model rules and map-registry plan.
 - `docs/FEATURES_RU.md` - implemented features summary, supporting.
 - `docs/DECISIONS.md` - current decisions.
 - `docs/KNOWN_LIMITATIONS.md` - known non-readiness areas.
@@ -107,18 +111,18 @@ reports. Cold files are evidence/history and must not override Hot context.
 
 - `docs/STEAM_IMPORT.md` - canonical Steam import truth.
 - `docs/STEAM_IMPORT_ARCHITECTURE.md` - deeper Steam architecture, supporting.
-- `docs/STEAM_MATCH_DATES_RU.md` - Steam match date policy.
-- `docs/DEMO_DEEP_PARSER_TZ_RU.md` - parser context/spec, supporting.
-- `docs/DEMO_STORAGE_TZ.md` - demo storage lifecycle plan.
+- `docs/STEAM_MATCH_DATES_RU.md` - supporting Steam/import date policy; not current source-of-truth.
+- `docs/DEMO_DEEP_PARSER_TZ_RU.md` - historical/supporting parser context/spec; not current source-of-truth.
+- `docs/DEMO_STORAGE_TZ.md` - historical/supporting demo storage lifecycle plan; not current source-of-truth.
 
 ## Metrics / Recommendations / AI
 
 - `docs/METRICS.md` - canonical Metric Truth contract.
 - `docs/RECOMMENDATIONS.md` - recommendation loop and planner rules.
 - `docs/AI_COACH.md` - AI provider/output truth.
-- `docs/METRICS_ROADMAP_SCORING_RU.md` - metric scoring/wishlist, historical/supporting.
+- `docs/METRICS_ROADMAP_SCORING_RU.md` - metric scoring/wishlist, historical/supporting; not current source-of-truth.
 - `docs/AI_COACH_PROVIDER_ARCHITECTURE.md` - older AI provider memo, supporting/historical.
-- `docs/AI_RECOMMENDATIONS_AIM_EXECUTION_PLAN_RU.md` - older AI/recommendation plan, historical.
+- `docs/AI_RECOMMENDATIONS_AIM_EXECUTION_PLAN_RU.md` - older AI/recommendation plan, historical/completed; not current source-of-truth.
 
 ## Testing / Security
 
@@ -154,11 +158,11 @@ reports. Cold files are evidence/history and must not override Hot context.
 
 - `docs/project_management/CS2_AI_COACH_MASTER_CURATION_PLAYBOOK.md` - historical/archive-candidate operating playbook; superseded by `AGENTS.md`, `AGENT_WORKFLOW.md` and current Hot context.
 - `docs/project_management/CS2_AI_COACH_PROJECT_CURATION_HANDOFF.md` - historical/archive-candidate handoff manual; superseded by `docs/HANDOFF.md`.
-- `docs/PRODUCT_EXECUTION_STRATEGY.md` - older strategy, historical.
-- `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md` - older implementation plan, historical.
+- `docs/PRODUCT_EXECUTION_STRATEGY.md` - older strategy memo, historical/superseded; not current source-of-truth.
+- `docs/NEXT_100_PERCENT_IMPLEMENTATION_PLAN.md` - older implementation plan, historical/superseded; not current source-of-truth.
 - `docs/NON_STOP_DEVELOPMENT_PROMPTS.md` - historical/archive-candidate prompt library; not active workflow.
 - `docs/COMPETITOR_FEATURE_MATRIX.md` - market comparison, supporting.
-- `docs/FEATURE_ROADMAP_SCORING.md` - feature scoring, supporting/historical.
+- `docs/FEATURE_ROADMAP_SCORING.md` - feature scoring, historical/supporting; not current roadmap truth.
 - `docs/feature_roadmap_scoring_ru.xlsx` - supporting spreadsheet artifact.
 - `docs/metrics_roadmap_scoring_ru.xlsx` - supporting spreadsheet artifact.
 - `docs/archive/README.md` - archive index.

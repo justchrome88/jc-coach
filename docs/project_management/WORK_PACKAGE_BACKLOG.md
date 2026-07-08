@@ -1,8 +1,24 @@
 # Work Package Backlog
 
-Last updated: 2026-07-05.
+Last updated: 2026-07-07.
 
 This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a governance artifact, not implementation approval. Each WP still needs an explicit user prompt before changes begin.
+
+Current foundation-hardening risks, owners, statuses, target tasks and evidence
+are tracked in
+`docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
+Major CS2 feature work and unrestricted WP-018 expansion remain paused until
+the final readiness gate passes. Narrow evidence, caveat, calibration, docs or
+tests work may continue only when it improves readiness and does not add
+unsupported claims. Docs-only roadmap edits cannot set
+`READY_FOR_MAJOR_CS2_FEATURE_WORK` to `YES`; only final readiness gate `PASS`
+can authorize that state change.
+
+After gate `PASS`, current status and roadmap docs must be updated by an
+appropriate task before a focused WP-018 restart task card resumes the
+canonical WP-018 sequence. The preserved resume context begins from the WP-018B
+context recorded by the existing WP-018A diagnosis, unless later accepted work
+changes that.
 
 ## WP-012
 
@@ -317,15 +333,15 @@ This backlog defines the planned WP sequence from `v0.4.2` to `v1.0`. It is a go
 | id | `WP-018` |
 | title | Coach Quality Calibration |
 | target version | `v0.10` |
-| status | planned |
-| objective | Calibrate coach/recommendation quality, progress scoring and wording against accepted evidence. |
+| status | planned / restricted pending foundation readiness gate |
+| objective | Calibrate coach/recommendation quality, progress scoring and wording against accepted evidence after the readiness gate; before gate `PASS`, only narrow evidence/caveat/calibration/docs/tests work may continue when it improves readiness and avoids unsupported claims. |
 | guardians | `METRICS_GUARDIAN`, `UI_COACH_GUARDIAN`, `TEST_GUARDIAN`, `PM_ORCHESTRATOR` |
 | source docs | `docs/RECOMMENDATIONS.md`, `docs/METRICS.md`, `docs/AI_COACH.md`, `docs/project_management/ACCEPTANCE_MATRIX.md` |
-| forbidden actions | Unsupported metric upgrades, planner quality claims without evidence, live AI/import/parser jobs unless explicitly authorized. |
+| forbidden actions | Unrestricted major WP-018 / CS2 feature expansion before readiness gate `PASS`; unsupported metric upgrades; planner quality claims without evidence; live AI/import/parser jobs unless explicitly authorized. |
 | acceptance criteria | Coach claims are calibrated to evidence confidence; rough one-match progress wording is repaired or explicitly bounded; planner and recommendation quality gaps are diagnosed; weak metrics remain caveated. |
 | required evidence | Targeted tests if code changes, Metric Truth checks, UI/wording evidence, audit report. |
 | exit criteria | Coach output is useful and honest enough for repeated personal use with known caveats. |
-| next WP | `WP-019 Personal Daily Use UX` |
+| next WP | `WP-019 Personal Daily Use UX` after WP-018 promotion; WP-018 restart after gate `PASS` should use the preserved WP-018B context unless later accepted work changes the sequence. |
 
 ## WP-019
 

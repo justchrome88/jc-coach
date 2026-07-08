@@ -11,7 +11,7 @@ Source: audit `01_AUDIT_MATRIX.csv` and `01_AUDIT_MATRIX.md`.
 | AR-005 | `01_AUDIT_MATRIX.csv` | Task lifecycle documented but manual. | Fix during hardening. | Supports gate enforcement. | Reduces skipped closure steps. | Revisit after report template/gate update. |
 | AR-007 | `01_AUDIT_MATRIX.csv` | Permission matrix not tool-enforced. | Fix during hardening. | Prevents unsafe DB/import/runtime tasks. | Better execution safety. | Revisit after prompt lint/checklist exists. |
 | AR-010 | `01_AUDIT_MATRIX.csv` | DoD strong but manual. | Fix during hardening. | Needed for binary readiness gate. | More reliable PASS/FAIL. | Revisit after report checklist template. |
-| AR-014 | `01_AUDIT_MATRIX.csv` | Docs update policy can drift. | Fix during hardening. | Foundation docs must remain source of truth. | Reduces stale docs. | Revisit after docs checklist in reports. |
+| AR-014 | `01_AUDIT_MATRIX.csv` | Docs update policy can drift. | Implemented during hardening by FH-013; maintain. | Foundation docs must remain source of truth, and FH-013 adds an explicit docs update checklist requirement to task reports. | Reduces stale docs. | Revisit if future reports omit the docs update checklist. |
 | AR-021 | `01_AUDIT_MATRIX.csv` | Route-level validation inventory missing. | Fix during hardening if touching API contracts. | Complements AR-018. | Safer mutation endpoints. | Revisit during API contract task. |
 | AR-023 | `01_AUDIT_MATRIX.csv` | Logging policy thin. | Fix during hardening. | Supports ops/security gate. | Better incident diagnosis. | Revisit after observability runbook. |
 | AR-024 | `01_AUDIT_MATRIX.csv` | Deploy verification checklist missing. | Fix during hardening as docs-only. | Needed before later VPS hardening. | Safer deploy comparisons. | Revisit in WP-020. |
@@ -94,4 +94,3 @@ Source: audit `01_AUDIT_MATRIX.csv` and `01_AUDIT_MATRIX.md`.
 | Audit ID | Source audit file | Finding | Decision | Rationale | Impact | Revisit condition |
 |---|---|---|---|---|---|---|
 | None | audit matrix | No P2/P3 item needs immediate human clarification. | No clarification needed. | The audit gives enough evidence for triage. | None. | Reopen if user wants root `PROJECT_INDEX.md` or public/friends roadmap. |
-

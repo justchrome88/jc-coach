@@ -1,6 +1,16 @@
-> СТАТУС: ВСПОМОГАТЕЛЬНЫЙ / ЧАСТИЧНО АКТУАЛЬНЫЙ / НЕ SOURCE OF TRUTH
-> Канонический источник: `docs/PROJECT_CONTROL.md`, `docs/ARCHITECTURE.md` и `docs/BACKUP_RESTORE.md`.
-> Не использовать этот файл как текущий план реализации, если `PROJECT_CONTROL` явно на него не ссылается.
+> Status: Supporting / historical demo-storage plan; not current product,
+> roadmap, workflow or source-of-truth.
+> Use as supporting history only. This file must not override `AGENTS.md`,
+> `docs/CURRENT_STATUS.md`, `docs/project_management/WP_REGISTRY.md` or current
+> Task Cards.
+> Current storage/import and operations truth: `docs/STEAM_IMPORT.md`,
+> `docs/ARCHITECTURE.md` and `docs/BACKUP_RESTORE.md`.
+> Current roadmap/version truth: `docs/CURRENT_STATUS.md`,
+> `docs/project_management/WP_REGISTRY.md` and
+> `docs/project_management/VERSION_ROADMAP.md`.
+> Current workflow truth: `docs/project_management/AGENT_WORKFLOW.md`.
+> Navigation/classification: `docs/project_management/DOCS_INDEX.md` and
+> `docs/project_management/DOCS_MAP.md`.
 
 # ТЗ: жизненный цикл CS2 demo
 

@@ -1,0 +1,3563 @@
+{
+  "schema": {
+    "application_id": 0,
+    "engine": "sqlite",
+    "objects": [
+      {
+        "name": "ix_coach_recommendations_id",
+        "sql": "CREATE INDEX ix_coach_recommendations_id ON coach_recommendations (id)",
+        "tbl_name": "coach_recommendations",
+        "type": "index"
+      },
+      {
+        "name": "ix_coach_recommendations_status",
+        "sql": "CREATE INDEX ix_coach_recommendations_status ON coach_recommendations (status)",
+        "tbl_name": "coach_recommendations",
+        "type": "index"
+      },
+      {
+        "name": "ix_coach_reports_created_at",
+        "sql": "CREATE INDEX ix_coach_reports_created_at ON coach_reports (created_at)",
+        "tbl_name": "coach_reports",
+        "type": "index"
+      },
+      {
+        "name": "ix_coach_reports_id",
+        "sql": "CREATE INDEX ix_coach_reports_id ON coach_reports (id)",
+        "tbl_name": "coach_reports",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_damage_events_attacker_name",
+        "sql": "CREATE INDEX ix_demo_damage_events_attacker_name ON demo_damage_events (attacker_name)",
+        "tbl_name": "demo_damage_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_damage_events_attacker_steamid",
+        "sql": "CREATE INDEX ix_demo_damage_events_attacker_steamid ON demo_damage_events (attacker_steamid)",
+        "tbl_name": "demo_damage_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_damage_events_id",
+        "sql": "CREATE INDEX ix_demo_damage_events_id ON demo_damage_events (id)",
+        "tbl_name": "demo_damage_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_damage_events_match_id",
+        "sql": "CREATE INDEX ix_demo_damage_events_match_id ON demo_damage_events (match_id)",
+        "tbl_name": "demo_damage_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_damage_events_round_number",
+        "sql": "CREATE INDEX ix_demo_damage_events_round_number ON demo_damage_events (round_number)",
+        "tbl_name": "demo_damage_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_damage_events_tick",
+        "sql": "CREATE INDEX ix_demo_damage_events_tick ON demo_damage_events (tick)",
+        "tbl_name": "demo_damage_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_damage_events_victim_name",
+        "sql": "CREATE INDEX ix_demo_damage_events_victim_name ON demo_damage_events (victim_name)",
+        "tbl_name": "demo_damage_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_damage_events_victim_steamid",
+        "sql": "CREATE INDEX ix_demo_damage_events_victim_steamid ON demo_damage_events (victim_steamid)",
+        "tbl_name": "demo_damage_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_damage_events_weapon",
+        "sql": "CREATE INDEX ix_demo_damage_events_weapon ON demo_damage_events (weapon)",
+        "tbl_name": "demo_damage_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_duels_attacker_name",
+        "sql": "CREATE INDEX ix_demo_duels_attacker_name ON demo_duels (attacker_name)",
+        "tbl_name": "demo_duels",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_duels_attacker_steamid",
+        "sql": "CREATE INDEX ix_demo_duels_attacker_steamid ON demo_duels (attacker_steamid)",
+        "tbl_name": "demo_duels",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_duels_id",
+        "sql": "CREATE INDEX ix_demo_duels_id ON demo_duels (id)",
+        "tbl_name": "demo_duels",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_duels_match_id",
+        "sql": "CREATE INDEX ix_demo_duels_match_id ON demo_duels (match_id)",
+        "tbl_name": "demo_duels",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_duels_round_number",
+        "sql": "CREATE INDEX ix_demo_duels_round_number ON demo_duels (round_number)",
+        "tbl_name": "demo_duels",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_duels_tick",
+        "sql": "CREATE INDEX ix_demo_duels_tick ON demo_duels (tick)",
+        "tbl_name": "demo_duels",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_duels_victim_name",
+        "sql": "CREATE INDEX ix_demo_duels_victim_name ON demo_duels (victim_name)",
+        "tbl_name": "demo_duels",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_duels_victim_steamid",
+        "sql": "CREATE INDEX ix_demo_duels_victim_steamid ON demo_duels (victim_steamid)",
+        "tbl_name": "demo_duels",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_duels_weapon",
+        "sql": "CREATE INDEX ix_demo_duels_weapon ON demo_duels (weapon)",
+        "tbl_name": "demo_duels",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_grenade_events_event_type",
+        "sql": "CREATE INDEX ix_demo_grenade_events_event_type ON demo_grenade_events (event_type)",
+        "tbl_name": "demo_grenade_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_grenade_events_grenade_type",
+        "sql": "CREATE INDEX ix_demo_grenade_events_grenade_type ON demo_grenade_events (grenade_type)",
+        "tbl_name": "demo_grenade_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_grenade_events_id",
+        "sql": "CREATE INDEX ix_demo_grenade_events_id ON demo_grenade_events (id)",
+        "tbl_name": "demo_grenade_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_grenade_events_match_id",
+        "sql": "CREATE INDEX ix_demo_grenade_events_match_id ON demo_grenade_events (match_id)",
+        "tbl_name": "demo_grenade_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_grenade_events_player_name",
+        "sql": "CREATE INDEX ix_demo_grenade_events_player_name ON demo_grenade_events (player_name)",
+        "tbl_name": "demo_grenade_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_grenade_events_player_steamid",
+        "sql": "CREATE INDEX ix_demo_grenade_events_player_steamid ON demo_grenade_events (player_steamid)",
+        "tbl_name": "demo_grenade_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_grenade_events_round_number",
+        "sql": "CREATE INDEX ix_demo_grenade_events_round_number ON demo_grenade_events (round_number)",
+        "tbl_name": "demo_grenade_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_grenade_events_tick",
+        "sql": "CREATE INDEX ix_demo_grenade_events_tick ON demo_grenade_events (tick)",
+        "tbl_name": "demo_grenade_events",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_parse_artifacts_demo_sha1",
+        "sql": "CREATE INDEX ix_demo_parse_artifacts_demo_sha1 ON demo_parse_artifacts (demo_sha1)",
+        "tbl_name": "demo_parse_artifacts",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_parse_artifacts_id",
+        "sql": "CREATE INDEX ix_demo_parse_artifacts_id ON demo_parse_artifacts (id)",
+        "tbl_name": "demo_parse_artifacts",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_parse_artifacts_match_id",
+        "sql": "CREATE INDEX ix_demo_parse_artifacts_match_id ON demo_parse_artifacts (match_id)",
+        "tbl_name": "demo_parse_artifacts",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_parse_artifacts_parsed_at",
+        "sql": "CREATE INDEX ix_demo_parse_artifacts_parsed_at ON demo_parse_artifacts (parsed_at)",
+        "tbl_name": "demo_parse_artifacts",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_parse_artifacts_status",
+        "sql": "CREATE INDEX ix_demo_parse_artifacts_status ON demo_parse_artifacts (status)",
+        "tbl_name": "demo_parse_artifacts",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_player_rounds_id",
+        "sql": "CREATE INDEX ix_demo_player_rounds_id ON demo_player_rounds (id)",
+        "tbl_name": "demo_player_rounds",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_player_rounds_match_id",
+        "sql": "CREATE INDEX ix_demo_player_rounds_match_id ON demo_player_rounds (match_id)",
+        "tbl_name": "demo_player_rounds",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_player_rounds_player_name",
+        "sql": "CREATE INDEX ix_demo_player_rounds_player_name ON demo_player_rounds (player_name)",
+        "tbl_name": "demo_player_rounds",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_player_rounds_player_steamid",
+        "sql": "CREATE INDEX ix_demo_player_rounds_player_steamid ON demo_player_rounds (player_steamid)",
+        "tbl_name": "demo_player_rounds",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_player_rounds_round_number",
+        "sql": "CREATE INDEX ix_demo_player_rounds_round_number ON demo_player_rounds (round_number)",
+        "tbl_name": "demo_player_rounds",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_rounds_id",
+        "sql": "CREATE INDEX ix_demo_rounds_id ON demo_rounds (id)",
+        "tbl_name": "demo_rounds",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_rounds_match_id",
+        "sql": "CREATE INDEX ix_demo_rounds_match_id ON demo_rounds (match_id)",
+        "tbl_name": "demo_rounds",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_rounds_round_number",
+        "sql": "CREATE INDEX ix_demo_rounds_round_number ON demo_rounds (round_number)",
+        "tbl_name": "demo_rounds",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_rounds_winner_side",
+        "sql": "CREATE INDEX ix_demo_rounds_winner_side ON demo_rounds (winner_side)",
+        "tbl_name": "demo_rounds",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_weapon_stats_id",
+        "sql": "CREATE INDEX ix_demo_weapon_stats_id ON demo_weapon_stats (id)",
+        "tbl_name": "demo_weapon_stats",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_weapon_stats_match_id",
+        "sql": "CREATE INDEX ix_demo_weapon_stats_match_id ON demo_weapon_stats (match_id)",
+        "tbl_name": "demo_weapon_stats",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_weapon_stats_player_name",
+        "sql": "CREATE INDEX ix_demo_weapon_stats_player_name ON demo_weapon_stats (player_name)",
+        "tbl_name": "demo_weapon_stats",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_weapon_stats_player_steamid",
+        "sql": "CREATE INDEX ix_demo_weapon_stats_player_steamid ON demo_weapon_stats (player_steamid)",
+        "tbl_name": "demo_weapon_stats",
+        "type": "index"
+      },
+      {
+        "name": "ix_demo_weapon_stats_weapon",
+        "sql": "CREATE INDEX ix_demo_weapon_stats_weapon ON demo_weapon_stats (weapon)",
+        "tbl_name": "demo_weapon_stats",
+        "type": "index"
+      },
+      {
+        "name": "ix_import_jobs_created_at",
+        "sql": "CREATE INDEX ix_import_jobs_created_at ON import_jobs (created_at)",
+        "tbl_name": "import_jobs",
+        "type": "index"
+      },
+      {
+        "name": "ix_import_jobs_id",
+        "sql": "CREATE INDEX ix_import_jobs_id ON import_jobs (id)",
+        "tbl_name": "import_jobs",
+        "type": "index"
+      },
+      {
+        "name": "ix_import_jobs_provider",
+        "sql": "CREATE INDEX ix_import_jobs_provider ON import_jobs (provider)",
+        "tbl_name": "import_jobs",
+        "type": "index"
+      },
+      {
+        "name": "ix_import_jobs_status",
+        "sql": "CREATE INDEX ix_import_jobs_status ON import_jobs (status)",
+        "tbl_name": "import_jobs",
+        "type": "index"
+      },
+      {
+        "name": "ix_import_jobs_steam_account_id",
+        "sql": "CREATE INDEX ix_import_jobs_steam_account_id ON import_jobs (steam_account_id)",
+        "tbl_name": "import_jobs",
+        "type": "index"
+      },
+      {
+        "name": "ix_match_recommendation_evaluations_id",
+        "sql": "CREATE INDEX ix_match_recommendation_evaluations_id ON match_recommendation_evaluations (id)",
+        "tbl_name": "match_recommendation_evaluations",
+        "type": "index"
+      },
+      {
+        "name": "ix_match_recommendation_evaluations_match_id",
+        "sql": "CREATE INDEX ix_match_recommendation_evaluations_match_id ON match_recommendation_evaluations (match_id)",
+        "tbl_name": "match_recommendation_evaluations",
+        "type": "index"
+      },
+      {
+        "name": "ix_match_recommendation_evaluations_recommendation_id",
+        "sql": "CREATE INDEX ix_match_recommendation_evaluations_recommendation_id ON match_recommendation_evaluations (recommendation_id)",
+        "tbl_name": "match_recommendation_evaluations",
+        "type": "index"
+      },
+      {
+        "name": "ix_match_recommendation_evaluations_status",
+        "sql": "CREATE INDEX ix_match_recommendation_evaluations_status ON match_recommendation_evaluations (status)",
+        "tbl_name": "match_recommendation_evaluations",
+        "type": "index"
+      },
+      {
+        "name": "ix_matches_external_match_id",
+        "sql": "CREATE INDEX ix_matches_external_match_id ON matches (external_match_id)",
+        "tbl_name": "matches",
+        "type": "index"
+      },
+      {
+        "name": "ix_matches_id",
+        "sql": "CREATE INDEX ix_matches_id ON matches (id)",
+        "tbl_name": "matches",
+        "type": "index"
+      },
+      {
+        "name": "ix_matches_map_name",
+        "sql": "CREATE INDEX ix_matches_map_name ON matches (map_name)",
+        "tbl_name": "matches",
+        "type": "index"
+      },
+      {
+        "name": "ix_matches_played_at",
+        "sql": "CREATE INDEX ix_matches_played_at ON matches (played_at)",
+        "tbl_name": "matches",
+        "type": "index"
+      },
+      {
+        "name": "ix_matches_result",
+        "sql": "CREATE INDEX ix_matches_result ON matches (result)",
+        "tbl_name": "matches",
+        "type": "index"
+      },
+      {
+        "name": "ix_steam_accounts_id",
+        "sql": "CREATE INDEX ix_steam_accounts_id ON steam_accounts (id)",
+        "tbl_name": "steam_accounts",
+        "type": "index"
+      },
+      {
+        "name": "ix_steam_accounts_steam_id",
+        "sql": "CREATE INDEX ix_steam_accounts_steam_id ON steam_accounts (steam_id)",
+        "tbl_name": "steam_accounts",
+        "type": "index"
+      },
+      {
+        "name": "ix_steam_accounts_user_id",
+        "sql": "CREATE INDEX ix_steam_accounts_user_id ON steam_accounts (user_id)",
+        "tbl_name": "steam_accounts",
+        "type": "index"
+      },
+      {
+        "name": "ix_users_id",
+        "sql": "CREATE INDEX ix_users_id ON users (id)",
+        "tbl_name": "users",
+        "type": "index"
+      },
+      {
+        "name": "app_settings",
+        "sql": "CREATE TABLE app_settings ( \"key\" VARCHAR(120) NOT NULL, value TEXT NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, PRIMARY KEY (\"key\") )",
+        "tbl_name": "app_settings",
+        "type": "table"
+      },
+      {
+        "name": "coach_recommendations",
+        "sql": "CREATE TABLE coach_recommendations ( id INTEGER NOT NULL, title VARCHAR(255) NOT NULL, description TEXT NOT NULL, category VARCHAR(80) NOT NULL, status VARCHAR(30) NOT NULL, priority VARCHAR(30) NOT NULL, started_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, ended_at DATETIME, target_period_matches INTEGER NOT NULL, baseline_period_matches INTEGER NOT NULL, baseline_metrics_json TEXT NOT NULL, target_metrics_json TEXT NOT NULL, success_rules_json TEXT NOT NULL, failure_rules_json TEXT NOT NULL, baseline_match_ids_json TEXT NOT NULL, coach_comment TEXT, created_by VARCHAR(80) NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, start_after_match_id INTEGER, PRIMARY KEY (id) )",
+        "tbl_name": "coach_recommendations",
+        "type": "table"
+      },
+      {
+        "name": "coach_reports",
+        "sql": "CREATE TABLE coach_reports ( id INTEGER NOT NULL, period_start DATETIME, period_end DATETIME, matches_count INTEGER NOT NULL, report_markdown TEXT NOT NULL, report_json TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, report_type VARCHAR(50) DEFAULT 'rule_based' NOT NULL, source_ref VARCHAR(500), PRIMARY KEY (id) )",
+        "tbl_name": "coach_reports",
+        "type": "table"
+      },
+      {
+        "name": "demo_damage_events",
+        "sql": "CREATE TABLE demo_damage_events ( id INTEGER NOT NULL, match_id INTEGER NOT NULL, round_number INTEGER NOT NULL, tick INTEGER, attacker_name VARCHAR(255), attacker_steamid VARCHAR(32), victim_name VARCHAR(255), victim_steamid VARCHAR(32), weapon VARCHAR(120), hitgroup VARCHAR(80), damage_health INTEGER NOT NULL, damage_armor INTEGER NOT NULL, victim_health_after INTEGER, raw_json TEXT NOT NULL, PRIMARY KEY (id), FOREIGN KEY(match_id) REFERENCES matches (id) )",
+        "tbl_name": "demo_damage_events",
+        "type": "table"
+      },
+      {
+        "name": "demo_duels",
+        "sql": "CREATE TABLE demo_duels ( id INTEGER NOT NULL, match_id INTEGER NOT NULL, round_number INTEGER NOT NULL, tick INTEGER, attacker_name VARCHAR(255), attacker_steamid VARCHAR(32), victim_name VARCHAR(255), victim_steamid VARCHAR(32), assister_name VARCHAR(255), assister_steamid VARCHAR(32), weapon VARCHAR(120), headshot INTEGER NOT NULL, opening_duel INTEGER NOT NULL, trade_kill INTEGER NOT NULL, distance FLOAT, raw_json TEXT NOT NULL, PRIMARY KEY (id), FOREIGN KEY(match_id) REFERENCES matches (id) )",
+        "tbl_name": "demo_duels",
+        "type": "table"
+      },
+      {
+        "name": "demo_grenade_events",
+        "sql": "CREATE TABLE demo_grenade_events ( id INTEGER NOT NULL, match_id INTEGER NOT NULL, round_number INTEGER NOT NULL, tick INTEGER, event_type VARCHAR(80) NOT NULL, grenade_type VARCHAR(120), player_name VARCHAR(255), player_steamid VARCHAR(32), x FLOAT, y FLOAT, z FLOAT, flashed_count INTEGER NOT NULL, damage INTEGER NOT NULL, raw_json TEXT NOT NULL, PRIMARY KEY (id), FOREIGN KEY(match_id) REFERENCES matches (id) )",
+        "tbl_name": "demo_grenade_events",
+        "type": "table"
+      },
+      {
+        "name": "demo_parse_artifacts",
+        "sql": "CREATE TABLE demo_parse_artifacts ( id INTEGER NOT NULL, match_id INTEGER NOT NULL, parser_name VARCHAR(80) NOT NULL, parser_version VARCHAR(80), payload_version VARCHAR(40) NOT NULL, status VARCHAR(40) NOT NULL, source_demo_file VARCHAR(500), demo_sha1 VARCHAR(64), parsed_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, event_counts_json TEXT NOT NULL, confidence_json TEXT NOT NULL, data_gaps_json TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY (id), CONSTRAINT uq_demo_parse_artifacts_match_id UNIQUE (match_id), FOREIGN KEY(match_id) REFERENCES matches (id) )",
+        "tbl_name": "demo_parse_artifacts",
+        "type": "table"
+      },
+      {
+        "name": "demo_player_rounds",
+        "sql": "CREATE TABLE demo_player_rounds ( id INTEGER NOT NULL, match_id INTEGER NOT NULL, round_number INTEGER NOT NULL, player_name VARCHAR(255), player_steamid VARCHAR(32), team_side VARCHAR(10), kills INTEGER NOT NULL, deaths INTEGER NOT NULL, assists INTEGER NOT NULL, damage INTEGER NOT NULL, utility_damage INTEGER NOT NULL, headshots INTEGER NOT NULL, flash_assists INTEGER NOT NULL, enemies_flashed INTEGER NOT NULL, opening_kill INTEGER NOT NULL, opening_death INTEGER NOT NULL, survived INTEGER NOT NULL, kast INTEGER NOT NULL, raw_json TEXT NOT NULL, PRIMARY KEY (id), FOREIGN KEY(match_id) REFERENCES matches (id) )",
+        "tbl_name": "demo_player_rounds",
+        "type": "table"
+      },
+      {
+        "name": "demo_rounds",
+        "sql": "CREATE TABLE demo_rounds ( id INTEGER NOT NULL, match_id INTEGER NOT NULL, round_number INTEGER NOT NULL, start_tick INTEGER, freeze_end_tick INTEGER, end_tick INTEGER, winner_side VARCHAR(10), end_reason VARCHAR(80), bomb_planted_tick INTEGER, bomb_site VARCHAR(20), bomb_outcome VARCHAR(40), raw_json TEXT NOT NULL, PRIMARY KEY (id), CONSTRAINT uq_demo_round_match_round UNIQUE (match_id, round_number), FOREIGN KEY(match_id) REFERENCES matches (id) )",
+        "tbl_name": "demo_rounds",
+        "type": "table"
+      },
+      {
+        "name": "demo_weapon_stats",
+        "sql": "CREATE TABLE demo_weapon_stats ( id INTEGER NOT NULL, match_id INTEGER NOT NULL, player_name VARCHAR(255), player_steamid VARCHAR(32), weapon VARCHAR(120) NOT NULL, shots INTEGER NOT NULL, hits INTEGER NOT NULL, kills INTEGER NOT NULL, deaths INTEGER NOT NULL, damage INTEGER NOT NULL, headshots INTEGER NOT NULL, accuracy FLOAT, headshot_percent FLOAT, raw_json TEXT NOT NULL, PRIMARY KEY (id), FOREIGN KEY(match_id) REFERENCES matches (id) )",
+        "tbl_name": "demo_weapon_stats",
+        "type": "table"
+      },
+      {
+        "name": "import_jobs",
+        "sql": "CREATE TABLE import_jobs ( id INTEGER NOT NULL, provider VARCHAR(50) NOT NULL, job_type VARCHAR(80) NOT NULL, status VARCHAR(30) NOT NULL, steam_account_id INTEGER, requested_payload_json TEXT, result_json TEXT, error_message TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, started_at DATETIME, finished_at DATETIME, PRIMARY KEY (id), FOREIGN KEY(steam_account_id) REFERENCES steam_accounts (id) )",
+        "tbl_name": "import_jobs",
+        "type": "table"
+      },
+      {
+        "name": "match_recommendation_evaluations",
+        "sql": "CREATE TABLE match_recommendation_evaluations ( id INTEGER NOT NULL, recommendation_id INTEGER NOT NULL, match_id INTEGER NOT NULL, evaluated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, score INTEGER NOT NULL, status VARCHAR(20) NOT NULL, evidence_json TEXT NOT NULL, positive_signals_json TEXT NOT NULL, negative_signals_json TEXT NOT NULL, coach_comment TEXT NOT NULL, PRIMARY KEY (id), CONSTRAINT uq_match_recommendation_evaluation UNIQUE (recommendation_id, match_id), FOREIGN KEY(recommendation_id) REFERENCES coach_recommendations (id), FOREIGN KEY(match_id) REFERENCES matches (id) )",
+        "tbl_name": "match_recommendation_evaluations",
+        "type": "table"
+      },
+      {
+        "name": "matches",
+        "sql": "CREATE TABLE matches ( id INTEGER NOT NULL, source VARCHAR(50) NOT NULL, external_match_id VARCHAR(255), demo_file VARCHAR(500), played_at DATETIME, map_name VARCHAR(80), mode VARCHAR(80), result VARCHAR(20), rounds_for INTEGER, rounds_against INTEGER, kills INTEGER, deaths INTEGER, assists INTEGER, kd FLOAT, adr FLOAT, kast FLOAT, rating FLOAT, headshot_percent FLOAT, entry_kills INTEGER, entry_deaths INTEGER, flash_assists INTEGER, utility_damage INTEGER, enemies_flashed INTEGER, clutches_won INTEGER, clutches_lost INTEGER, side_t_rounds_won INTEGER, side_t_rounds_lost INTEGER, side_ct_rounds_won INTEGER, side_ct_rounds_lost INTEGER, raw_json TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, early_deaths INTEGER, swing_score FLOAT, PRIMARY KEY (id), CONSTRAINT uq_matches_source_external_id UNIQUE (source, external_match_id) )",
+        "tbl_name": "matches",
+        "type": "table"
+      },
+      {
+        "name": "steam_accounts",
+        "sql": "CREATE TABLE steam_accounts ( id INTEGER NOT NULL, user_id INTEGER, steam_id VARCHAR(32) NOT NULL, persona_name VARCHAR(120), profile_url VARCHAR(500), avatar_url VARCHAR(500), linked_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, last_sync_at DATETIME, sync_enabled INTEGER NOT NULL, match_auth_code VARCHAR(255), last_share_code VARCHAR(255), created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, PRIMARY KEY (id), CONSTRAINT uq_steam_accounts_steam_id UNIQUE (steam_id), FOREIGN KEY(user_id) REFERENCES users (id) )",
+        "tbl_name": "steam_accounts",
+        "type": "table"
+      },
+      {
+        "name": "users",
+        "sql": "CREATE TABLE users ( id INTEGER NOT NULL, display_name VARCHAR(120), created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, email VARCHAR(255), password_hash VARCHAR(500), is_active INTEGER DEFAULT 1 NOT NULL, last_login_at DATETIME, PRIMARY KEY (id) )",
+        "tbl_name": "users",
+        "type": "table"
+      }
+    ],
+    "tables": [
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "key",
+            "notnull": 1,
+            "pk": 1,
+            "type": "VARCHAR(120)"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "value",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 2,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "updated_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          }
+        ],
+        "foreign_keys": [],
+        "indexes": [],
+        "name": "app_settings"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "title",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "description",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "category",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(80)"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "status",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(30)"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "priority",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(30)"
+          },
+          {
+            "cid": 6,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "started_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "ended_at",
+            "notnull": 0,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 8,
+            "default": null,
+            "name": "target_period_matches",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "baseline_period_matches",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 10,
+            "default": null,
+            "name": "baseline_metrics_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 11,
+            "default": null,
+            "name": "target_metrics_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 12,
+            "default": null,
+            "name": "success_rules_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 13,
+            "default": null,
+            "name": "failure_rules_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 14,
+            "default": null,
+            "name": "baseline_match_ids_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 15,
+            "default": null,
+            "name": "coach_comment",
+            "notnull": 0,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 16,
+            "default": null,
+            "name": "created_by",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(80)"
+          },
+          {
+            "cid": 17,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "created_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 18,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "updated_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 19,
+            "default": null,
+            "name": "start_after_match_id",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          }
+        ],
+        "foreign_keys": [],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_coach_recommendations_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 4,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "status",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_coach_recommendations_status",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          }
+        ],
+        "name": "coach_recommendations"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "period_start",
+            "notnull": 0,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "period_end",
+            "notnull": 0,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "matches_count",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "report_markdown",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "report_json",
+            "notnull": 0,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 6,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "created_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 7,
+            "default": "'rule_based'",
+            "name": "report_type",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(50)"
+          },
+          {
+            "cid": 8,
+            "default": null,
+            "name": "source_ref",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(500)"
+          }
+        ],
+        "foreign_keys": [],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 6,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "created_at",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_coach_reports_created_at",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_coach_reports_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          }
+        ],
+        "name": "coach_reports"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "match_id",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "round_number",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "tick",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "attacker_name",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "attacker_steamid",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(32)"
+          },
+          {
+            "cid": 6,
+            "default": null,
+            "name": "victim_name",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "victim_steamid",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(32)"
+          },
+          {
+            "cid": 8,
+            "default": null,
+            "name": "weapon",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(120)"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "hitgroup",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(80)"
+          },
+          {
+            "cid": 10,
+            "default": null,
+            "name": "damage_health",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 11,
+            "default": null,
+            "name": "damage_armor",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 12,
+            "default": null,
+            "name": "victim_health_after",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 13,
+            "default": null,
+            "name": "raw_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "from": "match_id",
+            "id": 0,
+            "match": "NONE",
+            "on_delete": "NO ACTION",
+            "on_update": "NO ACTION",
+            "seq": 0,
+            "table": "matches",
+            "to": "id"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 4,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "attacker_name",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_damage_events_attacker_name",
+            "origin": "c",
+            "partial": 0,
+            "seq": 4,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 5,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "attacker_steamid",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_damage_events_attacker_steamid",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_damage_events_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 2,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 1,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "match_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_damage_events_match_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 5,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 2,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "round_number",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_damage_events_round_number",
+            "origin": "c",
+            "partial": 0,
+            "seq": 8,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 3,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "tick",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_damage_events_tick",
+            "origin": "c",
+            "partial": 0,
+            "seq": 7,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 6,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "victim_name",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_damage_events_victim_name",
+            "origin": "c",
+            "partial": 0,
+            "seq": 6,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 7,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "victim_steamid",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_damage_events_victim_steamid",
+            "origin": "c",
+            "partial": 0,
+            "seq": 3,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 8,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "weapon",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_damage_events_weapon",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          }
+        ],
+        "name": "demo_damage_events"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "match_id",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "round_number",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "tick",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "attacker_name",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "attacker_steamid",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(32)"
+          },
+          {
+            "cid": 6,
+            "default": null,
+            "name": "victim_name",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "victim_steamid",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(32)"
+          },
+          {
+            "cid": 8,
+            "default": null,
+            "name": "assister_name",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "assister_steamid",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(32)"
+          },
+          {
+            "cid": 10,
+            "default": null,
+            "name": "weapon",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(120)"
+          },
+          {
+            "cid": 11,
+            "default": null,
+            "name": "headshot",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 12,
+            "default": null,
+            "name": "opening_duel",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 13,
+            "default": null,
+            "name": "trade_kill",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 14,
+            "default": null,
+            "name": "distance",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          },
+          {
+            "cid": 15,
+            "default": null,
+            "name": "raw_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "from": "match_id",
+            "id": 0,
+            "match": "NONE",
+            "on_delete": "NO ACTION",
+            "on_update": "NO ACTION",
+            "seq": 0,
+            "table": "matches",
+            "to": "id"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 4,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "attacker_name",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_duels_attacker_name",
+            "origin": "c",
+            "partial": 0,
+            "seq": 3,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 5,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "attacker_steamid",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_duels_attacker_steamid",
+            "origin": "c",
+            "partial": 0,
+            "seq": 2,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_duels_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 1,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "match_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_duels_match_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 6,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 2,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "round_number",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_duels_round_number",
+            "origin": "c",
+            "partial": 0,
+            "seq": 8,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 3,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "tick",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_duels_tick",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 6,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "victim_name",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_duels_victim_name",
+            "origin": "c",
+            "partial": 0,
+            "seq": 5,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 7,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "victim_steamid",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_duels_victim_steamid",
+            "origin": "c",
+            "partial": 0,
+            "seq": 4,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 10,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "weapon",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_duels_weapon",
+            "origin": "c",
+            "partial": 0,
+            "seq": 7,
+            "unique": 0
+          }
+        ],
+        "name": "demo_duels"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "match_id",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "round_number",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "tick",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "event_type",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(80)"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "grenade_type",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(120)"
+          },
+          {
+            "cid": 6,
+            "default": null,
+            "name": "player_name",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "player_steamid",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(32)"
+          },
+          {
+            "cid": 8,
+            "default": null,
+            "name": "x",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "y",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          },
+          {
+            "cid": 10,
+            "default": null,
+            "name": "z",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          },
+          {
+            "cid": 11,
+            "default": null,
+            "name": "flashed_count",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 12,
+            "default": null,
+            "name": "damage",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 13,
+            "default": null,
+            "name": "raw_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "from": "match_id",
+            "id": 0,
+            "match": "NONE",
+            "on_delete": "NO ACTION",
+            "on_update": "NO ACTION",
+            "seq": 0,
+            "table": "matches",
+            "to": "id"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 4,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "event_type",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_grenade_events_event_type",
+            "origin": "c",
+            "partial": 0,
+            "seq": 7,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 5,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "grenade_type",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_grenade_events_grenade_type",
+            "origin": "c",
+            "partial": 0,
+            "seq": 6,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_grenade_events_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 5,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 1,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "match_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_grenade_events_match_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 2,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 6,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "player_name",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_grenade_events_player_name",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 7,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "player_steamid",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_grenade_events_player_steamid",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 2,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "round_number",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_grenade_events_round_number",
+            "origin": "c",
+            "partial": 0,
+            "seq": 3,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 3,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "tick",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_grenade_events_tick",
+            "origin": "c",
+            "partial": 0,
+            "seq": 4,
+            "unique": 0
+          }
+        ],
+        "name": "demo_grenade_events"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "match_id",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "parser_name",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(80)"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "parser_version",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(80)"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "payload_version",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(40)"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "status",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(40)"
+          },
+          {
+            "cid": 6,
+            "default": null,
+            "name": "source_demo_file",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(500)"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "demo_sha1",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(64)"
+          },
+          {
+            "cid": 8,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "parsed_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "event_counts_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 10,
+            "default": null,
+            "name": "confidence_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 11,
+            "default": null,
+            "name": "data_gaps_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 12,
+            "default": null,
+            "name": "payload_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "from": "match_id",
+            "id": 0,
+            "match": "NONE",
+            "on_delete": "NO ACTION",
+            "on_update": "NO ACTION",
+            "seq": 0,
+            "table": "matches",
+            "to": "id"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 7,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "demo_sha1",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_parse_artifacts_demo_sha1",
+            "origin": "c",
+            "partial": 0,
+            "seq": 4,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_parse_artifacts_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 2,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 1,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "match_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_parse_artifacts_match_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 8,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "parsed_at",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_parse_artifacts_parsed_at",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 5,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "status",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_parse_artifacts_status",
+            "origin": "c",
+            "partial": 0,
+            "seq": 3,
+            "unique": 0
+          }
+        ],
+        "name": "demo_parse_artifacts"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "match_id",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "round_number",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "player_name",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "player_steamid",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(32)"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "team_side",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(10)"
+          },
+          {
+            "cid": 6,
+            "default": null,
+            "name": "kills",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "deaths",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 8,
+            "default": null,
+            "name": "assists",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "damage",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 10,
+            "default": null,
+            "name": "utility_damage",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 11,
+            "default": null,
+            "name": "headshots",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 12,
+            "default": null,
+            "name": "flash_assists",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 13,
+            "default": null,
+            "name": "enemies_flashed",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 14,
+            "default": null,
+            "name": "opening_kill",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 15,
+            "default": null,
+            "name": "opening_death",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 16,
+            "default": null,
+            "name": "survived",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 17,
+            "default": null,
+            "name": "kast",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 18,
+            "default": null,
+            "name": "raw_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "from": "match_id",
+            "id": 0,
+            "match": "NONE",
+            "on_delete": "NO ACTION",
+            "on_update": "NO ACTION",
+            "seq": 0,
+            "table": "matches",
+            "to": "id"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_player_rounds_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 3,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 1,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "match_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_player_rounds_match_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 2,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 3,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "player_name",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_player_rounds_player_name",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 4,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "player_steamid",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_player_rounds_player_steamid",
+            "origin": "c",
+            "partial": 0,
+            "seq": 4,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 2,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "round_number",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_player_rounds_round_number",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          }
+        ],
+        "name": "demo_player_rounds"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "match_id",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "round_number",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "start_tick",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "freeze_end_tick",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "end_tick",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 6,
+            "default": null,
+            "name": "winner_side",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(10)"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "end_reason",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(80)"
+          },
+          {
+            "cid": 8,
+            "default": null,
+            "name": "bomb_planted_tick",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "bomb_site",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(20)"
+          },
+          {
+            "cid": 10,
+            "default": null,
+            "name": "bomb_outcome",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(40)"
+          },
+          {
+            "cid": 11,
+            "default": null,
+            "name": "raw_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "from": "match_id",
+            "id": 0,
+            "match": "NONE",
+            "on_delete": "NO ACTION",
+            "on_update": "NO ACTION",
+            "seq": 0,
+            "table": "matches",
+            "to": "id"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_rounds_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 1,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "match_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_rounds_match_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 3,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 2,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "round_number",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_rounds_round_number",
+            "origin": "c",
+            "partial": 0,
+            "seq": 2,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 6,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "winner_side",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_rounds_winner_side",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          }
+        ],
+        "name": "demo_rounds"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "match_id",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "player_name",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "player_steamid",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(32)"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "weapon",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(120)"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "shots",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 6,
+            "default": null,
+            "name": "hits",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "kills",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 8,
+            "default": null,
+            "name": "deaths",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "damage",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 10,
+            "default": null,
+            "name": "headshots",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 11,
+            "default": null,
+            "name": "accuracy",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          },
+          {
+            "cid": 12,
+            "default": null,
+            "name": "headshot_percent",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          },
+          {
+            "cid": 13,
+            "default": null,
+            "name": "raw_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "from": "match_id",
+            "id": 0,
+            "match": "NONE",
+            "on_delete": "NO ACTION",
+            "on_update": "NO ACTION",
+            "seq": 0,
+            "table": "matches",
+            "to": "id"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_weapon_stats_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 1,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "match_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_weapon_stats_match_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 3,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 2,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "player_name",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_weapon_stats_player_name",
+            "origin": "c",
+            "partial": 0,
+            "seq": 4,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 3,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "player_steamid",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_weapon_stats_player_steamid",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 4,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "weapon",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_demo_weapon_stats_weapon",
+            "origin": "c",
+            "partial": 0,
+            "seq": 2,
+            "unique": 0
+          }
+        ],
+        "name": "demo_weapon_stats"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "provider",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(50)"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "job_type",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(80)"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "status",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(30)"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "steam_account_id",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "requested_payload_json",
+            "notnull": 0,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 6,
+            "default": null,
+            "name": "result_json",
+            "notnull": 0,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "error_message",
+            "notnull": 0,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 8,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "created_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "started_at",
+            "notnull": 0,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 10,
+            "default": null,
+            "name": "finished_at",
+            "notnull": 0,
+            "pk": 0,
+            "type": "DATETIME"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "from": "steam_account_id",
+            "id": 0,
+            "match": "NONE",
+            "on_delete": "NO ACTION",
+            "on_update": "NO ACTION",
+            "seq": 0,
+            "table": "steam_accounts",
+            "to": "id"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 8,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "created_at",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_import_jobs_created_at",
+            "origin": "c",
+            "partial": 0,
+            "seq": 3,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_import_jobs_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 4,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 1,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "provider",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_import_jobs_provider",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 3,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "status",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_import_jobs_status",
+            "origin": "c",
+            "partial": 0,
+            "seq": 2,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 4,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "steam_account_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_import_jobs_steam_account_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          }
+        ],
+        "name": "import_jobs"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "recommendation_id",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "match_id",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 3,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "evaluated_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "score",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "status",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(20)"
+          },
+          {
+            "cid": 6,
+            "default": null,
+            "name": "evidence_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "positive_signals_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 8,
+            "default": null,
+            "name": "negative_signals_json",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "coach_comment",
+            "notnull": 1,
+            "pk": 0,
+            "type": "TEXT"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "from": "match_id",
+            "id": 0,
+            "match": "NONE",
+            "on_delete": "NO ACTION",
+            "on_update": "NO ACTION",
+            "seq": 0,
+            "table": "matches",
+            "to": "id"
+          },
+          {
+            "from": "recommendation_id",
+            "id": 1,
+            "match": "NONE",
+            "on_delete": "NO ACTION",
+            "on_update": "NO ACTION",
+            "seq": 0,
+            "table": "coach_recommendations",
+            "to": "id"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_match_recommendation_evaluations_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 2,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "match_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_match_recommendation_evaluations_match_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 1,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "recommendation_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_match_recommendation_evaluations_recommendation_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 3,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 5,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "status",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_match_recommendation_evaluations_status",
+            "origin": "c",
+            "partial": 0,
+            "seq": 2,
+            "unique": 0
+          }
+        ],
+        "name": "match_recommendation_evaluations"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "source",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(50)"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "external_match_id",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "demo_file",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(500)"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "played_at",
+            "notnull": 0,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "map_name",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(80)"
+          },
+          {
+            "cid": 6,
+            "default": null,
+            "name": "mode",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(80)"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "result",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(20)"
+          },
+          {
+            "cid": 8,
+            "default": null,
+            "name": "rounds_for",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "rounds_against",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 10,
+            "default": null,
+            "name": "kills",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 11,
+            "default": null,
+            "name": "deaths",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 12,
+            "default": null,
+            "name": "assists",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 13,
+            "default": null,
+            "name": "kd",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          },
+          {
+            "cid": 14,
+            "default": null,
+            "name": "adr",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          },
+          {
+            "cid": 15,
+            "default": null,
+            "name": "kast",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          },
+          {
+            "cid": 16,
+            "default": null,
+            "name": "rating",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          },
+          {
+            "cid": 17,
+            "default": null,
+            "name": "headshot_percent",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          },
+          {
+            "cid": 18,
+            "default": null,
+            "name": "entry_kills",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 19,
+            "default": null,
+            "name": "entry_deaths",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 20,
+            "default": null,
+            "name": "flash_assists",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 21,
+            "default": null,
+            "name": "utility_damage",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 22,
+            "default": null,
+            "name": "enemies_flashed",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 23,
+            "default": null,
+            "name": "clutches_won",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 24,
+            "default": null,
+            "name": "clutches_lost",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 25,
+            "default": null,
+            "name": "side_t_rounds_won",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 26,
+            "default": null,
+            "name": "side_t_rounds_lost",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 27,
+            "default": null,
+            "name": "side_ct_rounds_won",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 28,
+            "default": null,
+            "name": "side_ct_rounds_lost",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 29,
+            "default": null,
+            "name": "raw_json",
+            "notnull": 0,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 30,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "created_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 31,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "updated_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 32,
+            "default": null,
+            "name": "early_deaths",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 33,
+            "default": null,
+            "name": "swing_score",
+            "notnull": 0,
+            "pk": 0,
+            "type": "FLOAT"
+          }
+        ],
+        "foreign_keys": [],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 2,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "external_match_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_matches_external_match_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 3,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_matches_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 5,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "map_name",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_matches_map_name",
+            "origin": "c",
+            "partial": 0,
+            "seq": 2,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 4,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "played_at",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_matches_played_at",
+            "origin": "c",
+            "partial": 0,
+            "seq": 4,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 7,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "result",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_matches_result",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          }
+        ],
+        "name": "matches"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "user_id",
+            "notnull": 0,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 2,
+            "default": null,
+            "name": "steam_id",
+            "notnull": 1,
+            "pk": 0,
+            "type": "VARCHAR(32)"
+          },
+          {
+            "cid": 3,
+            "default": null,
+            "name": "persona_name",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(120)"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "profile_url",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(500)"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "avatar_url",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(500)"
+          },
+          {
+            "cid": 6,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "linked_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "last_sync_at",
+            "notnull": 0,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 8,
+            "default": null,
+            "name": "sync_enabled",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 9,
+            "default": null,
+            "name": "match_auth_code",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 10,
+            "default": null,
+            "name": "last_share_code",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 11,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "created_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 12,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "updated_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "from": "user_id",
+            "id": 0,
+            "match": "NONE",
+            "on_delete": "NO ACTION",
+            "on_update": "NO ACTION",
+            "seq": 0,
+            "table": "users",
+            "to": "id"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_steam_accounts_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 1,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 2,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "steam_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_steam_accounts_steam_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          },
+          {
+            "columns": [
+              {
+                "cid": 1,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "user_id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_steam_accounts_user_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 2,
+            "unique": 0
+          }
+        ],
+        "name": "steam_accounts"
+      },
+      {
+        "columns": [
+          {
+            "cid": 0,
+            "default": null,
+            "name": "id",
+            "notnull": 1,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "default": null,
+            "name": "display_name",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(120)"
+          },
+          {
+            "cid": 2,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "created_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 3,
+            "default": "CURRENT_TIMESTAMP",
+            "name": "updated_at",
+            "notnull": 1,
+            "pk": 0,
+            "type": "DATETIME"
+          },
+          {
+            "cid": 4,
+            "default": null,
+            "name": "email",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(255)"
+          },
+          {
+            "cid": 5,
+            "default": null,
+            "name": "password_hash",
+            "notnull": 0,
+            "pk": 0,
+            "type": "VARCHAR(500)"
+          },
+          {
+            "cid": 6,
+            "default": "1",
+            "name": "is_active",
+            "notnull": 1,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 7,
+            "default": null,
+            "name": "last_login_at",
+            "notnull": 0,
+            "pk": 0,
+            "type": "DATETIME"
+          }
+        ],
+        "foreign_keys": [],
+        "indexes": [
+          {
+            "columns": [
+              {
+                "cid": 0,
+                "coll": "BINARY",
+                "desc": 0,
+                "key": 1,
+                "name": "id",
+                "seqno": 0
+              }
+            ],
+            "name": "ix_users_id",
+            "origin": "c",
+            "partial": 0,
+            "seq": 0,
+            "unique": 0
+          }
+        ],
+        "name": "users"
+      }
+    ],
+    "user_version": 0
+  },
+  "schema_baseline_version": 1,
+  "schema_hash": "sha256:68a137643d87789533f4440794f97bd7313a9fea1476a98ed078361131867070"
+}

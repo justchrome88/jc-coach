@@ -1,18 +1,23 @@
 # Current Status
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-08.
 
 ## Snapshot
 
 - Product version: `v0.9`.
-- Current lane: Foundation Hardening / Readiness Recovery after the
-  2026-07-06 agentic-readiness audit.
+- Current lane: Foundation Hardening is closed pending post-foundation audit
+  after the 2026-07-06 agentic-readiness audit recovery sequence.
+- Required next lane: `POST_FOUNDATION_AUDIT_AND_STABILIZATION`.
 - Current active WP: none; latest completed product WP is `WP-017K Real Data
   Onboarding Promotion to v0.9`.
-- Next product WP: `WP-018 Coach Quality Calibration`, restricted pending the
-  foundation readiness gate.
+- Next unrestricted product WP: `WP-018 Coach Quality Calibration`, paused
+  pending post-foundation audit and stabilization. Do not restart WP-018 from
+  foundation closure alone.
+- Allowed interim WP-018 work is limited to narrow evidence, caveat,
+  calibration, docs or tests work that improves readiness and does not add
+  unsupported coach/domain claims.
 - Promotion status: `v0.9` is promoted with warnings by WP-017K. Warnings and limitations must carry forward into WP-018.
-- Latest known production DB SHA: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33` from WP-017H evidence and the 2026-07-06 agentic-readiness audit. Re-check before any WP that depends on current DB state.
+- Latest known production DB SHA: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33` from read-only project-gate evidence. Re-check before any WP that depends on current DB state.
 
 ## Foundation Hardening Status
 
@@ -22,10 +27,21 @@ Last updated: 2026-07-06.
   foundation P0/P1 items before major coach/domain expansion.
 - Recovery plan:
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/`.
+- Foundation risk register:
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
 - Current project status for execution planning:
-  `CONTINUE WITH RESTRICTED SCOPE`.
+  `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
 - `READY_FOR_MAJOR_CS2_FEATURE_WORK`: `NO` until the readiness gate in the
-  recovery plan passes.
+  recovery plan passes and post-foundation audit/remediation separately
+  authorizes product restart.
+- FH-124R-03 accepted H1 final-readiness rerun evidence with full-suite pytest
+  `250 passed, 1 warning`, local quality gate `LOCAL_QUALITY_GATE=PASS` and
+  project-gate checks passing. H2 closes the foundation-hardening sequence as a
+  handoff state, not as product-development authorization.
+- Docs-only roadmap edits, H1 PASS evidence and H2 closure do not set
+  `READY_FOR_MAJOR_CS2_FEATURE_WORK` to `YES`.
+- After H2, the next appropriate task must run a post-foundation defect/warning
+  audit and stabilization pass before any WP-018 restart task card is created.
 
 ## Runtime Basics
 
@@ -66,6 +82,13 @@ Last updated: 2026-07-06.
 
 ## Current Blockers And Limitations
 
+- Foundation hardening is closed only as
+  `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
+- `READY_FOR_MAJOR_CS2_FEATURE_WORK` is not `YES`; major CS2 feature work and
+  WP-018 remain paused/blocked pending post-foundation audit and stabilization.
+- System `v1.0` is not claimed. It remains gated behind future post-foundation
+  audit/remediation, later roadmap WPs and explicit acceptance.
+
 - Match playlist mode is not accepted as exact in `v0.9`. Current persisted data distinguishes parser/import provenance (`demo`) and generic Valve share-code provenance (`Valve Matchmaking`), but it does not reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom modes.
 - No playlist-specific claims, filters or recommendations are accepted in `v0.9` unless a future WP captures reliable mode metadata.
 - `STEAM_IMPORT_MAX_DEMOS_PER_RUN` remains `1`; no cap raise is accepted by WP-017K.
@@ -83,9 +106,10 @@ Last updated: 2026-07-06.
 - Do not mutate production DB, schema, production files or generated app reports unless the current WP explicitly authorizes them with backup/SHA evidence.
 - Do not raise `STEAM_IMPORT_MAX_DEMOS_PER_RUN` without an explicit cap-change WP.
 - Do not start or change WP-018 product work without an explicit WP-018 prompt.
-- Do not start major WP-018/CS2 feature expansion until the foundation
-  readiness gate passes; narrow evidence-backed calibration/docs/tests work is
-  allowed only when it does not worsen foundation readiness.
+- Do not start major WP-018/CS2 feature expansion until post-foundation audit
+  and stabilization authorize a product restart; narrow evidence-backed
+  calibration/docs/tests work remains allowed only when explicitly scoped and
+  it does not add unsupported claims or weaken foundation readiness.
 - Do not run `git add`, commit or push without explicit user approval.
 
 ## Source Of Truth
@@ -105,4 +129,8 @@ Last updated: 2026-07-06.
 - Agentic-readiness audit and recovery plan:
   `docs/audits/2026-07-06-agentic-readiness-audit/` and
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/`.
+- Final foundation closure / post-foundation handoff report:
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/task_reports/FH-125_128_final-foundation-closure-post-foundation-audit-handoff_report.md`.
+- Foundation risk register:
+  `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
 - Roadmap/planning detail: `docs/project_management/VERSION_ROADMAP.md`, `docs/project_management/WORK_PACKAGE_BACKLOG.md`, `docs/project_management/ACCEPTANCE_MATRIX.md`.

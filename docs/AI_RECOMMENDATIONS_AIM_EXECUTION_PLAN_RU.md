@@ -1,6 +1,18 @@
 # HISTORICAL / COMPLETED PLAN
 
-This document is retained for context. Current recommendation and AI priorities are governed by `docs/PROJECT_CONTROL.md`, `docs/RECOMMENDATIONS.md` and `docs/AI_COACH.md`.
+> Status: Historical / completed recommendation and AI plan; not current
+> product, roadmap, workflow or source-of-truth.
+> Use as supporting history only. This file must not override `AGENTS.md`,
+> `docs/CURRENT_STATUS.md`, `docs/project_management/WP_REGISTRY.md` or current
+> Task Cards.
+> Current recommendation and AI truth: `docs/RECOMMENDATIONS.md` and
+> `docs/AI_COACH.md`.
+> Current roadmap/version truth: `docs/CURRENT_STATUS.md`,
+> `docs/project_management/WP_REGISTRY.md` and
+> `docs/project_management/VERSION_ROADMAP.md`.
+> Current workflow truth: `docs/project_management/AGENT_WORKFLOW.md`.
+> Navigation/classification: `docs/project_management/DOCS_INDEX.md` and
+> `docs/project_management/DOCS_MAP.md`.
 
 # План доведения AI persistence, multi-category recommendations и aim stats
 

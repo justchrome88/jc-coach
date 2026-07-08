@@ -56,6 +56,23 @@ For task routing, task type profiles and standard prompt/report contracts, use
 `docs/project_management/AGENT_WORKFLOW.md` when the task calls for governance
 workflow context. This does not expand per-task Hot context.
 
+## 2.2 External Documentation Policy
+
+For tasks involving external libraries, frameworks, APIs or tooling behavior,
+use Context7 MCP when available before changing code, config or docs that
+depend on those APIs. This includes FastAPI, SQLAlchemy, Alembic, pytest,
+Playwright, frontend libraries, Codex/MCP config and other
+dependency-specific behavior.
+
+If Context7 MCP is unavailable, state that MCP docs lookup was unavailable, use
+another current official source if available, and avoid confident
+version-specific API claims without evidence.
+
+This is not required for docs-only PM/process tasks that only modify internal
+project state. External docs never override this file, project source-of-truth
+docs or the active Task Card scope/allowed files. Executor reports should
+mention external documentation lookup only when it was relevant.
+
 ## 3. Hard Safety Rules
 
 - Never commit `data/cs2_coach.db`.
@@ -79,7 +96,11 @@ workflow context. This does not expand per-task Hot context.
 
 - Show `git status --short` before work.
 - Do not run `git add` unless explicitly asked.
-- Do not commit unless explicitly asked.
+- Executor Codex must not commit unless explicitly asked or a Task Card
+  explicitly authorizes it.
+- PM_ORCHESTRATOR may create local commits after an accepted PM review verifies
+  scope, acceptance, forbidden-action safety, required checks and that no user
+  decision is needed.
 - Do not push unless explicitly asked.
 - Commits, when authorized, must exclude DBs, backups, uploads and demos.
 - Commit only scoped reports, docs, code or tests.
@@ -91,7 +112,38 @@ workflow context. This does not expand per-task Hot context.
 - For any authorized production DB mutation, record `sha256sum
   data/cs2_coach.db` before and after.
 - Back up the production DB before any authorized production mutation.
-- Do not change schema unless schema work is explicitly scoped.
+- Schema-changing work is `approval-required` unless the Task Card explicitly
+  names schema scope and allowed files.
+- Schema work includes schema definition/code, startup schema behavior,
+  migration or baseline artifacts, schema scripts, copied-DB experiments and
+  production DB mutation.
+- Read-only schema inspection, schema artifact edits, copied-DB experiments and
+  production DB mutation are distinct scopes. Authorization for one does not
+  authorize the others.
+- Do not change schema, migration/baseline artifacts, schema behavior or any DB
+  copy unless that exact scope is explicitly approved.
+- Documentation of schema compatibility boundaries is not authorization to
+  change runtime startup behavior, helper behavior, schema artifacts, migration
+  scripts, copied DBs or the production DB.
+- Startup schema compatibility work is schema-changing work. Future Task Cards
+  for that work must state the allowed files/artifacts, rollback and
+  compatibility expectations, required schema-gate evidence and production DB
+  authorization status.
+- FH-030, FH-031 and FH-032 did not adopt Alembic, add migration support, mutate
+  the production DB or change startup schema behavior.
+- Report DB evidence by task risk:
+  - ordinary tasks with no DB, schema, import/parser/evaluator or production-data
+    risk do not require a production DB SHA check unless the Task Card asks for
+    one;
+  - DB/schema-risk tasks that do not touch `data/cs2_coach.db` must explicitly
+    declare no production DB touch instead of implying mutation evidence;
+  - read-only production DB inspection must record the observed `sha256sum
+    data/cs2_coach.db` and the read-only command/evidence used;
+  - authorized production DB mutation must record backup evidence plus before
+    and after `sha256sum data/cs2_coach.db`.
+- A read-only SHA check is evidence collection only. It does not authorize or
+  imply production DB mutation, copied-DB work, schema artifact changes,
+  migration/baseline changes or startup schema behavior changes.
 
 ## 6. Steam And Import Rules
 
@@ -117,10 +169,47 @@ workflow context. This does not expand per-task Hot context.
 
 - Each WP must create a `docs/audit/WP_*` report.
 - The report must include result, evidence, files changed, safety declarations,
-  DB SHA, blockers and next WP.
+  DB SHA evidence or an explicit no-production-DB-touch declaration appropriate
+  to the task risk, blockers and next WP.
 - Long reports must be written to a file; console output should stay short and
   include the report path.
 - Be honest: use `PASS_WITH_WARNINGS` when warnings exist.
+
+## 8.1 Task Classes And Discovery Reporting
+
+Tasks may be either:
+
+- Execution task: performs a bounded change.
+- Audit / Review / Discovery task: inspects an area, reports findings,
+  estimates completeness, and may propose follow-up tasks.
+
+For Audit / Review / Discovery tasks, Executor Codex must perform only the
+requested inspection/review, report findings with evidence, estimate
+completeness when meaningful, and propose follow-up tasks if gaps are found.
+Do not execute follow-up work unless explicitly tasked. Do not create broad new
+scope by yourself.
+
+For Audit / Review / Discovery tasks, or when meaningful gaps are found, include
+this report block:
+
+```yaml
+discovery_result:
+  completeness_estimate: "<percentage or qualitative estimate>"
+  missing_items_found: true|false
+  followup_required: true|false
+  followup_tasks_recommended:
+    - proposed_id: "FH-115A-01"
+      title: "Short task title"
+      reason: "Why this task is needed"
+      risk: "P0|P1|P2|P3 or none"
+      suggested_scope: "docs-only|tests|code|config|unknown"
+      needs_user_decision: true|false
+```
+
+PM_ORCHESTRATOR owns backlog decomposition after review. The runtime runner
+only starts/resumes cycles and does not implement decomposition logic.
+Decomposition never overrides the active prompt, allowed files, stop conditions,
+DB safety, public-access restrictions or readiness gates.
 
 ## 9. Current Roadmap
 
