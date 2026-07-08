@@ -1,6 +1,6 @@
 # API Contracts
 
-Last updated: 2026-07-07.
+Last updated: 2026-07-08.
 
 ## Purpose
 
@@ -36,6 +36,11 @@ response shapes or mutation semantics requires explicit future task scope.
   models are unavailable and hard trade recommendations are blocked before
   parser hardening. API responses and AI/coach payloads must not imply stronger
   certainty than those limitations allow.
+- Metric source trust, sample-size thresholds, aggregation rules and period
+  comparison semantics follow `docs/METRICS.md`. API responses that expose
+  aggregates, comparisons, coach evidence or AI payloads must preserve
+  low-sample, missing-value, mixed-source and date-source caveats instead of
+  upgrading them into hard claims.
 
 Endpoint contract test rule:
 
@@ -187,7 +192,9 @@ Their browser contract is template/redirect oriented rather than JSON oriented.
 AI coach payload/result consumers must preserve the source limitations carried
 by Metric Truth and `docs/CS2_DOMAIN_CONTRACT.md`. Unavailable economy,
 positioning and clutch models, display-only side metrics and weak trade
-semantics cannot be upgraded into confident API-level coach advice.
+semantics cannot be upgraded into confident API-level coach advice. Mixed
+sources, insufficient samples, missing values and incompatible comparison
+windows follow the source trust and aggregation policy in `docs/METRICS.md`.
 
 ### Steam And Import Jobs
 

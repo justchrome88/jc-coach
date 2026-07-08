@@ -20,6 +20,11 @@ is not exact in `v0.9`, economy/positioning/clutch models are unavailable, side
 metrics are display-only, current map labels are source-provided and hard trade
 recommendations are blocked before parser hardening.
 
+Source trust, mixed-source aggregation, sample-size thresholds and period
+comparison semantics are defined in `docs/METRICS.md`. AI coach output must not
+turn mixed, missing, low-sample, low-trust or suppressed metrics into hard
+diagnosis or recommendations.
+
 ## Rules
 
 - AI consumes structured facts; it does not parse demos.
@@ -30,6 +35,9 @@ recommendations are blocked before parser hardening.
 - AI recommendations are subordinate to verified metrics and the recommendation planner.
 - AI must not infer economy, positioning, clutch, exact playlist/mode,
   canonical map identity or reliable trade semantics from adjacent metrics.
+- AI must respect source trust and period comparison boundaries from
+  `docs/METRICS.md`: insufficient samples, incompatible source mixes, missing
+  values and approximate date sources require caveats or suppression.
 - AI output must follow the Stage 8 schema: `summary`, `diagnoses[]`, `recommendations[]`, `warnings[]`, `evidence[]`, `confidence`.
 - Unknown metric ids are rejected.
 - Suppressed or unavailable metrics cannot support diagnosis/recommendation claims.

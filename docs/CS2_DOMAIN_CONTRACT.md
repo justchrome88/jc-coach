@@ -36,6 +36,10 @@ Current accepted domain objects:
 Accepted source labels must describe provenance and confidence, not unsupported
 playlist certainty.
 
+- Source trust, mixed-source aggregation, sample-size thresholds and period
+  comparison semantics are governed by `docs/METRICS.md`. CS2 domain claims may
+  not exceed both the source-trust policy and the per-metric Metric Truth usage
+  decision.
 - `mode_unknown` is the accepted playlist/mode stance for current `v0.9`
   rows unless future metadata proves otherwise.
 - `provenance_demo` may identify parser/import provenance, not playlist.
@@ -64,7 +68,9 @@ The following models are explicitly unavailable for hard advice:
 ## Metric Usage Boundaries
 
 `docs/METRICS.md` remains the canonical Metric Truth contract and runtime
-registry source. This domain contract adds CS2-specific boundaries:
+registry source. It also defines the accepted source trust registry, sample-size
+thresholds, aggregation rules and period comparison semantics for mixed sources.
+This domain contract adds CS2-specific boundaries:
 
 - Side metrics stay display-only and warning-labeled until parser confidence
   improves.
@@ -76,6 +82,9 @@ registry source. This domain contract adds CS2-specific boundaries:
   to entry deaths.
 - Economy, positioning and clutch metrics must not be invented from adjacent
   facts such as score, kills, deaths, ADR, KAST, entry kills or round count.
+- Hard advice from mixed CSV, JSON, demo, Steam or future FACEIT data requires
+  a registered source trust tier, enough samples for the metric category and
+  compatible period comparison windows.
 
 ## Coach Output Visibility Contract
 

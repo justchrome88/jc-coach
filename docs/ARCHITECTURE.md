@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-07-07.
+Last updated: 2026-07-08.
 
 ## Purpose
 
@@ -60,14 +60,18 @@ Existing DB facts
 
 AI and recommendations must consume persisted or derived deterministic facts.
 They must not invent parser data, playlist mode, match dates or hard metric
-confidence. Low-confidence metrics must remain caveated.
+confidence. Low-confidence metrics must remain caveated. Source trust,
+sample-size thresholds, mixed-source aggregation and period comparison
+semantics are governed by `docs/METRICS.md`.
 
 CS2 domain claims are bounded by `docs/CS2_DOMAIN_CONTRACT.md`. Economy,
 positioning and clutch models are unavailable; side metrics are display-only;
 hard trade recommendations are blocked before parser hardening; map labels are
 source-provided until a canonical map registry is accepted. Coach, report,
 recommendation and AI surfaces must keep these source limitations visible
-instead of implying unsupported certainty.
+instead of implying unsupported certainty. Mixed CSV, JSON, demo, Steam or
+future FACEIT facts must not be combined into hard advice unless source trust,
+metric reliability, sample thresholds and comparison-window rules all pass.
 
 ## Route Layers
 
@@ -299,6 +303,9 @@ Expected boundary:
   API/web routes as thin orchestration and serialization layers.
 - Keep deterministic fact extraction, confidence handling and caveats in
   services, not templates.
+- Keep source-trust, sample-size, aggregation and period-comparison caveats
+  attached to service outputs that feed recommendations, reports, API payloads
+  or AI coach handoffs.
 - Keep provider calls and payload construction behind service functions.
 - Add tests near the changed service behavior before relying on route tests.
 
