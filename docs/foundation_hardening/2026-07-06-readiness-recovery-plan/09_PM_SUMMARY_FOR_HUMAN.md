@@ -1,18 +1,34 @@
 # PM Summary For Human
 
-Date: 2026-07-06.
+Date: 2026-07-08.
 
-The situation is serious but controlled.
+The foundation-hardening recovery sequence is closed, but product development
+is not unlocked.
 
-The project is not broken. The audit ran safely: 211 tests passed, Ruff passed,
-`git diff --check` passed and production DB was not mutated. But readiness is
-only 66%, and the weak points are foundational: schema migration discipline,
-quality gate enforcement, recommendation planning, source/sample policy,
-prompt/payload versioning and semantic AI evals.
+Current state:
 
-Can CS2 continue? Yes, but only narrowly. Wording, caveats, tests, docs,
-confidence policy and read-only diagnostics can continue. Major CS2 coach/domain
-expansion should pause until the readiness gate passes.
+```text
+FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT
+READY_FOR_MAJOR_CS2_FEATURE_WORK: NO
+NEXT_LANE: POST_FOUNDATION_AUDIT_AND_STABILIZATION
+```
+
+The project was not broken when audited. The original audit ran safely: 211
+tests passed, Ruff passed, `git diff --check` passed and production DB was not
+mutated. The original readiness score was 66%, and the weak points were
+foundational: schema migration discipline, quality gate enforcement,
+recommendation planning, source/sample policy, prompt/payload versioning and
+semantic AI evals.
+
+The recovery lane has now produced accepted H1 evidence. FH-124R-03 recorded
+full-suite pytest PASS, local quality gate PASS and project-gate PASS. H2 uses
+that evidence for final foundation closure and handoff only.
+
+Can CS2 continue? Not as normal product work yet. Wording, caveats, tests,
+docs, confidence policy and read-only diagnostics can continue only when
+explicitly scoped. Major CS2 coach/domain expansion, WP-018 restart,
+public/friends access and system `v1.0` claims remain paused pending
+post-foundation audit and stabilization.
 
 Do not do now:
 
@@ -23,13 +39,13 @@ Do not do now:
 - no broad refactor;
 - no production DB/import/parser/evaluator/service work without explicit WP.
 
-Do first:
+Do next:
 
-1. Create risk register.
-2. Enforce quality gate.
-3. Create migration baseline/schema gate.
-4. Define source trust/sample-size policy.
-5. Add prompt/payload versioning and semantic evals.
+1. Run post-foundation defect/warning audit.
+2. Reconcile warning ledger disposition, accepted risks and source-of-truth
+   status.
+3. Identify stabilization fixes or explicit accepted-risk carry-forward items.
+4. Only after that, decide whether a focused WP-018 restart task card is safe.
 
 The hardening path has seven phases: docs/source-of-truth, architecture,
 data/metrics/AI contracts, tests/evals/gates, agent workflow, security/ops and
@@ -43,8 +59,6 @@ The strongest areas are governance docs, current status/WP registry, test
 isolation, Metric Truth and AI Output Validator. These are real assets, not
 decorative docs.
 
-Hardening succeeds when all P0s are closed or hard-blocked, all P1s are closed
-or explicitly risk-accepted, P2/P3 are triaged and `04_READINESS_GATE.md` is
-PASS. At that point normal WP-018/WP-019/WP-020 roadmap work can resume with
-less risk.
-
+H2 closure means the foundation-hardening lane is no longer the next work lane.
+It does not mean normal WP-018/WP-019/WP-020 roadmap work can resume. The next
+lane is post-foundation audit and stabilization.

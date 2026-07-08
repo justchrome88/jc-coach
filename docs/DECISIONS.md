@@ -1,6 +1,6 @@
 # Decisions
 
-Last updated: 2026-07-06.
+Last updated: 2026-07-08.
 
 ## Current Decisions
 
@@ -16,6 +16,14 @@ Last updated: 2026-07-06.
 - 2026-07-06: `v0.9` Real Data Onboarding / Bulk Demo Usage is promoted with warnings by WP-017K for controlled personal use; cap remains `1`, exact playlist mode remains unknown/provenance-only, and friends/public readiness is not claimed.
 - 2026-07-06: Future prompts should use invocation modes and output modes from `docs/project_management/AGENT_WORKFLOW.md`; long, reviewable, WP-level, promotion, planning, QA and docs-audit outputs should prefer file-backed reports.
 - 2026-07-06: Control-plane docs may be changed only by explicit governance/control-plane tasks; if a rule blocks ordinary work, Codex must stop and request approval instead of weakening the rule.
+- 2026-07-08: FH-124R-03 accepted H1 final-readiness rerun evidence, and
+  FH-125_128 closes foundation hardening only as
+  `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`. The required
+  next lane is `POST_FOUNDATION_AUDIT_AND_STABILIZATION`; WP-018, major CS2
+  feature work, public/friends access and system `v1.0` claims remain blocked
+  until later explicit authorization after audit/stabilization.
+- 2026-07-08: `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`. H1 PASS
+  evidence, H2 closure and docs-only roadmap edits do not set it to `YES`.
 - 2026-07-05: `docs/audit/WP_018_DOCUMENTATION_GOVERNANCE_AUDIT_REPORT.md` is out-of-band governance audit evidence and does not consume the planned WP-018 product block.
 - 2026-07-05: Match mode classification remains deferred/unknown unless future metadata capture is implemented.
 - 2026-07-05: `v0.9` must not claim playlist-specific Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom mode labels.

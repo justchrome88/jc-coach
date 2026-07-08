@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-07-07.
+Last updated: 2026-07-08.
 
 ## Purpose
 
@@ -10,11 +10,12 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 - Project: JC Coach, a personal AI coach for CS2.
 - Current product version: `v0.9`.
-- Current lane: Foundation Hardening / Readiness Recovery after the 2026-07-06
-  agentic-readiness audit.
+- Current lane: `POST_FOUNDATION_AUDIT_AND_STABILIZATION` after foundation
+  hardening closure.
 - Current active WP: none; latest completed product WP is `WP-017K Real Data Onboarding Promotion to v0.9`.
-- Next unrestricted product WP after the readiness gate: `WP-018 Coach Quality
-  Calibration` targeting `v0.10`.
+- Next unrestricted product WP: `WP-018 Coach Quality Calibration` targeting
+  `v0.10`, paused pending post-foundation audit and stabilization. Do not
+  restart WP-018 from foundation closure alone.
 - Runtime: FastAPI / Uvicorn service `jc-coach.service` on `127.0.0.1:8010`.
 - Production DB: `data/cs2_coach.db`.
 
@@ -66,23 +67,27 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Current Pause / Resume State
 
-- Project status: `CONTINUE WITH RESTRICTED SCOPE`.
+- Project status: `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
 - `READY_FOR_MAJOR_CS2_FEATURE_WORK`: `NO`.
-- Unrestricted major WP-018 / CS2 feature expansion is paused until final
-  readiness gate `PASS`.
+- Foundation hardening H2 closed the recovery lane as
+  `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
+- FH-124R-03 accepted H1 final-readiness rerun evidence: full-suite pytest and
+  the local quality gate passed.
+- Unrestricted major WP-018 / CS2 feature expansion remains paused pending
+  post-foundation audit and stabilization.
 - Narrow evidence, caveat, calibration, docs or tests work may continue only
   when it improves readiness and does not add unsupported claims.
-- Docs-only roadmap edits do not change the readiness flag; only final
-  readiness gate `PASS` can authorize updating
-  `READY_FOR_MAJOR_CS2_FEATURE_WORK` to `YES`.
+- Docs-only roadmap edits, H1 PASS evidence and H2 closure do not change the
+  readiness flag; `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`.
 
 ## Next Safe Step
 
-Continue the foundation hardening sequence until the final readiness review
-passes. After gate `PASS`, an appropriate task can update current
-status/roadmap docs and create a focused WP-018 restart task card. The resume
-target is the canonical WP-018 sequence using the preserved WP-018B context from
-the existing WP-018A diagnosis, unless later accepted work changes that.
+Run the post-foundation defect/warning audit and stabilization lane. That lane
+must review remaining warnings, accepted risks, source-of-truth status, and
+stabilization needs before any product restart. Only a later explicitly
+authorized task may update status/roadmap docs for product restart and create a
+focused WP-018 restart task card using the preserved WP-018B context from the
+existing WP-018A diagnosis, unless later accepted work changes that.
 
 ## Forbidden Without Explicit WP Authorization
 

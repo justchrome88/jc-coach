@@ -1,6 +1,6 @@
 # Codex Execution Handoff
 
-Date: 2026-07-07.
+Date: 2026-07-08.
 
 ## Context
 
@@ -21,28 +21,22 @@ docs/foundation_hardening/2026-07-06-readiness-recovery-plan
 Current status:
 
 ```text
-CONTINUE WITH RESTRICTED SCOPE
+FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT
 READY_FOR_MAJOR_CS2_FEATURE_WORK: NO
+NEXT_LANE: POST_FOUNDATION_AUDIT_AND_STABILIZATION
 ```
 
-Audit score: 66% / 3.30 of 5 across 106 audit rows. Evidence:
-`00_EXECUTIVE_SUMMARY.md`.
+Original audit score: 66% / 3.30 of 5 across 106 audit rows. Evidence:
+`00_EXECUTIVE_SUMMARY.md`. Accepted FH-124R-03 H1 rerun evidence later passed
+full-suite pytest, the local quality gate and project-gate checks. H2 closes
+the foundation-hardening sequence into post-foundation audit handoff only.
 
-## First Tasks In Order
+## Current Next Task
 
-1. Create or update canonical risk register / enriched known limitations.
-2. Add mandatory local quality gate or CI-equivalent gate workflow.
-3. Create migration baseline and schema gate.
-4. Define source trust and sample-size policy.
-5. Add prompt/payload versioning plan or implementation if schema-safe.
-6. Build first semantic AI eval suite.
-7. Design diagnosis registry and recommendation planner.
-8. Expand architecture map and API contracts.
-9. Add CS2 domain pack document.
-10. Plan durable import worker and retry ledger.
-
-This order follows audit `10_NEXT_10_TASKS.md`, with risk/gate work pulled
-early so later execution has stronger controls.
+Run `POST_FOUNDATION_AUDIT_AND_STABILIZATION`. The next task should audit
+remaining warnings, accepted risks, source-of-truth status and stabilization
+gaps after H2. It must not restart WP-018, create a WP-018 task card, start
+major CS2 feature work, expose public/friends access or claim system `v1.0`.
 
 ## Strict Rules
 
@@ -52,6 +46,8 @@ early so later execution has stronger controls.
 - No parser jobs on production data.
 - No evaluator or manual evaluator on production DB.
 - No major CS2 feature work.
+- No WP-018 restart unless a later post-foundation audit/stabilization task
+  explicitly authorizes product restart.
 - No broad refactor without explicit approval.
 - No import cap raise.
 - No service/nginx/systemd/deploy mutation.
@@ -110,11 +106,11 @@ This is not hosted CI and does not authorize `.github` workflow files, external
 accounts, secrets, package installation, branch protection or provider setup.
 Hosted CI remains a separate future user decision and configuration task.
 
-This local gate also does not prove final readiness by itself. The known
-full-suite pytest stall in
-`tests/test_coach_first_ui.py::test_coach_page_renders_for_authenticated_owner_with_empty_state`
-remains an unresolved residual quality-gate risk, not a resolved condition and
-not final-readiness evidence.
+This local gate also does not prove product restart readiness by itself.
+FH-124R-03 accepted H1 final-readiness rerun evidence after the TestClient/AnyIO
+repair, including full-suite pytest PASS and local quality gate PASS. The
+upstream Starlette/httpx TestClient deprecation warning remains visible and
+non-blocking for that evidence; no package installation was authorized.
 
 ## Definition Of Done For Each Hardening Task
 
