@@ -17,11 +17,16 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
   `CODEX_NATIVE_SIMPLIFICATION`, closed by `LEAN-DOCS-06`; do not return to
   docs cleanup unless explicitly scoped.
 - Current product version: `v0.9`.
-- Current lane: real WP-018 coach quality work in the scoped AI coach
-  quality/calibration/output-quality lane.
+- Current lane:
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE`, authorized by user decision after
+  GATE-001.
+- The scoped WP-018 coach quality/calibration/output-quality lane remains
+  available, but it is no longer the only authorized post-foundation product
+  lane.
 - Current active WP: `WP-018 Coach Quality Calibration` remains open and is
   not complete; the preparation/prelude layer is closed.
-- Next scoped task: `WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
+- Next scoped task:
+  `MVP-001_AUTH_STEAM_IDENTITY_FOUNDATION_AND_GUARDRAILS`.
 - WP-018 targets `v0.10`, but `v0.10` is not promoted. Work remains authorized
   only for narrow AI coach quality, calibration and output-quality scope. This
   is not a broad product expansion.
@@ -79,6 +84,11 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - Runtime AI coach quality infrastructure now available: version/snapshot
   metadata, runtime CS2 domain constraints, semantic validator checks, safe
   fallback behavior and accepted/rejected output-quality fixtures.
+- GATE-002 records the user decision to authorize
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` for controlled implementation WPs
+  across auth / Steam identity, import, demo storage, parser, normalized
+  events, derived context, metric snapshots, AI Scout, Evidence Validator,
+  missions and coach UI.
 
 ## Data And Product Facts To Carry Forward
 
@@ -100,6 +110,9 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - FH-124R-03 accepted H1 final-readiness rerun evidence: full-suite pytest and
   the local quality gate passed.
 - Unrestricted major WP-018 / CS2 feature expansion remains paused.
+- The old broad pause language no longer blocks scoped work inside
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` when the future WP explicitly defines
+  scope, allowed files, mutation/job authorization and evidence requirements.
 - Narrow WP-018 AI coach quality, calibration, output-quality, evidence,
   caveat, docs or tests work may proceed only when explicitly scoped and when
   it improves readiness without adding unsupported claims.
@@ -112,16 +125,19 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Next Safe Step
 
-Proceed to the first real WP-018 task after the closed prelude:
-`WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
+Proceed to the first MVP lane WP:
+`MVP-001_AUTH_STEAM_IDENTITY_FOUNDATION_AND_GUARDRAILS`.
 
-That task should diagnose real coach output quality against the available
-quality infrastructure: contract snapshot metadata, CS2 domain constraints,
-semantic validator checks, safe fallback behavior and output-quality fixtures.
-It should not return to docs cleanup, Forge, Codex Native, PM repo workflow,
-broad product features, major CS2 readiness claims or DB/import/parser/
-evaluator/runtime/deploy/package behavior unless a later prompt explicitly
-scopes that risk.
+That task should define and implement only the first scoped auth / Steam
+identity foundation slice named by its Task Card. It must preserve owner-only
+identity boundaries, avoid public/friends readiness claims, and must not run
+live Steam/Valve import, parser, evaluator, manual evaluator, service/deploy
+changes or production DB/schema/data mutation unless the Task Card explicitly
+authorizes that risk and includes the required evidence contract.
+
+`WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS` remains a valid scoped WP-018 next
+task if the user chooses the coach-quality lane instead of the MVP auth/import
+lane.
 
 ## Forbidden Without Explicit WP Authorization
 

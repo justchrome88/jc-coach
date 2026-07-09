@@ -1,6 +1,6 @@
 # Decisions
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-09.
 
 ## Current Decisions
 
@@ -24,6 +24,18 @@ Last updated: 2026-07-08.
   until later explicit authorization after audit/stabilization.
 - 2026-07-08: `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`. H1 PASS
   evidence, H2 closure and docs-only roadmap edits do not set it to `YES`.
+- 2026-07-09: User authorizes
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` after GATE-001. The lane permits
+  explicitly scoped WPs for auth / Steam identity, import, demo storage,
+  parser, normalized events, derived context, metric snapshots, AI Scout,
+  Evidence Validator, missions and coach UI. Preserved guardrails: no
+  production DB/schema/data mutation without explicit authorization plus backup
+  and pre/post SHA evidence; no live Steam/Valve import without explicit
+  authorization; no parser/evaluator/manual evaluator jobs without explicit
+  authorization; no raw demo delete/move/compress without explicit storage WP
+  scope; no public/friends readiness; no unsupported coach claims; no git push;
+  `STEAM_IMPORT_MAX_DEMOS_PER_RUN` remains `1` unless a future cap-change WP
+  changes it.
 - 2026-07-05: `docs/audit/WP_018_DOCUMENTATION_GOVERNANCE_AUDIT_REPORT.md` is out-of-band governance audit evidence and does not consume the planned WP-018 product block.
 - 2026-07-05: Match mode classification remains deferred/unknown unless future metadata capture is implemented.
 - 2026-07-05: `v0.9` must not claim playlist-specific Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom mode labels.

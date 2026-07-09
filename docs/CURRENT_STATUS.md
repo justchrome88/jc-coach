@@ -15,8 +15,12 @@ Last updated: 2026-07-09.
   the same product workspace unless a future explicit task asks for separate
   windows. They are not mandatory separate Codex sessions.
 - Product version: `v0.9`.
-- Current lane: real WP-018 coach quality work in the scoped AI coach
-  quality/calibration/output-quality lane.
+- Current lane:
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE`, authorized by user decision after
+  GATE-001.
+- The scoped WP-018 AI coach quality/calibration/output-quality lane remains
+  available, but it is no longer the only authorized post-foundation product
+  lane.
 - Post-foundation audit/stabilization result:
   `POST-FOUNDATION-01_DEFECT_WARNING_AUDIT_AND_STABILIZATION_PLAN` produced
   `PASS_WITH_WARNINGS`; no broad product/runtime remediation is required before
@@ -25,12 +29,18 @@ Last updated: 2026-07-09.
   not complete; the preparation/prelude layer is closed.
 - Next scoped task: `WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
 - WP-018 is restart-authorized only for narrow AI coach quality, calibration
-  and output-quality scope. This is not authorization for broad WP-018
-  expansion or major CS2 product work.
+  and output-quality scope. The new MVP lane is separately authorized for
+  explicitly scoped WPs covering auth / Steam identity, import, demo storage,
+  parser, normalized events, derived context, metric snapshots, AI Scout,
+  Evidence Validator, missions and coach UI.
 - Allowed WP-018 work is limited to narrow evidence, caveat, calibration,
   output-quality, docs or tests work that improves coach quality and does not
   add unsupported coach/domain claims.
 - Promotion status: `v0.9` is promoted with warnings by WP-017K. Warnings and limitations must carry forward into WP-018.
+- MVP lane status: authorized for controlled implementation WPs only. Each
+  future WP must name allowed files, risk scope, required backup/SHA evidence
+  where applicable, import/parser/evaluator authorization if applicable and a
+  file-backed report.
 - Latest known production DB SHA: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33` from read-only project-gate evidence. Re-check before any WP that depends on current DB state.
 
 ## Foundation Hardening Status
@@ -45,9 +55,11 @@ Last updated: 2026-07-09.
   `docs/foundation_hardening/2026-07-06-readiness-recovery-plan/RISK_REGISTER.md`.
 - Current project status for execution planning:
   `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
-- `READY_FOR_MAJOR_CS2_FEATURE_WORK`: `NO` until the readiness gate in the
-  recovery plan passes and post-foundation audit/remediation separately
-  authorizes product restart.
+- `READY_FOR_MAJOR_CS2_FEATURE_WORK`: `NO` for unrestricted major CS2 feature
+  work, public/friends readiness and `v1.0` claims. This flag no longer blocks
+  the explicitly authorized `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` when a
+  future WP provides scope, evidence requirements and explicit authorization
+  for risky actions.
 - FH-124R-03 accepted H1 final-readiness rerun evidence with full-suite pytest
   `250 passed, 1 warning`, local quality gate `LOCAL_QUALITY_GATE=PASS` and
   project-gate checks passing. H2 closes the foundation-hardening sequence as a
@@ -101,6 +113,9 @@ Last updated: 2026-07-09.
   version/snapshot metadata, runtime CS2 domain constraints, semantic
   validator checks, safe fallback behavior and accepted/rejected
   output-quality fixtures.
+- GATE-002 authorizes the
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` as a controlled implementation lane,
+  not as unrestricted production mutation or public readiness.
 
 ## Current Blockers And Limitations
 
@@ -108,12 +123,17 @@ Last updated: 2026-07-09.
   Forge work, major CS2 product work, public/friends access or a `v1.0` claim.
 - Foundation hardening is closed only as
   `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
-- Post-foundation audit/stabilization has passed with warnings and authorizes
-  only a scoped WP-018 restart for AI coach quality/calibration/output quality.
+- Post-foundation audit/stabilization has passed with warnings. It authorized
+  the scoped WP-018 restart for AI coach quality/calibration/output quality,
+  and the later GATE-002 user decision authorizes the separate controlled MVP
+  implementation lane.
 - WP-018 prelude closed the quality-infrastructure blocker, but WP-018 itself
   remains open; do not mark `v0.10` promoted.
-- `READY_FOR_MAJOR_CS2_FEATURE_WORK` is not `YES`; major CS2 feature work and
-  unrestricted WP-018 expansion remain paused/blocked.
+- `READY_FOR_MAJOR_CS2_FEATURE_WORK` is not `YES`; unrestricted major CS2
+  feature work and unrestricted WP-018 expansion remain paused/blocked. This
+  does not block scoped work inside
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` when the task-specific WP carries the
+  required authorization and evidence contract.
 - System `v1.0` is not claimed. It remains gated behind future post-foundation
   audit/remediation, later roadmap WPs and explicit acceptance.
 - AI coach can-carry warnings: Starlette/TestClient deprecation warning remains
@@ -140,10 +160,11 @@ Last updated: 2026-07-09.
 - Do not start or change WP-018 product work without an explicit WP-018 prompt;
   the next authorized prompt should start from
   `WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
-- Do not start major WP-018/CS2 feature expansion. WP-018 restart is authorized
-  only for narrow AI coach quality/calibration/output-quality work when
-  explicitly scoped, and it must not add unsupported claims or weaken foundation
-  readiness.
+- Do not start unrestricted major WP-018/CS2 feature expansion. Scoped MVP lane
+  work may proceed only under
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` WPs that explicitly define files,
+  mutation/job authorization, backup/SHA evidence where applicable and a
+  file-backed report.
 - Do not change DB/schema/data/import/parser/evaluator/runtime/deploy/package
   files unless the active task explicitly scopes that risk.
 - Do not run `git add`, commit or push without explicit user approval.

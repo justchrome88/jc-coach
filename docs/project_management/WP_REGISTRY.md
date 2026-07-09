@@ -27,6 +27,12 @@ registry.
 - `docs/audit/WP_018_DOCUMENTATION_GOVERNANCE_AUDIT_REPORT.md` is an
   out-of-band governance audit evidence file. It does not consume or replace
   the planned `WP-018` product work-package ID.
+- GATE-002 authorizes
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` as a controlled implementation lane.
+  This relaxes the old broad pause only for explicitly scoped MVP WPs and does
+  not relax production DB/schema/data mutation, live import, parser/evaluator
+  jobs, raw demo lifecycle, public/friends readiness, unsupported coach claims,
+  git push restrictions or the Steam import cap.
 
 ## Status Values
 
@@ -120,9 +126,14 @@ overlay, not as a replacement for a planned product WP.
 - FH-125_128 H2 closes the foundation-hardening sequence into a handoff state,
   not product-development authorization.
 - Major CS2 feature work, including unrestricted WP-018 expansion, remains
-  paused. PF-STAB-01 authorizes only the scoped AI coach quality lane.
-- `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`; docs-only roadmap edits, H1
-  PASS evidence and H2 closure do not set it to `YES`.
+  paused. PF-STAB-01 authorizes only the scoped AI coach quality lane, and
+  GATE-002 separately authorizes the controlled MVP auth/import/parser/AI coach
+  lane.
+- `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO` for unrestricted major CS2
+  work, public/friends readiness and `v1.0` claims; docs-only roadmap edits, H1
+  PASS evidence and H2 closure do not set it to `YES`. This flag does not block
+  scoped WPs inside `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` when the WP includes
+  the required authorization and evidence contract.
 - Required next lane after H2:
 - Post-foundation audit/stabilization result:
   `POST-FOUNDATION-01_DEFECT_WARNING_AUDIT_AND_STABILIZATION_PLAN` produced
@@ -134,6 +145,55 @@ overlay, not as a replacement for a planned product WP.
 - Small/scoped work may continue only when it strengthens documentation,
   tests/evals, gates, confidence/caveats or foundation readiness and does not
   add unsupported CS2/domain claims.
+
+## MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE
+
+Lane authorization: user decision after GATE-001, recorded by
+`GATE-002_MVP_LANE_AUTHORIZATION_AND_GUARDRAIL_UPDATE`.
+
+Lane scope:
+
+- auth / Steam identity;
+- import;
+- demo storage;
+- parser;
+- normalized events;
+- derived context;
+- metric snapshots;
+- AI Scout;
+- Evidence Validator;
+- missions;
+- coach UI.
+
+Lane guardrails:
+
+- No production DB/schema/data mutation unless the task explicitly authorizes
+  it and includes backup plus pre/post SHA evidence.
+- No live Steam/Valve import unless the task explicitly authorizes it.
+- No parser/evaluator/manual evaluator jobs unless the task explicitly
+  authorizes them.
+- No raw demo delete/move/compress unless a storage WP explicitly authorizes
+  it.
+- No public/friends readiness.
+- No unsupported coach claims.
+- No git push.
+- `STEAM_IMPORT_MAX_DEMOS_PER_RUN` remains `1` unless a future cap-change WP
+  changes it.
+
+Planned/active sequence:
+
+| WP ID | Title | Status | Report path | Dependencies | Notes / warnings |
+|---|---|---|---|---|---|
+| `GATE-002` | MVP Lane Authorization and Guardrail Update | `done` | `docs/audit/GATE_002_MVP_LANE_AUTHORIZATION_AND_GUARDRAIL_UPDATE.md` | `GATE-001`, user decision | Docs-only control-plane update. Converts broad stop-signals into controlled implementation gates. |
+| `MVP-001` | Auth / Steam Identity Foundation and Guardrails | `planned / next active scoped task` | TBD | `GATE-002` | Owner-only identity scope. No public/friends readiness. Must not launch import/parser/evaluator jobs unless separately authorized. |
+| `MVP-002` | Import and Demo Storage Safety Contract | `planned` | TBD | `MVP-001` | Define tempdir, cap, retention and raw-demo lifecycle guardrails. No raw demo delete/move/compress unless explicitly authorized. |
+| `MVP-003` | DB / Schema / Data Storage Mutation Plan | `planned` | TBD | `MVP-002` | Any production DB/schema/data mutation requires explicit authorization, backup and pre/post SHA evidence. |
+| `MVP-004` | Controlled Steam Import Execution Slice | `planned` | TBD | `MVP-002`, `MVP-003` if DB mutation is needed | Live Steam/Valve import requires explicit authorization. Import cap remains `1` unless a future cap-change WP changes it. |
+| `MVP-005` | Parser and Normalized Events Ingestion Slice | `planned` | TBD | `MVP-003`, `MVP-004` if using fresh demos | Parser jobs and production data writes require explicit authorization and evidence. |
+| `MVP-006` | Derived Context and Metric Snapshots | `planned` | TBD | `MVP-005` | Must preserve weak-metric caveats and metric-confidence limitations. |
+| `MVP-007` | AI Scout and Evidence Validator Integration | `planned` | TBD | `MVP-006`, scoped WP-018 quality infrastructure as needed | Must preserve evidence chains and avoid unsupported coach claims. |
+| `MVP-008` | Missions and Coach UI Integration | `planned` | TBD | `MVP-007` | Personal MVP UI only. No public/friends readiness or `v1.0` claim. |
+| `MVP-009` | Personal MVP Lane Acceptance Review | `planned` | TBD | `MVP-001` through `MVP-008` or documented deferrals | May only accept scoped personal MVP readiness with carried limitations. Public/friends readiness remains blocked. |
 
 ## WP-018 Current Scope
 
