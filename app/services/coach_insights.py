@@ -1,11 +1,31 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 INSIGHT_CARD_SCHEMA_VERSION = "coach-insight-card-v1"
 VALID_INSIGHT_CONFIDENCE = {"low", "medium", "high"}
 REQUIRED_INSIGHT_CARD_FIELDS = ("problem", "evidence", "confidence", "caveats", "recommended_focus")
+
+
+@dataclass(frozen=True)
+class InsightCard:
+    problem: str
+    evidence: tuple[dict[str, Any], ...]
+    confidence: Literal["low", "medium", "high"]
+    caveats: tuple[str, ...]
+    recommended_focus: str
+    schema_version: str = INSIGHT_CARD_SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "problem": self.problem,
+            "evidence": [dict(item) for item in self.evidence],
+            "confidence": self.confidence,
+            "caveats": list(self.caveats),
+            "recommended_focus": self.recommended_focus,
+        }
 
 
 @dataclass(frozen=True)
@@ -75,7 +95,7 @@ def validate_insight_cards(raw_cards: Any, *, path: str = "$.insight_cards") -> 
                     f"{card_path}.caveats",
                 )
             )
-        elif any(not str(item).strip() for item in card.get("caveats") or []):
+        elif any(not isinstance(item, str) or not item.strip() for item in card.get("caveats") or []):
             issues.append(
                 InsightCardValidationIssue(
                     "invalid_insight_caveat",
@@ -94,31 +114,34 @@ def serialize_insight_cards(raw_cards: Any) -> list[dict[str, Any]]:
     for card in raw_cards:
         if not isinstance(card, dict):
             continue
-        evidence = card.get("evidence") if isinstance(card.get("evidence"), list) else []
-        caveats = _string_list(card.get("caveats"))
-        serialized.append(
-            {
-                "schema_version": INSIGHT_CARD_SCHEMA_VERSION,
-                "problem": str(card.get("problem") or "").strip(),
-                "evidence": [dict(item) for item in evidence if isinstance(item, dict)],
-                "confidence": str(card.get("confidence") or "").strip(),
-                "caveats": caveats,
-                "recommended_focus": str(card.get("recommended_focus") or "").strip(),
-            }
-        )
+        model = _insight_card_model(card)
+        if model is not None:
+            serialized.append(model.to_dict())
     return serialized
 
 
 def no_data_insight_card(reason: str) -> dict[str, Any]:
     recommended_focus = "Use the dashboard and current accepted recommendation until validated insight data exists."
-    return {
-        "schema_version": INSIGHT_CARD_SCHEMA_VERSION,
-        "problem": "No validated coach insight is available from the submitted AI output.",
-        "evidence": [],
-        "confidence": "low",
-        "caveats": [reason],
-        "recommended_focus": recommended_focus,
-    }
+    return InsightCard(
+        problem="No validated coach insight is available from the submitted AI output.",
+        evidence=(),
+        confidence="low",
+        caveats=(reason,),
+        recommended_focus=recommended_focus,
+    ).to_dict()
+
+
+def _insight_card_model(card: dict[str, Any]) -> InsightCard | None:
+    if validate_insight_cards([card]):
+        return None
+    evidence = tuple(dict(item) for item in card["evidence"] if isinstance(item, dict))
+    return InsightCard(
+        problem=card["problem"].strip(),
+        evidence=evidence,
+        confidence=card["confidence"],
+        caveats=tuple(_string_list(card["caveats"])),
+        recommended_focus=card["recommended_focus"].strip(),
+    )
 
 
 def _validate_non_empty_string(
