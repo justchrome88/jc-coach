@@ -190,10 +190,10 @@ EVENT_METRIC_DICTIONARY: dict[str, EventMetricDefinition] = {
     "traded_death": EventMetricDefinition(
         "traded_death",
         "trade",
-        "unsupported",
-        (),
-        ("traded_deaths",),
-        ("Traded/untraded death facts are unavailable and must remain a data gap.",),
+        "weak",
+        ("player_death",),
+        ("traded_deaths", "kast"),
+        ("Traded/untraded death facts depend on event order, trade window and team-side inference.",),
     ),
     "view_angle": EventMetricDefinition(
         "view_angle",
