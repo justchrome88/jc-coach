@@ -1,0 +1,60 @@
+{
+  "schema_version": "parser-evidence-v1",
+  "parser_identity": {
+    "name": "demoparser2",
+    "version": "synthetic-test-version",
+    "payload_version": "synthetic-c2"
+  },
+  "source_refs": {
+    "demo_file": "synthetic-c2.dem",
+    "demo_sha1": "0000000000000000000000000000000000000000",
+    "external_match_id": "synthetic-parser-c2",
+    "played_at_source": "steam_gc_match_time",
+    "match_date_source": "steam_gc_match_time",
+    "match_date_status": "exact_match_date_available"
+  },
+  "event_counts": {
+    "rounds": 23,
+    "player_death": 36,
+    "player_hurt": 144,
+    "weapon_fire": 210,
+    "grenade_events": 24,
+    "player_blind": 18,
+    "round_end": 23,
+    "player_team": 0
+  },
+  "metric_confidence": {
+    "adr": "medium",
+    "kast": "medium",
+    "kast_trade_component": "low",
+    "trade_kills": "low",
+    "traded_deaths": "unavailable",
+    "entry_duels": "medium",
+    "early_deaths": "medium",
+    "utility": "medium",
+    "flash": "medium",
+    "weapon_accuracy": "medium",
+    "side_stats": "low",
+    "swing": "medium"
+  },
+  "parser_confidence": "medium",
+  "warnings": [
+    "Trade and side facts are synthetic low-confidence parser context.",
+    "No economy, positioning or clutch model is present in this fixture."
+  ],
+  "data_gaps": [
+    "traded_deaths",
+    "economy_model",
+    "positioning_model",
+    "clutch_model",
+    "exact_playlist"
+  ],
+  "hard_claim_support": {
+    "diagnosis": [
+      "adr"
+    ],
+    "recommendation": [
+      "adr"
+    ]
+  }
+}

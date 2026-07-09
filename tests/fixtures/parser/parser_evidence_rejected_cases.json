@@ -1,0 +1,123 @@
+[
+  {
+    "id": "missing_parser_identity",
+    "expected_issue": "missing_parser_identity_name",
+    "evidence": {
+      "schema_version": "parser-evidence-v1",
+      "parser_identity": {
+        "version": "synthetic-test-version",
+        "payload_version": "synthetic-c2"
+      },
+      "source_refs": {
+        "demo_file": "synthetic-c2.dem",
+        "demo_sha1": "0000000000000000000000000000000000000000",
+        "external_match_id": "synthetic-parser-c2"
+      },
+      "event_counts": {
+        "player_death": 36
+      },
+      "metric_confidence": {
+        "adr": "medium"
+      },
+      "parser_confidence": "medium",
+      "warnings": [],
+      "data_gaps": [],
+      "hard_claim_support": {}
+    }
+  },
+  {
+    "id": "missing_metric_confidence",
+    "expected_issue": "missing_metric_confidence",
+    "evidence": {
+      "schema_version": "parser-evidence-v1",
+      "parser_identity": {
+        "name": "demoparser2",
+        "version": "synthetic-test-version",
+        "payload_version": "synthetic-c2"
+      },
+      "source_refs": {
+        "demo_file": "synthetic-c2.dem",
+        "demo_sha1": "0000000000000000000000000000000000000000",
+        "external_match_id": "synthetic-parser-c2"
+      },
+      "event_counts": {
+        "player_death": 36
+      },
+      "parser_confidence": "medium",
+      "warnings": [],
+      "data_gaps": [],
+      "hard_claim_support": {}
+    }
+  },
+  {
+    "id": "unsupported_hard_claim_support",
+    "expected_issue": "insufficient_hard_claim_metric_confidence:traded_deaths",
+    "evidence": {
+      "schema_version": "parser-evidence-v1",
+      "parser_identity": {
+        "name": "demoparser2",
+        "version": "synthetic-test-version",
+        "payload_version": "synthetic-c2"
+      },
+      "source_refs": {
+        "demo_file": "synthetic-c2.dem",
+        "demo_sha1": "0000000000000000000000000000000000000000",
+        "external_match_id": "synthetic-parser-c2"
+      },
+      "event_counts": {
+        "player_death": 36
+      },
+      "metric_confidence": {
+        "traded_deaths": "unavailable"
+      },
+      "parser_confidence": "medium",
+      "warnings": [
+        "Traded death facts are unavailable."
+      ],
+      "data_gaps": [
+        "traded_deaths"
+      ],
+      "hard_claim_support": {
+        "recommendation": [
+          "traded_deaths"
+        ]
+      }
+    }
+  },
+  {
+    "id": "metric_truth_blocks_warn_only_hard_claim_support",
+    "expected_issue": "unsupported_hard_claim_support:kast:recommendation",
+    "evidence": {
+      "schema_version": "parser-evidence-v1",
+      "parser_identity": {
+        "name": "demoparser2",
+        "version": "synthetic-test-version",
+        "payload_version": "synthetic-c2"
+      },
+      "source_refs": {
+        "demo_file": "synthetic-c2.dem",
+        "demo_sha1": "0000000000000000000000000000000000000000",
+        "external_match_id": "synthetic-parser-c2"
+      },
+      "event_counts": {
+        "player_death": 36,
+        "player_hurt": 144
+      },
+      "metric_confidence": {
+        "kast": "medium"
+      },
+      "parser_confidence": "medium",
+      "warnings": [
+        "KAST trade component is incomplete."
+      ],
+      "data_gaps": [
+        "traded_deaths"
+      ],
+      "hard_claim_support": {
+        "recommendation": [
+          "kast"
+        ]
+      }
+    }
+  }
+]
