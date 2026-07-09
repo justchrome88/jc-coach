@@ -61,6 +61,15 @@ def _upgrade_sqlite_schema() -> None:
             if "last_login_at" not in user_columns:
                 connection.execute(text("ALTER TABLE users ADD COLUMN last_login_at DATETIME"))
     recommendation_tables = inspector.get_table_names()
+    if "import_jobs" in recommendation_tables:
+        import_job_columns = {column["name"] for column in inspector.get_columns("import_jobs")}
+        with engine.begin() as connection:
+            if "user_id" not in import_job_columns:
+                connection.execute(text("ALTER TABLE import_jobs ADD COLUMN user_id INTEGER"))
+            if "logical_target_key" not in import_job_columns:
+                connection.execute(text("ALTER TABLE import_jobs ADD COLUMN logical_target_key VARCHAR(500)"))
+            if "updated_at" not in import_job_columns:
+                connection.execute(text("ALTER TABLE import_jobs ADD COLUMN updated_at DATETIME"))
     if "coach_recommendations" not in recommendation_tables:
         return
     recommendation_columns = {column["name"] for column in inspector.get_columns("coach_recommendations")}

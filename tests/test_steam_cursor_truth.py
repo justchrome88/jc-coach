@@ -124,7 +124,7 @@ def test_no_new_matches_is_success_and_does_not_advance_cursor(db, monkeypatch):
         get_settings.cache_clear()
 
     db.refresh(account)
-    assert result["status"] == "succeeded"
+    assert result["status"] == "completed"
     assert result["result"]["sync_outcome"] == STEAM_SYNC_SUCCESS_NO_NEW_MATCHES
     assert result["result"]["cursor_advanced"] is False
     assert account.last_share_code == INITIAL_CODE

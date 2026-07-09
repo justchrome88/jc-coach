@@ -282,7 +282,7 @@ def test_parent_checkpoint_persists_disk_budget_exceeded(db, monkeypatch):
 
 def test_stale_running_steam_import_all_is_not_reused(db):
     stale = queue_steam_import_all(db)
-    stale.status = "running"
+    stale.status = "in_progress"
     stale.started_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=2)
     db.commit()
 
@@ -297,7 +297,7 @@ def test_stale_running_steam_import_all_is_not_reused(db):
 
 def test_stale_running_steam_import_all_can_be_marked_interrupted(db):
     job = queue_steam_import_all(db)
-    job.status = "running"
+    job.status = "in_progress"
     job.started_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=2)
     db.commit()
 
@@ -314,7 +314,7 @@ def test_stale_running_steam_import_all_can_be_marked_interrupted(db):
 
 def test_non_stale_running_steam_import_all_blocks_new_queue(db):
     running = queue_steam_import_all(db)
-    running.status = "running"
+    running.status = "in_progress"
     running.started_at = datetime.now(UTC).replace(tzinfo=None)
     db.commit()
 
@@ -322,7 +322,7 @@ def test_non_stale_running_steam_import_all_blocks_new_queue(db):
 
     db.refresh(running)
     assert queued.id == running.id
-    assert running.status == "running"
+    assert running.status == "in_progress"
     assert db.query(ImportJob).count() == 1
 
 
@@ -330,7 +330,7 @@ def test_startup_stale_repair_is_opt_in(db, monkeypatch):
     from app.config import get_settings
 
     job = create_steam_import_job(db, None, "steam_import_all")
-    job.status = "running"
+    job.status = "in_progress"
     job.started_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=2)
     db.commit()
 
@@ -339,7 +339,7 @@ def test_startup_stale_repair_is_opt_in(db, monkeypatch):
     try:
         assert run_startup_stale_steam_import_repair(db) == []
         db.refresh(job)
-        assert job.status == "running"
+        assert job.status == "in_progress"
 
         monkeypatch.setenv("STEAM_IMPORT_REPAIR_STALE_ON_STARTUP", "true")
         get_settings.cache_clear()
@@ -355,7 +355,7 @@ def test_startup_stale_repair_is_opt_in(db, monkeypatch):
 
 def test_parent_checkpoint_recent_events_are_bounded(db):
     job = queue_steam_import_all(db)
-    job.status = "running"
+    job.status = "in_progress"
     job.started_at = datetime.now(UTC).replace(tzinfo=None)
     db.commit()
 
@@ -424,7 +424,7 @@ def test_run_steam_import_all_job_reports_no_new_clean_success(db, monkeypatch):
     finally:
         get_settings.cache_clear()
 
-    assert result["status"] == "succeeded"
+    assert result["status"] == "completed"
     assert result["result"]["overall_outcome"] == STEAM_IMPORT_NO_NEW
     assert STEAM_IMPORT_EXACT_MATCH_DATE_UNAVAILABLE in result["result"]["statuses"]
 
@@ -458,7 +458,7 @@ def test_run_steam_import_all_job_reports_duplicate_skipped_clean_success(db, mo
     finally:
         get_settings.cache_clear()
 
-    assert result["status"] == "succeeded"
+    assert result["status"] == "completed"
     assert result["result"]["overall_outcome"] == STEAM_IMPORT_DUPLICATE_SKIPPED
     assert STEAM_IMPORT_DUPLICATE_SKIPPED in result["result"]["statuses"]
 
@@ -588,7 +588,7 @@ def test_sync_match_history_job_stores_share_codes(db, monkeypatch):
     finally:
         get_settings.cache_clear()
 
-    assert result["status"] == "succeeded"
+    assert result["status"] == "completed"
     assert result["result"]["inserted"] == 1
     assert result["result"]["collected_share_codes"] == ["CSGO-abcde-abcde-abcde-abcde-abcde"]
     assert account.last_share_code == "CSGO-abcde-abcde-abcde-abcde-abcde"
@@ -689,7 +689,7 @@ def test_import_all_available_steam_matches(db, monkeypatch):
     assert result["result"]["overall_outcome"] == STEAM_IMPORT_DOWNLOAD_FAILED
     assert result["result"]["demo_status"]["pending_demo_download"] == 2
     assert result["result"]["demo_status"]["steam_history_matches"] == 2
-    assert result["result"]["sync_jobs"][0]["status"] == "succeeded"
+    assert result["result"]["sync_jobs"][0]["status"] == "completed"
     assert result["result"]["demo_download"]["configured"] is False
     assert result["result"]["demo_download"]["pending"] == 2
     assert "service bot" in result["result"]["demo_download"]["message"]
@@ -719,7 +719,7 @@ def test_import_all_available_steam_matches_uses_sync_even_after_recent_sync(db,
 
     assert result["status"] == "failed"
     assert result["result"]["overall_outcome"] == STEAM_IMPORT_DOWNLOAD_FAILED
-    assert result["result"]["sync_jobs"][0]["status"] == "succeeded"
+    assert result["result"]["sync_jobs"][0]["status"] == "completed"
     assert result["result"]["demo_status"]["pending_demo_download"] == 2
 
 
@@ -844,7 +844,7 @@ def test_import_all_available_steam_matches_reports_approximate_match_date(db, m
     finally:
         get_settings.cache_clear()
 
-    assert result["status"] == "succeeded"
+    assert result["status"] == "completed"
     assert STEAM_IMPORT_APPROXIMATE_MATCH_DATE in result["result"]["statuses"]
 
 
@@ -876,7 +876,7 @@ def test_import_steam_share_code_demo_creates_tracking_job_before_downloader(db,
 
     def fake_download_pending_steam_demos(inner_db, *_args, **_kwargs):
         job = inner_db.query(ImportJob).filter(ImportJob.job_type == "share_code_import").one()
-        assert job.status == "running"
+        assert job.status == "in_progress"
         return {
             "configured": True,
             "processed": 1,
@@ -900,7 +900,7 @@ def test_import_steam_share_code_demo_creates_tracking_job_before_downloader(db,
 
     job = db.query(ImportJob).filter(ImportJob.job_type == "share_code_import").one()
     assert result["job_id"] == job.id
-    assert result["job_status"] == "succeeded"
+    assert result["job_status"] == "completed"
     assert result["overall_outcome"] == STEAM_IMPORT_SUCCESS
     assert STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE in result["statuses"]
 
@@ -1003,7 +1003,7 @@ def test_steam_import_result_reports_batch_cap(db, monkeypatch):
 
     result = import_all_available_steam_matches(db)
 
-    assert result["status"] == "succeeded"
+    assert result["status"] == "completed"
     assert STEAM_IMPORT_BATCH_CAP_REACHED in result["result"]["statuses"]
 
 

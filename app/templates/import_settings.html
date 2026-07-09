@@ -12,8 +12,8 @@
     <a class="button" href="/auth/steam">{{ t("steam.connect") }}</a>
     <form action="/settings/imports/pull-all" method="post" class="inline-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="button ghost" type="submit" {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}disabled{% endif %}>
-        {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}Импорт идет{% elif steam_import_overview.current_job %}Запустить задачу{% else %}Подгрузить все{% endif %}
+      <button class="button ghost" type="submit" {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "in_progress" %}disabled{% endif %}>
+        {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "in_progress" %}Импорт идет{% elif steam_import_overview.current_job %}Запустить задачу{% else %}Подгрузить все{% endif %}
       </button>
     </form>
   </div>
@@ -58,8 +58,8 @@
   <div class="actions">
     <form action="/settings/imports/pull-all" method="post" class="inline-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="button" type="submit" {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}disabled{% endif %}>
-        {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}Импорт идет{% elif steam_import_overview.current_job %}Запустить задачу{% else %}Обновить и скачать демки{% endif %}
+      <button class="button" type="submit" {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "in_progress" %}disabled{% endif %}>
+        {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "in_progress" %}Импорт идет{% elif steam_import_overview.current_job %}Запустить задачу{% else %}Обновить и скачать демки{% endif %}
       </button>
     </form>
     {% if steam_import_overview.demo_download_errors %}
@@ -114,8 +114,8 @@
         <td>
           <form action="/settings/imports/pull-all" method="post" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button class="button ghost compact" type="submit" {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}disabled{% endif %}>
-              {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "running" %}Идет{% else %}Обновить{% endif %}
+            <button class="button ghost compact" type="submit" {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "in_progress" %}disabled{% endif %}>
+              {% if steam_import_overview.current_job and steam_import_overview.current_job.status == "in_progress" %}Идет{% else %}Обновить{% endif %}
             </button>
           </form>
         </td>
@@ -155,7 +155,7 @@
         <td>{{ job.created_at.strftime("%Y-%m-%d %H:%M") if job.created_at else "n/a" }}</td>
         <td class="comment-cell">{{ job.error_message or "" }}</td>
         <td>
-          {% if job.provider == "steam" and job.job_type == "match_history_sync" and job.status in ["queued", "failed"] %}
+          {% if job.provider == "steam" and job.job_type == "match_history_sync" and job.status == "queued" %}
           <form action="/settings/imports/jobs/{{ job.id }}/run" method="post" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button class="button compact ghost" type="submit">Run</button>

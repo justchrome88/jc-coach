@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.db.models import ImportJob, Match
@@ -25,6 +25,12 @@ from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, get_map_stats, get_summary
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.demo_storage import demo_storage_report, write_demo_storage_manifest
+from app.services.import_jobs import (
+    IMPORT_JOB_COMPLETED,
+    IMPORT_JOB_IN_PROGRESS,
+    IMPORT_JOB_QUEUED,
+    create_import_request,
+)
 from app.services.importer import import_csv, import_json
 from app.services.match_queries import playable_match_select
 from app.services.recommendation_tracking import (
@@ -63,7 +69,7 @@ def _run_steam_import_all_background(job_id: int) -> None:
         run_steam_import_all_job(db, job_id)
     except BaseException as exc:
         job = db.get(ImportJob, job_id)
-        if job is not None and job.status == "running":
+        if job is not None and job.status == IMPORT_JOB_IN_PROGRESS:
             mark_steam_import_all_job_interrupted(
                 db,
                 job,
@@ -377,14 +383,14 @@ def run_steam_import_job_endpoint(db: Annotated[Session, Depends(get_db)], job_i
         result = sync_match_history_job(db, job_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"ok": result.get("status") == "succeeded", **result}
+    return {"ok": result.get("status") == IMPORT_JOB_COMPLETED, **result}
 
 
 @router.post("/steam/import/jobs/run-queued")
 def run_queued_steam_import_jobs_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
     results = process_queued_steam_jobs(db)
     return {
-        "ok": all(item.get("status") == "succeeded" for item in results),
+        "ok": all(item.get("status") == IMPORT_JOB_COMPLETED for item in results),
         "processed": len(results),
         "results": results,
     }
@@ -396,7 +402,7 @@ def import_all_steam_matches_endpoint(
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     job = queue_steam_import_all(db)
-    if job.status == "queued":
+    if job.status == IMPORT_JOB_QUEUED:
         background_tasks.add_task(_run_steam_import_all_background, job.id)
     return {
         "ok": True,
@@ -437,17 +443,58 @@ def import_jobs_endpoint(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
     return [serialize_import_job(job) for job in list_import_jobs(db)]
 
 
+@router.post("/import/jobs")
+def create_import_job_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    request: Annotated[dict[str, Any], Body()],
+) -> dict:
+    payload = request.get("payload") if isinstance(request.get("payload"), dict) else {}
+    job = create_import_request(
+        db,
+        provider=str(request.get("provider") or "manual"),
+        job_type=str(request.get("job_type") or "demo_import_request"),
+        payload=payload,
+        user_id=_optional_int(request.get("user_id")),
+        steam_account_id=_optional_int(request.get("steam_account_id")),
+        initial_status=str(request.get("status") or "requested"),
+        logical_target_key=request.get("logical_target_key"),
+    )
+    return serialize_import_job(job)
+
+
 def serialize_import_job(job: ImportJob) -> dict:
     return {
         "id": job.id,
         "provider": job.provider,
         "job_type": job.job_type,
         "status": job.status,
+        "user_id": job.user_id,
+        "steam_account_id": job.steam_account_id,
+        "logical_target_key": job.logical_target_key,
+        "requested_payload": _json_dict(job.requested_payload_json),
+        "result": _json_dict(job.result_json),
         "created_at": job.created_at.isoformat() if job.created_at else None,
         "started_at": job.started_at.isoformat() if job.started_at else None,
         "finished_at": job.finished_at.isoformat() if job.finished_at else None,
+        "updated_at": job.updated_at.isoformat() if job.updated_at else None,
         "error_message": job.error_message,
     }
+
+
+def _optional_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    return int(value)
+
+
+def _json_dict(value: str | None) -> dict[str, Any]:
+    if not value:
+        return {}
+    try:
+        data = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def serialize_match(match: Match) -> dict:

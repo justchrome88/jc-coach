@@ -49,6 +49,7 @@ from app.services.coach_rules import build_coach_focus
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.i18n import normalize_locale
+from app.services.import_jobs import IMPORT_JOB_COMPLETED, IMPORT_JOB_FAILED, IMPORT_JOB_IN_PROGRESS, IMPORT_JOB_QUEUED
 from app.services.importer import import_csv, import_json
 from app.services.match_queries import is_playable_match, playable_match_select
 from app.services.metric_confidence import (
@@ -106,7 +107,7 @@ def _run_steam_import_all_background(job_id: int) -> None:
         run_steam_import_all_job(db, job_id)
     except BaseException as exc:
         job = db.get(ImportJob, job_id)
-        if job is not None and job.status == "running":
+        if job is not None and job.status == IMPORT_JOB_IN_PROGRESS:
             mark_steam_import_all_job_interrupted(
                 db,
                 job,
@@ -508,8 +509,8 @@ def run_queued_steam_import_jobs(request: Request, db: Annotated[Session, Depend
     if auth_redirect:
         return auth_redirect
     results = process_queued_steam_jobs(db)
-    succeeded = sum(1 for item in results if item.get("status") == "succeeded")
-    failed = sum(1 for item in results if item.get("status") == "failed")
+    succeeded = sum(1 for item in results if item.get("status") == IMPORT_JOB_COMPLETED)
+    failed = sum(1 for item in results if item.get("status") == IMPORT_JOB_FAILED)
     message = f"Processed {len(results)} Steam jobs: {succeeded} succeeded, {failed} failed."
     return RedirectResponse(
         f"/settings/imports?message={quote(message)}",
@@ -527,8 +528,8 @@ def pull_all_steam_imports(
     if auth_redirect:
         return auth_redirect
     job = queue_steam_import_all(db)
-    if job.status in {"queued", "running"}:
-        if job.status == "queued":
+    if job.status in {IMPORT_JOB_QUEUED, IMPORT_JOB_IN_PROGRESS}:
+        if job.status == IMPORT_JOB_QUEUED:
             background_tasks.add_task(_run_steam_import_all_background, job.id)
         message = f"Steam import job #{job.id} started. This page will show progress."
     else:

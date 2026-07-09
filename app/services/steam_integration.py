@@ -14,6 +14,18 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db.models import ImportJob, Match, SteamAccount, User
 from app.services.app_settings import get_app_setting
+from app.services.import_jobs import (
+    IMPORT_JOB_ACTIVE_STATUSES,
+    IMPORT_JOB_COMPLETED,
+    IMPORT_JOB_FAILED,
+    IMPORT_JOB_IN_PROGRESS,
+    IMPORT_JOB_QUEUED,
+    IMPORT_JOB_SKIPPED_DUPLICATE,
+    complete_import_job,
+    create_import_request,
+    fail_import_job,
+    start_import_job,
+)
 
 STEAM_OPENID_ENDPOINT = "https://steamcommunity.com/openid/login"
 STEAM_OPENID_CLAIM_PREFIX = "https://steamcommunity.com/openid/id/"
@@ -104,18 +116,23 @@ def create_steam_import_job(
     steam_account_id: int | None,
     job_type: str,
     payload: dict[str, Any] | None = None,
+    *,
+    skip_duplicate: bool = True,
 ) -> ImportJob:
-    job = ImportJob(
+    user_id: int | None = None
+    if steam_account_id is not None:
+        account = db.get(SteamAccount, steam_account_id)
+        user_id = account.user_id if account else None
+    return create_import_request(
+        db,
         provider="steam",
         job_type=job_type,
-        status="queued",
+        initial_status=IMPORT_JOB_QUEUED,
+        user_id=user_id,
         steam_account_id=steam_account_id,
-        requested_payload_json=json.dumps(payload or {}, ensure_ascii=False),
+        payload=payload or {},
+        skip_duplicate=skip_duplicate,
     )
-    db.add(job)
-    db.commit()
-    db.refresh(job)
-    return job
 
 
 def list_steam_accounts(db: Session) -> list[SteamAccount]:
@@ -143,7 +160,7 @@ def current_steam_import_all_job(db: Session) -> ImportJob | None:
         select(ImportJob)
         .where(ImportJob.provider == "steam")
         .where(ImportJob.job_type == "steam_import_all")
-        .where(ImportJob.status.in_(("queued", "running")))
+        .where(ImportJob.status.in_(tuple(IMPORT_JOB_ACTIVE_STATUSES)))
         .order_by(ImportJob.created_at.desc(), ImportJob.id.desc())
     )
 
@@ -175,7 +192,7 @@ def mark_stale_steam_import_all_jobs_interrupted(
         select(ImportJob)
         .where(ImportJob.provider == "steam")
         .where(ImportJob.job_type == "steam_import_all")
-        .where(ImportJob.status == "running")
+        .where(ImportJob.status.in_((IMPORT_JOB_IN_PROGRESS, "running")))
         .order_by(ImportJob.created_at.asc(), ImportJob.id.asc())
     ).all()
     for job in running_jobs:
@@ -191,7 +208,11 @@ def is_stale_steam_import_all_job(
     now: datetime | None = None,
     timeout_seconds: int | None = None,
 ) -> bool:
-    if job.provider != "steam" or job.job_type != "steam_import_all" or job.status != "running":
+    if (
+        job.provider != "steam"
+        or job.job_type != "steam_import_all"
+        or job.status not in {IMPORT_JOB_IN_PROGRESS, "running"}
+    ):
         return False
     settings = get_settings()
     timeout = max(1, int(timeout_seconds or settings.steam_import_stale_running_job_seconds))
@@ -236,13 +257,7 @@ def mark_steam_import_all_job_interrupted(
         "previous_overall_outcome": previous.get("overall_outcome"),
         "progress": progress,
     }
-    job.status = "failed"
-    job.error_message = reason
-    job.finished_at = now or _now()
-    job.result_json = json.dumps(result, ensure_ascii=False, default=str)
-    db.commit()
-    db.refresh(job)
-    return job
+    return fail_import_job(db, job, reason, result=result)
 
 
 def steam_import_overview(db: Session) -> dict[str, Any]:
@@ -339,6 +354,7 @@ def queue_match_history_sync(db: Session, steam_account_id: int) -> ImportJob:
         account.id,
         "match_history_sync",
         {"steam_id": account.steam_id, "has_match_auth_code": True, "reason": "manual_queue"},
+        skip_duplicate=False,
     )
 
 
@@ -348,6 +364,10 @@ def sync_match_history_job(db: Session, job_id: int) -> dict[str, Any]:
         raise ValueError("Import job was not found.")
     if job.provider != "steam" or job.job_type != "match_history_sync":
         raise ValueError("Only steam match_history_sync jobs can be processed here.")
+    if job.status == IMPORT_JOB_IN_PROGRESS:
+        return _job_result(job)
+    if job.status in {IMPORT_JOB_COMPLETED, IMPORT_JOB_FAILED, IMPORT_JOB_SKIPPED_DUPLICATE, "succeeded"}:
+        return _job_result(job)
     account = db.get(SteamAccount, job.steam_account_id) if job.steam_account_id else None
     if account is None:
         return _fail_job(db, job, "Steam account was not found.")
@@ -363,9 +383,7 @@ def sync_match_history_job(db: Session, job_id: int) -> dict[str, Any]:
             "STEAM_WEB_API_KEY is missing. Add it to .env to call GetNextMatchSharingCode.",
         )
 
-    job.status = "running"
-    job.started_at = datetime.now(UTC).replace(tzinfo=None)
-    db.commit()
+    start_import_job(db, job)
 
     try:
         payload = _json_loads(job.requested_payload_json)
@@ -388,40 +406,33 @@ def sync_match_history_job(db: Session, job_id: int) -> dict[str, Any]:
         cursor_advanced = advance_steam_cursor_after_success(account, collected)
         account.last_sync_at = datetime.now(UTC).replace(tzinfo=None)
         account.sync_enabled = 1
-        job.status = "succeeded"
-        job.finished_at = datetime.now(UTC).replace(tzinfo=None)
-        job.result_json = json.dumps(
-            {
-                "sync_outcome": classify_steam_sync_outcome(collected, inserted, duplicates),
-                "known_code": known_code,
-                "cursor_source": cursor["source"],
-                "knowncode_zero_is_initial_sentinel": cursor["initial_sentinel"],
-                "collected": len(collected),
-                "collected_share_codes": collected,
-                "inserted": inserted,
-                "duplicates": duplicates,
-                "cursor_advanced": cursor_advanced,
-                "last_share_code": account.last_share_code,
-                "note": (
-                    "Steam share codes were saved. The account cursor advances only after the Steam API call "
-                    "and local share-code persistence complete successfully."
-                ),
-            },
-            ensure_ascii=False,
-        )
-        db.commit()
-        db.refresh(job)
+        result = {
+            "sync_outcome": classify_steam_sync_outcome(collected, inserted, duplicates),
+            "known_code": known_code,
+            "cursor_source": cursor["source"],
+            "knowncode_zero_is_initial_sentinel": cursor["initial_sentinel"],
+            "collected": len(collected),
+            "collected_share_codes": collected,
+            "inserted": inserted,
+            "duplicates": duplicates,
+            "cursor_advanced": cursor_advanced,
+            "last_share_code": account.last_share_code,
+            "note": (
+                "Steam share codes were saved. The account cursor advances only after the Steam API call "
+                "and local share-code persistence complete successfully."
+            ),
+        }
+        complete_import_job(db, job, result=result)
         return _job_result(job)
     except Exception as exc:
         return _fail_job(db, job, str(exc), sync_outcome=STEAM_SYNC_STEAM_TEMPORARY_ERROR)
-
 
 def process_queued_steam_jobs(db: Session, limit: int = 5) -> list[dict[str, Any]]:
     jobs = db.scalars(
         select(ImportJob)
         .where(ImportJob.provider == "steam")
         .where(ImportJob.job_type == "match_history_sync")
-        .where(ImportJob.status == "queued")
+        .where(ImportJob.status == IMPORT_JOB_QUEUED)
         .order_by(ImportJob.created_at.asc(), ImportJob.id.asc())
         .limit(limit)
     ).all()
@@ -434,10 +445,17 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
         raise ValueError("Import job was not found.")
     if job.provider != "steam" or job.job_type != "steam_import_all":
         raise ValueError("Only steam_import_all jobs can be processed here.")
-    if job.status == "running":
+    if job.status in {IMPORT_JOB_IN_PROGRESS, "running"}:
         return {"id": job.id, "status": job.status, "result": None, "error": None}
-    if job.status == "succeeded":
+    if job.status in {IMPORT_JOB_COMPLETED, "succeeded"}:
         return {"id": job.id, "status": job.status, "result": _json_loads(job.result_json), "error": None}
+    if job.status in {IMPORT_JOB_FAILED, IMPORT_JOB_SKIPPED_DUPLICATE}:
+        return {
+            "id": job.id,
+            "status": job.status,
+            "result": _json_loads(job.result_json),
+            "error": job.error_message,
+        }
 
     try:
         settings = get_settings()
@@ -455,22 +473,16 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
                 "error_message": str(exc),
                 "storage_budget": exc.budget,
                 "job_status_limitation": (
-                    "ImportJob.status supports queued/running/succeeded/failed only; storage safety blocks "
+                    "ImportJob.status uses requested/queued/in_progress/completed/failed/skipped_duplicate; "
+                    "storage safety blocks "
                     "are represented in result_json.statuses and persisted as failed."
                 ),
             }
-            job.status = "failed"
-            job.started_at = _now()
-            job.finished_at = _now()
-            job.error_message = str(exc)
-            job.result_json = json.dumps(result, ensure_ascii=False, default=str)
-            db.commit()
-            db.refresh(job)
+            start_import_job(db, job)
+            fail_import_job(db, job, str(exc), result=result)
             return {"id": job.id, "status": job.status, "result": result, "error": job.error_message}
 
-        job.status = "running"
-        job.started_at = _now()
-        db.commit()
+        start_import_job(db, job)
         checkpoint_steam_import_all_job(
             db,
             job,
@@ -644,13 +656,10 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
                 "are skipped."
             ),
         }
-        job.status = "succeeded" if taxonomy["clean_success"] else "failed"
-        if not taxonomy["clean_success"]:
-            job.error_message = taxonomy["error_message"]
-        job.finished_at = _now()
-        job.result_json = json.dumps(result, ensure_ascii=False, default=str)
-        db.commit()
-        db.refresh(job)
+        if taxonomy["clean_success"]:
+            complete_import_job(db, job, result=result)
+        else:
+            fail_import_job(db, job, str(taxonomy["error_message"]), result=result)
         return {"id": job.id, "status": job.status, "result": result, "error": job.error_message}
     except Exception as exc:
         return _fail_job(db, job, str(exc))
@@ -689,9 +698,7 @@ def import_steam_share_code_demo(db: Session, steam_account_id: int, share_code_
             "primary_path": False,
         },
     )
-    job.status = "running"
-    job.started_at = datetime.now(UTC).replace(tzinfo=None)
-    db.commit()
+    start_import_job(db, job)
     was_inserted = _store_steam_share_code_match(db, account, share_code)
     account.last_share_code = share_code
     account.last_sync_at = datetime.now(UTC).replace(tzinfo=None)
@@ -725,13 +732,10 @@ def import_steam_share_code_demo(db: Session, steam_account_id: int, share_code_
             "primary_path": False,
             "note": "Exact share-code import is tracked but remains a non-primary debug/manual path.",
         }
-        job.status = "succeeded" if taxonomy["clean_success"] else "failed"
-        if not taxonomy["clean_success"]:
-            job.error_message = taxonomy["error_message"]
-        job.finished_at = datetime.now(UTC).replace(tzinfo=None)
-        job.result_json = json.dumps(result, ensure_ascii=False, default=str)
-        db.commit()
-        db.refresh(job)
+        if taxonomy["clean_success"]:
+            complete_import_job(db, job, result=result)
+        else:
+            fail_import_job(db, job, str(taxonomy["error_message"]), result=result)
         return {**result, "job_id": job.id, "job_status": job.status, "job_error": job.error_message}
     except Exception as exc:
         failed = _fail_job(db, job, str(exc))
@@ -862,7 +866,8 @@ def classify_steam_import_all_result(
         "clean_success": clean_success,
         "error_message": error_message,
         "job_status_limitation": (
-            "ImportJob.status supports queued/running/succeeded/failed only; partial_success is represented "
+            "ImportJob.status uses requested/queued/in_progress/completed/failed/skipped_duplicate; "
+            "partial_success is represented "
             "in result_json.overall_outcome/statuses and persisted as failed to avoid clean-success overclaim."
         ),
     }
@@ -970,12 +975,7 @@ def mark_steam_history_demo_download_status(db: Session, share_codes: list[str] 
 
 
 def mark_job_failed(db: Session, job: ImportJob, message: str) -> ImportJob:
-    job.status = "failed"
-    job.error_message = message
-    job.finished_at = datetime.now(UTC).replace(tzinfo=None)
-    db.commit()
-    db.refresh(job)
-    return job
+    return fail_import_job(db, job, message)
 
 
 def validate_openid_callback(query_params: dict[str, str]) -> tuple[str | None, str | None]:
@@ -1306,6 +1306,7 @@ def checkpoint_steam_import_all_job(
     payload["statuses"] = payload.get("statuses") or [STEAM_IMPORT_RUNNING]
     payload["progress"] = _bounded_progress(progress, checkpoint_event)
     job.result_json = json.dumps(payload, ensure_ascii=False, default=str)
+    job.updated_at = _now()
     db.commit()
     db.refresh(job)
 
@@ -1372,13 +1373,8 @@ def _now() -> datetime:
 
 
 def _fail_job(db: Session, job: ImportJob, message: str, sync_outcome: str | None = None) -> dict[str, Any]:
-    job.status = "failed"
-    job.error_message = message
-    job.finished_at = datetime.now(UTC).replace(tzinfo=None)
-    if sync_outcome:
-        job.result_json = json.dumps({"sync_outcome": sync_outcome}, ensure_ascii=False)
-    db.commit()
-    db.refresh(job)
+    result = {"sync_outcome": sync_outcome} if sync_outcome else None
+    fail_import_job(db, job, message, result=result)
     return _job_result(job)
 
 
