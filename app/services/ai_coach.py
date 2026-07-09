@@ -31,6 +31,7 @@ from app.services.metric_truth import (
     suppressed_metrics_for_usage,
 )
 from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
+from app.services.ownership import get_owned_metric_snapshot
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_all_recommendation_progress
 from app.services.report_generator import _serialize_recommendation_progress
 
@@ -158,12 +159,17 @@ def save_ai_coach_result(
     markdown: str,
     source_ref: str | None = None,
     payload_snapshot: dict[str, Any] | None = None,
+    user_id: int | None = None,
+    source_metric_snapshot_id: int | None = None,
 ) -> CoachReport:
     raw_content = markdown.strip()
     if not raw_content:
         raise ValueError("AI coach result is empty.")
     if len(raw_content) > 60_000:
         raise ValueError("AI coach result is too long.")
+    if user_id is not None and source_metric_snapshot_id is not None:
+        if get_owned_metric_snapshot(db, user_id=user_id, snapshot_id=source_metric_snapshot_id) is None:
+            raise PermissionError("Metric snapshot belongs to a different user.")
     snapshot = payload_snapshot or build_ai_coach_payload(db)
     validation = validate_ai_coach_output(raw_content, payload_snapshot=snapshot)
     content = (
@@ -182,6 +188,8 @@ def save_ai_coach_result(
     if validation.valid and validation.output is not None:
         metadata["ai_structured_output"] = validation.output
     report = CoachReport(
+        user_id=user_id,
+        source_metric_snapshot_id=source_metric_snapshot_id,
         period_start=period_start,
         period_end=period_end,
         matches_count=len(matches),
@@ -196,22 +204,20 @@ def save_ai_coach_result(
     return report
 
 
-def latest_ai_coach_report(db: Session) -> CoachReport | None:
-    return db.scalar(
-        select(CoachReport)
-        .where(CoachReport.report_type == "ai_coach")
-        .order_by(CoachReport.created_at.desc(), CoachReport.id.desc())
-        .limit(1)
-    )
+def latest_ai_coach_report(db: Session, *, user_id: int | None = None) -> CoachReport | None:
+    stmt = select(CoachReport).where(CoachReport.report_type == "ai_coach")
+    if user_id is not None:
+        stmt = stmt.where(CoachReport.user_id == user_id)
+    return db.scalar(stmt.order_by(CoachReport.created_at.desc(), CoachReport.id.desc()).limit(1))
 
 
-def list_ai_coach_reports(db: Session, limit: int = 10) -> list[CoachReport]:
+def list_ai_coach_reports(db: Session, limit: int = 10, *, user_id: int | None = None) -> list[CoachReport]:
+    stmt = select(CoachReport).where(CoachReport.report_type == "ai_coach")
+    if user_id is not None:
+        stmt = stmt.where(CoachReport.user_id == user_id)
     return list(
         db.scalars(
-            select(CoachReport)
-            .where(CoachReport.report_type == "ai_coach")
-            .order_by(CoachReport.created_at.desc(), CoachReport.id.desc())
-            .limit(limit)
+            stmt.order_by(CoachReport.created_at.desc(), CoachReport.id.desc()).limit(limit)
         ).all()
     )
 
@@ -220,6 +226,8 @@ def serialize_ai_coach_report(report: CoachReport) -> dict[str, Any]:
     metadata = _json_loads(report.report_json)
     return {
         "id": report.id,
+        "user_id": report.user_id,
+        "source_metric_snapshot_id": report.source_metric_snapshot_id,
         "matches_count": report.matches_count,
         "period_start": report.period_start.isoformat() if report.period_start else None,
         "period_end": report.period_end.isoformat() if report.period_end else None,

@@ -2,7 +2,7 @@ import re
 
 from fastapi.testclient import TestClient
 
-from app.db.models import ImportJob, SteamAccount, User
+from app.db.models import CoachReport, DemoParseArtifact, ImportJob, Match, SteamAccount, User
 from app.db.session import SessionLocal
 from app.main import app, create_app
 from app.services.auth import (
@@ -11,6 +11,14 @@ from app.services.auth import (
     hash_password,
     owner_user,
     register_user,
+)
+from app.services.metric_snapshots import create_metric_snapshot
+from app.services.ownership import (
+    get_owned_coach_report,
+    get_owned_import_job,
+    get_owned_match,
+    get_owned_metric_snapshot,
+    get_owned_parse_artifact,
 )
 
 
@@ -262,3 +270,84 @@ def test_api_token_represents_owner_operator_without_creating_users(monkeypatch)
 
     assert response.status_code == 200
     assert _app_db_count(User) == 0
+
+
+def test_owned_data_chain_helpers_deny_cross_owner_rows(db):
+    owner = register_user(db, "owner@example.test", "strong-password", display_name="Owner")
+    other = User(
+        email="other@example.test",
+        password_hash=hash_password("strong-password"),
+        display_name="Other",
+        is_active=1,
+    )
+    db.add(other)
+    db.commit()
+    db.refresh(other)
+    job = ImportJob(
+        provider="steam",
+        job_type="demo_import_orchestration",
+        status="completed",
+        user_id=owner.id,
+        requested_payload_json="{}",
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    match = Match(
+        user_id=owner.id,
+        import_job_id=job.id,
+        source="steam_history",
+        external_match_id="CSGO-owner-chain",
+        demo_file="/tmp/owner.dem",
+    )
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    artifact = DemoParseArtifact(
+        match_id=match.id,
+        import_job_id=job.id,
+        parser_name="fixture-parser",
+        payload_version="parser-artifact-v1",
+        status="completed",
+        source_demo_file=match.demo_file,
+        event_counts_json="{}",
+        confidence_json="{}",
+        data_gaps_json="[]",
+        payload_json="{}",
+    )
+    db.add(artifact)
+    db.commit()
+    db.refresh(artifact)
+    snapshot = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:owner",
+        source="parser_artifact",
+        source_parser_artifact_id=artifact.id,
+        metrics={"kills": 10},
+        confidence_baseline={"metrics": {"kills": "trusted"}},
+    )
+    report = CoachReport(
+        user_id=owner.id,
+        source_metric_snapshot_id=snapshot.id,
+        matches_count=1,
+        report_type="ai_coach",
+        source_ref="fixture",
+        report_markdown="Owner report",
+        report_json="{}",
+    )
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+
+    assert get_owned_import_job(db, user_id=owner.id, job_id=job.id).id == job.id
+    assert get_owned_match(db, user_id=owner.id, match_id=match.id).id == match.id
+    assert get_owned_parse_artifact(db, user_id=owner.id, artifact_id=artifact.id).id == artifact.id
+    assert get_owned_metric_snapshot(db, user_id=owner.id, snapshot_id=snapshot.id).id == snapshot.id
+    assert get_owned_coach_report(db, user_id=owner.id, report_id=report.id).id == report.id
+
+    assert get_owned_import_job(db, user_id=other.id, job_id=job.id) is None
+    assert get_owned_match(db, user_id=other.id, match_id=match.id) is None
+    assert get_owned_parse_artifact(db, user_id=other.id, artifact_id=artifact.id) is None
+    assert get_owned_metric_snapshot(db, user_id=other.id, snapshot_id=snapshot.id) is None
+    assert get_owned_coach_report(db, user_id=other.id, report_id=report.id) is None

@@ -38,6 +38,7 @@ from app.services.import_orchestration import (
 )
 from app.services.importer import import_csv, import_json
 from app.services.match_queries import playable_match_select
+from app.services.ownership import get_owned_import_job
 from app.services.recommendation_tracking import (
     extend_recommendation_target,
     get_active_recommendation_progress,
@@ -444,8 +445,17 @@ def write_demo_storage_manifest_endpoint(db: Annotated[Session, Depends(get_db)]
 
 
 @router.get("/import/jobs")
-def import_jobs_endpoint(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
-    return [serialize_import_job(job) for job in list_import_jobs(db)]
+def import_jobs_endpoint(db: Annotated[Session, Depends(get_db)], user_id: int | None = None) -> list[dict]:
+    if user_id is None:
+        return [serialize_import_job(job) for job in list_import_jobs(db)]
+    jobs = (
+        db.query(ImportJob)
+        .filter(ImportJob.user_id == user_id)
+        .order_by(ImportJob.created_at.desc(), ImportJob.id.desc())
+        .limit(20)
+        .all()
+    )
+    return [serialize_import_job(job) for job in jobs]
 
 
 @router.get("/import/contract")
@@ -454,8 +464,8 @@ def import_contract_endpoint() -> dict:
 
 
 @router.get("/import/jobs/{job_id}")
-def import_job_endpoint(db: Annotated[Session, Depends(get_db)], job_id: int) -> dict:
-    job = db.get(ImportJob, job_id)
+def import_job_endpoint(db: Annotated[Session, Depends(get_db)], job_id: int, user_id: int | None = None) -> dict:
+    job = db.get(ImportJob, job_id) if user_id is None else get_owned_import_job(db, user_id=user_id, job_id=job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Import job was not found.")
     return serialize_import_job(job)

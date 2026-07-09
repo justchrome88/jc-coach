@@ -57,7 +57,40 @@ def test_deterministic_import_orchestration_stores_parser_handoff(db, monkeypatc
     assert result["parser_handoff"]["match_field"] == "Match.demo_file"
     assert result["parser_handoff"]["parser_artifact_field"] == "DemoParseArtifact.source_demo_file"
     assert match.demo_file == result["parser_handoff"]["path"]
+    assert match.user_id == 11
+    assert match.import_job_id == job.id
     assert json.loads(match.raw_json)["parser_handoff"]["field"] == "Match.demo_file"
+
+
+def test_import_orchestration_denies_cross_owner_share_code_reuse(db, monkeypatch, tmp_path):
+    upload_dir = tmp_path / "uploads"
+    first_source = tmp_path / "owner-one.dem"
+    second_source = tmp_path / "owner-two.dem"
+    first_source.write_bytes(b"HL2DEMO owner one")
+    second_source.write_bytes(b"HL2DEMO owner two")
+    monkeypatch.setenv("UPLOAD_DIR", str(upload_dir))
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        first = run_demo_import_orchestration(
+            db,
+            payload={"share_code": SHARE_CODE, "fixture_demo_path": str(first_source)},
+            user_id=11,
+        )
+        second = run_demo_import_orchestration(
+            db,
+            payload={"share_code": SHARE_CODE, "fixture_demo_path": str(second_source)},
+            user_id=22,
+        )
+    finally:
+        get_settings.cache_clear()
+
+    result = json.loads(second.result_json)
+    assert first.status == IMPORT_JOB_COMPLETED
+    assert second.status == IMPORT_JOB_FAILED
+    assert "different user" in result["error"]["message"]
+    assert db.query(Match).filter(Match.external_match_id == SHARE_CODE).one().user_id == 11
 
 
 def test_imported_parser_handoff_path_feeds_normalized_event_reader(db, monkeypatch, tmp_path):

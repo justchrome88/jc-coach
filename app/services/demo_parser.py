@@ -114,11 +114,15 @@ def import_demo_file(
     retention = retention_metadata(raw_demo_path=stored_path, parser_success=True)
     parsed.update(retention)
     parsed["demo_retention"] = retention
+    storage_links = storage_metadata["links"]
     match_data = parsed["match"]
     match_data["demo_file"] = str(stored_path)
     match_data["source"] = "demo"
     match_data["raw_json"] = json.dumps(parsed, ensure_ascii=False, default=str)
     match_model_data = _match_model_kwargs(match_data)
+    match_model_data["user_id"] = _int_or_none(storage_links.get("user_id"))
+    match_model_data["steam_account_id"] = _int_or_none(storage_links.get("steam_account_id"))
+    match_model_data["import_job_id"] = _int_or_none(storage_links.get("import_job_id"))
 
     existing = db.scalar(
         select(Match).where(
@@ -130,6 +134,9 @@ def import_demo_file(
         existing.played_at = match_model_data["played_at"]
         existing.raw_json = match_model_data["raw_json"]
         existing.demo_file = existing.demo_file or str(stored_path)
+        existing.user_id = existing.user_id or match_model_data["user_id"]
+        existing.steam_account_id = existing.steam_account_id or match_model_data["steam_account_id"]
+        existing.import_job_id = existing.import_job_id or match_model_data["import_job_id"]
         db.commit()
         db.refresh(existing)
         _save_demo_parse_artifacts(db, existing, parsed)
@@ -1479,6 +1486,7 @@ def _save_demo_parse_artifacts(db: Session, match: Match, parsed: dict[str, Any]
     db.add(
         DemoParseArtifact(
             match_id=match.id,
+            import_job_id=match.import_job_id,
             parser_name=str(parsed.get("parser") or "demoparser2"),
             parser_version=parsed.get("parser_version"),
             payload_version=str(parsed.get("payload_version") or PARSER_PAYLOAD_VERSION),

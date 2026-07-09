@@ -36,6 +36,12 @@ def _upgrade_sqlite_schema() -> None:
         return
     columns = {column["name"] for column in inspector.get_columns("matches")}
     with engine.begin() as connection:
+        if "user_id" not in columns:
+            connection.execute(text("ALTER TABLE matches ADD COLUMN user_id INTEGER"))
+        if "steam_account_id" not in columns:
+            connection.execute(text("ALTER TABLE matches ADD COLUMN steam_account_id INTEGER"))
+        if "import_job_id" not in columns:
+            connection.execute(text("ALTER TABLE matches ADD COLUMN import_job_id INTEGER"))
         if "early_deaths" not in columns:
             connection.execute(text("ALTER TABLE matches ADD COLUMN early_deaths INTEGER"))
         if "swing_score" not in columns:
@@ -43,6 +49,10 @@ def _upgrade_sqlite_schema() -> None:
     if "coach_reports" in inspector.get_table_names():
         report_columns = {column["name"] for column in inspector.get_columns("coach_reports")}
         with engine.begin() as connection:
+            if "user_id" not in report_columns:
+                connection.execute(text("ALTER TABLE coach_reports ADD COLUMN user_id INTEGER"))
+            if "source_metric_snapshot_id" not in report_columns:
+                connection.execute(text("ALTER TABLE coach_reports ADD COLUMN source_metric_snapshot_id INTEGER"))
             if "report_type" not in report_columns:
                 connection.execute(
                     text("ALTER TABLE coach_reports ADD COLUMN report_type VARCHAR(50) DEFAULT 'rule_based' NOT NULL")
@@ -70,6 +80,11 @@ def _upgrade_sqlite_schema() -> None:
                 connection.execute(text("ALTER TABLE import_jobs ADD COLUMN logical_target_key VARCHAR(500)"))
             if "updated_at" not in import_job_columns:
                 connection.execute(text("ALTER TABLE import_jobs ADD COLUMN updated_at DATETIME"))
+    if "demo_parse_artifacts" in recommendation_tables:
+        artifact_columns = {column["name"] for column in inspector.get_columns("demo_parse_artifacts")}
+        with engine.begin() as connection:
+            if "import_job_id" not in artifact_columns:
+                connection.execute(text("ALTER TABLE demo_parse_artifacts ADD COLUMN import_job_id INTEGER"))
     if "coach_recommendations" not in recommendation_tables:
         return
     recommendation_columns = {column["name"] for column in inspector.get_columns("coach_recommendations")}

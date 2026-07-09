@@ -13,6 +13,9 @@ class Match(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    steam_account_id: Mapped[int | None] = mapped_column(ForeignKey("steam_accounts.id"), index=True)
+    import_job_id: Mapped[int | None] = mapped_column(ForeignKey("import_jobs.id"), index=True)
     source: Mapped[str] = mapped_column(String(50), default="upload", nullable=False)
     external_match_id: Mapped[str | None] = mapped_column(String(255), index=True)
     demo_file: Mapped[str | None] = mapped_column(String(500))
@@ -59,6 +62,7 @@ class DemoParseArtifact(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"), nullable=False, index=True)
+    import_job_id: Mapped[int | None] = mapped_column(ForeignKey("import_jobs.id"), index=True)
     parser_name: Mapped[str] = mapped_column(String(80), nullable=False)
     parser_version: Mapped[str | None] = mapped_column(String(80))
     payload_version: Mapped[str] = mapped_column(String(40), default="2026-07-02.1", nullable=False)
@@ -223,6 +227,8 @@ class CoachReport(Base):
     __tablename__ = "coach_reports"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    source_metric_snapshot_id: Mapped[int | None] = mapped_column(ForeignKey("metric_snapshots.id"), index=True)
     period_start: Mapped[datetime | None] = mapped_column(DateTime)
     period_end: Mapped[datetime | None] = mapped_column(DateTime)
     matches_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

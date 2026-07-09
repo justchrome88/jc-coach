@@ -24,6 +24,7 @@ from app.services.import_jobs import (
     queue_import_job,
     start_import_job,
 )
+from app.services.ownership import assert_match_owner, attach_match_owner_from_import_job, resolve_owner_ids
 from app.services.steam_demo_acquisition import (
     DEMO_ACQUISITION_SUCCESS_OUTCOMES,
     DEMO_ALREADY_AVAILABLE,
@@ -133,6 +134,7 @@ def run_demo_import_orchestration(
     acquisition_adapter: AcquisitionAdapter | None = None,
 ) -> ImportJob:
     payload = dict(payload or {})
+    user_id, steam_account_id = resolve_owner_ids(db, user_id=user_id, steam_account_id=steam_account_id)
     job = create_or_reuse_job(
         db,
         provider=provider,
@@ -156,6 +158,7 @@ def run_demo_import_orchestration(
             db,
             payload=payload,
             acquisition_config=acquisition_config,
+            user_id=job.user_id,
             acquisition_adapter=acquisition_adapter,
         )
         if acquisition["outcome"] not in DEMO_ACQUISITION_SUCCESS_OUTCOMES:
@@ -235,13 +238,14 @@ def run_acquisition_or_fixture_adapter(
     *,
     payload: dict[str, Any],
     acquisition_config: dict[str, Any],
+    user_id: int | None = None,
     acquisition_adapter: AcquisitionAdapter | None = None,
 ) -> dict[str, Any]:
     if acquisition_adapter is not None:
         return _normalize_acquisition(acquisition_adapter(db, payload), acquisition_config=acquisition_config)
 
     share_code = _share_code(payload)
-    existing = _existing_available_match(db, share_code)
+    existing = _existing_available_match(db, share_code, user_id=user_id)
     if existing is not None:
         return {
             "outcome": DEMO_ALREADY_AVAILABLE,
@@ -322,7 +326,7 @@ def store_artifact_metadata(
     acquisition: dict[str, Any],
 ) -> dict[str, Any]:
     source_path = _source_path(payload, acquisition)
-    match = _match_for_storage(db, payload=payload, acquisition=acquisition)
+    match = _match_for_storage(db, job=job, payload=payload, acquisition=acquisition)
 
     if acquisition["outcome"] == DEMO_ALREADY_AVAILABLE and source_path:
         path = Path(str(source_path))
@@ -463,39 +467,64 @@ def _normalize_acquisition(result: dict[str, Any], *, acquisition_config: dict[s
     }
 
 
-def _existing_available_match(db: Session, share_code: str | None) -> Match | None:
+def _existing_available_match(db: Session, share_code: str | None, *, user_id: int | None = None) -> Match | None:
     if not share_code:
         return None
-    match = db.scalar(
+    stmt = (
         select(Match)
         .where(Match.source == "steam_history")
         .where(Match.external_match_id == share_code)
         .where(Match.demo_file.is_not(None))
         .order_by(Match.id.desc())
     )
+    if user_id is not None:
+        stmt = stmt.where(Match.user_id == user_id)
+    match = db.scalar(stmt)
     if match is None or not match.demo_file:
         return None
     return match if Path(match.demo_file).is_file() else None
 
 
-def _match_for_storage(db: Session, *, payload: dict[str, Any], acquisition: dict[str, Any]) -> Match | None:
+def _match_for_storage(
+    db: Session,
+    *,
+    job: ImportJob,
+    payload: dict[str, Any],
+    acquisition: dict[str, Any],
+) -> Match | None:
     match_id = acquisition.get("match_id")
     if match_id:
         match = db.get(Match, int(match_id))
         if match is not None:
+            assert_match_owner(match, user_id=job.user_id)
+            attach_match_owner_from_import_job(db, match, job)
             return match
 
     share_code = _share_code(payload) or acquisition.get("share_code")
     if share_code:
-        match = db.scalar(
+        base_stmt = (
             select(Match)
             .where(Match.source == "steam_history")
             .where(Match.external_match_id == str(share_code))
             .order_by(Match.id.desc())
         )
+        existing_any_owner = db.scalar(base_stmt)
+        if existing_any_owner is not None and job.user_id is not None and existing_any_owner.user_id not in (
+            None,
+            job.user_id,
+        ):
+            raise PermissionError("Steam match belongs to a different user.")
+        stmt = base_stmt
+        if job.user_id is not None:
+            stmt = stmt.where((Match.user_id == job.user_id) | (Match.user_id.is_(None)))
+        match = db.scalar(stmt)
         if match is not None:
+            attach_match_owner_from_import_job(db, match, job)
             return match
         match = Match(
+            user_id=job.user_id,
+            steam_account_id=job.steam_account_id,
+            import_job_id=job.id,
             source="steam_history",
             external_match_id=str(share_code),
             raw_json=json.dumps({"share_code": str(share_code), "status": "demo_orchestration_requested"}),
@@ -517,6 +546,9 @@ def _persist_match_storage(
 ) -> None:
     if match is None or not isinstance(storage.get("artifact"), dict):
         return
+    job = db.get(ImportJob, import_job_id)
+    if job is not None:
+        attach_match_owner_from_import_job(db, match, job)
     artifact = storage["artifact"]
     parser_handoff_path = artifact.get("parser_handoff_path") or artifact.get("path")
     if parser_handoff_path:

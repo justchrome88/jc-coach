@@ -167,7 +167,11 @@ def test_import_demo_file_persists_storage_links_and_parser_handoff(monkeypatch,
     assert raw["storage"]["links"]["source_match_id"] == 7
     assert raw["storage"]["links"]["user_id"] == 3
     assert raw["storage"]["links"]["steam_account_id"] == 5
+    assert match.user_id == 3
+    assert match.steam_account_id == 5
+    assert match.import_job_id == 42
     assert raw["parser_handoff"]["path"] == result["stored_path"]
+    assert artifact.import_job_id == 42
     assert artifact.source_demo_file == result["stored_path"]
     assert artifact.demo_sha1 == result["storage"]["sha1"]
 

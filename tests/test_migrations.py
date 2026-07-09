@@ -16,8 +16,13 @@ ROOT = Path(__file__).resolve().parents[1]
 LEGACY_STARTUP_SCHEMA_SQL = {
     "ALTER TABLE matches ADD COLUMN early_deaths INTEGER",
     "ALTER TABLE matches ADD COLUMN swing_score FLOAT",
+    "ALTER TABLE matches ADD COLUMN user_id INTEGER",
+    "ALTER TABLE matches ADD COLUMN steam_account_id INTEGER",
+    "ALTER TABLE matches ADD COLUMN import_job_id INTEGER",
     "ALTER TABLE coach_reports ADD COLUMN report_type VARCHAR(50) DEFAULT 'rule_based' NOT NULL",
     "ALTER TABLE coach_reports ADD COLUMN source_ref VARCHAR(500)",
+    "ALTER TABLE coach_reports ADD COLUMN user_id INTEGER",
+    "ALTER TABLE coach_reports ADD COLUMN source_metric_snapshot_id INTEGER",
     "ALTER TABLE users ADD COLUMN email VARCHAR(255)",
     "ALTER TABLE users ADD COLUMN password_hash VARCHAR(500)",
     "ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1 NOT NULL",
@@ -26,6 +31,7 @@ LEGACY_STARTUP_SCHEMA_SQL = {
     "ALTER TABLE import_jobs ADD COLUMN user_id INTEGER",
     "ALTER TABLE import_jobs ADD COLUMN logical_target_key VARCHAR(500)",
     "ALTER TABLE import_jobs ADD COLUMN updated_at DATETIME",
+    "ALTER TABLE demo_parse_artifacts ADD COLUMN import_job_id INTEGER",
 }
 
 
