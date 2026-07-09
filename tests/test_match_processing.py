@@ -19,7 +19,7 @@ OTHER_STEAM_ID = "76561198000009999"
 def test_process_owner_match_after_parser_artifact_persists_metrics_and_runs_owner_loop(db):
     owner = _owner(db)
     match = _match(db, "m05-happy")
-    artifact = _artifact(db, match=match, owner_utility_damage=130, other_utility_damage=5)
+    artifact = _artifact(db, match=match, owner_utility_damage=130, other_utility_damage=5, status="parsed")
 
     result = process_owner_match_after_parser_artifact(
         db,
@@ -136,6 +136,7 @@ def _artifact(
     match: Match,
     owner_utility_damage: int,
     other_utility_damage: int,
+    status: str = "completed",
 ) -> DemoParseArtifact:
     payload = {
         "parser": "fixture-parser",
@@ -217,7 +218,7 @@ def _artifact(
         parser_name="fixture-parser",
         parser_version="m05",
         payload_version="parser-artifact-v0.10",
-        status="completed",
+        status=status,
         source_demo_file="/tmp/m05.dem",
         demo_sha1="b" * 40,
         event_counts_json=json.dumps({"player_hurt": 2, "player_death": 2}),

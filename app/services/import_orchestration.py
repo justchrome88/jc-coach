@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import DemoParseArtifact, ImportJob, Match
@@ -775,7 +775,7 @@ def _existing_available_match(db: Session, share_code: str | None, *, user_id: i
         .order_by(Match.id.desc())
     )
     if user_id is not None:
-        stmt = stmt.where(Match.user_id == user_id)
+        stmt = stmt.where(or_(Match.user_id == user_id, Match.user_id.is_(None)))
     match = db.scalar(stmt)
     if match is None or not match.demo_file:
         return None

@@ -23,7 +23,7 @@ from app.services.utility_metrics import UTILITY_SNAPSHOT_SOURCE, calculate_and_
 
 MATCH_PROCESSING_BOUNDARY = "owner_match_after_parser_artifact"
 MATCH_PROCESSING_VERSION = "owner-match-processing-orchestrator-v1"
-ACCEPTED_PARSER_ARTIFACT_STATUSES = {"completed", "accepted", "success"}
+ACCEPTED_PARSER_ARTIFACT_STATUSES = {"completed", "accepted", "success", "parsed"}
 
 
 def process_owner_match_after_parser_artifact(

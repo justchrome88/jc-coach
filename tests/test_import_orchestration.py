@@ -271,6 +271,30 @@ def test_import_orchestration_reuses_already_available_artifact(db, tmp_path):
     assert result["parser_handoff"]["path"] == str(existing.resolve())
 
 
+def test_import_orchestration_claims_unowned_existing_steam_artifact(db, tmp_path):
+    existing = tmp_path / "existing.dem"
+    existing.write_bytes(b"HL2DEMO existing unowned retained")
+    match = Match(
+        source="steam_history",
+        external_match_id=SHARE_CODE,
+        demo_file=str(existing),
+        raw_json=json.dumps({"share_code": SHARE_CODE, "status": "demo_imported"}),
+    )
+    db.add(match)
+    db.commit()
+
+    job = run_demo_import_orchestration(db, payload={"share_code": SHARE_CODE}, user_id=11, steam_account_id=None)
+
+    result = json.loads(job.result_json)
+    db.refresh(match)
+    assert job.status == IMPORT_JOB_COMPLETED
+    assert job.user_id == 11
+    assert result["acquisition"]["outcome"] == DEMO_ALREADY_AVAILABLE
+    assert result["storage"]["outcome"] == STORAGE_ALREADY_AVAILABLE
+    assert match.user_id == 11
+    assert match.import_job_id == job.id
+
+
 def test_import_orchestration_downloads_reference_for_storage(db, monkeypatch, tmp_path):
     monkeypatch.setenv("STEAM_BOT_REFRESH_TOKEN", "test-refresh-token")
     upload_dir = tmp_path / "uploads"
