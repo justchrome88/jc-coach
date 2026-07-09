@@ -13,11 +13,14 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db.models import Match
 from app.services.demo_retention import (
+    ARTIFACT_CATEGORY_RAW_DEMO,
+    ARTIFACT_RETENTION_CLASSES,
     CONSISTENCY_DB_REFERENCES_FILE_EXISTS,
     CONSISTENCY_DB_REFERENCES_FILE_MISSING,
     CONSISTENCY_FILE_WITHOUT_DB_REFERENCE,
     CONSISTENCY_LEGACY_UNKNOWN,
     DEMO_RETENTION_POLICY_RETAIN_RAW,
+    artifact_retention_metadata,
     current_demo_retention_policy,
     delete_after_success_enabled,
 )
@@ -91,11 +94,12 @@ def demo_storage_report(db: Session, write_manifest: bool = False) -> dict[str, 
         "policy": {
             "demo_retention_policy": current_demo_retention_policy(),
             "raw_delete_after_parse_enabled": delete_after_success_enabled(),
-            "target_lifecycle": "download -> parse -> verify parsed payload -> delete raw .dem",
+            "target_lifecycle": "download -> retain raw .dem -> parse -> rebuild derived artifacts when needed",
             "current_mode": f"{DEMO_RETENTION_POLICY_RETAIN_RAW}; raw .dem files are never deleted by this report",
             "retained_demo_path_rule": f"{upload_dir}/{RETAINED_DEMO_DIRNAME}/<sha1[0:2]>/<sha1>.dem",
             "temporary_acquisition_path": str(temp_dir),
             "parser_handoff_field": "Match.demo_file / DemoParseArtifact.source_demo_file",
+            "artifact_retention_classes": ARTIFACT_RETENTION_CLASSES,
         },
         "upload_dir": str(upload_dir),
         "manifest_path": str(reports_dir / "demo_storage_manifest.json"),
@@ -241,11 +245,7 @@ def store_demo_file(
         "path": str(destination),
         "relative_path": str(destination.relative_to(upload_dir)),
         "parser_handoff_path": str(destination),
-        "retention": {
-            "class": "retained",
-            "reason": "raw demo retained for parser/metrics/coach reproducibility",
-            "delete_allowed": False,
-        },
+        "retention": artifact_retention_metadata(ARTIFACT_CATEGORY_RAW_DEMO, path=destination),
         "temporary_source": {
             "path": str(source),
             "cleanup_owner": "caller" if not source.is_relative_to(upload_dir) else "retained_storage",

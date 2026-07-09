@@ -3,6 +3,7 @@ from pathlib import Path
 
 from app.api.routes import create_import_job_endpoint, import_contract_endpoint, import_job_endpoint
 from app.db.models import Match
+from app.services.demo_retention import ARTIFACT_CATEGORY_RAW_DEMO, RETENTION_CLASS_RETAINED_RAW
 from app.services.import_jobs import (
     IMPORT_JOB_COMPLETED,
     IMPORT_JOB_FAILED,
@@ -52,6 +53,8 @@ def test_deterministic_import_orchestration_stores_parser_handoff(db, monkeypatc
     assert result["acquisition"]["outcome"] == DEMO_DOWNLOAD_QUEUED_OR_READY
     assert result["storage"]["outcome"] == STORAGE_STORED
     assert Path(result["storage"]["artifact"]["path"]).is_file()
+    assert result["storage"]["artifact"]["retention"]["category"] == ARTIFACT_CATEGORY_RAW_DEMO
+    assert result["storage"]["artifact"]["retention"]["retention_class"] == RETENTION_CLASS_RETAINED_RAW
     assert result["parser_handoff"]["path"] == result["storage"]["artifact"]["parser_handoff_path"]
     assert result["parser_handoff"]["field"] == "parser_handoff_path"
     assert result["parser_handoff"]["match_field"] == "Match.demo_file"

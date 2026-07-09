@@ -22,7 +22,12 @@ from app.db.models import (
     DemoWeaponStat,
     Match,
 )
-from app.services.demo_retention import retention_metadata
+from app.services.demo_retention import (
+    ARTIFACT_CATEGORY_PARSER_ARTIFACT,
+    ARTIFACT_CATEGORY_RAW_DEMO,
+    artifact_retention_metadata,
+    retention_metadata,
+)
 from app.services.demo_storage import store_demo_file
 from app.services.recommendation_tracking import (
     compact_recommendation_evaluations,
@@ -110,6 +115,10 @@ def import_demo_file(
         "kind": "raw_demo_file",
         "path": storage_metadata["parser_handoff_path"],
         "sha1": storage_metadata["sha1"],
+        "retention": artifact_retention_metadata(
+            ARTIFACT_CATEGORY_RAW_DEMO,
+            path=storage_metadata["parser_handoff_path"],
+        ),
     }
     retention = retention_metadata(raw_demo_path=stored_path, parser_success=True)
     parsed.update(retention)
@@ -140,13 +149,6 @@ def import_demo_file(
         db.commit()
         db.refresh(existing)
         _save_demo_parse_artifacts(db, existing, parsed)
-        copied_to_distinct_path = (
-            stored.get("copied")
-            and stored_path.exists()
-            and stored_path.resolve() != Path(existing.demo_file).resolve()
-        )
-        if copied_to_distinct_path:
-            stored_path.unlink()
         duplicate_retention = retention_metadata(raw_demo_path=existing.demo_file, parser_success=True)
         evaluation_metadata = recommendation_evaluation_metadata(
             status="duplicate",
@@ -1516,6 +1518,7 @@ def _save_demo_parse_artifacts(db: Session, match: Match, parsed: dict[str, Any]
                     "swing_summary": parsed.get("swing_summary") or {},
                     "available_players": parsed.get("available_players") or [],
                     "deep": deep,
+                    "artifact_retention": artifact_retention_metadata(ARTIFACT_CATEGORY_PARSER_ARTIFACT),
                 }
             ),
         )

@@ -21,6 +21,7 @@ from app.services.ai_coach import (
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
+from app.services.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, RETENTION_CLASS_FINAL_OUTPUT
 from app.services.importer import import_rows
 from app.services.metric_truth import METRIC_REGISTRY_VERSION
 
@@ -198,6 +199,8 @@ def test_save_ai_coach_result_persists_ai_report(db, sample_rows):
     assert serialized["metadata"]["playlist_mode_policy"]["mode_status"] == "unknown_or_provenance_only"
     assert serialized["metadata"]["public_readiness_policy"]["v1_0_claim_allowed"] is False
     assert serialized["metadata"]["public_readiness_policy"]["friends_readiness"] == "blocked"
+    assert serialized["metadata"]["artifact_retention"]["category"] == ARTIFACT_CATEGORY_COACH_OUTPUT
+    assert serialized["metadata"]["artifact_retention"]["retention_class"] == RETENTION_CLASS_FINAL_OUTPUT
     assert (
         serialized["metadata"]["contract_snapshot"]
         == serialized["metadata"]["payload_snapshot"]["contract_snapshot"]

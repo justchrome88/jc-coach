@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Match, MetricSnapshot
+from app.services.demo_retention import ARTIFACT_CATEGORY_METRIC_SNAPSHOT, artifact_retention_metadata
 
 MetricPayload = Mapping[str, Any]
 
@@ -40,7 +41,7 @@ def create_metric_snapshot(
         metrics_json=_dumps_dict(metrics, "metrics"),
         confidence_baseline_json=_dumps_dict(confidence_baseline, "confidence_baseline"),
         caveats_json=_dumps_list(caveats or []),
-        metadata_json=_dumps_dict(metadata or {}, "metadata"),
+        metadata_json=_dumps_dict(_metadata_with_retention(metadata), "metadata"),
     )
     db.add(snapshot)
     db.commit()
@@ -101,7 +102,7 @@ def update_metric_snapshot(
     if caveats is not None:
         snapshot.caveats_json = _dumps_list(caveats)
     if metadata is not None:
-        snapshot.metadata_json = _dumps_dict(metadata, "metadata")
+        snapshot.metadata_json = _dumps_dict(_metadata_with_retention(metadata), "metadata")
     snapshot.updated_at = _now()
     db.commit()
     db.refresh(snapshot)
@@ -195,6 +196,12 @@ def _dumps_dict(value: MetricPayload, field: str) -> str:
     if not isinstance(value, Mapping):
         raise ValueError(f"{field} must be a mapping")
     return json.dumps(dict(value), ensure_ascii=False, sort_keys=True, default=str)
+
+
+def _metadata_with_retention(metadata: MetricPayload | None) -> dict[str, Any]:
+    value = dict(metadata or {})
+    value.setdefault("artifact_retention", artifact_retention_metadata(ARTIFACT_CATEGORY_METRIC_SNAPSHOT))
+    return value
 
 
 def _dumps_list(value: Sequence[str]) -> str:

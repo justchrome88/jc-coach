@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ImportJob, Match
+from app.services.demo_retention import ARTIFACT_CATEGORY_RAW_DEMO, artifact_retention_metadata
 from app.services.demo_storage import store_demo_file
 from app.services.import_jobs import (
     IMPORT_JOB_COMPLETED,
@@ -337,6 +338,7 @@ def store_artifact_metadata(
                     "path": str(path.resolve()),
                     "parser_handoff_path": str(path.resolve()),
                     "match_demo_file": match.demo_file if match is not None else str(path.resolve()),
+                    "retention": artifact_retention_metadata(ARTIFACT_CATEGORY_RAW_DEMO, path=path.resolve()),
                 },
                 "raw": {"storage_status": STORAGE_ALREADY_AVAILABLE, "path": str(path.resolve())},
                 "actionable_reason": None,
@@ -381,6 +383,7 @@ def store_artifact_metadata(
             "path": stored["path"],
             "relative_path": stored["relative_path"],
             "parser_handoff_path": stored["parser_handoff_path"],
+            "retention": stored["retention"],
         },
         "raw": stored,
         "actionable_reason": None,

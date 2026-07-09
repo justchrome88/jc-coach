@@ -4,10 +4,12 @@ from pathlib import Path
 
 from app.db.models import Match
 from app.services.demo_retention import (
+    ARTIFACT_CATEGORY_RAW_DEMO,
     CONSISTENCY_DB_REFERENCES_FILE_EXISTS,
     CONSISTENCY_DB_REFERENCES_FILE_MISSING,
     CONSISTENCY_FILE_WITHOUT_DB_REFERENCE,
     DEMO_RETENTION_POLICY_RETAIN_RAW,
+    RETENTION_CLASS_RETAINED_RAW,
 )
 from app.services.demo_storage import (
     classify_demo_file_consistency,
@@ -80,6 +82,10 @@ def test_storage_path_generation_and_duplicate_store(monkeypatch, tmp_path):
     assert first["path"] == second["path"]
     assert len(list(upload_dir.rglob("*.dem"))) == 1
     assert first["parser_handoff_path"] == first["path"]
+    assert first["retention"]["category"] == ARTIFACT_CATEGORY_RAW_DEMO
+    assert first["retention"]["retention_class"] == RETENTION_CLASS_RETAINED_RAW
+    assert first["retention"]["delete_allowed"] is False
+    assert first["retention"]["requires_explicit_backup_or_list_for_delete"] is True
 
 
 def test_demo_storage_report_includes_nested_retained_files(db, monkeypatch, tmp_path):

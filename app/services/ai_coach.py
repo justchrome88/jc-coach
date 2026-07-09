@@ -18,6 +18,7 @@ from app.services.ai_validator import render_ai_output_markdown, validate_ai_coa
 from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
+from app.services.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, artifact_retention_metadata
 from app.services.match_queries import playable_match_select
 from app.services.metric_confidence import (
     exact_date_window_metadata,
@@ -439,6 +440,7 @@ def _ai_report_metadata(
     return {
         "type": "ai_coach",
         "status": "saved",
+        "artifact_retention": artifact_retention_metadata(ARTIFACT_CATEGORY_COACH_OUTPUT),
         "provider": provider,
         "source_ref": source_ref,
         "handoff": latest_handoff,

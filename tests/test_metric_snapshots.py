@@ -3,6 +3,7 @@ import json
 import pytest
 
 from app.db.models import DemoParseArtifact, Match, MetricSnapshot
+from app.services.demo_retention import ARTIFACT_CATEGORY_METRIC_SNAPSHOT, RETENTION_CLASS_DERIVED_REBUILDABLE
 from app.services.metric_snapshots import (
     create_metric_snapshot,
     find_metric_snapshot,
@@ -44,7 +45,9 @@ def test_metric_snapshot_create_read_and_payload_are_independent_of_parser_artif
     assert payload["metrics"] == {"adr": 84.5, "kills": 17}
     assert payload["confidence_baseline"]["metrics"]["adr"] == "medium"
     assert payload["caveats"] == ["adr derived from normalized damage events"]
-    assert payload["metadata"] == {"schema_version": "metric-snapshot-v1"}
+    assert payload["metadata"]["schema_version"] == "metric-snapshot-v1"
+    assert payload["metadata"]["artifact_retention"]["category"] == ARTIFACT_CATEGORY_METRIC_SNAPSHOT
+    assert payload["metadata"]["artifact_retention"]["retention_class"] == RETENTION_CLASS_DERIVED_REBUILDABLE
 
 
 def test_metric_snapshot_updates_without_touching_parser_artifact(db):
@@ -71,7 +74,8 @@ def test_metric_snapshot_updates_without_touching_parser_artifact(db):
     assert payload["metrics"] == {"deaths": 9, "kills": 12}
     assert payload["confidence_baseline"]["metrics"] == {"deaths": "trusted", "kills": "trusted"}
     assert payload["caveats"] == ["fixture update"]
-    assert payload["metadata"] == {"updated_by": "repository_test"}
+    assert payload["metadata"]["updated_by"] == "repository_test"
+    assert payload["metadata"]["artifact_retention"]["retention_class"] == RETENTION_CLASS_DERIVED_REBUILDABLE
 
 
 def test_metric_snapshot_records_parser_artifact_and_event_set_metadata(db):
@@ -114,7 +118,9 @@ def test_metric_snapshot_records_parser_artifact_and_event_set_metadata(db):
     assert found is not None
     assert found.id == snapshot.id
     assert found.source_parser_artifact_id == artifact.id
-    assert metric_snapshot_payload(found)["metadata"] == {"event_schema": "normalized-events-v0.10"}
+    metadata = metric_snapshot_payload(found)["metadata"]
+    assert metadata["event_schema"] == "normalized-events-v0.10"
+    assert metadata["artifact_retention"]["retention_class"] == RETENTION_CLASS_DERIVED_REBUILDABLE
 
     snapshots = list_metric_snapshots(db, match_id=match.id, source="parser_artifact")
     assert [item.id for item in snapshots] == [snapshot.id]

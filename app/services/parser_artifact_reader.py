@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from app.services.demo_retention import ARTIFACT_CATEGORY_NORMALIZED_EVENT_STORE, artifact_retention_metadata
 from app.services.event_metric_dictionary import EVENT_METRIC_DICTIONARY, event_definition
 from app.services.parser_evidence import CONFIDENCE_LEVELS
 
@@ -830,6 +831,7 @@ def _event(
         "confidence": _event_confidence(event_type, confidence),
         "caveats": _ordered_unique([*definition.caveats, *(caveats or [])]),
         "payload": _clean_mapping(payload or {}),
+        "retention": artifact_retention_metadata(ARTIFACT_CATEGORY_NORMALIZED_EVENT_STORE),
     }
 
 

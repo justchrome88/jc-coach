@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from app.services.demo_retention import ARTIFACT_CATEGORY_NORMALIZED_EVENT_STORE, RETENTION_CLASS_DERIVED_REBUILDABLE
 from app.services.event_metric_dictionary import EVENT_METRIC_DICTIONARY, NORMALIZED_EVENT_SCHEMA
 from app.services.parser_artifact_reader import (
     NORMALIZED_EVENT_SCHEMA_VERSION,
@@ -65,6 +66,8 @@ def test_parser_artifact_fixture_reads_normalized_events():
     assert all(event["schema_version"] == NORMALIZED_EVENT_SCHEMA_VERSION for event in events)
     assert all(event["event_type"] in EVENT_METRIC_DICTIONARY for event in events)
     assert all(event["source"]["source_demo_file"] == HANDOFF_PATH for event in events)
+    assert all(event["retention"]["category"] == ARTIFACT_CATEGORY_NORMALIZED_EVENT_STORE for event in events)
+    assert all(event["retention"]["retention_class"] == RETENTION_CLASS_DERIVED_REBUILDABLE for event in events)
 
     kill = next(event for event in events if event["event_type"] == "player_kill")
     assert kill["round_number"] == 1

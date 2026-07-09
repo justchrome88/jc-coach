@@ -16,9 +16,11 @@ from app.db.models import (
 )
 from app.services.demo_parser import DemoParseError, import_demo_file, parse_demo
 from app.services.demo_retention import (
+    ARTIFACT_CATEGORY_PARSER_ARTIFACT,
     DEMO_RETENTION_POLICY_RETAIN_RAW,
     DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE,
     DEMO_RETENTION_STATUS_RETAINED_FOR_DEV,
+    RETENTION_CLASS_DERIVED_REBUILDABLE,
     delete_raw_demo_after_success,
 )
 
@@ -174,6 +176,9 @@ def test_import_demo_file_persists_storage_links_and_parser_handoff(monkeypatch,
     assert artifact.import_job_id == 42
     assert artifact.source_demo_file == result["stored_path"]
     assert artifact.demo_sha1 == result["storage"]["sha1"]
+    artifact_payload = json.loads(artifact.payload_json)
+    assert artifact_payload["artifact_retention"]["category"] == ARTIFACT_CATEGORY_PARSER_ARTIFACT
+    assert artifact_payload["artifact_retention"]["retention_class"] == RETENTION_CLASS_DERIVED_REBUILDABLE
 
 
 def test_import_demo_file_persists_deep_parse_artifacts(monkeypatch, tmp_path, db):
@@ -253,11 +258,22 @@ def test_delete_after_success_helper_is_disabled_by_default(tmp_path):
     assert result["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_FOR_DEV
 
 
-def test_delete_after_success_helper_requires_explicit_enable(tmp_path):
+def test_delete_after_success_helper_requires_explicit_backup_or_list(tmp_path):
     demo_path = tmp_path / "delete-me.dem"
     demo_path.write_bytes(b"HL2DEMO")
 
     result = delete_raw_demo_after_success(demo_path, enabled=True)
+
+    assert result["deleted"] is False
+    assert demo_path.exists()
+    assert "explicit backup" in result["reason"]
+
+
+def test_delete_after_success_helper_allows_explicit_backup_or_list(tmp_path):
+    demo_path = tmp_path / "delete-me.dem"
+    demo_path.write_bytes(b"HL2DEMO")
+
+    result = delete_raw_demo_after_success(demo_path, enabled=True, explicit_backup_or_list=True)
 
     assert result["deleted"] is True
     assert not demo_path.exists()
