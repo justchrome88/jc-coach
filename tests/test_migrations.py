@@ -23,6 +23,9 @@ LEGACY_STARTUP_SCHEMA_SQL = {
     "ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1 NOT NULL",
     "ALTER TABLE users ADD COLUMN last_login_at DATETIME",
     "ALTER TABLE coach_recommendations ADD COLUMN start_after_match_id INTEGER",
+    "ALTER TABLE import_jobs ADD COLUMN user_id INTEGER",
+    "ALTER TABLE import_jobs ADD COLUMN logical_target_key VARCHAR(500)",
+    "ALTER TABLE import_jobs ADD COLUMN updated_at DATETIME",
 }
 
 

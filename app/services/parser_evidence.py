@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from app.services.metric_truth import MetricUsage, USAGES, is_metric_allowed_for_hard_claim
+from app.services.metric_truth import (
+    USAGES,
+    MetricUsage,
+    is_metric_allowed_for_hard_claim,
+)
 
 PARSER_EVIDENCE_SCHEMA_VERSION = "parser-evidence-v1"
 CONFIDENCE_LEVELS = {"high", "medium", "low", "unavailable"}
