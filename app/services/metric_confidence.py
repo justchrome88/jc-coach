@@ -14,6 +14,13 @@ EXACT_DATE_SOURCE = "steam_gc_match_time"
 APPROXIMATE_DATE_STATUS = "approximate_match_date"
 
 ConfidenceLevel = str
+CONFIDENCE_LEVELS = {"high", "medium", "low", "unavailable"}
+_LEGACY_LEVELS = {
+    "exact": "high",
+    "trusted": "high",
+    "partial": "medium",
+    "low_confidence": "low",
+}
 
 
 METRIC_ATTRS = {
@@ -172,34 +179,59 @@ def metric_confidence(
         else None
     )
     reasons: list[str] = []
+    reason_codes: list[str] = []
 
     if decision == "suppressed" or definition.reliability == "unavailable":
         level: ConfidenceLevel = "unavailable"
         reasons.append(f"{canonical_id} is {definition.reliability} and {decision} for {usage}.")
+        reason_codes.append("metric_suppressed_for_usage")
     elif not items or present == 0:
         level = "unavailable"
         reasons.append(f"{canonical_id} has no populated values in this sample.")
+        reason_codes.append("metric_no_populated_values")
     elif date_meta and date_meta["insufficient_exact_sample"]:
-        level = "low_confidence"
+        level = "low"
         reasons.extend(date_meta["warnings"])
+        reason_codes.append("insufficient_exact_date_sample")
     elif definition.reliability == "trusted" and parser_level in {"high", "unknown"} and len(items) >= min_sample:
-        level = "exact"
+        level = "high"
+        reason_codes.append("trusted_metric_with_required_sample")
     elif definition.reliability in {"trusted", "medium"} and parser_level not in {"low", "unavailable"}:
-        level = "partial"
+        level = "medium"
+        reason_codes.append("trusted_or_medium_metric_partial_support")
     else:
-        level = "low_confidence"
+        level = "low"
+        reason_codes.append("weak_metric_or_source")
 
     if definition.reliability in {"approximate", "low"}:
         reasons.append(f"{canonical_id} registry reliability is {definition.reliability}.")
+        reason_codes.append("registry_reliability_limited")
     if parser_level in {"low", "unavailable"}:
         reasons.append(f"{canonical_id} parser confidence is {parser_level}.")
+        reason_codes.append(f"parser_confidence_{parser_level}")
     if coverage < 100 and level != "unavailable":
         reasons.append(f"{canonical_id} coverage is {coverage}%.")
+        reason_codes.append("metric_coverage_gap")
 
-    return {
+    record = confidence_record(
+        canonical_id,
+        level,
+        usage=usage,
+        reasons=reasons,
+        reason_codes=reason_codes,
+        source_trust={
+            "registry_reliability": definition.reliability,
+            "usage_decision": decision,
+            "parser_confidence": parser_level,
+            "sample_size": len(items),
+            "present_count": present,
+            "coverage": coverage,
+        },
+    )
+    record.update(
+        {
         "metric_id": canonical_id,
         "name": definition.display_name,
-        "level": level,
         "registry_reliability": definition.reliability,
         "usage_decision": decision,
         "sample_size": len(items),
@@ -207,8 +239,9 @@ def metric_confidence(
         "coverage": coverage,
         "parser_confidence": parser_level,
         "date_window": date_meta,
-        "reasons": reasons,
-    }
+        }
+    )
+    return record
 
 
 def metric_confidence_map(
@@ -284,11 +317,11 @@ def _parser_level(canonical_id: str, matches: list[Match], *, context: MetricCon
 
 def _sample_confidence(exact_count: int, required_sample: int) -> str:
     if exact_count >= required_sample:
-        return "exact"
+        return "high"
     if exact_count >= max(5, required_sample // 2):
-        return "partial"
+        return "medium"
     if exact_count > 0:
-        return "low_confidence"
+        return "low"
     return "unavailable"
 
 
@@ -321,3 +354,61 @@ def _load_raw(match: Match) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return loaded if isinstance(loaded, dict) else {}
+
+
+def normalize_confidence_level(level: Any) -> ConfidenceLevel:
+    normalized = str(level or "").strip().lower()
+    normalized = _LEGACY_LEVELS.get(normalized, normalized)
+    return normalized if normalized in CONFIDENCE_LEVELS else "unavailable"
+
+
+def confidence_record(
+    metric_id: str,
+    level: Any,
+    *,
+    usage: str = "display",
+    reasons: Iterable[str] = (),
+    reason_codes: Iterable[str] = (),
+    source_trust: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    normalized = normalize_confidence_level(level)
+    definition = metric_definition(metric_id)
+    decision = usage_decision(definition.metric_id, usage) if definition.metric_id != "unknown" else "suppressed"
+    codes = _ordered_unique([str(code) for code in reason_codes if str(code).strip()])
+    if normalized == "low":
+        codes.append("low_confidence_blocks_hard_recommendation")
+    elif normalized == "unavailable":
+        codes.append("unavailable_metric_blocks_hard_recommendation")
+    if decision == "warn":
+        codes.append("warn_metric_requires_caveat")
+    elif decision == "suppressed":
+        codes.append("suppressed_metric_blocks_hard_recommendation")
+
+    hard_eligible = normalized in {"high", "medium"} and decision == "allowed"
+    insight_usable = normalized in {"high", "medium"} and decision != "suppressed"
+    trust = {
+        "registry_reliability": definition.reliability,
+        "usage_decision": decision,
+    }
+    if source_trust:
+        trust.update(source_trust)
+
+    return {
+        "level": normalized,
+        "reasons": _ordered_unique([str(reason) for reason in reasons if str(reason).strip()]),
+        "reason_codes": _ordered_unique(codes),
+        "source_trust": trust,
+        "usable_for_insights": insight_usable,
+        "usable_for_missions": hard_eligible,
+        "hard_recommendation_eligible": hard_eligible,
+    }
+
+
+def _ordered_unique(values: Iterable[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered = []
+    for value in values:
+        if value not in seen:
+            ordered.append(value)
+            seen.add(value)
+    return ordered

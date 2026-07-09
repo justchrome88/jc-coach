@@ -90,10 +90,15 @@ def test_weak_flash_utility_metric_carries_low_confidence_and_reason():
     alpha = _result_by_player(events)["steam:T1"]
 
     assert alpha.metrics["enemies_flashed"] == 1
-    assert alpha.confidence_baseline["metrics"]["enemies_flashed"] == {
-        "level": "low",
-        "reasons": ["Flash metrics are weak C05 facts; blind duration and kill impact are not exact value."],
-    }
+    flash_confidence = alpha.confidence_baseline["metrics"]["enemies_flashed"]
+    assert flash_confidence["level"] == "low"
+    assert flash_confidence["reasons"] == [
+        "Flash metrics are weak C05 facts; blind duration and kill impact are not exact value."
+    ]
+    assert "weak_event_support" in flash_confidence["reason_codes"]
+    assert flash_confidence["source_trust"]["source_kinds"] == ["fixture"]
+    assert flash_confidence["usable_for_insights"] is False
+    assert flash_confidence["hard_recommendation_eligible"] is False
     assert "Source row omitted blind duration; flash value must remain low-confidence." in alpha.caveats
 
 

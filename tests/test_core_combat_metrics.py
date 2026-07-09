@@ -74,7 +74,11 @@ def test_core_combat_metrics_are_deterministic_for_fixture_events():
         "survival_rate": 0.5,
     }
     assert by_player["steam:T1"].confidence_baseline["source"] == CORE_COMBAT_METRICS_VERSION
-    assert by_player["steam:T1"].confidence_baseline["metrics"]["kills"] == "high"
+    kills_confidence = by_player["steam:T1"].confidence_baseline["metrics"]["kills"]
+    assert kills_confidence["level"] == "high"
+    assert "event_confidence_high" in kills_confidence["reason_codes"]
+    assert kills_confidence["source_trust"]["event_count"] == 2
+    assert kills_confidence["hard_recommendation_eligible"] is True
 
 
 def test_opening_trade_and_survival_metrics_are_deterministic_for_c04_events():
@@ -104,9 +108,12 @@ def test_opening_trade_and_survival_metrics_are_deterministic_for_c04_events():
     assert bravo.metrics["untraded_death_rate"] == 0.0
     assert bravo.metrics["survival_rate"] == 0.667
 
-    assert alpha.confidence_baseline["metrics"]["opening_death_rate"] == "medium"
-    assert alpha.confidence_baseline["metrics"]["opening_duel_win_rate"] == "high"
-    assert alpha.confidence_baseline["metrics"]["traded_death_rate"] == "high"
+    assert alpha.confidence_baseline["metrics"]["opening_death_rate"]["level"] == "medium"
+    assert alpha.confidence_baseline["metrics"]["opening_duel_win_rate"]["level"] == "high"
+    traded_confidence = alpha.confidence_baseline["metrics"]["traded_death_rate"]
+    assert traded_confidence["level"] == "high"
+    assert traded_confidence["hard_recommendation_eligible"] is False
+    assert "suppressed_metric_blocks_hard_recommendation" in traded_confidence["reason_codes"]
     assert alpha.confidence_baseline["event_coverage"]["opening_duel_events"] == 3
     assert alpha.confidence_baseline["event_coverage"]["traded_death_events"] == 5
 
@@ -120,8 +127,12 @@ def test_ambiguous_trade_metrics_exclude_unknown_status_and_carry_caveat():
     assert unknown_b.metrics["trade_status_known_deaths"] == 0
     assert "traded_death_rate" not in unknown_b.metrics
     assert "untraded_death_rate" not in unknown_b.metrics
-    assert unknown_b.confidence_baseline["metrics"]["traded_death_rate"] == "low"
-    assert unknown_b.confidence_baseline["metrics"]["untraded_death_rate"] == "low"
+    assert unknown_b.confidence_baseline["metrics"]["traded_death_rate"]["level"] == "low"
+    assert unknown_b.confidence_baseline["metrics"]["untraded_death_rate"]["level"] == "low"
+    assert (
+        "low_confidence_blocks_hard_recommendation"
+        in unknown_b.confidence_baseline["metrics"]["traded_death_rate"]["reason_codes"]
+    )
     assert "Ambiguous traded death events were excluded from traded/untraded death rates." in unknown_b.caveats
     assert (
         "Source events do not include both actor/victim team side; traded death is ambiguous."

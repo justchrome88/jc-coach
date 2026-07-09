@@ -129,13 +129,13 @@
       "avg_kast": 69.0,
       "entry_diff": -4,
       "round_diff": -3,
-      "date_window_confidence": "low_confidence",
+      "date_window_confidence": "low",
       "excluded_from_exact_windows": 1
     },
     "period_comparison": {
       "current_n": 2,
       "previous_n": 1,
-      "confidence": "exact",
+      "confidence": "high",
       "adr_delta": -14.5
     },
     "map_stats": [

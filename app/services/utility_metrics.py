@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db.models import MetricSnapshot
+from app.services.metric_confidence import confidence_record
 from app.services.metric_snapshots import upsert_metric_snapshot
 
 UTILITY_METRICS_VERSION = "utility-metrics-v1"
@@ -62,6 +63,7 @@ def calculate_utility_metrics(
                 by_type[fact["utility_type"]] = by_type.get(fact["utility_type"], 0) + fact["damage"]
             metrics["utility_damage"] = sum(by_type.values())
             confidence["utility_damage"] = _confidence(
+                "utility_damage",
                 player_damage_events,
                 fallback="medium",
                 reasons=["Utility damage is limited to C05 utility_damage events with positive damage."],
@@ -69,6 +71,7 @@ def calculate_utility_metrics(
             if by_type.get("hegrenade") is not None:
                 metrics["he_damage"] = by_type["hegrenade"]
                 confidence["he_damage"] = _confidence(
+                    "he_damage",
                     [event for event in player_damage_events if _utility_type(event) == "hegrenade"],
                     fallback="medium",
                     reasons=["HE damage is limited to hegrenade utility_damage events."],
@@ -77,6 +80,7 @@ def calculate_utility_metrics(
             if molotov_damage:
                 metrics["molotov_damage"] = molotov_damage
                 confidence["molotov_damage"] = _confidence(
+                    "molotov_damage",
                     [event for event in player_damage_events if _utility_type(event) in _MOLOTOV_TYPES],
                     fallback="low",
                     reasons=["Molotov damage is parser-attributed utility damage and must remain caveated."],
@@ -84,6 +88,7 @@ def calculate_utility_metrics(
             caveats.extend(_event_caveats(player_damage_events))
         else:
             confidence["utility_damage"] = _unavailable(
+                "utility_damage",
                 "No supported utility_damage events for this player; utility damage is omitted instead of set to zero."
             )
             if "utility_damage" in data_gap_missing:
@@ -94,6 +99,7 @@ def calculate_utility_metrics(
         if enemies_flashed is not None:
             metrics["enemies_flashed"] = enemies_flashed
             confidence["enemies_flashed"] = _confidence(
+                "enemies_flashed",
                 player_flash_events,
                 weak=True,
                 reasons=["Flash metrics are weak C05 facts; blind duration and kill impact are not exact value."],
@@ -101,10 +107,12 @@ def calculate_utility_metrics(
             caveats.extend(_event_caveats(player_flash_events))
         else:
             confidence["enemies_flashed"] = _unavailable(
+                "enemies_flashed",
                 "No flash_effect events for this player; enemies_flashed is omitted instead of set to zero."
             )
 
         confidence["flash_assists"] = _unavailable(
+            "flash_assists",
             "Flash assists require accepted blind-to-kill correlation; C05 utility events do not support it."
         )
         caveats.append("Flash assists are omitted until accepted blind-to-kill correlation exists.")
@@ -146,6 +154,7 @@ def calculate_utility_metrics(
             caveats.extend(_event_caveats(player_detonations))
 
         confidence["grenade_rating"] = _unavailable(
+            "grenade_rating",
             "Grenade rating is unsupported; detonation, damage and flash facts do not define tactical utility value."
         )
         caveats.append("Unsupported grenade_rating is omitted rather than inferred from weak utility events.")
@@ -217,10 +226,11 @@ def _add_detonation_metric(
 ) -> None:
     matching = [event for event in events if _utility_type(event) in utility_types]
     if not matching:
-        confidence[metric_id] = _unavailable(f"No {metric_id} source events for this player.")
+        confidence[metric_id] = _unavailable(metric_id, f"No {metric_id} source events for this player.")
         return
     metrics[metric_id] = len(matching)
     confidence[metric_id] = _confidence(
+        metric_id,
         matching,
         weak=True,
         reasons=["Detonation events prove utility was used, not that it produced tactical value."],
@@ -298,6 +308,7 @@ def _add_player(known: dict[str, Mapping[str, Any]], player: Any) -> None:
 
 
 def _confidence(
+    metric_id: str,
     events: Sequence[Mapping[str, Any]],
     *,
     fallback: str = "medium",
@@ -315,11 +326,29 @@ def _confidence(
         level = "medium"
     else:
         level = "high"
-    return {"level": level, "reasons": _ordered_unique(list(reasons))}
+    return confidence_record(
+        metric_id,
+        level,
+        reasons=reasons,
+        reason_codes=[
+            f"event_confidence_{level}",
+            "weak_event_support" if weak else "normalized_event_source",
+        ],
+        source_trust={
+            "event_confidence": level,
+            "event_count": len(events),
+            "source_kinds": _source_kinds(events),
+        },
+    )
 
 
-def _unavailable(reason: str) -> dict[str, Any]:
-    return {"level": "unavailable", "reasons": [reason]}
+def _unavailable(metric_id: str, reason: str) -> dict[str, Any]:
+    return confidence_record(
+        metric_id,
+        "unavailable",
+        reasons=[reason],
+        reason_codes=["source_data_unavailable"],
+    )
 
 
 def _data_gap_missing_sources(events: Sequence[Mapping[str, Any]]) -> set[str]:
@@ -339,6 +368,15 @@ def _event_caveats(events: Sequence[Mapping[str, Any]]) -> list[str]:
         if isinstance(values, Sequence) and not isinstance(values, str):
             caveats.extend(str(value) for value in values if value)
     return _ordered_unique(caveats)
+
+
+def _source_kinds(events: Sequence[Mapping[str, Any]]) -> list[str]:
+    kinds: set[str] = set()
+    for event in events:
+        source = event.get("source")
+        if isinstance(source, Mapping) and source.get("kind"):
+            kinds.add(str(source["kind"]))
+    return sorted(kinds)
 
 
 def _damage(event: Mapping[str, Any]) -> int | None:

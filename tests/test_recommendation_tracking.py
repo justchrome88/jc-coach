@@ -36,7 +36,10 @@ def test_creates_default_recommendation_with_baseline(db):
     assert survival.target_period_matches == 10
     baseline = json.loads(survival.baseline_metrics_json)
     assert baseline["confidence"]["date_window"]["exact_date_matches"] == 15
-    assert baseline["confidence"]["metrics"]["early_deaths"]["level"] == "low_confidence"
+    early_confidence = baseline["confidence"]["metrics"]["early_deaths"]
+    assert early_confidence["level"] == "low"
+    assert early_confidence["hard_recommendation_eligible"] is False
+    assert "low_confidence_blocks_hard_recommendation" in early_confidence["reason_codes"]
     assert db.query(CoachRecommendation).count() == 4
 
 

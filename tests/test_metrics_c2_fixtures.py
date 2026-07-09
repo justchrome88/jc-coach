@@ -43,10 +43,14 @@ def test_filter_confidence_labels_are_carried_with_selected_match_windows():
     summary = get_summary(selected, date_windowed=True, context=context)
     date_window = exact_date_window_metadata(selected, required_sample=3, context=context)
 
-    assert date_window["confidence"] == "low_confidence"
-    assert summary["metric_confidence"]["adr"]["level"] == "low_confidence"
-    assert summary["metric_confidence"]["kast"]["level"] == "low_confidence"
+    assert date_window["confidence"] == "low"
+    assert summary["metric_confidence"]["adr"]["level"] == "low"
+    assert summary["metric_confidence"]["kast"]["level"] == "low"
     assert summary["metric_confidence"]["side_split_metrics"]["level"] == "unavailable"
+    assert "insufficient_exact_date_sample" in summary["metric_confidence"]["adr"]["reason_codes"]
+    assert summary["metric_confidence"]["adr"]["source_trust"]["parser_confidence"] == "medium"
+    assert summary["metric_confidence"]["adr"]["usable_for_insights"] is False
+    assert summary["metric_confidence"]["adr"]["hard_recommendation_eligible"] is False
     assert any("Only 2 exact-date matches available" in warning for warning in date_window["warnings"])
 
 
@@ -144,6 +148,7 @@ def test_null_and_empty_metrics_remain_unavailable_without_imputation(metric_id)
     assert confidence["level"] == "unavailable"
     assert confidence["present_count"] == 0
     assert confidence["coverage"] == 0.0
+    assert "metric_no_populated_values" in confidence["reason_codes"]
     assert any("no populated values" in reason for reason in confidence["reasons"])
 
 

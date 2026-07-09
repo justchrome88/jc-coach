@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db.models import MetricSnapshot
+from app.services.metric_confidence import confidence_record
 from app.services.metric_snapshots import upsert_metric_snapshot
 
 CORE_COMBAT_METRICS_VERSION = "core-combat-metrics-v1"
@@ -53,13 +54,20 @@ def calculate_core_combat_metrics(
     results = []
     for player_key, player in sorted(known_players.items()):
         metrics: dict[str, Any] = {}
-        confidence: dict[str, str] = {}
+        confidence: dict[str, dict[str, Any]] = {}
         caveats: list[str] = []
 
         if kill_source_events:
             metrics["kills"] = sum(1 for event in kill_source_events if _player_key(event.get("actor")) == player_key)
-            confidence["kills"] = (
-                "medium" if kills_from_deaths else _event_confidence(kill_source_events, "actor", player_key)
+            confidence["kills"] = _confidence(
+                "kills",
+                "medium" if kills_from_deaths else _event_confidence(kill_source_events, "actor", player_key),
+                kill_source_events,
+                reasons=(
+                    ["Kills derived from player_death actor because player_kill events were unavailable."]
+                    if kills_from_deaths
+                    else ["Kills are counted from supported kill/death events."]
+                ),
             )
             if kills_from_deaths:
                 caveats.append("Kills derived from player_death actor because player_kill events were unavailable.")
@@ -68,13 +76,23 @@ def calculate_core_combat_metrics(
 
         if death_events:
             metrics["deaths"] = sum(1 for event in death_events if _player_key(event.get("victim")) == player_key)
-            confidence["deaths"] = _event_confidence(death_events, "victim", player_key)
+            confidence["deaths"] = _confidence(
+                "deaths",
+                _event_confidence(death_events, "victim", player_key),
+                death_events,
+                reasons=["Deaths are counted from supported death events."],
+            )
         else:
             caveats.append("Death events unavailable; deaths are omitted instead of filled as zero.")
 
         if assists_available:
             metrics["assists"] = sum(1 for event in kill_source_events if _player_key(_assister(event)) == player_key)
-            confidence["assists"] = _event_confidence(kill_source_events, "assister", player_key)
+            confidence["assists"] = _confidence(
+                "assists",
+                _event_confidence(kill_source_events, "assister", player_key),
+                kill_source_events,
+                reasons=["Assists depend on source assister fields."],
+            )
         else:
             caveats.append("Assist source unavailable; assists are omitted instead of filled as zero.")
 
@@ -83,7 +101,12 @@ def calculate_core_combat_metrics(
             value for event in player_damage_events for value in [_damage_health(event)] if value is not None
         ]
         if damage_events:
-            confidence["damage"] = _event_confidence(damage_events, "actor", player_key)
+            confidence["damage"] = _confidence(
+                "damage",
+                _event_confidence(damage_events, "actor", player_key),
+                damage_events,
+                reasons=["Damage is summed only from populated damage_health facts."],
+            )
             missing_damage = any(_damage_health(event) is None for event in player_damage_events)
             if player_damage_events and not damage_values:
                 caveats.append(
@@ -99,7 +122,16 @@ def calculate_core_combat_metrics(
         player_rounds = _player_rounds(player_key, survival_events, round_numbers)
         if player_rounds:
             metrics["rounds"] = len(player_rounds)
-            confidence["rounds"] = "low" if inferred_rounds else "medium"
+            confidence["rounds"] = _confidence(
+                "rounds",
+                "low" if inferred_rounds else "medium",
+                survival_events,
+                reasons=(
+                    ["Round count inferred from combat events."]
+                    if inferred_rounds
+                    else ["Round count uses supported round or survival events."]
+                ),
+            )
             if inferred_rounds:
                 caveats.append(
                     "Round count inferred from combat event round numbers because round events were unavailable."
@@ -109,8 +141,13 @@ def calculate_core_combat_metrics(
 
         if "damage" in metrics and metrics.get("rounds"):
             metrics["adr"] = round(metrics["damage"] / metrics["rounds"], 3)
-            confidence["adr"] = (
-                "medium" if confidence.get("damage") != "low" and confidence.get("rounds") != "low" else "low"
+            confidence["adr"] = _confidence(
+                "adr",
+                "medium"
+                if confidence["damage"]["level"] != "low" and confidence["rounds"]["level"] != "low"
+                else "low",
+                player_damage_events,
+                reasons=["ADR is damage divided by available round count."],
             )
 
         player_survival = [event for event in survival_events if _player_key(event.get("actor")) == player_key]
@@ -119,7 +156,12 @@ def calculate_core_combat_metrics(
         if player_survival and len(survival_booleans) == len(player_survival):
             metrics["survived_rounds"] = sum(1 for survived in survival_booleans if survived)
             metrics["survival_rate"] = round(metrics["survived_rounds"] / len(player_survival), 3)
-            confidence["survival"] = _event_confidence(player_survival, "actor", player_key)
+            confidence["survival_rate"] = _confidence(
+                "survival_rate",
+                _event_confidence(player_survival, "actor", player_key),
+                player_survival,
+                reasons=["Survival rate is calculated from round_survival facts."],
+            )
         else:
             caveats.append("Round survival events unavailable or incomplete; survival metrics are omitted.")
 
@@ -202,7 +244,7 @@ def calculate_and_store_core_combat_metrics(
 
 def _add_opening_duel_metrics(
     metrics: dict[str, Any],
-    confidence: dict[str, str],
+    confidence: dict[str, dict[str, Any]],
     caveats: list[str],
     *,
     player_key: str,
@@ -226,13 +268,23 @@ def _add_opening_duel_metrics(
 
     if isinstance(player_round_count, int) and player_round_count > 0:
         metrics["opening_death_rate"] = round(opening_deaths / player_round_count, 3)
-        confidence["opening_death_rate"] = _event_confidence(player_duels, "victim", player_key)
+        confidence["opening_death_rate"] = _confidence(
+            "opening_death_rate",
+            _event_confidence(player_duels, "victim", player_key),
+            player_duels,
+            reasons=["Opening death rate depends on parser opening duel event order."],
+        )
     else:
         caveats.append("Round count unavailable; opening death rate is omitted.")
 
     if player_duels:
         metrics["opening_duel_win_rate"] = round(opening_duel_wins / len(player_duels), 3)
-        confidence["opening_duel_win_rate"] = _event_confidence(player_duels, "actor", player_key)
+        confidence["opening_duel_win_rate"] = _confidence(
+            "opening_duel_win_rate",
+            _event_confidence(player_duels, "actor", player_key),
+            player_duels,
+            reasons=["Opening duel win rate depends on parser opening duel event order."],
+        )
         caveats.extend(_event_caveats(player_duels))
     else:
         caveats.append("Player had no derived opening duel events; opening duel win rate is omitted.")
@@ -240,7 +292,7 @@ def _add_opening_duel_metrics(
 
 def _add_trade_death_metrics(
     metrics: dict[str, Any],
-    confidence: dict[str, str],
+    confidence: dict[str, dict[str, Any]],
     caveats: list[str],
     *,
     player_key: str,
@@ -264,12 +316,32 @@ def _add_trade_death_metrics(
     if known_trade_deaths:
         metrics["traded_death_rate"] = round(traded_deaths / known_trade_deaths, 3)
         metrics["untraded_death_rate"] = round(untraded_deaths / known_trade_deaths, 3)
-        confidence["traded_death_rate"] = _event_confidence(player_deaths, "victim", player_key)
-        confidence["untraded_death_rate"] = _event_confidence(player_deaths, "victim", player_key)
+        confidence["traded_death_rate"] = _confidence(
+            "traded_death_rate",
+            _event_confidence(player_deaths, "victim", player_key),
+            player_deaths,
+            reasons=["Traded death rate depends on parser trade window and side inference."],
+        )
+        confidence["untraded_death_rate"] = _confidence(
+            "untraded_death_rate",
+            _event_confidence(player_deaths, "victim", player_key),
+            player_deaths,
+            reasons=["Untraded death rate depends on parser trade window and side inference."],
+        )
     else:
         if player_deaths:
-            confidence["traded_death_rate"] = "low"
-            confidence["untraded_death_rate"] = "low"
+            confidence["traded_death_rate"] = _confidence(
+                "traded_death_rate",
+                "low",
+                player_deaths,
+                reasons=["No deaths with known trade status for this player."],
+            )
+            confidence["untraded_death_rate"] = _confidence(
+                "untraded_death_rate",
+                "low",
+                player_deaths,
+                reasons=["No deaths with known trade status for this player."],
+            )
         caveats.append("No deaths with known trade status for this player; trade death rates are omitted.")
 
     if ambiguous_deaths:
@@ -400,6 +472,35 @@ def _event_confidence(events: Sequence[Mapping[str, Any]], role: str, player_key
     if "medium" in values:
         return "medium"
     return "high"
+
+
+def _confidence(
+    metric_id: str,
+    level: str,
+    events: Sequence[Mapping[str, Any]],
+    *,
+    reasons: Sequence[str],
+) -> dict[str, Any]:
+    return confidence_record(
+        metric_id,
+        level,
+        reasons=reasons,
+        reason_codes=[f"event_confidence_{level}", "normalized_event_source"],
+        source_trust={
+            "event_confidence": level,
+            "event_count": len(events),
+            "source_kinds": _source_kinds(events),
+        },
+    )
+
+
+def _source_kinds(events: Sequence[Mapping[str, Any]]) -> list[str]:
+    kinds: set[str] = set()
+    for event in events:
+        source = event.get("source")
+        if isinstance(source, Mapping) and source.get("kind"):
+            kinds.add(str(source["kind"]))
+    return sorted(kinds)
 
 
 def _event_caveats(events: Sequence[Mapping[str, Any]]) -> list[str]:

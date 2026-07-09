@@ -195,7 +195,8 @@ def test_partial_metrics_are_caveated_not_exact_hard_claims(sample_rows):
 
     summary = get_summary(matches)
 
-    assert summary["metric_confidence"]["kast"]["level"] == "low_confidence"
+    assert summary["metric_confidence"]["kast"]["level"] == "low"
+    assert summary["metric_confidence"]["kast"]["hard_recommendation_eligible"] is False
     assert summary["metric_confidence"]["swing_score"]["level"] == "unavailable"
 
 

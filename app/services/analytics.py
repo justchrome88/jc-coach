@@ -531,9 +531,9 @@ def _form_confidence(items: list[Match], *, date_windowed: bool) -> dict[str, An
     elif date_windowed and len(items) < 5:
         level = "unavailable"
     elif date_windowed and len(items) < 15:
-        level = "low_confidence"
+        level = "low"
     else:
-        level = "partial"
+        level = "medium"
     return {
         "level": level,
         "sample_size": len(items),
@@ -544,7 +544,7 @@ def _form_confidence(items: list[Match], *, date_windowed: bool) -> dict[str, An
 
 def _map_sample_confidence(matches_count: int) -> str:
     if matches_count >= 5:
-        return "partial"
+        return "medium"
     if matches_count >= 3:
-        return "low_confidence"
+        return "low"
     return "unavailable"
