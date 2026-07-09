@@ -426,6 +426,36 @@ def list_mission_progress_evaluations(
     )
 
 
+def serialize_mission_progress_evaluation(evaluation: MissionProgressEvaluation) -> dict[str, Any]:
+    result = _json_load_mapping(evaluation.result_json)
+    components = [
+        dict(component)
+        for component in result.get("components", [])
+        if isinstance(component, Mapping)
+    ]
+    primary = next((component for component in components if component.get("role") == "primary"), None)
+    guardrails = [component for component in components if component.get("role") == "guardrail"]
+    secondaries = [component for component in components if component.get("role") == "secondary"]
+    target_met = result.get("target_met") is True
+    counted_reason = _mission_count_reason(evaluation.status, components, target_met)
+    return {
+        "evaluation_id": evaluation.id,
+        "mission_id": evaluation.mission_id,
+        "owner_steam_id": evaluation.owner_steam_id,
+        "evaluated_window": result.get("evaluation_window_json") or {},
+        "source_metric_snapshot_ids": _int_list(result.get("source_metric_snapshot_ids")),
+        "status": evaluation.status,
+        "confidence": evaluation.confidence,
+        "caveats": _json_load_sequence(evaluation.caveats_json),
+        "primary_metric_result": _component_summary(primary),
+        "secondary_metric_results": [_component_summary(component) for component in secondaries],
+        "guardrail_results": [_component_summary(component) for component in guardrails],
+        "target_met": target_met,
+        "counted": target_met,
+        "why_counted_or_not": counted_reason,
+    }
+
+
 def _require_owned_analysis_run(db: Session, *, user_id: int, analysis_run_id: int) -> AnalysisRun:
     run = db.get(AnalysisRun, analysis_run_id)
     if run is None:
@@ -520,6 +550,7 @@ def _evaluate_criteria(criteria: MissionCriteria, snapshot_window: Mapping[str, 
         "observed_value": _optional_number(metrics.get(criteria.metric_name))
         if criteria.metric_name in metrics
         else None,
+        "delta": None,
         "outcome": "insufficient_data",
         "reason_codes": [],
         "sample_matches": snapshot_window.get("sample_matches"),
@@ -547,6 +578,8 @@ def _evaluate_criteria(criteria: MissionCriteria, snapshot_window: Mapping[str, 
 
     observed = _optional_number(metrics.get(criteria.metric_name))
     baseline = criteria.baseline_value
+    if observed is not None and baseline is not None:
+        component["delta"] = observed - baseline
     component["outcome"] = _directional_outcome(
         metric_name=criteria.metric_name,
         direction=criteria.direction,
@@ -775,6 +808,41 @@ def _evaluation_caveats(
             }:
                 caveats.append(f"{component.get('metric_name')}:{reason}")
     return sorted(set(caveats))
+
+
+def _component_summary(component: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if component is None:
+        return None
+    return {
+        "criteria_id": component.get("criteria_id"),
+        "metric_name": component.get("metric_name"),
+        "role": component.get("role"),
+        "direction": component.get("direction"),
+        "baseline_value": component.get("baseline_value"),
+        "evaluation_value": component.get("observed_value"),
+        "delta": component.get("delta"),
+        "target_value": component.get("target_value"),
+        "outcome": component.get("outcome"),
+        "target_reached": component.get("target_reached"),
+        "reason_codes": list(component.get("reason_codes") or []),
+        "sample_matches": component.get("sample_matches"),
+        "sample_rounds": component.get("sample_rounds"),
+        "confidence": component.get("confidence"),
+    }
+
+
+def _mission_count_reason(status: str, components: Sequence[Mapping[str, Any]], target_met: bool) -> str:
+    if target_met:
+        return "Primary and secondary mission targets were reached without failing guardrails."
+    blocking = [
+        f"{component.get('metric_name')}:{component.get('outcome')}"
+        for component in components
+        if component.get("outcome") in {"regressing", "insufficient_data", "not_following"}
+        or component.get("target_reached") is False
+    ]
+    if blocking:
+        return f"Mission did not count because {', '.join(blocking)}."
+    return f"Mission did not count because evaluation status is {status}."
 
 
 def _snapshot_to_mapping(snapshot: Any) -> dict[str, Any]:
@@ -1131,6 +1199,18 @@ def _optional_int(value: Any) -> int | None:
     if value is None:
         return None
     return int(value)
+
+
+def _int_list(value: Any) -> list[int]:
+    if not isinstance(value, Sequence) or isinstance(value, str):
+        return []
+    output: list[int] = []
+    for item in value:
+        try:
+            output.append(int(item))
+        except (TypeError, ValueError):
+            continue
+    return output
 
 
 def _optional_lower_str(value: Any) -> str | None:

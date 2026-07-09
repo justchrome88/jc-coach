@@ -20,6 +20,7 @@ from app.services.ai_coach import (
     latest_ai_coach_report,
     list_ai_coach_reports,
     persist_owner_scoped_coach_hypotheses,
+    process_owner_match_metric_snapshots_for_coach_loop,
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
@@ -32,6 +33,11 @@ from app.services.metric_snapshots import (
     create_metric_snapshot,
 )
 from app.services.metric_truth import METRIC_REGISTRY_VERSION
+from app.services.mission_domain import (
+    activate_draft_coach_mission,
+    create_draft_coach_mission,
+    list_mission_progress_evaluations,
+)
 
 
 def test_build_ai_coach_payload_uses_structured_match_data(db, sample_rows):
@@ -648,6 +654,140 @@ def test_persist_owner_scoped_coach_hypotheses_rejects_admin_debug_scope(db):
 
     assert db.query(AnalysisRun).count() == 0
     assert db.query(CoachHypothesis).count() == 0
+
+
+def test_post_metrics_owner_match_coach_loop_persists_analysis_and_evaluates_active_mission(db):
+    owner = User(email="m02-owner@example.test", display_name="M02 Owner", password_hash="hash")
+    db.add(owner)
+    db.commit()
+    db.refresh(owner)
+    db.add(SteamAccount(user_id=owner.id, steam_id="76561198000000076", persona_name="JC"))
+    baseline_match = Match(id=76, source="demo", external_match_id="m02-baseline-match")
+    evaluation_match = Match(id=77, source="demo", external_match_id="m02-evaluation-match")
+    db.add_all([baseline_match, evaluation_match])
+    db.commit()
+    baseline_snapshot = create_metric_snapshot(
+        db,
+        match_id=baseline_match.id,
+        player_key="steam:76561198000000076",
+        player_name="JC",
+        player_steamid="76561198000000076",
+        source="utility_metrics",
+        source_event_set_id="fixture:m02:baseline-utility",
+        metrics={"utility_damage": 95, "he_damage": 30},
+        confidence_baseline={
+            "source": "utility-metrics-v1",
+            "confidence": "medium",
+            "metrics": {
+                "utility_damage": {
+                    "level": "medium",
+                    "usable_for_insights": True,
+                    "usable_for_missions": True,
+                    "hard_recommendation_eligible": True,
+                }
+            },
+        },
+        metadata={"schema_version": "utility-metrics-v1", "sample_matches": 1, "sample_rounds": 24},
+    )
+    baseline_scope = MetricSnapshotAnalysisScope(
+        match_ids=(baseline_match.id,),
+        source="steam",
+        owner_user_id=owner.id,
+        owner_steam_id="76561198000000076",
+        player_key="steam:76561198000000076",
+        player_steamid="76561198000000076",
+        selected_metric_snapshot_ids=(baseline_snapshot.id,),
+    )
+    baseline_payload = build_ai_coach_payload(db, analysis_scope=baseline_scope)
+    baseline_run, baseline_hypotheses = persist_owner_scoped_coach_hypotheses(
+        db,
+        analysis_scope=baseline_scope,
+        insight_cards=baseline_payload["coach_insight_cards"],
+        source_payload={"acceptance": "m02-baseline"},
+    )
+    draft = create_draft_coach_mission(
+        db,
+        user_id=owner.id,
+        hypothesis_id=baseline_hypotheses[0].id,
+        title="Improve utility damage",
+    )
+    mission = activate_draft_coach_mission(db, user_id=owner.id, mission_id=draft.id)
+    owner_evaluation_snapshot = create_metric_snapshot(
+        db,
+        match_id=evaluation_match.id,
+        player_key="steam:76561198000000076",
+        player_name="JC",
+        player_steamid="76561198000000076",
+        source="utility_metrics",
+        source_event_set_id="fixture:m02:evaluation-utility-owner",
+        metrics={"utility_damage": 122, "he_damage": 42},
+        confidence_baseline={
+            "source": "utility-metrics-v1",
+            "confidence": "medium",
+            "metrics": {
+                "utility_damage": {
+                    "level": "medium",
+                    "usable_for_insights": True,
+                    "usable_for_missions": True,
+                    "hard_recommendation_eligible": True,
+                }
+            },
+        },
+        metadata={"schema_version": "utility-metrics-v1", "sample_matches": 1, "sample_rounds": 24},
+    )
+    other_evaluation_snapshot = create_metric_snapshot(
+        db,
+        match_id=evaluation_match.id,
+        player_key="steam:other",
+        player_name="Other",
+        player_steamid="76561198000009999",
+        source="utility_metrics",
+        source_event_set_id="fixture:m02:evaluation-utility-other",
+        metrics={"utility_damage": 1, "he_damage": 1},
+        confidence_baseline={
+            "source": "utility-metrics-v1",
+            "confidence": "medium",
+            "metrics": {
+                "utility_damage": {
+                    "level": "medium",
+                    "usable_for_insights": True,
+                    "usable_for_missions": True,
+                    "hard_recommendation_eligible": True,
+                }
+            },
+        },
+        metadata={"schema_version": "utility-metrics-v1", "sample_matches": 1, "sample_rounds": 24},
+    )
+
+    result = process_owner_match_metric_snapshots_for_coach_loop(
+        db,
+        user_id=owner.id,
+        match_id=evaluation_match.id,
+        metric_snapshot_ids=(owner_evaluation_snapshot.id, other_evaluation_snapshot.id),
+        evaluation_window_start=datetime(2026, 7, 10),
+        evaluation_window_end=datetime(2026, 7, 10),
+    )
+
+    assert baseline_run.user_id == owner.id
+    assert baseline_hypotheses[0].owner_steam_id == "76561198000000076"
+    assert result["selected_metric_snapshot_ids"] == [owner_evaluation_snapshot.id]
+    assert result["analysis_run_id"] is not None
+    assert result["coach_hypothesis_ids"]
+    evaluations = list_mission_progress_evaluations(db, user_id=owner.id, mission_id=mission.id)
+    assert [item.id for item in evaluations] == result["mission_progress_evaluation_ids"]
+    summary = result["mission_status_summaries"][0]
+    assert summary["mission_id"] == mission.id
+    assert summary["evaluated_window"]["match_ids"] == [evaluation_match.id]
+    assert summary["source_metric_snapshot_ids"] == [owner_evaluation_snapshot.id]
+    assert summary["primary_metric_result"]["metric_name"] == "utility_damage"
+    assert summary["primary_metric_result"]["baseline_value"] == 95
+    assert summary["primary_metric_result"]["evaluation_value"] == 122
+    assert summary["primary_metric_result"]["delta"] == 27
+    assert summary["status"] == "improving"
+    assert summary["confidence"] == 0.6
+    assert summary["caveats"] == []
+    assert summary["target_met"] is True
+    assert "reached without failing guardrails" in summary["why_counted_or_not"]
 
 
 def test_ai_payload_uses_exact_recent_matches_and_reports_exclusions(db):

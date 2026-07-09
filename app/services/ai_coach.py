@@ -45,7 +45,13 @@ from app.services.metric_truth import (
     metric_truth_payload,
     suppressed_metrics_for_usage,
 )
-from app.services.mission_domain import create_analysis_run, create_coach_hypothesis
+from app.services.mission_domain import (
+    create_analysis_run,
+    create_coach_hypothesis,
+    evaluate_mission_progress,
+    list_active_coach_missions,
+    serialize_mission_progress_evaluation,
+)
 from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
 from app.services.ownership import get_owned_metric_snapshot
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_all_recommendation_progress
@@ -217,6 +223,85 @@ def persist_owner_scoped_coach_hypotheses(
     for hypothesis in hypotheses:
         db.refresh(hypothesis)
     return run, hypotheses
+
+
+def process_owner_match_metric_snapshots_for_coach_loop(
+    db: Session,
+    *,
+    user_id: int,
+    match_id: int,
+    metric_snapshot_ids: Sequence[int] | None = None,
+    evaluation_window_start: datetime | None = None,
+    evaluation_window_end: datetime | None = None,
+) -> dict[str, Any]:
+    owner_scope = owner_player_metric_snapshot_scope(db, user_id=user_id)
+    if owner_scope.owner_user_id is None:
+        raise ValueError("Post-metrics coach loop requires a linked owner account.")
+    analysis_scope = MetricSnapshotAnalysisScope(
+        match_ids=(match_id,),
+        source=owner_scope.source,
+        owner_user_id=owner_scope.owner_user_id,
+        owner_steam_id=owner_scope.owner_steam_id,
+        player_key=owner_scope.player_key,
+        player_name=owner_scope.player_name,
+        player_steamid=owner_scope.player_steamid,
+        selected_metric_snapshot_ids=tuple(int(item) for item in (metric_snapshot_ids or ())),
+        mode="personal",
+    )
+    owner_snapshot_payloads = _metric_snapshot_payloads_for_scope(db, analysis_scope)
+    coach_payload = build_ai_coach_payload(db, analysis_scope=analysis_scope)
+    insight_cards = coach_payload["coach_insight_cards"]
+    analysis_run: AnalysisRun | None = None
+    hypotheses: list[CoachHypothesis] = []
+    if insight_cards:
+        analysis_run, hypotheses = persist_owner_scoped_coach_hypotheses(
+            db,
+            analysis_scope=analysis_scope,
+            insight_cards=insight_cards,
+            source_payload={
+                "post_metrics_hook": "process_owner_match_metric_snapshots_for_coach_loop",
+                "match_id": match_id,
+            },
+        )
+
+    evaluations = [
+        evaluate_mission_progress(
+            db,
+            user_id=user_id,
+            mission_id=mission.id,
+            evaluation_metric_snapshots=owner_snapshot_payloads,
+            evaluation_window_start=evaluation_window_start,
+            evaluation_window_end=evaluation_window_end,
+            evaluation_window={
+                "match_ids": [match_id],
+                "source": "post_metrics_owner_match_loop",
+            },
+        )
+        for mission in list_active_coach_missions(db, user_id=user_id)
+    ]
+    db.commit()
+    if analysis_run is not None:
+        db.refresh(analysis_run)
+    for hypothesis in hypotheses:
+        db.refresh(hypothesis)
+    for evaluation in evaluations:
+        db.refresh(evaluation)
+
+    selected_snapshot_ids = [payload["id"] for payload in owner_snapshot_payloads]
+    return {
+        "backend_loop": "owner_match_post_metrics_coach_loop",
+        "user_id": user_id,
+        "owner_steam_id": owner_scope.owner_steam_id,
+        "match_id": match_id,
+        "selected_metric_snapshot_ids": selected_snapshot_ids,
+        "analysis_run_id": analysis_run.id if analysis_run is not None else None,
+        "coach_hypothesis_ids": [hypothesis.id for hypothesis in hypotheses],
+        "mission_progress_evaluation_ids": [evaluation.id for evaluation in evaluations],
+        "mission_status_summaries": [
+            serialize_mission_progress_evaluation(evaluation)
+            for evaluation in evaluations
+        ],
+    }
 
 
 def ai_provider_health() -> dict[str, Any]:
