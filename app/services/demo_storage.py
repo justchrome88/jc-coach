@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -22,16 +23,19 @@ from app.services.demo_retention import (
 )
 
 SUSPICIOUS_DEMO_BYTES = 1024 * 1024
+RETAINED_DEMO_DIRNAME = "retained"
+RAW_DEMO_STORAGE_VERSION = "2026-07-09.1"
 
 
 def demo_storage_report(db: Session, write_manifest: bool = False) -> dict[str, Any]:
     settings = get_settings()
     upload_dir = Path(settings.upload_dir).resolve()
     reports_dir = Path(settings.reports_dir).resolve()
+    temp_dir = Path(settings.temp_dir).resolve()
     upload_dir.mkdir(parents=True, exist_ok=True)
     reports_dir.mkdir(parents=True, exist_ok=True)
 
-    demo_files = sorted(upload_dir.glob("*.dem"), key=lambda item: item.name)
+    demo_files = _demo_files(upload_dir)
     file_items = [_file_item(path, upload_dir) for path in demo_files]
     file_by_path = {item["path"]: item for item in file_items}
     file_paths = set(file_by_path)
@@ -89,6 +93,9 @@ def demo_storage_report(db: Session, write_manifest: bool = False) -> dict[str, 
             "raw_delete_after_parse_enabled": delete_after_success_enabled(),
             "target_lifecycle": "download -> parse -> verify parsed payload -> delete raw .dem",
             "current_mode": f"{DEMO_RETENTION_POLICY_RETAIN_RAW}; raw .dem files are never deleted by this report",
+            "retained_demo_path_rule": f"{upload_dir}/{RETAINED_DEMO_DIRNAME}/<sha1[0:2]>/<sha1>.dem",
+            "temporary_acquisition_path": str(temp_dir),
+            "parser_handoff_field": "Match.demo_file / DemoParseArtifact.source_demo_file",
         },
         "upload_dir": str(upload_dir),
         "manifest_path": str(reports_dir / "demo_storage_manifest.json"),
@@ -131,7 +138,7 @@ def classify_demo_file_consistency(db: Session, upload_dir: Path | None = None) 
     if upload_dir is None:
         upload_dir = Path(get_settings().upload_dir).resolve()
     upload_dir.mkdir(parents=True, exist_ok=True)
-    demo_files = sorted(upload_dir.glob("*.dem"), key=lambda item: item.name)
+    demo_files = _demo_files(upload_dir)
     file_paths = {str(path.resolve()): path for path in demo_files}
     matches = list(db.scalars(select(Match).where(Match.demo_file.is_not(None)).order_by(Match.id.asc())).all())
     referenced_paths: set[str] = set()
@@ -187,13 +194,84 @@ def _file_item(path: Path, upload_dir: Path) -> dict[str, Any]:
     }
 
 
+def store_demo_file(
+    source_path: Path,
+    original_filename: str | None,
+    *,
+    storage_budget: Any | None = None,
+) -> dict[str, Any]:
+    source = source_path.resolve()
+    if not source.is_file():
+        raise FileNotFoundError(f"Demo source file was not found: {source}")
+    if source.suffix.lower() != ".dem":
+        raise ValueError("Only decompressed .dem files can be retained for parser input.")
+
+    upload_dir = Path(get_settings().upload_dir).resolve()
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    sha1 = _sha1(source)
+    destination = deterministic_demo_path(sha1, upload_dir=upload_dir)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    source_size = source.stat().st_size
+    copied = False
+    status = "already_stored"
+
+    if destination.exists():
+        if _sha1(destination) != sha1:
+            raise ValueError(f"Stored demo path collision for sha1 {sha1}.")
+    elif source == destination:
+        status = "already_stored"
+    else:
+        if storage_budget is not None:
+            storage_budget.ensure_upload_write(source_size, phase="copy_to_retained_demo_storage")
+        shutil.copy2(source, destination)
+        copied = True
+        status = "stored"
+        if storage_budget is not None:
+            storage_budget.record_stored(destination.stat().st_size)
+
+    return {
+        "storage_schema_version": RAW_DEMO_STORAGE_VERSION,
+        "storage_kind": "retained_raw_demo",
+        "storage_status": status,
+        "copied": copied,
+        "sha1": sha1,
+        "size_bytes": destination.stat().st_size,
+        "original_filename": Path(original_filename or source.name).name,
+        "source_path": str(source),
+        "path": str(destination),
+        "relative_path": str(destination.relative_to(upload_dir)),
+        "parser_handoff_path": str(destination),
+        "retention": {
+            "class": "retained",
+            "reason": "raw demo retained for parser/metrics/coach reproducibility",
+            "delete_allowed": False,
+        },
+        "temporary_source": {
+            "path": str(source),
+            "cleanup_owner": "caller" if not source.is_relative_to(upload_dir) else "retained_storage",
+        },
+    }
+
+
+def deterministic_demo_path(sha1: str, *, upload_dir: Path | None = None) -> Path:
+    digest = sha1.strip().lower()
+    if len(digest) != 40 or any(character not in "0123456789abcdef" for character in digest):
+        raise ValueError("sha1 must be a 40-character hexadecimal digest.")
+    root = Path(upload_dir or get_settings().upload_dir).resolve()
+    return root / RETAINED_DEMO_DIRNAME / digest[:2] / f"{digest}.dem"
+
+
 def _resolve_demo_path(value: str | None, upload_dir: Path) -> Path:
     if not value:
         return upload_dir / ""
     path = Path(value)
     if path.is_absolute():
         return path.resolve()
-    return (upload_dir / path.name).resolve()
+    return (upload_dir / path).resolve()
+
+
+def _demo_files(upload_dir: Path) -> list[Path]:
+    return sorted((path for path in upload_dir.rglob("*.dem") if path.is_file()), key=lambda item: str(item))
 
 
 def _sha256_short(path: Path) -> str:
@@ -202,6 +280,14 @@ def _sha256_short(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()[:16]
+
+
+def _sha1(path: Path) -> str:
+    digest = hashlib.sha1()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _bytes_to_mb(value: int) -> float:

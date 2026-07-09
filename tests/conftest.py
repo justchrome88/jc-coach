@@ -30,6 +30,7 @@ os.environ["APP_ENV"] = "test"
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{TEST_DB_PATH}")
 os.environ.setdefault("UPLOAD_DIR", str(TEST_RUNTIME_ROOT / "uploads"))
 os.environ.setdefault("DEMO_INBOX_DIR", str(TEST_RUNTIME_ROOT / "incoming_demos"))
+os.environ.setdefault("TEMP_DIR", str(TEST_RUNTIME_ROOT / "tmp"))
 os.environ.setdefault("REPORTS_DIR", str(TEST_RUNTIME_ROOT / "reports"))
 os.environ.setdefault("AI_HANDOFF_DIR", str(TEST_RUNTIME_ROOT / "ai_handoffs"))
 os.environ.setdefault("SESSION_SECRET_KEY", "pytest-only-session-secret")

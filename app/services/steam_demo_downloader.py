@@ -19,7 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import BASE_DIR, get_settings
-from app.db.models import Match
+from app.db.models import Match, SteamAccount
 from app.services.demo_parser import DemoParseError, import_demo_file
 from app.services.demo_retention import (
     DEMO_RETENTION_STATUS_CLEANUP_NEEDED,
@@ -65,6 +65,7 @@ def download_pending_steam_demos(
     min_played_at: datetime | None = None,
     storage_budget: SteamImportStorageBudget | None = None,
     progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
+    import_job_id: int | None = None,
 ) -> dict[str, Any]:
     storage_budget = storage_budget or SteamImportStorageBudget()
     total_pending = _count_pending_steam_history_matches(db, share_codes=share_codes)
@@ -171,6 +172,7 @@ def download_pending_steam_demos(
                 player_identifier=player_identifier,
                 storage_budget=storage_budget,
                 progress_callback=progress_callback,
+                import_job_id=import_job_id,
             )
             imported += 1 if result.get("imported") else 0
             results.append(result)
@@ -298,6 +300,7 @@ def _download_and_import_match(
     player_identifier: str | None,
     storage_budget: SteamImportStorageBudget | None = None,
     progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
+    import_job_id: int | None = None,
 ) -> dict[str, Any]:
     decoded = decode_match_share_code(share_code)
     demo_url = str(steam_gc_item["demo_url"])
@@ -315,6 +318,7 @@ def _download_and_import_match(
             original_filename=f"{share_code}.dem",
             player_identifier=player_identifier,
             steam_metadata=steam_metadata,
+            acquisition_metadata=_acquisition_metadata(db, match, share_code, import_job_id),
             storage_budget=storage_budget,
             evaluate_recommendations=False,
         )
@@ -326,6 +330,8 @@ def _download_and_import_match(
             stored_path=import_result.get("stored_path"),
             raw_demo_path=import_result.get("raw_demo_path"),
             raw_demo_size_bytes=import_result.get("raw_demo_size_bytes"),
+            storage=import_result.get("storage"),
+            parser_handoff=import_result.get("parser_handoff"),
         )
         _emit_progress(
             progress_callback,
@@ -402,6 +408,8 @@ def _download_and_import_match(
             "raw_demo_path": import_result.get("raw_demo_path"),
             "raw_demo_size_bytes": import_result.get("raw_demo_size_bytes"),
             "parser_success": import_result.get("parser_success"),
+            "storage": import_result.get("storage"),
+            "parser_handoff": import_result.get("parser_handoff"),
             "recommendation_evaluations": recommendation_evaluations,
             "recommendation_evaluation": recommendation_metadata,
             "demo_url_host": urlparse(demo_url).netloc,
@@ -427,6 +435,8 @@ def _download_and_import_match(
         "raw_demo_path": import_result.get("raw_demo_path"),
         "raw_demo_size_bytes": import_result.get("raw_demo_size_bytes"),
         "parser_success": import_result.get("parser_success"),
+        "storage": import_result.get("storage"),
+        "parser_handoff": import_result.get("parser_handoff"),
         "imported": import_result.get("imported", 0),
         "duplicate": import_result.get("skipped_duplicates", 0),
         "recommendation_evaluations": recommendation_evaluations,
@@ -492,7 +502,9 @@ def _download_demo_file(
         raise SteamDemoDownloadError("Steam service bot returned an invalid demo URL.")
     suffix = ".dem.bz2" if url.endswith(".bz2") else ".dem"
     safe_share = share_code.replace("/", "_")
-    temp_dir = Path(tempfile.mkdtemp(prefix="jc-steam-demo-"))
+    temp_root = Path(get_settings().temp_dir).resolve()
+    temp_root.mkdir(parents=True, exist_ok=True)
+    temp_dir = Path(tempfile.mkdtemp(prefix="jc-steam-demo-", dir=temp_root))
     archive_path = temp_dir / f"{safe_share}{suffix}"
     demo_path = temp_dir / f"{safe_share}.dem"
     request = Request(url, headers={"User-Agent": "jc-coach/0.1"})
@@ -657,6 +669,21 @@ def _match_raw(match: Match) -> dict[str, Any]:
     except json.JSONDecodeError:
         raw = {}
     return raw if isinstance(raw, dict) else {}
+
+
+def _acquisition_metadata(db: Session, match: Match, share_code: str, import_job_id: int | None) -> dict[str, Any]:
+    raw = _match_raw(match)
+    steam_account_id = raw.get("steam_account_id")
+    account = db.get(SteamAccount, steam_account_id) if steam_account_id else None
+    return {
+        "import_job_id": import_job_id,
+        "source_match_id": match.id,
+        "source_match_external_id": match.external_match_id,
+        "share_code": share_code,
+        "steam_account_id": account.id if account else steam_account_id,
+        "steam_id": account.steam_id if account else raw.get("steam_id"),
+        "user_id": account.user_id if account else None,
+    }
 
 
 def _match_date_status(steam_metadata: dict[str, Any]) -> str:

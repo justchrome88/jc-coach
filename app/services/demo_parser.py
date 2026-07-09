@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 import json
-import shutil
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -24,6 +23,7 @@ from app.db.models import (
     Match,
 )
 from app.services.demo_retention import retention_metadata
+from app.services.demo_storage import store_demo_file
 from app.services.recommendation_tracking import (
     compact_recommendation_evaluations,
     ensure_default_recommendation,
@@ -88,17 +88,29 @@ def import_demo_file(
     original_filename: str | None = None,
     player_identifier: str | None = None,
     steam_metadata: dict[str, Any] | None = None,
+    acquisition_metadata: dict[str, Any] | None = None,
     storage_budget: Any | None = None,
     evaluate_recommendations: bool = True,
 ) -> dict[str, Any]:
-    stored_path = _store_demo(source_path, original_filename, storage_budget=storage_budget)
+    stored = _store_demo(source_path, original_filename, storage_budget=storage_budget)
+    stored_path = Path(stored["path"])
     try:
         parsed = parse_demo(stored_path, player_identifier=player_identifier)
     except DemoParseError as exc:
         exc.retention = retention_metadata(raw_demo_path=stored_path, parser_success=False)
+        exc.retention["storage"] = stored
         raise
     if steam_metadata:
         apply_steam_metadata_to_parsed_demo(parsed, steam_metadata)
+    storage_metadata = _storage_metadata(stored, acquisition_metadata=acquisition_metadata)
+    parsed["file"] = storage_metadata["parser_handoff_path"]
+    parsed["demo_sha1"] = storage_metadata["sha1"]
+    parsed["storage"] = storage_metadata
+    parsed["parser_handoff"] = {
+        "kind": "raw_demo_file",
+        "path": storage_metadata["parser_handoff_path"],
+        "sha1": storage_metadata["sha1"],
+    }
     retention = retention_metadata(raw_demo_path=stored_path, parser_success=True)
     parsed.update(retention)
     parsed["demo_retention"] = retention
@@ -121,7 +133,7 @@ def import_demo_file(
         db.commit()
         db.refresh(existing)
         _save_demo_parse_artifacts(db, existing, parsed)
-        if stored_path.exists() and str(stored_path) != existing.demo_file:
+        if stored.get("copied") and stored_path.exists() and stored_path.resolve() != Path(existing.demo_file).resolve():
             stored_path.unlink()
         duplicate_retention = retention_metadata(raw_demo_path=existing.demo_file, parser_success=True)
         evaluation_metadata = recommendation_evaluation_metadata(
@@ -144,6 +156,8 @@ def import_demo_file(
             "metric_confidence": parsed["metric_confidence"],
             "parser_confidence": parsed["parser_confidence"],
             "warnings": parsed["warnings"],
+            "storage": storage_metadata,
+            "parser_handoff": parsed["parser_handoff"],
             **duplicate_retention,
             "message": "Demo already imported.",
         }
@@ -183,6 +197,8 @@ def import_demo_file(
         "metric_confidence": parsed["metric_confidence"],
         "parser_confidence": parsed["parser_confidence"],
         "warnings": parsed["warnings"],
+        "storage": storage_metadata,
+        "parser_handoff": parsed["parser_handoff"],
         **retention,
         "message": parsed["message"],
     }
@@ -487,20 +503,38 @@ def _safe_grenade_trajectories(parser, round_end_events) -> list[dict[str, Any]]
     return list(grouped.values())
 
 
-def _store_demo(source_path: Path, original_filename: str | None, storage_budget: Any | None = None) -> Path:
-    settings = get_settings()
-    suffix = source_path.suffix.lower() or ".dem"
-    digest = _file_sha1(source_path)
-    safe_name = Path(original_filename or source_path.name).name.replace(" ", "_")
-    if not safe_name.lower().endswith(".dem"):
-        safe_name = f"{safe_name}{suffix}"
-    destination = Path(settings.upload_dir) / f"{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}_{digest[:10]}_{safe_name}"
-    if storage_budget is not None:
-        storage_budget.ensure_upload_write(source_path.stat().st_size, phase="copy_to_uploads")
-    shutil.copy2(source_path, destination)
-    if storage_budget is not None:
-        storage_budget.record_stored(destination.stat().st_size)
-    return destination
+def _store_demo(source_path: Path, original_filename: str | None, storage_budget: Any | None = None) -> dict[str, Any]:
+    return store_demo_file(source_path, original_filename, storage_budget=storage_budget)
+
+
+def _storage_metadata(
+    stored: dict[str, Any],
+    *,
+    acquisition_metadata: dict[str, Any] | None,
+) -> dict[str, Any]:
+    links = dict(acquisition_metadata or {})
+    return {
+        "schema_version": stored["storage_schema_version"],
+        "kind": stored["storage_kind"],
+        "status": stored["storage_status"],
+        "path": stored["path"],
+        "relative_path": stored["relative_path"],
+        "parser_handoff_path": stored["parser_handoff_path"],
+        "sha1": stored["sha1"],
+        "size_bytes": stored["size_bytes"],
+        "original_filename": stored["original_filename"],
+        "retention": stored["retention"],
+        "temporary_source": stored["temporary_source"],
+        "links": {
+            "import_job_id": links.get("import_job_id"),
+            "source_match_id": links.get("source_match_id"),
+            "source_match_external_id": links.get("source_match_external_id"),
+            "share_code": links.get("share_code"),
+            "user_id": links.get("user_id"),
+            "steam_account_id": links.get("steam_account_id"),
+            "steam_id": links.get("steam_id"),
+        },
+    }
 
 
 def _select_player(deaths, hurts, player_info, identifier: str | None) -> dict[str, str | None]:

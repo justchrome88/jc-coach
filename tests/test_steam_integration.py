@@ -1175,10 +1175,18 @@ def test_streamed_bz2_decompression_counts_bytes(monkeypatch, tmp_path):
 
 
 def test_steam_downloader_passes_gc_match_time_to_demo_import(db, monkeypatch, tmp_path):
+    account = link_steam_account(db, "76561198056634139", persona_name="JC")
     match = Match(
         source="steam_history",
         external_match_id="CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
-        raw_json='{"share_code":"CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL","status":"demo_download_pending"}',
+        raw_json=json.dumps(
+            {
+                "share_code": "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+                "status": "demo_download_pending",
+                "steam_account_id": account.id,
+                "steam_id": account.steam_id,
+            }
+        ),
     )
     db.add(match)
     db.commit()
@@ -1217,11 +1225,16 @@ def test_steam_downloader_passes_gc_match_time_to_demo_import(db, monkeypatch, t
             "demo_url": "https://replay123.valve.net/730/demo.dem.bz2",
         },
         player_identifier=None,
+        import_job_id=99,
     )
 
     db.refresh(match)
     assert captured["steam_metadata"]["played_at"] == "2026-07-02T20:00:00"
     assert captured["steam_metadata"]["played_at_source"] == "steam_gc_match_time"
+    assert captured["acquisition_metadata"]["import_job_id"] == 99
+    assert captured["acquisition_metadata"]["source_match_id"] == match.id
+    assert captured["acquisition_metadata"]["steam_account_id"] == account.id
+    assert captured["acquisition_metadata"]["user_id"] == account.user_id
     assert result["played_at"] == "2026-07-02T20:00:00"
     assert result["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_FOR_DEV
     assert "steam_gc_match_time" in match.raw_json
@@ -1275,6 +1288,47 @@ def test_steam_downloader_writes_exact_gc_match_time_to_imported_match(db, monke
     truth = match_date_truth(imported)
     assert truth["status"] == STEAM_IMPORT_EXACT_MATCH_DATE_AVAILABLE
     assert truth["source"] == "steam_gc_match_time"
+
+
+def test_steam_downloader_cleans_test_owned_temp_acquisition_dir(db, monkeypatch, tmp_path):
+    placeholder = Match(
+        source="steam_history",
+        external_match_id="CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+        raw_json='{"share_code":"CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL","status":"demo_download_pending"}',
+    )
+    db.add(placeholder)
+    db.commit()
+    temp_acquisition_dir = tmp_path / "acquisition-temp"
+    temp_acquisition_dir.mkdir()
+    demo_path = temp_acquisition_dir / "downloaded.dem"
+    demo_path.write_bytes(b"demo")
+
+    def fake_download_demo_file(_url, _share_code, storage_budget=None):
+        return demo_path
+
+    def fake_import_demo_file(inner_db, _demo_path, **_kwargs):
+        imported = Match(source="demo", external_match_id="cleanup-test", raw_json=json.dumps({"match": {}}))
+        inner_db.add(imported)
+        inner_db.commit()
+        inner_db.refresh(imported)
+        return {"match_id": imported.id, "imported": 1, "skipped_duplicates": 0, "stored_path": "/retained/demo.dem"}
+
+    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+
+    _download_and_import_match(
+        db,
+        placeholder,
+        share_code="CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+        steam_gc_item={
+            "share_code": "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL",
+            "match_id": "3822708819734036647",
+            "demo_url": "https://replay123.valve.net/730/demo.dem.bz2",
+        },
+        player_identifier=None,
+    )
+
+    assert not temp_acquisition_dir.exists()
 
 
 def test_steam_downloader_evaluates_recommendations_after_exact_date_truth(db, monkeypatch, tmp_path):

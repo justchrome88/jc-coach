@@ -71,12 +71,15 @@ def test_import_demo_file_persists_match(monkeypatch, tmp_path, db):
     assert result["event_counts"]["player_hurt"] == 2
     assert match is not None
     assert match.demo_file.endswith(".dem")
+    assert "/retained/" in match.demo_file
     assert match.kills == 1
     assert match.utility_damage == 50
     assert result["demo_retention_policy"] == DEMO_RETENTION_POLICY_RETAIN_RAW
     assert result["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_FOR_DEV
     assert result["parser_success"] is True
     assert result["raw_demo_size_bytes"] is not None
+    assert result["storage"]["kind"] == "retained_raw_demo"
+    assert result["parser_handoff"]["path"] == result["stored_path"]
     assert "retain_raw_for_parser_development" in match.raw_json
 
 
@@ -136,6 +139,39 @@ def test_import_demo_file_preserves_unavailable_date_truth_metadata(monkeypatch,
     assert raw["match"]["played_at_source"] == "unavailable"
 
 
+def test_import_demo_file_persists_storage_links_and_parser_handoff(monkeypatch, tmp_path, db):
+    demo_path = tmp_path / "steam-acquired.dem"
+    demo_path.write_bytes(b"HL2DEMO linked")
+    parsed = _parsed_demo_payload(external_match_id="linked-storage", played_at=datetime(2026, 7, 2, 20, 0, 0))
+    monkeypatch.setattr("app.services.demo_parser.parse_demo", lambda *_args, **_kwargs: parsed)
+
+    result = import_demo_file(
+        db,
+        demo_path,
+        original_filename="steam-acquired.dem",
+        acquisition_metadata={
+            "import_job_id": 42,
+            "source_match_id": 7,
+            "source_match_external_id": "CSGO-link",
+            "share_code": "CSGO-link",
+            "user_id": 3,
+            "steam_account_id": 5,
+            "steam_id": "76561198000000000",
+        },
+    )
+    match = db.get(Match, result["match_id"])
+    artifact = db.scalar(select(DemoParseArtifact).where(DemoParseArtifact.match_id == match.id))
+    raw = json.loads(match.raw_json)
+
+    assert raw["storage"]["links"]["import_job_id"] == 42
+    assert raw["storage"]["links"]["source_match_id"] == 7
+    assert raw["storage"]["links"]["user_id"] == 3
+    assert raw["storage"]["links"]["steam_account_id"] == 5
+    assert raw["parser_handoff"]["path"] == result["stored_path"]
+    assert artifact.source_demo_file == result["stored_path"]
+    assert artifact.demo_sha1 == result["storage"]["sha1"]
+
+
 def test_import_demo_file_persists_deep_parse_artifacts(monkeypatch, tmp_path, db):
     demo_path = tmp_path / "match.dem"
     demo_path.write_bytes(b"HL2DEMO")
@@ -169,6 +205,7 @@ def test_duplicate_demo_import_removes_extra_copy(monkeypatch, tmp_path, db):
     assert second["skipped_duplicates"] == 1
     assert second["stored_path"] == first["stored_path"]
     assert second["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_FOR_DEV
+    assert second["storage"]["status"] == "already_stored"
 
 
 def test_parse_failure_retains_raw_demo_metadata(monkeypatch, tmp_path, db):
@@ -196,8 +233,9 @@ def test_parse_failure_retains_raw_demo_metadata(monkeypatch, tmp_path, db):
     assert retention["demo_retention_policy"] == DEMO_RETENTION_POLICY_RETAIN_RAW
     assert retention["demo_retention_status"] == DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE
     assert retention["parser_success"] is False
-    assert retention["raw_demo_path"].endswith("broken.dem")
+    assert retention["raw_demo_path"].endswith(".dem")
     assert retention["raw_demo_size_bytes"] is not None
+    assert retention["storage"]["original_filename"] == "broken.dem"
 
 
 def test_delete_after_success_helper_is_disabled_by_default(tmp_path):

@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite:///{BASE_DIR / 'data' / 'cs2_coach.db'}"
     upload_dir: Path = BASE_DIR / "data" / "uploads"
     demo_inbox_dir: Path = BASE_DIR / "data" / "incoming_demos"
+    temp_dir: Path = BASE_DIR / "data" / "tmp"
     reports_dir: Path = BASE_DIR / "data" / "reports"
     ai_handoff_dir: Path = BASE_DIR / "data" / "ai_handoffs"
     ai_provider: str = "codex_cli_handoff"
@@ -56,6 +57,7 @@ def get_settings() -> Settings:
     _assert_strong_session_secret(settings)
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.demo_inbox_dir.mkdir(parents=True, exist_ok=True)
+    settings.temp_dir.mkdir(parents=True, exist_ok=True)
     settings.reports_dir.mkdir(parents=True, exist_ok=True)
     settings.ai_handoff_dir.mkdir(parents=True, exist_ok=True)
     return settings

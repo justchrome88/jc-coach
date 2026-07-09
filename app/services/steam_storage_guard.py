@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -158,7 +157,7 @@ def steam_storage_guard_settings() -> SteamStorageGuardSettings:
         preserve_free_bytes=max(0, int(settings.steam_import_preserve_free_bytes)),
         unknown_demo_reserve_bytes=max(1, int(settings.steam_import_unknown_demo_reserve_bytes)),
         upload_dir=Path(settings.upload_dir).resolve(),
-        temp_dir=Path(tempfile.gettempdir()).resolve(),
+        temp_dir=Path(settings.temp_dir).resolve(),
     )
 
 

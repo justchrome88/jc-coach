@@ -597,6 +597,7 @@ def run_steam_import_all_job(db: Session, job_id: int) -> dict[str, Any]:
             min_played_at=latest_played_at,
             storage_budget=storage_budget,
             progress_callback=progress_callback,
+            import_job_id=job.id,
         )
         if demo_download.get("budget_status"):
             checkpoint_steam_import_all_job(
@@ -709,7 +710,7 @@ def import_steam_share_code_demo(db: Session, steam_account_id: int, share_code_
         demo_status = mark_steam_history_demo_download_status(db, share_codes=[share_code])
         from app.services.steam_demo_downloader import download_pending_steam_demos
 
-        demo_download = download_pending_steam_demos(db, limit=1, share_codes=[share_code])
+        demo_download = download_pending_steam_demos(db, limit=1, share_codes=[share_code], import_job_id=job.id)
         taxonomy = classify_steam_import_all_result(
             accounts_count=1,
             account_states=[
