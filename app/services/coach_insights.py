@@ -7,6 +7,7 @@ from typing import Any, Literal
 INSIGHT_CARD_SCHEMA_VERSION = "coach-insight-card-v1"
 SURVIVAL_OPENING_INSIGHT_VERSION = "survival-opening-insight-v1"
 BAD_FIGHT_TRADE_INSIGHT_VERSION = "bad-fight-trade-insight-v1"
+UTILITY_VALUE_INSIGHT_VERSION = "utility-value-insight-v1"
 VALID_INSIGHT_CONFIDENCE = {"low", "medium", "high"}
 REQUIRED_INSIGHT_CARD_FIELDS = ("problem", "evidence", "confidence", "caveats", "recommended_focus")
 USABLE_INSIGHT_CONFIDENCE = {"medium", "high"}
@@ -17,6 +18,7 @@ SURVIVAL_RATE_THRESHOLD = 0.55
 MIN_TRADE_STATUS_KNOWN_DEATHS = 2
 MIN_UNTRADED_DEATHS = 2
 UNTRADED_DEATH_RATE_THRESHOLD = 0.60
+MIN_UTILITY_DAMAGE_FOR_INSIGHT = 40
 MEDIUM_CONFIDENCE_CAVEAT = "Metric confidence is medium, so treat this as a bounded review signal."
 
 
@@ -229,10 +231,44 @@ def bad_fight_trade_insights_from_snapshots(
     return sorted(candidates, key=_insight_sort_key)
 
 
+def utility_value_insight_from_snapshot(snapshot: Mapping[str, Any]) -> dict[str, Any] | None:
+    metrics = _mapping(snapshot.get("metrics"))
+    confidence_baseline = _mapping(snapshot.get("confidence_baseline"))
+    metric_confidence = _mapping(confidence_baseline.get("metrics"))
+    if not _looks_like_utility_snapshot(snapshot, metrics, metric_confidence):
+        return None
+
+    utility_evidence = _utility_damage_evidence(snapshot, metrics, metric_confidence)
+    if utility_evidence is not None:
+        confidence = _metric_confidence_level(utility_evidence.get("metric_confidence"))
+        card_confidence: Literal["medium", "high"] = "medium" if confidence == "medium" else "high"
+        return InsightCard(
+            problem="Utility damage is the only supported utility value signal in this match snapshot.",
+            evidence=(utility_evidence,),
+            confidence=card_confidence,
+            caveats=tuple(_utility_value_caveats(snapshot, card_confidence)),
+            recommended_focus=(
+                "Review the damage-producing grenade rounds before making broader utility or lineup changes."
+            ),
+        ).to_dict()
+
+    return _unsupported_utility_insight_from_snapshot(snapshot, metrics, metric_confidence)
+
+
+def utility_value_insights_from_snapshots(
+    snapshots: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    candidates = [
+        card for snapshot in snapshots for card in [utility_value_insight_from_snapshot(snapshot)] if card is not None
+    ]
+    return sorted(candidates, key=_insight_sort_key)
+
+
 def coach_insights_from_snapshots(snapshots: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     candidates = [
         *bad_fight_trade_insights_from_snapshots(snapshots),
         *survival_opening_death_insights_from_snapshots(snapshots),
+        *utility_value_insights_from_snapshots(snapshots),
     ]
     return sorted(candidates, key=_insight_sort_key)
 
@@ -477,6 +513,62 @@ def _ambiguous_trade_insight_from_snapshot(
     ).to_dict()
 
 
+def _utility_damage_evidence(
+    snapshot: Mapping[str, Any],
+    metrics: Mapping[str, Any],
+    metric_confidence: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    utility_damage = _number(metrics.get("utility_damage"))
+    confidence_record = metric_confidence.get("utility_damage")
+    confidence = _metric_confidence_level(confidence_record)
+    if (
+        utility_damage is None
+        or utility_damage < MIN_UTILITY_DAMAGE_FOR_INSIGHT
+        or confidence not in USABLE_INSIGHT_CONFIDENCE
+        or not _confidence_usable_for_insights(confidence_record)
+    ):
+        return None
+
+    evidence: dict[str, Any] = {
+        "metric_id": "utility_damage",
+        "value": int(utility_damage),
+        "threshold": MIN_UTILITY_DAMAGE_FOR_INSIGHT,
+        "metric_confidence": confidence,
+        "match_ids": _match_ids(snapshot),
+        "source": snapshot.get("source"),
+        "description": (
+            f"Utility damage is {int(utility_damage)} in this snapshot, meeting the "
+            f"{MIN_UTILITY_DAMAGE_FOR_INSIGHT} first-pass insight threshold."
+        ),
+    }
+    breakdown = _utility_damage_breakdown(metrics)
+    if breakdown:
+        evidence["breakdown"] = breakdown
+        evidence["description"] += f" Supported damage breakdown: {_utility_breakdown_description(breakdown)}."
+    event_count = _utility_damage_event_count(snapshot)
+    if event_count is not None:
+        evidence["source_event_count"] = event_count
+    return evidence
+
+
+def _unsupported_utility_insight_from_snapshot(
+    snapshot: Mapping[str, Any],
+    metrics: Mapping[str, Any],
+    metric_confidence: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    if not (metrics or metric_confidence or _string_list(snapshot.get("caveats"))):
+        return None
+    return InsightCard(
+        problem="Utility value cannot be judged confidently from this match snapshot.",
+        evidence=tuple(_weak_utility_evidence(snapshot, metrics, metric_confidence)),
+        confidence="low",
+        caveats=tuple(_unsupported_utility_caveats(snapshot, metrics, metric_confidence)),
+        recommended_focus=(
+            "Collect supported utility damage evidence before turning flash, detonation or grenade data into advice."
+        ),
+    ).to_dict()
+
+
 def _bad_fight_trade_caveats(
     snapshot: Mapping[str, Any],
     metrics: Mapping[str, Any],
@@ -499,6 +591,45 @@ def _bad_fight_trade_caveats(
     return _ordered_unique(caveats)
 
 
+def _utility_value_caveats(snapshot: Mapping[str, Any], confidence: str) -> list[str]:
+    caveats = [
+        "This card is generated only from D04/D05 utility metric snapshots.",
+        (
+            "Utility damage supports damage review only; it does not prove grenade quality, lineup quality, "
+            "or flash value."
+        ),
+        "Do not infer exact playlist, mode, enemy position, timing model, economy impact, or map-specific causes.",
+        "Unsupported grenade_rating and flash_assists must remain omitted unless accepted source data exists.",
+    ]
+    if confidence == "medium":
+        caveats.append(MEDIUM_CONFIDENCE_CAVEAT)
+    caveats.extend(_string_list(snapshot.get("caveats")))
+    return _ordered_unique(caveats)
+
+
+def _unsupported_utility_caveats(
+    snapshot: Mapping[str, Any],
+    metrics: Mapping[str, Any],
+    metric_confidence: Mapping[str, Any],
+) -> list[str]:
+    caveats = [
+        "No supported utility_damage evidence met the first-pass utility insight gate.",
+        (
+            "Weak flash and detonation facts cannot be converted into grenade value, flash assists, lineups, "
+            "or grenade_rating."
+        ),
+    ]
+    utility_damage = _number(metrics.get("utility_damage"))
+    if utility_damage is not None and utility_damage < MIN_UTILITY_DAMAGE_FOR_INSIGHT:
+        caveats.append(
+            f"Utility damage is below the {MIN_UTILITY_DAMAGE_FOR_INSIGHT} first-pass insight threshold."
+        )
+    utility_confidence = _mapping(metric_confidence.get("utility_damage"))
+    caveats.extend(_string_list(utility_confidence.get("reasons")))
+    caveats.extend(_string_list(snapshot.get("caveats")))
+    return _ordered_unique(caveats)
+
+
 def _survival_opening_caveats(
     snapshot: Mapping[str, Any],
     evidence: Sequence[Mapping[str, Any]],
@@ -517,6 +648,95 @@ def _survival_opening_caveats(
     return _ordered_unique(caveats)
 
 
+def _looks_like_utility_snapshot(
+    snapshot: Mapping[str, Any],
+    metrics: Mapping[str, Any],
+    metric_confidence: Mapping[str, Any],
+) -> bool:
+    metadata = _mapping(snapshot.get("metadata"))
+    confidence_baseline = _mapping(snapshot.get("confidence_baseline"))
+    if snapshot.get("source") == "utility_metrics":
+        return True
+    if str(metadata.get("schema_version") or "").startswith("utility-metrics"):
+        return True
+    if str(confidence_baseline.get("source") or "").startswith("utility-metrics"):
+        return True
+    utility_metric_ids = {
+        "utility_damage",
+        "he_damage",
+        "molotov_damage",
+        "enemies_flashed",
+        "flash_detonations",
+        "smoke_detonations",
+        "he_detonations",
+        "molotov_detonations",
+        "flash_assists",
+        "grenade_rating",
+    }
+    return bool(utility_metric_ids & (set(metrics) | set(metric_confidence)))
+
+
+def _weak_utility_evidence(
+    snapshot: Mapping[str, Any],
+    metrics: Mapping[str, Any],
+    metric_confidence: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    evidence = []
+    for metric_id in (
+        "utility_damage",
+        "enemies_flashed",
+        "flash_detonations",
+        "smoke_detonations",
+        "he_detonations",
+        "molotov_detonations",
+    ):
+        value = _number(metrics.get(metric_id))
+        if value is None:
+            continue
+        confidence = _metric_confidence_level(metric_confidence.get(metric_id)) or "low"
+        item: dict[str, Any] = {
+            "metric_id": metric_id,
+            "value": int(value),
+            "metric_confidence": confidence,
+            "match_ids": _match_ids(snapshot),
+            "source": snapshot.get("source"),
+            "description": (
+                f"{metric_id} is present but did not pass the supported utility insight gate; "
+                "treat it as caveated context only."
+            ),
+        }
+        if metric_id == "utility_damage":
+            item["threshold"] = MIN_UTILITY_DAMAGE_FOR_INSIGHT
+        evidence.append(item)
+    return evidence[:3]
+
+
+def _utility_damage_breakdown(metrics: Mapping[str, Any]) -> dict[str, int]:
+    breakdown = {}
+    for metric_id in ("he_damage", "molotov_damage"):
+        value = _number(metrics.get(metric_id))
+        if value is not None and value > 0:
+            breakdown[metric_id] = int(value)
+    return breakdown
+
+
+def _utility_breakdown_description(breakdown: Mapping[str, int]) -> str:
+    return ", ".join(f"{metric_id}={value}" for metric_id, value in sorted(breakdown.items()))
+
+
+def _utility_damage_event_count(snapshot: Mapping[str, Any]) -> int | None:
+    confidence_baseline = _mapping(snapshot.get("confidence_baseline"))
+    event_coverage = _mapping(confidence_baseline.get("event_coverage"))
+    count = _number(event_coverage.get("utility_damage_events"))
+    return int(count) if count is not None else None
+
+
+def _confidence_usable_for_insights(value: Any) -> bool:
+    if isinstance(value, Mapping) and value.get("usable_for_insights") is False:
+        return False
+    return True
+
+
 def _card_confidence(evidence: Sequence[Mapping[str, Any]]) -> Literal["medium", "high"]:
     levels = {_metric_confidence_level(item.get("metric_confidence")) for item in evidence}
     return "medium" if "medium" in levels else "high"
@@ -527,15 +747,20 @@ def _insight_sort_key(card: Mapping[str, Any]) -> tuple[int, float, int]:
     primary = evidence[0] if evidence and isinstance(evidence[0], Mapping) else {}
     metric_id = primary.get("metric_id")
     value = _number(primary.get("value")) or 0.0
+    confidence = card.get("confidence")
     if metric_id == "untraded_death_rate":
         return (0, -value, -int(primary.get("sample_count") or 0))
     if metric_id == "opening_death_rate":
         return (1, -value, -int(primary.get("sample_count") or 0))
     if metric_id == "survival_rate":
         return (2, value, -int(primary.get("sample_count") or 0))
+    if metric_id == "utility_damage":
+        return (3 if confidence in USABLE_INSIGHT_CONFIDENCE else 5, -value, 0)
     if metric_id == "ambiguous_traded_deaths":
-        return (3, -value, -int(primary.get("sample_count") or 0))
-    return (4, 0.0, 0)
+        return (4, -value, -int(primary.get("sample_count") or 0))
+    if metric_id in {"enemies_flashed", "flash_detonations", "smoke_detonations", "he_detonations"}:
+        return (5, -value, -int(primary.get("sample_count") or 0))
+    return (5, 0.0, 0)
 
 
 def _metric_confidence_level(value: Any) -> str | None:

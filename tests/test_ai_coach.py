@@ -153,6 +153,43 @@ def test_ai_coach_payload_includes_deterministic_bad_fight_trade_insight_cards(d
     assert payload["coach_insight_cards"][0]["confidence"] == "high"
 
 
+def test_ai_coach_payload_includes_deterministic_utility_value_insight_cards(db):
+    match = Match(source="demo", external_match_id="utility-insight-ai")
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:76561198000000001",
+        player_name="Alpha",
+        player_steamid="76561198000000001",
+        source="utility_metrics",
+        source_event_set_id="fixture:c05:utility",
+        metrics={"utility_damage": 49, "he_damage": 42, "molotov_damage": 7, "enemies_flashed": 1},
+        confidence_baseline={
+            "source": "utility-metrics-v1",
+            "metrics": {
+                "utility_damage": {"level": "medium", "usable_for_insights": True},
+                "enemies_flashed": {"level": "low", "usable_for_insights": False},
+                "grenade_rating": {"level": "unavailable", "usable_for_insights": False},
+            },
+            "event_coverage": {"utility_damage_events": 2},
+        },
+        caveats=["Utility damage is inferred from parser weapon name on player_hurt."],
+        metadata={"schema_version": "utility-metrics-v1"},
+    )
+
+    payload = build_ai_coach_payload(db)
+
+    card = payload["coach_insight_cards"][0]
+    assert card["problem"] == "Utility damage is the only supported utility value signal in this match snapshot."
+    assert card["evidence"][0]["metric_id"] == "utility_damage"
+    assert card["evidence"][0]["value"] == 49
+    assert card["confidence"] == "medium"
+    assert "grenade_rating" not in card["evidence"][0]
+
+
 def test_ai_payload_uses_exact_recent_matches_and_reports_exclusions(db):
     db.add_all(
         [

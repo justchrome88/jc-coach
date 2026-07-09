@@ -7,7 +7,16 @@ from app.services.coach_insights import (
     serialize_insight_cards,
     survival_opening_death_insight_from_snapshot,
     survival_opening_death_insights_from_snapshots,
+    utility_value_insight_from_snapshot,
     validate_insight_cards,
+)
+
+UTILITY_OMISSION_CAVEAT = (
+    "Unsupported grenade_rating and flash_assists must remain omitted unless accepted source data exists."
+)
+UTILITY_WEAK_DATA_CAVEAT = (
+    "Weak flash and detonation facts cannot be converted into grenade value, flash assists, lineups, "
+    "or grenade_rating."
 )
 
 
@@ -353,6 +362,147 @@ def test_combined_coach_insights_prioritize_bad_fight_trade_before_prior_surviva
     ]
 
 
+def test_utility_value_insight_uses_supported_damage_without_grenade_rating_claim():
+    card = utility_value_insight_from_snapshot(
+        _utility_snapshot(
+            metrics={
+                "utility_damage": 49,
+                "he_damage": 42,
+                "molotov_damage": 7,
+                "enemies_flashed": 1,
+                "flash_detonations": 1,
+            },
+            confidence={
+                "utility_damage": {
+                    "level": "medium",
+                    "usable_for_insights": True,
+                    "hard_recommendation_eligible": True,
+                },
+                "enemies_flashed": {"level": "low", "usable_for_insights": False},
+                "grenade_rating": {"level": "unavailable", "usable_for_insights": False},
+            },
+            caveats=["Utility damage is inferred from parser weapon name on player_hurt."],
+        )
+    )
+
+    assert card is not None
+    assert validate_insight_cards([card]) == ()
+    assert card["problem"] == "Utility damage is the only supported utility value signal in this match snapshot."
+    assert card["confidence"] == "medium"
+    assert card["evidence"] == [
+        {
+            "metric_id": "utility_damage",
+            "value": 49,
+            "threshold": 40,
+            "metric_confidence": "medium",
+            "match_ids": [42],
+            "source": "utility_metrics",
+            "description": (
+                "Utility damage is 49 in this snapshot, meeting the 40 first-pass insight threshold. "
+                "Supported damage breakdown: he_damage=42, molotov_damage=7."
+            ),
+            "breakdown": {"he_damage": 42, "molotov_damage": 7},
+            "source_event_count": 2,
+        }
+    ]
+    assert MEDIUM_CONFIDENCE_CAVEAT in card["caveats"]
+    assert UTILITY_OMISSION_CAVEAT in card["caveats"]
+    assert "Utility damage is inferred from parser weapon name on player_hurt." in card["caveats"]
+
+
+def test_unsupported_utility_data_produces_low_confidence_no_claim_with_caveat():
+    card = utility_value_insight_from_snapshot(
+        _utility_snapshot(
+            metrics={},
+            confidence={
+                "utility_damage": {
+                    "level": "unavailable",
+                    "reasons": [
+                        (
+                            "No supported utility_damage events for this player; utility damage is omitted "
+                            "instead of set to zero."
+                        )
+                    ],
+                    "usable_for_insights": False,
+                },
+                "grenade_rating": {"level": "unavailable", "usable_for_insights": False},
+            },
+            caveats=[
+                "Utility damage source data is missing; utility damage metrics are unavailable.",
+                "Downstream coach and metrics layers must not infer grenade quality from missing utility data.",
+            ],
+        )
+    )
+
+    assert card is not None
+    assert validate_insight_cards([card]) == ()
+    assert card["problem"] == "Utility value cannot be judged confidently from this match snapshot."
+    assert card["confidence"] == "low"
+    assert card["evidence"] == []
+    assert "No supported utility_damage evidence met the first-pass utility insight gate." in card["caveats"]
+    assert (
+        "Downstream coach and metrics layers must not infer grenade quality from missing utility data."
+        in card["caveats"]
+    )
+
+
+def test_weak_flash_utility_data_stays_low_confidence_context_only():
+    card = utility_value_insight_from_snapshot(
+        _utility_snapshot(
+            metrics={"enemies_flashed": 1, "flash_detonations": 1},
+            confidence={
+                "enemies_flashed": {"level": "low", "usable_for_insights": False},
+                "flash_detonations": {"level": "low", "usable_for_insights": False},
+                "utility_damage": {"level": "unavailable", "usable_for_insights": False},
+            },
+            caveats=["Source row omitted blind duration; flash value must remain low-confidence."],
+        )
+    )
+
+    assert card is not None
+    assert validate_insight_cards([card]) == ()
+    assert card["confidence"] == "low"
+    assert [item["metric_id"] for item in card["evidence"]] == ["enemies_flashed", "flash_detonations"]
+    assert all(item["metric_confidence"] == "low" for item in card["evidence"])
+    assert UTILITY_WEAK_DATA_CAVEAT in card["caveats"]
+    assert "Source row omitted blind duration; flash value must remain low-confidence." in card["caveats"]
+
+
+def test_utility_value_confidence_gate_blocks_hard_claim_from_low_confidence_damage():
+    card = utility_value_insight_from_snapshot(
+        _utility_snapshot(
+            metrics={"utility_damage": 90},
+            confidence={
+                "utility_damage": {
+                    "level": "low",
+                    "reasons": ["Utility damage source events are incomplete."],
+                    "usable_for_insights": False,
+                }
+            },
+        )
+    )
+
+    assert card is not None
+    assert validate_insight_cards([card]) == ()
+    assert card["problem"] == "Utility value cannot be judged confidently from this match snapshot."
+    assert card["confidence"] == "low"
+    assert card["evidence"] == [
+        {
+            "metric_id": "utility_damage",
+            "value": 90,
+            "metric_confidence": "low",
+            "match_ids": [42],
+            "source": "utility_metrics",
+            "description": (
+                "utility_damage is present but did not pass the supported utility insight gate; "
+                "treat it as caveated context only."
+            ),
+            "threshold": 40,
+        }
+    ]
+    assert "Utility damage source events are incomplete." in card["caveats"]
+
+
 def _snapshot(
     *,
     metrics: dict,
@@ -370,4 +520,33 @@ def _snapshot(
         "confidence_baseline": {"source": "core-combat-metrics-v1", "metrics": confidence},
         "caveats": caveats or [],
         "metadata": {"schema_version": "core-combat-metrics-v1"},
+    }
+
+
+def _utility_snapshot(
+    *,
+    metrics: dict,
+    confidence: dict,
+    match_id: int = 42,
+    caveats: list[str] | None = None,
+) -> dict:
+    return {
+        "id": 200 + match_id,
+        "match_id": match_id,
+        "player_key": "steam:76561198000000001",
+        "source": "utility_metrics",
+        "source_event_set_id": "fixture:c05:utility",
+        "metrics": metrics,
+        "confidence_baseline": {
+            "source": "utility-metrics-v1",
+            "metrics": confidence,
+            "event_coverage": {
+                "utility_damage_events": 2,
+                "flash_effect_events": 1,
+                "utility_detonation_events": 4,
+                "utility_data_gap_events": 1,
+            },
+        },
+        "caveats": caveats or [],
+        "metadata": {"schema_version": "utility-metrics-v1"},
     }
