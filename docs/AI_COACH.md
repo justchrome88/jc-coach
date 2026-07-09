@@ -14,6 +14,14 @@ Stage 6 parser payloads add clearer warnings for early-death timing, KAST trade 
 
 Stage 8 adds AI Output Validator without schema changes and without live AI calls. Structured AI output is validated before persistence/display; invalid or free-form output is replaced by safe fallback Markdown and validation metadata is stored in `coach_reports.report_json`.
 
+WP-018-04 extends runtime validation to enforce the current semantic coach
+contract when a payload snapshot is available. Persisted AI coach output is
+checked against the WP-018-02 version/snapshot metadata, WP-018-03 domain
+contract metadata, public/friends and `v1.0` blockers, playlist/mode
+limitations, weak-metric caveat requirements, legacy recommendation refresh
+boundaries and unavailable CS2 model boundaries. Output that violates those
+checks uses the same safe fallback path as invalid schema output.
+
 CS2 domain boundaries are defined in `docs/CS2_DOMAIN_CONTRACT.md`. AI coach
 payloads and results must keep those source limitations visible: playlist/mode
 is not exact in `v0.9`, economy/positioning/clutch models are unavailable, side
@@ -146,6 +154,8 @@ available in the payload and the full prompt payload used for the report.
 - Unknown metric ids are rejected.
 - Suppressed or unavailable metrics cannot support diagnosis/recommendation claims.
 - Approximate/warn metrics require explicit `caveats`.
+- Persisted runtime validation rejects semantic contract violations when they
+  are detectable from structured AI output and the payload snapshot.
 
 ## Output Schema
 
@@ -170,7 +180,11 @@ recommendations[]:
 warnings[]: string
 evidence[]:
   metric_id: string
+  metric_confidence: low | medium | high | unavailable
   value: optional
+  problem/problem_id: optional
+  match_ids/sample_count/window: optional
+  recommendation_id: optional
   caveats[]: string
 confidence: low | medium | high
 ```

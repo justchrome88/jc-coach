@@ -194,7 +194,14 @@ def _valid_ai_output() -> dict:
             }
         ],
         "warnings": ["Do not infer crosshair placement from current data."],
-        "evidence": [{"metric_id": "entry_deaths", "value": 3, "caveats": ["Source/order dependent."]}],
+        "evidence": [
+            {
+                "metric_id": "entry_deaths",
+                "value": 3,
+                "metric_confidence": "medium",
+                "caveats": ["Source/order dependent."],
+            }
+        ],
         "confidence": "medium",
     }
 

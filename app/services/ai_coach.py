@@ -164,7 +164,8 @@ def save_ai_coach_result(
         raise ValueError("AI coach result is empty.")
     if len(raw_content) > 60_000:
         raise ValueError("AI coach result is too long.")
-    validation = validate_ai_coach_output(raw_content)
+    snapshot = payload_snapshot or build_ai_coach_payload(db)
+    validation = validate_ai_coach_output(raw_content, payload_snapshot=snapshot)
     content = (
         render_ai_output_markdown(validation.output)
         if validation.valid and validation.output is not None
@@ -176,7 +177,6 @@ def save_ai_coach_result(
     period_start = next((match.played_at for match in matches if match.played_at), None)
     period_end = next((match.played_at for match in reversed(matches) if match.played_at), None)
     latest_handoff = latest_ai_handoff()
-    snapshot = payload_snapshot or build_ai_coach_payload(db)
     metadata = _ai_report_metadata(content, snapshot, latest_handoff, source_ref)
     metadata["ai_validation"] = validation.to_dict()
     if validation.valid and validation.output is not None:
@@ -355,6 +355,8 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
             "evidence[], confidence.",
             "- В diagnoses указывай category, severity, claim, evidence_metric_ids[], confidence, caveats[].",
             "- В recommendations указывай category, action, rationale, target_metric_ids[], confidence, caveats[].",
+            "- В evidence указывай metric_id, metric_confidence, caveats[] и, если есть в payload, "
+            "problem/problem_id, match_ids/sample_count/window и recommendation_id.",
             "- Для approximate/warn metrics обязательно добавляй caveats; suppressed/unavailable metrics "
             "не используй как evidence.",
             "- Соблюдай domain_constraints, claim_guardrails, metric_confidence_policy, playlist_mode_policy, "
