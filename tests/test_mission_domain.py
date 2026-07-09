@@ -19,6 +19,7 @@ from app.services.mission_domain import (
     create_analysis_run,
     create_coach_hypothesis,
     create_draft_coach_mission,
+    evaluate_mission_progress,
     get_analysis_run,
     get_coach_hypothesis,
     get_coach_mission,
@@ -240,6 +241,174 @@ def test_progress_evaluation_rejects_unknown_status(db):
         )
 
 
+@pytest.mark.parametrize(
+    ("future_value", "expected_status"),
+    [
+        (0.24, "improving"),
+        (0.31, "unchanged"),
+        (0.38, "regressing"),
+    ],
+)
+def test_evaluate_opening_mission_progress_outcomes(db, future_value, expected_status):
+    owner = _user(db, "owner")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Survive openings",
+    )
+
+    evaluation = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_window_start=datetime(2026, 7, 9),
+        evaluation_window_end=datetime(2026, 7, 16),
+        evaluation_metric_snapshots=[
+            _snapshot(
+                owner,
+                owner_steam_id=mission.owner_steam_id,
+                metrics={"opening_death_rate": future_value},
+                sample_matches=3,
+                sample_rounds=72,
+            )
+        ],
+    )
+
+    result = json.loads(evaluation.result_json)
+    assert evaluation.status == expected_status
+    assert result["evaluation_window_json"]["sample_matches"] == 3
+    assert result["components"][0]["metric_name"] == "opening_death_rate"
+    assert result["components"][0]["outcome"] == expected_status
+    assert evaluation.owner_steam_id == mission.owner_steam_id
+
+
+def test_evaluate_mission_progress_distinguishes_missing_data(db):
+    owner = _user(db, "owner")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Survive openings",
+    )
+
+    evaluation = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            _snapshot(
+                owner,
+                owner_steam_id=mission.owner_steam_id,
+                metrics={"survival_rate": 0.55},
+                sample_matches=3,
+                sample_rounds=72,
+            )
+        ],
+    )
+
+    result = json.loads(evaluation.result_json)
+    assert evaluation.status == "insufficient_data"
+    assert result["components"][0]["outcome"] == "insufficient_data"
+    assert "missing_metric" in result["components"][0]["reason_codes"]
+    assert json.loads(evaluation.caveats_json) == ["opening_death_rate:missing_metric"]
+
+
+def test_evaluate_mission_progress_distinguishes_not_following(db):
+    owner = _user(db, "owner")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_utility_card_with_follow_rule(),
+        title="Utility discipline",
+    )
+
+    evaluation = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            _snapshot(
+                owner,
+                owner_steam_id=mission.owner_steam_id,
+                metrics={
+                    "utility_damage": 98,
+                    "utility_uses_per_match": 1,
+                },
+                sample_matches=4,
+                sample_rounds=96,
+            )
+        ],
+    )
+
+    result = json.loads(evaluation.result_json)
+    assert evaluation.status == "not_following"
+    assert result["components"][0]["outcome"] == "not_following"
+    assert "not_following" in result["components"][0]["reason_codes"]
+    assert json.loads(evaluation.caveats_json) == ["utility_damage:not_following"]
+
+
+def test_evaluate_mission_progress_guardrail_blocks_harmful_success(db):
+    owner = _user(db, "owner")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_survival_with_adr_guardrail_card(),
+        title="Survive with damage",
+    )
+
+    evaluation = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            _snapshot(
+                owner,
+                owner_steam_id=mission.owner_steam_id,
+                metrics={
+                    "survival_rate": 0.58,
+                    "adr": 58,
+                },
+                sample_matches=4,
+                sample_rounds=96,
+            )
+        ],
+    )
+
+    result = json.loads(evaluation.result_json)
+    assert evaluation.status == "regressing"
+    assert result["target_met"] is False
+    assert result["component_metrics"]["survival_rate"]["outcome"] == "improving"
+    assert result["component_metrics"]["adr"]["outcome"] == "regressing"
+
+
+def test_evaluate_mission_progress_rejects_cross_owner_snapshot(db):
+    owner = _user(db, "owner")
+    other_owner = _user(db, "other")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Survive openings",
+    )
+
+    with pytest.raises(PermissionError):
+        evaluate_mission_progress(
+            db,
+            user_id=owner.id,
+            mission_id=mission.id,
+            evaluation_metric_snapshots=[
+                _snapshot(
+                    other_owner,
+                    owner_steam_id="76561198000000999",
+                    metrics={"opening_death_rate": 0.24},
+                    sample_matches=3,
+                    sample_rounds=72,
+                )
+            ],
+        )
+
+
 def test_active_mission_requires_ready_metric_confidence_and_persists_explicit_criteria(db):
     owner = _user(db, "owner")
     run = create_analysis_run(db, user_id=owner.id, owner_steam_id="76561198000000002")
@@ -392,4 +561,114 @@ def _ready_opening_death_card() -> dict:
             "missing_requirements": [],
             "blocking_reason_codes": [],
         },
+    }
+
+
+def _ready_utility_card_with_follow_rule() -> dict:
+    return {
+        "problem": "Utility damage needs repeatable usage.",
+        "evidence": [{"metric_id": "utility_damage", "value": 94, "metric_confidence": "medium"}],
+        "confidence": "medium",
+        "caveats": [],
+        "recommended_focus": "Use planned utility before taking space.",
+        "mission_readiness": {
+            "can_become_mission": True,
+            "target_metric_candidate": "utility_damage",
+            "baseline_value": 94,
+            "confidence_eligibility": {
+                "level": "medium",
+                "usable_for_missions": True,
+                "hard_recommendation_eligible": True,
+            },
+            "missing_requirements": [],
+            "blocking_reason_codes": [],
+            "criteria": [
+                {
+                    "metric_name": "utility_damage",
+                    "role": "primary",
+                    "direction": "higher_is_better",
+                    "baseline_value": 94,
+                    "target_value": 110,
+                    "min_sample_matches": 3,
+                    "rule": {
+                        "follow_rule": {
+                            "metric_name": "utility_uses_per_match",
+                            "operator": ">=",
+                            "value": 3,
+                        }
+                    },
+                }
+            ],
+        },
+    }
+
+
+def _ready_survival_with_adr_guardrail_card() -> dict:
+    return {
+        "problem": "Survival is low without enough damage impact.",
+        "evidence": [{"metric_id": "survival_rate", "value": 0.47, "metric_confidence": "medium"}],
+        "confidence": "medium",
+        "caveats": [],
+        "recommended_focus": "Survive opening fights without disappearing from damage trades.",
+        "mission_readiness": {
+            "can_become_mission": True,
+            "target_metric_candidate": "survival_rate",
+            "baseline_value": 0.47,
+            "confidence_eligibility": {
+                "level": "medium",
+                "usable_for_missions": True,
+                "hard_recommendation_eligible": True,
+            },
+            "missing_requirements": [],
+            "blocking_reason_codes": [],
+            "criteria": [
+                {
+                    "metric_name": "survival_rate",
+                    "role": "primary",
+                    "direction": "higher_is_better",
+                    "baseline_value": 0.47,
+                    "target_value": 0.52,
+                    "min_sample_matches": 3,
+                },
+                {
+                    "metric_name": "adr",
+                    "role": "guardrail",
+                    "direction": "not_drop_more_than",
+                    "baseline_value": 78,
+                    "target_value": 68,
+                    "min_sample_matches": 3,
+                    "rule": {"max_drop": 10},
+                },
+            ],
+        },
+    }
+
+
+def _active_mission_from_card(db, *, owner: User, card: dict, title: str) -> CoachMission:
+    run = create_analysis_run(db, user_id=owner.id, owner_steam_id="76561198000000001")
+    hypothesis = create_coach_hypothesis(
+        db,
+        user_id=owner.id,
+        analysis_run_id=run.id,
+        insight_card=card,
+    )
+    return activate_coach_mission(db, user_id=owner.id, hypothesis_id=hypothesis.id, title=title)
+
+
+def _snapshot(
+    owner: User,
+    *,
+    owner_steam_id: str | None,
+    metrics: dict,
+    sample_matches: int,
+    sample_rounds: int,
+) -> dict:
+    return {
+        "id": owner.id * 1000 + sample_rounds,
+        "user_id": owner.id,
+        "owner_steam_id": owner_steam_id,
+        "metrics": metrics,
+        "confidence": "medium",
+        "sample_matches": sample_matches,
+        "sample_rounds": sample_rounds,
     }

@@ -352,6 +352,63 @@ def record_mission_progress_evaluation(
     return evaluation
 
 
+def evaluate_mission_progress(
+    db: Session,
+    *,
+    user_id: int,
+    mission_id: int,
+    evaluation_metric_snapshots: Sequence[Any],
+    evaluation_window_start: datetime | None = None,
+    evaluation_window_end: datetime | None = None,
+    evaluation_window: Mapping[str, Any] | None = None,
+) -> MissionProgressEvaluation:
+    mission = _require_owned_mission(db, user_id=user_id, mission_id=mission_id)
+    if mission.status != "active":
+        raise ValueError(f"Cannot evaluate mission progress from status: {mission.status}")
+    criteria_rows = list_mission_criteria(db, user_id=user_id, mission_id=mission.id)
+    snapshot_window = _metric_snapshot_window(mission, evaluation_metric_snapshots)
+    components = [
+        _evaluate_criteria(criteria, snapshot_window)
+        for criteria in criteria_rows
+    ]
+    status = _composite_progress_status(components)
+    caveats = _evaluation_caveats(snapshot_window, components)
+    window_payload = {
+        "start": evaluation_window_start.isoformat() if evaluation_window_start else None,
+        "end": evaluation_window_end.isoformat() if evaluation_window_end else None,
+        "snapshot_ids": snapshot_window["snapshot_ids"],
+        "snapshot_count": snapshot_window["snapshot_count"],
+        "sample_matches": snapshot_window["sample_matches"],
+        "sample_rounds": snapshot_window["sample_rounds"],
+    }
+    if evaluation_window:
+        window_payload.update(dict(evaluation_window))
+    result = {
+        "mission_id": mission.id,
+        "owner_steam_id": mission.owner_steam_id,
+        "status": status,
+        "evaluation_window_json": window_payload,
+        "components": components,
+        "component_metrics": {
+            component["metric_name"]: component
+            for component in components
+        },
+        "source_metric_snapshot_ids": snapshot_window["snapshot_ids"],
+        "target_met": _target_met(components),
+    }
+    return record_mission_progress_evaluation(
+        db,
+        user_id=user_id,
+        mission_id=mission.id,
+        status=status,
+        evaluation_window_start=evaluation_window_start,
+        evaluation_window_end=evaluation_window_end,
+        result=result,
+        confidence=_evaluation_confidence(snapshot_window, components),
+        caveats=caveats,
+    )
+
+
 def list_mission_progress_evaluations(
     db: Session,
     *,
@@ -405,6 +462,415 @@ def _require_mission_hypothesis(db: Session, mission: CoachMission) -> CoachHypo
     if hypothesis.user_id != mission.user_id:
         raise PermissionError("Coach mission source hypothesis belongs to a different user.")
     return hypothesis
+
+
+def _metric_snapshot_window(
+    mission: CoachMission,
+    evaluation_metric_snapshots: Sequence[Any],
+) -> dict[str, Any]:
+    metrics: dict[str, list[float]] = {}
+    caveats: list[str] = []
+    confidence_values: list[float] = []
+    snapshot_ids: list[int] = []
+    sample_matches = 0
+    sample_rounds = 0
+    for raw_snapshot in evaluation_metric_snapshots:
+        snapshot = _snapshot_to_mapping(raw_snapshot)
+        _validate_snapshot_owner(mission, snapshot)
+        snapshot_id = _optional_int(snapshot.get("id"))
+        if snapshot_id is not None:
+            snapshot_ids.append(snapshot_id)
+        metric_payload = _snapshot_payload_mapping(snapshot, "metrics", "metrics_json")
+        for metric_name, raw_value in metric_payload.items():
+            value = _metric_numeric_value(raw_value)
+            if value is not None:
+                metrics.setdefault(str(metric_name), []).append(value)
+        confidence = _snapshot_confidence(snapshot)
+        if confidence is not None:
+            confidence_values.append(confidence)
+        caveats.extend(_snapshot_caveats(snapshot))
+        sample_matches += _sample_count(snapshot, "matches")
+        sample_rounds += _sample_count(snapshot, "rounds")
+    if evaluation_metric_snapshots and sample_matches == 0:
+        sample_matches = len(evaluation_metric_snapshots)
+    return {
+        "metrics": {
+            metric_name: sum(values) / len(values)
+            for metric_name, values in metrics.items()
+        },
+        "snapshot_ids": snapshot_ids,
+        "snapshot_count": len(evaluation_metric_snapshots),
+        "sample_matches": sample_matches,
+        "sample_rounds": sample_rounds,
+        "confidence": min(confidence_values) if confidence_values else None,
+        "caveats": caveats,
+    }
+
+
+def _evaluate_criteria(criteria: MissionCriteria, snapshot_window: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _mapping(snapshot_window.get("metrics"))
+    rule = _json_load_mapping(criteria.rule_json)
+    component = {
+        "criteria_id": criteria.id,
+        "metric_name": criteria.metric_name,
+        "role": criteria.role,
+        "direction": criteria.direction,
+        "baseline_value": criteria.baseline_value,
+        "target_value": criteria.target_value,
+        "observed_value": _optional_number(metrics.get(criteria.metric_name))
+        if criteria.metric_name in metrics
+        else None,
+        "outcome": "insufficient_data",
+        "reason_codes": [],
+        "sample_matches": snapshot_window.get("sample_matches"),
+        "sample_rounds": snapshot_window.get("sample_rounds"),
+        "confidence": snapshot_window.get("confidence"),
+        "rule": rule,
+    }
+    sample_reason = _insufficient_sample_reason(criteria, snapshot_window)
+    confidence_reason = _insufficient_confidence_reason(criteria, snapshot_window)
+    if criteria.metric_name not in metrics:
+        component["reason_codes"].append("missing_metric")
+        return component
+    if sample_reason:
+        component["reason_codes"].append(sample_reason)
+        return component
+    if confidence_reason:
+        component["reason_codes"].append(confidence_reason)
+        return component
+
+    follow_outcome = _not_following_outcome(rule, metrics)
+    if follow_outcome is not None:
+        component["outcome"] = follow_outcome
+        component["reason_codes"].append(follow_outcome)
+        return component
+
+    observed = _optional_number(metrics.get(criteria.metric_name))
+    baseline = criteria.baseline_value
+    component["outcome"] = _directional_outcome(
+        metric_name=criteria.metric_name,
+        direction=criteria.direction,
+        observed=observed,
+        baseline=baseline,
+        target=criteria.target_value,
+        rule=rule,
+    )
+    component["target_reached"] = _target_reached(
+        direction=criteria.direction,
+        observed=observed,
+        target=criteria.target_value,
+        rule=rule,
+    )
+    component["reason_codes"].append(component["outcome"])
+    return component
+
+
+def _composite_progress_status(components: Sequence[Mapping[str, Any]]) -> str:
+    if not components:
+        return "insufficient_data"
+    guardrail_outcomes = [
+        component.get("outcome")
+        for component in components
+        if component.get("role") == "guardrail"
+    ]
+    if any(outcome == "regressing" for outcome in guardrail_outcomes):
+        return "regressing"
+    if any(outcome == "not_following" for outcome in guardrail_outcomes):
+        return "not_following"
+    outcomes = [str(component.get("outcome")) for component in components]
+    if "insufficient_data" in outcomes:
+        return "insufficient_data"
+    if "not_following" in outcomes:
+        return "not_following"
+    if "regressing" in outcomes:
+        return "regressing"
+    if "improving" in outcomes:
+        return "improving"
+    return "unchanged"
+
+
+def _directional_outcome(
+    *,
+    metric_name: str,
+    direction: str,
+    observed: float | None,
+    baseline: float | None,
+    target: float | None,
+    rule: Mapping[str, Any],
+) -> str:
+    if observed is None or baseline is None:
+        return "insufficient_data"
+    if direction == "lower_is_better":
+        return _compare_lower_is_better(observed, baseline)
+    if direction == "higher_is_better":
+        return _compare_higher_is_better(observed, baseline)
+    if direction == "improve_or_same":
+        metric_direction = str(rule.get("metric_direction") or _default_metric_direction(metric_name))
+        if metric_direction == "lower_is_better":
+            return _compare_lower_is_better(observed, baseline, unchanged_when_better=False)
+        return _compare_higher_is_better(observed, baseline, unchanged_when_better=False)
+    if direction == "not_drop_more_than":
+        max_drop = _max_drop(rule, baseline, target)
+        return "regressing" if observed < baseline - max_drop else "unchanged"
+    if direction == "stay_above":
+        floor = target if target is not None else baseline
+        return "regressing" if observed < floor else "unchanged"
+    if direction == "stay_below":
+        ceiling = target if target is not None else baseline
+        return "regressing" if observed > ceiling else "unchanged"
+    return "insufficient_data"
+
+
+def _compare_lower_is_better(
+    observed: float,
+    baseline: float,
+    *,
+    unchanged_when_better: bool = False,
+) -> str:
+    if observed < baseline:
+        return "unchanged" if unchanged_when_better else "improving"
+    if observed > baseline:
+        return "regressing"
+    return "unchanged"
+
+
+def _compare_higher_is_better(
+    observed: float,
+    baseline: float,
+    *,
+    unchanged_when_better: bool = False,
+) -> str:
+    if observed > baseline:
+        return "unchanged" if unchanged_when_better else "improving"
+    if observed < baseline:
+        return "regressing"
+    return "unchanged"
+
+
+def _target_reached(
+    *,
+    direction: str,
+    observed: float | None,
+    target: float | None,
+    rule: Mapping[str, Any],
+) -> bool | None:
+    if observed is None or target is None:
+        return None
+    if direction in {"higher_is_better", "stay_above", "improve_or_same"}:
+        return observed >= target
+    if direction in {"lower_is_better", "stay_below"}:
+        return observed <= target
+    if direction == "not_drop_more_than":
+        return observed >= target
+    return None
+
+
+def _target_met(components: Sequence[Mapping[str, Any]]) -> bool:
+    progress_components = [
+        component
+        for component in components
+        if component.get("role") in {"primary", "secondary"}
+    ]
+    if not progress_components:
+        return False
+    if not all(component.get("target_reached") is True for component in progress_components):
+        return False
+    return not any(
+        component.get("role") == "guardrail" and component.get("outcome") in {"regressing", "not_following"}
+        for component in components
+    )
+
+
+def _not_following_outcome(rule: Mapping[str, Any], metrics: Mapping[str, Any]) -> str | None:
+    not_following_if = rule.get("not_following_if")
+    if isinstance(not_following_if, Mapping) and _rule_condition_matches(not_following_if, metrics) is True:
+        return "not_following"
+    follow_rule = rule.get("follow_rule")
+    if isinstance(follow_rule, Mapping):
+        followed = _rule_condition_matches(follow_rule, metrics)
+        if followed is None:
+            return "insufficient_data"
+        if followed is False:
+            return "not_following"
+    return None
+
+
+def _rule_condition_matches(condition: Mapping[str, Any], metrics: Mapping[str, Any]) -> bool | None:
+    metric_name = condition.get("metric_name") or condition.get("metric")
+    if not metric_name or metric_name not in metrics:
+        return None
+    observed = _optional_number(metrics.get(str(metric_name)))
+    expected = _optional_number(condition.get("value"))
+    if observed is None or expected is None:
+        return None
+    operator = str(condition.get("operator") or ">=")
+    if operator == ">=":
+        return observed >= expected
+    if operator == ">":
+        return observed > expected
+    if operator == "<=":
+        return observed <= expected
+    if operator == "<":
+        return observed < expected
+    if operator == "==":
+        return observed == expected
+    if operator == "!=":
+        return observed != expected
+    raise ValueError(f"Unsupported mission rule operator: {operator}")
+
+
+def _insufficient_sample_reason(
+    criteria: MissionCriteria,
+    snapshot_window: Mapping[str, Any],
+) -> str | None:
+    sample_matches = _optional_int(snapshot_window.get("sample_matches")) or 0
+    sample_rounds = _optional_int(snapshot_window.get("sample_rounds")) or 0
+    if criteria.min_sample_matches is not None and sample_matches < criteria.min_sample_matches:
+        return "insufficient_sample_matches"
+    if criteria.min_sample_rounds is not None and sample_rounds < criteria.min_sample_rounds:
+        return "insufficient_sample_rounds"
+    return None
+
+
+def _insufficient_confidence_reason(
+    criteria: MissionCriteria,
+    snapshot_window: Mapping[str, Any],
+) -> str | None:
+    if criteria.confidence_required is None:
+        return None
+    confidence = _optional_number(snapshot_window.get("confidence"))
+    if confidence is None:
+        return "missing_confidence"
+    if confidence < criteria.confidence_required:
+        return "insufficient_confidence"
+    return None
+
+
+def _evaluation_confidence(
+    snapshot_window: Mapping[str, Any],
+    components: Sequence[Mapping[str, Any]],
+) -> float | None:
+    confidence = _optional_number(snapshot_window.get("confidence"))
+    if confidence is None:
+        return None
+    if any(component.get("outcome") == "insufficient_data" for component in components):
+        return min(confidence, 0.25)
+    return confidence
+
+
+def _evaluation_caveats(
+    snapshot_window: Mapping[str, Any],
+    components: Sequence[Mapping[str, Any]],
+) -> list[str]:
+    caveats = [str(caveat) for caveat in snapshot_window.get("caveats") or []]
+    for component in components:
+        for reason in component.get("reason_codes") or []:
+            if reason in {
+                "missing_metric",
+                "insufficient_sample_matches",
+                "insufficient_sample_rounds",
+                "missing_confidence",
+                "insufficient_confidence",
+                "not_following",
+            }:
+                caveats.append(f"{component.get('metric_name')}:{reason}")
+    return sorted(set(caveats))
+
+
+def _snapshot_to_mapping(snapshot: Any) -> dict[str, Any]:
+    if isinstance(snapshot, Mapping):
+        return dict(snapshot)
+    value: dict[str, Any] = {}
+    for name in (
+        "id",
+        "user_id",
+        "owner_steam_id",
+        "player_steamid",
+        "metrics_json",
+        "confidence_baseline_json",
+        "caveats_json",
+        "metadata_json",
+    ):
+        if hasattr(snapshot, name):
+            value[name] = getattr(snapshot, name)
+    return value
+
+
+def _validate_snapshot_owner(mission: CoachMission, snapshot: Mapping[str, Any]) -> None:
+    snapshot_user_id = _optional_int(snapshot.get("user_id"))
+    if snapshot_user_id is not None and snapshot_user_id != mission.user_id:
+        raise PermissionError("Evaluation metric snapshot belongs to a different user.")
+    owner_steam_id = snapshot.get("owner_steam_id") or snapshot.get("player_steamid")
+    if mission.owner_steam_id and owner_steam_id and str(owner_steam_id) != mission.owner_steam_id:
+        raise PermissionError("Evaluation metric snapshot belongs to a different owner.")
+
+
+def _snapshot_payload_mapping(snapshot: Mapping[str, Any], direct_key: str, json_key: str) -> dict[str, Any]:
+    direct = snapshot.get(direct_key)
+    if isinstance(direct, Mapping):
+        return dict(direct)
+    encoded = snapshot.get(json_key)
+    if isinstance(encoded, str):
+        return _json_load_mapping(encoded)
+    if isinstance(encoded, Mapping):
+        return dict(encoded)
+    return {}
+
+
+def _metric_numeric_value(raw_value: Any) -> float | None:
+    if isinstance(raw_value, Mapping):
+        raw_value = raw_value.get("value")
+    try:
+        return _optional_number(raw_value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _snapshot_confidence(snapshot: Mapping[str, Any]) -> float | None:
+    direct_confidence = snapshot.get("confidence")
+    if direct_confidence is not None:
+        return _optional_float(direct_confidence)
+    confidence_payload = _snapshot_payload_mapping(snapshot, "confidence_baseline", "confidence_baseline_json")
+    for key in ("confidence", "overall", "level", "metric_confidence"):
+        if key in confidence_payload:
+            return _optional_float(confidence_payload[key])
+    return None
+
+
+def _snapshot_caveats(snapshot: Mapping[str, Any]) -> list[str]:
+    direct = snapshot.get("caveats")
+    if isinstance(direct, Sequence) and not isinstance(direct, str):
+        return [str(item) for item in direct]
+    encoded = snapshot.get("caveats_json")
+    if isinstance(encoded, str):
+        return [str(item) for item in _json_load_sequence(encoded)]
+    return []
+
+
+def _sample_count(snapshot: Mapping[str, Any], name: str) -> int:
+    direct_key = f"sample_{name}"
+    if direct_key in snapshot:
+        return _optional_int(snapshot.get(direct_key)) or 0
+    sample = snapshot.get("sample")
+    if isinstance(sample, Mapping) and name in sample:
+        return _optional_int(sample.get(name)) or 0
+    metadata = _snapshot_payload_mapping(snapshot, "metadata", "metadata_json")
+    if direct_key in metadata:
+        return _optional_int(metadata.get(direct_key)) or 0
+    if name in metadata:
+        return _optional_int(metadata.get(name)) or 0
+    return 0
+
+
+def _max_drop(rule: Mapping[str, Any], baseline: float, target: float | None) -> float:
+    configured = _optional_number(rule["max_drop"]) if "max_drop" in rule else None
+    if configured is None and "accepted_drop" in rule:
+        configured = _optional_number(rule["accepted_drop"])
+    if configured is not None:
+        return configured
+    if target is not None and target < baseline:
+        return baseline - target
+    return 0.0
 
 
 def _validate_hypothesis_can_activate(
