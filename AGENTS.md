@@ -136,3 +136,39 @@ Stop and report `BLOCKED` when:
   `docs/project_management/WORK_PACKAGE_BACKLOG.md` and
   `docs/project_management/ACCEPTANCE_MATRIX.md`.
 - Historical reports and audits are task-relevant evidence only.
+
+## 10. Token Economy And Context Budget
+
+Every task must minimize context and token usage.
+
+Default context for product tasks:
+
+1. current task card;
+2. `/opt/jc-coach/AGENTS.md`;
+3. `/opt/jc-coach/docs/CURRENT_STATUS.md`;
+4. only directly relevant product files;
+5. only directly relevant tests.
+
+Do not read broad historical docs, old audits, old reports, foundation reports,
+full task archives, full documentation directories or large PM files unless the
+current task specifically requires them.
+
+If additional context is needed, read the smallest possible file, section or line
+range and state why in the report.
+
+Implementation tasks must prioritize product code, tests, fixtures and working
+behavior over planning/reporting documents.
+
+Reports must stay short and include only:
+
+- result;
+- files changed;
+- tests run;
+- blockers;
+- next recommended task.
+
+If a task starts requiring broad context, broad documentation rewrites or unclear
+scope, stop and report `BLOCKED_CONTEXT_EXPANSION` instead of continuing.
+
+For implementation tasks, a documentation-only diff is not acceptable unless the
+task is explicitly marked as docs-only by the user.
