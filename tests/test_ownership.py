@@ -202,6 +202,35 @@ def test_steam_openid_callback_without_owner_session_does_not_create_uncontrolle
     assert _app_db_count(ImportJob) == 0
 
 
+def test_steam_import_settings_requires_owner_session():
+    with TestClient(app, follow_redirects=False) as client:
+        response = client.get("/settings/imports")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+
+
+def test_steam_auth_start_requires_owner_session():
+    with TestClient(app, follow_redirects=False) as client:
+        response = client.get("/auth/steam")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+
+
+def test_steam_import_pull_all_without_owner_session_does_not_create_job():
+    with TestClient(app, follow_redirects=False) as client:
+        login_page = client.get("/login")
+        response = client.post(
+            "/settings/imports/pull-all",
+            data={"csrf_token": _csrf_from(login_page)},
+        )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+    assert _app_db_count(ImportJob) == 0
+
+
 def test_owner_session_can_link_steam_to_owner(monkeypatch):
     monkeypatch.setattr("app.web.routes.validate_openid_callback", lambda _params: ("76561198056634139", None))
 

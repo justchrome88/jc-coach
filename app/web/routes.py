@@ -360,6 +360,9 @@ def upload_page(request: Request, message: str | None = None):
 
 @router.get("/settings/imports")
 def import_settings_page(request: Request, db: Annotated[Session, Depends(get_db)], message: str | None = None):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     return templates.TemplateResponse(
         request=request,
         name="import_settings.html",
@@ -395,7 +398,10 @@ def write_storage_manifest(db: Annotated[Session, Depends(get_db)]):
 
 
 @router.get("/auth/steam")
-def steam_auth_start():
+def steam_auth_start(request: Request, db: Annotated[Session, Depends(get_db)]):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     return RedirectResponse(steam_login_url(), status_code=303)
 
 
@@ -414,7 +420,14 @@ def steam_auth_callback(request: Request, db: Annotated[Session, Depends(get_db)
 
 
 @router.post("/settings/imports/steam-web-api-key")
-def save_steam_web_api_key(db: Annotated[Session, Depends(get_db)], steam_web_api_key: Annotated[str, Form()]):
+def save_steam_web_api_key(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    steam_web_api_key: Annotated[str, Form()],
+):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     try:
         set_app_setting(db, "steam_web_api_key", steam_web_api_key)
     except ValueError as exc:
@@ -424,11 +437,15 @@ def save_steam_web_api_key(db: Annotated[Session, Depends(get_db)], steam_web_ap
 
 @router.post("/settings/imports/steam/{steam_account_id}/auth-code")
 def save_steam_auth_code(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     steam_account_id: int,
     match_auth_code: Annotated[str, Form()],
     latest_share_code: Annotated[str, Form()],
 ):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     try:
         update_match_auth_code(db, steam_account_id, match_auth_code, latest_share_code)
     except ValueError as exc:
@@ -438,10 +455,14 @@ def save_steam_auth_code(
 
 @router.post("/settings/imports/steam/{steam_account_id}/share-code")
 def import_steam_share_code(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     steam_account_id: int,
     share_code: Annotated[str, Form()],
 ):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     try:
         result = import_steam_share_code_demo(db, steam_account_id, share_code)
     except ValueError as exc:
@@ -457,7 +478,10 @@ def import_steam_share_code(
 
 
 @router.post("/settings/imports/steam/{steam_account_id}/sync")
-def queue_steam_sync(db: Annotated[Session, Depends(get_db)], steam_account_id: int):
+def queue_steam_sync(request: Request, db: Annotated[Session, Depends(get_db)], steam_account_id: int):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     try:
         queue_match_history_sync(db, steam_account_id)
     except ValueError as exc:
@@ -466,7 +490,10 @@ def queue_steam_sync(db: Annotated[Session, Depends(get_db)], steam_account_id: 
 
 
 @router.post("/settings/imports/jobs/{job_id}/run")
-def run_steam_import_job(db: Annotated[Session, Depends(get_db)], job_id: int):
+def run_steam_import_job(request: Request, db: Annotated[Session, Depends(get_db)], job_id: int):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     try:
         result = sync_match_history_job(db, job_id)
     except ValueError as exc:
@@ -476,7 +503,10 @@ def run_steam_import_job(db: Annotated[Session, Depends(get_db)], job_id: int):
 
 
 @router.post("/settings/imports/run-queued")
-def run_queued_steam_import_jobs(db: Annotated[Session, Depends(get_db)]):
+def run_queued_steam_import_jobs(request: Request, db: Annotated[Session, Depends(get_db)]):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     results = process_queued_steam_jobs(db)
     succeeded = sum(1 for item in results if item.get("status") == "succeeded")
     failed = sum(1 for item in results if item.get("status") == "failed")
@@ -489,9 +519,13 @@ def run_queued_steam_import_jobs(db: Annotated[Session, Depends(get_db)]):
 
 @router.post("/settings/imports/pull-all")
 def pull_all_steam_imports(
+    request: Request,
     background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
 ):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     job = queue_steam_import_all(db)
     if job.status in {"queued", "running"}:
         if job.status == "queued":
@@ -503,7 +537,10 @@ def pull_all_steam_imports(
 
 
 @router.post("/settings/imports/clear-demo-errors")
-def clear_steam_demo_errors(db: Annotated[Session, Depends(get_db)]):
+def clear_steam_demo_errors(request: Request, db: Annotated[Session, Depends(get_db)]):
+    auth_redirect = _require_user_redirect(request, db)
+    if auth_redirect:
+        return auth_redirect
     result = clear_steam_demo_download_errors(db)
     message = f"Cleared {result['cleared']} old demo download errors."
     return RedirectResponse(f"/settings/imports?message={quote(message)}", status_code=303)
