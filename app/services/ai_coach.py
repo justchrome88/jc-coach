@@ -35,6 +35,7 @@ from app.services.metric_snapshots import (
     MetricSnapshotAnalysisScope,
     default_owner_player_metric_snapshot_scope,
     metric_snapshot_payload,
+    owner_player_metric_snapshot_scope,
     select_metric_snapshots_for_analysis_scope,
 )
 from app.services.metric_truth import (
@@ -159,6 +160,10 @@ def generate_ai_coach_with_provider(
     return save_ai_coach_result(db, content, source_ref=provider.name, payload_snapshot=payload)
 
 
+def personal_ai_coach_analysis_scope(db: Session, *, user_id: int | None = None) -> MetricSnapshotAnalysisScope:
+    return owner_player_metric_snapshot_scope(db, user_id=user_id)
+
+
 def ai_provider_health() -> dict[str, Any]:
     settings = get_settings()
     provider = _provider()
@@ -192,6 +197,7 @@ def save_ai_coach_result(
         if get_owned_metric_snapshot(db, user_id=user_id, snapshot_id=source_metric_snapshot_id) is None:
             raise PermissionError("Metric snapshot belongs to a different user.")
     snapshot = payload_snapshot or build_ai_coach_payload(db, analysis_scope=analysis_scope)
+    saved_analysis_scope = _saved_personal_analysis_scope_metadata(snapshot)
     validation = validate_ai_coach_output(raw_content, payload_snapshot=snapshot)
     content = (
         render_ai_output_markdown(validation.output)
@@ -205,6 +211,7 @@ def save_ai_coach_result(
     period_end = next((match.played_at for match in reversed(matches) if match.played_at), None)
     latest_handoff = latest_ai_handoff()
     metadata = _ai_report_metadata(content, snapshot, latest_handoff, source_ref)
+    metadata["analysis_scope"] = saved_analysis_scope
     metadata["ai_validation"] = validation.to_dict()
     if validation.valid and validation.output is not None:
         metadata["ai_structured_output"] = validation.output
@@ -234,18 +241,22 @@ def latest_ai_coach_report(db: Session, *, user_id: int | None = None) -> CoachR
     stmt = select(CoachReport).where(CoachReport.report_type == "ai_coach")
     if user_id is not None:
         stmt = stmt.where(CoachReport.user_id == user_id)
-    return db.scalar(stmt.order_by(CoachReport.created_at.desc(), CoachReport.id.desc()).limit(1))
+    reports = db.scalars(stmt.order_by(CoachReport.created_at.desc(), CoachReport.id.desc()).limit(50)).all()
+    return next((report for report in reports if _report_has_presentable_personal_scope(report)), None)
 
 
 def list_ai_coach_reports(db: Session, limit: int = 10, *, user_id: int | None = None) -> list[CoachReport]:
     stmt = select(CoachReport).where(CoachReport.report_type == "ai_coach")
     if user_id is not None:
         stmt = stmt.where(CoachReport.user_id == user_id)
+    candidates = db.scalars(
+        stmt.order_by(CoachReport.created_at.desc(), CoachReport.id.desc()).limit(max(limit * 3, limit))
+    ).all()
     return list(
-        db.scalars(
-            stmt.order_by(CoachReport.created_at.desc(), CoachReport.id.desc()).limit(limit)
-        ).all()
-    )
+        report
+        for report in candidates
+        if _report_has_presentable_personal_scope(report)
+    )[:limit]
 
 
 def serialize_ai_coach_report(report: CoachReport) -> dict[str, Any]:
@@ -510,6 +521,87 @@ def _ai_report_metadata(
         "content_chars": len(content),
         "saved_at": datetime.now(UTC).isoformat(),
     }
+
+
+def _saved_personal_analysis_scope_metadata(payload_snapshot: dict[str, Any]) -> dict[str, Any]:
+    raw_scope = payload_snapshot.get("analysis_scope")
+    if not isinstance(raw_scope, dict):
+        return _personal_analysis_scope_placeholder()
+    if raw_scope.get("mode") != "personal":
+        raise ValueError("AI coach reports can only be saved from personal analysis scope.")
+
+    match_ids = _int_list(raw_scope.get("match_ids"))
+    resolved_snapshot_ids = _int_list(raw_scope.get("resolved_metric_snapshot_ids"))
+    requested_snapshot_ids = _int_list(raw_scope.get("selected_metric_snapshot_ids"))
+    player_identity = raw_scope.get("player_identity") if isinstance(raw_scope.get("player_identity"), dict) else {}
+    source = str(raw_scope.get("source") or "unknown")
+    return {
+        "mode": "personal",
+        "match_ids": match_ids,
+        "match_ids_placeholder": None if match_ids else "all_personal_playable_matches",
+        "source": source,
+        "source_placeholder": None if source != "unknown" else "unknown",
+        "owner_identity": {
+            "owner_user_id": raw_scope.get("owner_user_id"),
+            "owner_steam_id": raw_scope.get("owner_steam_id"),
+        },
+        "player_identity": {
+            "player_key": player_identity.get("player_key"),
+            "player_name": player_identity.get("player_name"),
+            "player_steamid": player_identity.get("player_steamid"),
+        },
+        "selected_metric_snapshot_ids": resolved_snapshot_ids,
+        "requested_metric_snapshot_ids": requested_snapshot_ids,
+    }
+
+
+def _personal_analysis_scope_placeholder() -> dict[str, Any]:
+    return {
+        "mode": "personal",
+        "match_ids": [],
+        "match_ids_placeholder": "legacy_payload_scope_unavailable",
+        "source": "unknown",
+        "source_placeholder": "unknown",
+        "owner_identity": {
+            "owner_user_id": None,
+            "owner_steam_id": None,
+        },
+        "player_identity": {
+            "player_key": None,
+            "player_name": None,
+            "player_steamid": None,
+        },
+        "selected_metric_snapshot_ids": [],
+        "requested_metric_snapshot_ids": [],
+    }
+
+
+def _int_list(value: Any) -> list[int]:
+    if not isinstance(value, list | tuple):
+        return []
+    output: list[int] = []
+    for item in value:
+        try:
+            output.append(int(item))
+        except (TypeError, ValueError):
+            continue
+    return output
+
+
+def _report_has_presentable_personal_scope(report: CoachReport) -> bool:
+    metadata = _json_loads(report.report_json)
+    return _analysis_scope_mode_from_metadata(metadata) != "admin_debug_all_snapshots"
+
+
+def _analysis_scope_mode_from_metadata(metadata: dict[str, Any]) -> str | None:
+    scope = metadata.get("analysis_scope")
+    if not isinstance(scope, dict):
+        payload_snapshot = metadata.get("payload_snapshot")
+        scope = payload_snapshot.get("analysis_scope") if isinstance(payload_snapshot, dict) else None
+    if not isinstance(scope, dict):
+        return None
+    mode = scope.get("mode")
+    return str(mode) if mode is not None else None
 
 
 def _json_loads(value: str | None) -> dict[str, Any]:

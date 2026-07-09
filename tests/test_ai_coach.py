@@ -4,7 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.db.models import Match, SteamAccount, User
+from app.api import routes as api_routes
+from app.db.models import CoachReport, Match, SteamAccount, User
 from app.services.ai_coach import (
     AI_COACH_DOMAIN_CONTRACT_VERSION,
     AI_COACH_PAYLOAD_SCHEMA_VERSION,
@@ -21,6 +22,7 @@ from app.services.ai_coach import (
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
+from app.services.coach_insights import validate_insight_cards
 from app.services.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, RETENTION_CLASS_FINAL_OUTPUT
 from app.services.importer import import_rows
 from app.services.metric_snapshots import (
@@ -264,7 +266,90 @@ def test_ai_coach_payload_defaults_to_owner_player_metric_snapshot_scope(db):
     assert payload["analysis_scope"]["resolved_metric_snapshot_ids"] == [owner_snapshot.id]
     assert other_snapshot.id not in payload["analysis_scope"]["resolved_metric_snapshot_ids"]
     assert [card["evidence"][0]["metric_id"] for card in payload["coach_insight_cards"]] == ["utility_damage"]
+    assert validate_insight_cards(payload["coach_insight_cards"]) == ()
     assert payload["coach_insight_cards"][0]["mission_readiness"]["can_become_mission"] is True
+
+
+def test_api_personal_payload_and_saved_report_exclude_non_owner_metric_snapshots(db):
+    owner = User(email="api-owner@example.test", display_name="Owner", password_hash="hash")
+    db.add(owner)
+    db.commit()
+    db.refresh(owner)
+    db.add(SteamAccount(user_id=owner.id, steam_id="api-owner-steam", persona_name="JC"))
+    match = Match(source="demo", external_match_id="api-owner-scope")
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    owner_snapshot = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:api-owner-steam",
+        player_name="JC",
+        player_steamid="api-owner-steam",
+        source="utility_metrics",
+        source_event_set_id="fixture:api-owner:utility",
+        metrics={"utility_damage": 88, "he_damage": 88},
+        confidence_baseline={
+            "source": "utility-metrics-v1",
+            "metrics": {
+                "utility_damage": {
+                    "level": "medium",
+                    "usable_for_insights": True,
+                    "usable_for_missions": True,
+                    "hard_recommendation_eligible": True,
+                }
+            },
+        },
+        metadata={"schema_version": "utility-metrics-v1"},
+    )
+    other_snapshot = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:other-player",
+        player_name="Other",
+        player_steamid="other-player",
+        source="core_combat_metrics",
+        source_event_set_id="fixture:api-other:core",
+        metrics={
+            "rounds": 12,
+            "opening_deaths": 5,
+            "opening_death_rate": 0.417,
+            "survived_rounds": 1,
+            "survival_rate": 0.083,
+        },
+        confidence_baseline={
+            "source": "core-combat-metrics-v1",
+            "metrics": {
+                "opening_death_rate": {"level": "high"},
+                "survival_rate": {"level": "high"},
+            },
+        },
+        metadata={"schema_version": "core-combat-metrics-v1"},
+    )
+
+    payload = api_routes.ai_coach_payload_endpoint(db)
+    created = api_routes.save_ai_coach_result_endpoint(
+        db,
+        report_markdown="# API personal report\n\nUse only scoped owner snapshots.",
+        source_ref="api-personal",
+    )
+    latest = api_routes.latest_ai_coach_result_endpoint(db)
+
+    assert payload["analysis_scope"]["mode"] == "personal"
+    assert payload["analysis_scope"]["owner_steam_id"] == "api-owner-steam"
+    assert payload["analysis_scope"]["resolved_metric_snapshot_ids"] == [owner_snapshot.id]
+    assert other_snapshot.id not in payload["analysis_scope"]["resolved_metric_snapshot_ids"]
+    assert [card["evidence"][0]["metric_id"] for card in payload["coach_insight_cards"]] == ["utility_damage"]
+    assert validate_insight_cards(payload["coach_insight_cards"]) == ()
+    assert created["ok"] is True
+    assert latest["metadata"]["analysis_scope"]["mode"] == "personal"
+    assert latest["metadata"]["analysis_scope"]["owner_identity"] == {
+        "owner_user_id": owner.id,
+        "owner_steam_id": "api-owner-steam",
+    }
+    assert latest["metadata"]["analysis_scope"]["player_identity"]["player_steamid"] == "api-owner-steam"
+    assert latest["metadata"]["analysis_scope"]["selected_metric_snapshot_ids"] == [owner_snapshot.id]
+    assert other_snapshot.id not in latest["metadata"]["analysis_scope"]["selected_metric_snapshot_ids"]
 
 
 def test_owner_scoped_scope_prioritizes_jc_snapshot_rows_after_filtering(db):
@@ -466,6 +551,17 @@ def test_save_ai_coach_result_persists_ai_report(db, sample_rows):
     assert serialized["metadata"]["public_readiness_policy"]["friends_readiness"] == "blocked"
     assert serialized["metadata"]["artifact_retention"]["category"] == ARTIFACT_CATEGORY_COACH_OUTPUT
     assert serialized["metadata"]["artifact_retention"]["retention_class"] == RETENTION_CLASS_FINAL_OUTPUT
+    assert serialized["metadata"]["analysis_scope"] == {
+        "mode": "personal",
+        "match_ids": [],
+        "match_ids_placeholder": "all_personal_playable_matches",
+        "source": "unknown",
+        "source_placeholder": "unknown",
+        "owner_identity": {"owner_user_id": None, "owner_steam_id": None},
+        "player_identity": {"player_key": None, "player_name": None, "player_steamid": None},
+        "selected_metric_snapshot_ids": [],
+        "requested_metric_snapshot_ids": [],
+    }
     assert serialized["insight_cards"][0]["confidence"] == "low"
     assert serialized["insight_cards"][0]["evidence"] == []
     assert serialized["insight_cards"][0]["caveats"]
@@ -485,6 +581,67 @@ def test_save_ai_coach_result_persists_ai_report(db, sample_rows):
             "public_readiness_policy": serialized["metadata"]["payload_snapshot"]["public_readiness_policy"],
         }
     )
+
+
+def test_save_ai_coach_result_rejects_admin_debug_all_snapshots_payload(db):
+    match = Match(source="demo", external_match_id="debug-scope-save")
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:any-player",
+        player_name="Any",
+        player_steamid="any-player",
+        source="core_combat_metrics",
+        metrics={
+            "rounds": 12,
+            "opening_deaths": 5,
+            "opening_death_rate": 0.417,
+            "survived_rounds": 1,
+            "survival_rate": 0.083,
+        },
+        confidence_baseline={
+            "source": "core-combat-metrics-v1",
+            "metrics": {
+                "opening_death_rate": {"level": "high"},
+                "survival_rate": {"level": "high"},
+            },
+        },
+    )
+    debug_payload = build_ai_coach_payload(db, analysis_scope=admin_debug_all_metric_snapshots_scope())
+
+    with pytest.raises(ValueError, match="personal analysis scope"):
+        save_ai_coach_result(db, "# Debug report\n\nShould not save as personal.", payload_snapshot=debug_payload)
+
+    assert latest_ai_coach_report(db) is None
+
+
+def test_admin_debug_scope_report_is_not_presented_as_personal_latest_or_history(db):
+    personal_report = CoachReport(
+        report_type="ai_coach",
+        source_ref="personal",
+        report_markdown="Personal report",
+        report_json=json.dumps({"analysis_scope": {"mode": "personal"}}),
+    )
+    debug_report = CoachReport(
+        report_type="ai_coach",
+        source_ref="admin-debug",
+        report_markdown="Debug report",
+        report_json=json.dumps({"payload_snapshot": {"analysis_scope": {"mode": "admin_debug_all_snapshots"}}}),
+    )
+    db.add_all([personal_report, debug_report])
+    db.commit()
+    db.refresh(personal_report)
+    db.refresh(debug_report)
+
+    latest = latest_ai_coach_report(db)
+    history = list_ai_coach_reports(db)
+
+    assert latest is not None
+    assert latest.id == personal_report.id
+    assert debug_report.id not in [report.id for report in history]
 
 
 def test_ai_coach_report_history_is_newest_first(db, sample_rows):

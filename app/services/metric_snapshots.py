@@ -60,10 +60,13 @@ def admin_debug_all_metric_snapshots_scope(
     )
 
 
-def default_owner_player_metric_snapshot_scope(db: Session) -> MetricSnapshotAnalysisScope:
-    account = db.scalar(select(SteamAccount).order_by(SteamAccount.user_id.asc().nulls_last(), SteamAccount.id.asc()))
+def owner_player_metric_snapshot_scope(db: Session, *, user_id: int | None = None) -> MetricSnapshotAnalysisScope:
+    stmt = select(SteamAccount).order_by(SteamAccount.user_id.asc().nulls_last(), SteamAccount.id.asc())
+    if user_id is not None:
+        stmt = stmt.where(SteamAccount.user_id == user_id)
+    account = db.scalar(stmt)
     if account is None:
-        return MetricSnapshotAnalysisScope(source="unknown")
+        return MetricSnapshotAnalysisScope(source="unknown", owner_user_id=user_id)
     return MetricSnapshotAnalysisScope(
         source="steam",
         owner_user_id=account.user_id,
@@ -71,6 +74,10 @@ def default_owner_player_metric_snapshot_scope(db: Session) -> MetricSnapshotAna
         player_key=f"steam:{account.steam_id}",
         player_steamid=account.steam_id,
     )
+
+
+def default_owner_player_metric_snapshot_scope(db: Session) -> MetricSnapshotAnalysisScope:
+    return owner_player_metric_snapshot_scope(db)
 
 
 def select_metric_snapshots_for_analysis_scope(

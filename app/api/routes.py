@@ -17,6 +17,7 @@ from app.services.ai_coach import (
     latest_ai_coach_report,
     latest_ai_handoff,
     list_ai_coach_reports,
+    personal_ai_coach_analysis_scope,
     prepare_ai_coach_handoff,
     save_ai_coach_result,
     serialize_ai_coach_report,
@@ -297,12 +298,12 @@ def latest_report_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
 
 @router.get("/coach/ai/payload")
 def ai_coach_payload_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
-    return build_ai_coach_payload(db)
+    return build_ai_coach_payload(db, analysis_scope=personal_ai_coach_analysis_scope(db))
 
 
 @router.post("/coach/ai/handoff")
 def ai_coach_handoff_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
-    return {"ok": True, **prepare_ai_coach_handoff(db)}
+    return {"ok": True, **prepare_ai_coach_handoff(db, analysis_scope=personal_ai_coach_analysis_scope(db))}
 
 
 @router.get("/coach/ai/handoff/latest")
@@ -321,7 +322,7 @@ def ai_provider_health_endpoint() -> dict:
 @router.post("/coach/ai/generate")
 def generate_ai_coach_with_provider_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
     try:
-        report = generate_ai_coach_with_provider(db)
+        report = generate_ai_coach_with_provider(db, analysis_scope=personal_ai_coach_analysis_scope(db))
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "id": report.id, "created_at": report.created_at, "source_ref": report.source_ref}
@@ -334,7 +335,12 @@ def save_ai_coach_result_endpoint(
     source_ref: str | None = None,
 ) -> dict:
     try:
-        report = save_ai_coach_result(db, report_markdown, source_ref=source_ref)
+        report = save_ai_coach_result(
+            db,
+            report_markdown,
+            source_ref=source_ref,
+            analysis_scope=personal_ai_coach_analysis_scope(db),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "id": report.id, "created_at": report.created_at}

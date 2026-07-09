@@ -30,6 +30,7 @@ from app.services.ai_coach import (
     latest_ai_coach_report,
     latest_ai_handoff,
     list_ai_coach_reports,
+    personal_ai_coach_analysis_scope,
     prepare_ai_coach_handoff,
     save_ai_coach_result,
     serialize_ai_coach_report,
@@ -1050,28 +1051,44 @@ def generate_report_page(db: Annotated[Session, Depends(get_db)]):
 
 
 @router.post("/coach/ai-handoff")
-def generate_ai_handoff_page(db: Annotated[Session, Depends(get_db)]):
-    prepare_ai_coach_handoff(db)
+def generate_ai_handoff_page(request: Request, db: Annotated[Session, Depends(get_db)]):
+    owner = current_user_from_session(request, db)
+    prepare_ai_coach_handoff(
+        db,
+        analysis_scope=personal_ai_coach_analysis_scope(db, user_id=owner.id if owner else None),
+    )
     return RedirectResponse("/coach", status_code=303)
 
 
 @router.post("/coach/ai-result")
 def save_ai_result_page(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     ai_result_markdown: Annotated[str, Form()],
     source_ref: Annotated[str | None, Form()] = None,
 ):
     try:
-        save_ai_coach_result(db, ai_result_markdown, source_ref=source_ref)
+        owner = current_user_from_session(request, db)
+        save_ai_coach_result(
+            db,
+            ai_result_markdown,
+            source_ref=source_ref,
+            user_id=owner.id if owner else None,
+            analysis_scope=personal_ai_coach_analysis_scope(db, user_id=owner.id if owner else None),
+        )
     except ValueError as exc:
         return RedirectResponse(f"/coach?message={exc}", status_code=303)
     return RedirectResponse("/coach", status_code=303)
 
 
 @router.post("/coach/ai-generate")
-def generate_ai_result_with_provider_page(db: Annotated[Session, Depends(get_db)]):
+def generate_ai_result_with_provider_page(request: Request, db: Annotated[Session, Depends(get_db)]):
     try:
-        generate_ai_coach_with_provider(db)
+        owner = current_user_from_session(request, db)
+        generate_ai_coach_with_provider(
+            db,
+            analysis_scope=personal_ai_coach_analysis_scope(db, user_id=owner.id if owner else None),
+        )
     except RuntimeError as exc:
         return RedirectResponse(f"/coach?message={exc}", status_code=303)
     return RedirectResponse("/coach", status_code=303)
