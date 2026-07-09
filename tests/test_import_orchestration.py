@@ -18,6 +18,7 @@ from app.services.import_orchestration import (
     import_block_handoff_contract,
     run_demo_import_orchestration,
 )
+from app.services.parser_artifact_reader import read_normalized_events
 from app.services.steam_demo_acquisition import (
     DEMO_ALREADY_AVAILABLE,
     DEMO_AUTH_MISSING,
@@ -25,6 +26,7 @@ from app.services.steam_demo_acquisition import (
 )
 
 SHARE_CODE = "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL"
+PARSER_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "parser" / "parser_artifact_c02.json"
 
 
 def test_deterministic_import_orchestration_stores_parser_handoff(db, monkeypatch, tmp_path):
@@ -56,6 +58,45 @@ def test_deterministic_import_orchestration_stores_parser_handoff(db, monkeypatc
     assert result["parser_handoff"]["parser_artifact_field"] == "DemoParseArtifact.source_demo_file"
     assert match.demo_file == result["parser_handoff"]["path"]
     assert json.loads(match.raw_json)["parser_handoff"]["field"] == "Match.demo_file"
+
+
+def test_imported_parser_handoff_path_feeds_normalized_event_reader(db, monkeypatch, tmp_path):
+    upload_dir = tmp_path / "uploads"
+    source = tmp_path / "fixture.dem"
+    source.write_bytes(b"HL2DEMO parser acceptance imported artifact")
+    monkeypatch.setenv("UPLOAD_DIR", str(upload_dir))
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        job = run_demo_import_orchestration(
+            db,
+            payload={"share_code": SHARE_CODE, "fixture_demo_path": str(source)},
+            user_id=11,
+        )
+    finally:
+        get_settings.cache_clear()
+
+    result = json.loads(job.result_json)
+    parser_handoff_path = result["parser_handoff"]["path"]
+    assert job.status == IMPORT_JOB_COMPLETED
+    assert Path(parser_handoff_path).is_file()
+
+    artifact = json.loads(PARSER_FIXTURE_PATH.read_text())
+    artifact["source_demo_file"] = parser_handoff_path
+    artifact["payload"]["file"] = parser_handoff_path
+    artifact["payload"]["parser_handoff"] = {"kind": "raw_demo_file", "path": parser_handoff_path}
+    parser_artifact_path = tmp_path / "parser-artifact-for-imported-demo.json"
+    parser_artifact_path.write_text(json.dumps(artifact), encoding="utf-8")
+
+    events = read_normalized_events(parser_handoff_path, parser_artifact_path=parser_artifact_path)
+
+    assert events
+    assert {event["source"]["source_demo_file"] for event in events} == {parser_handoff_path}
+    assert {"round_summary", "player_kill", "damage", "round_survival"}.issubset(
+        {event["event_type"] for event in events}
+    )
+    assert all(event["schema_version"] == "normalized-parser-events-v1" for event in events)
 
 
 def test_import_orchestration_auth_missing_fails_with_actionable_result(db, monkeypatch):
