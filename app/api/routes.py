@@ -31,6 +31,7 @@ from app.services.import_jobs import (
     IMPORT_JOB_QUEUED,
     create_import_request,
 )
+from app.services.import_orchestration import CANONICAL_IMPORT_JOB_TYPE, run_demo_import_orchestration
 from app.services.importer import import_csv, import_json
 from app.services.match_queries import playable_match_select
 from app.services.recommendation_tracking import (
@@ -443,16 +444,36 @@ def import_jobs_endpoint(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
     return [serialize_import_job(job) for job in list_import_jobs(db)]
 
 
+@router.get("/import/jobs/{job_id}")
+def import_job_endpoint(db: Annotated[Session, Depends(get_db)], job_id: int) -> dict:
+    job = db.get(ImportJob, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Import job was not found.")
+    return serialize_import_job(job)
+
+
 @router.post("/import/jobs")
 def create_import_job_endpoint(
     db: Annotated[Session, Depends(get_db)],
     request: Annotated[dict[str, Any], Body()],
 ) -> dict:
     payload = request.get("payload") if isinstance(request.get("payload"), dict) else {}
+    job_type = str(request.get("job_type") or "demo_import_request")
+    if job_type == CANONICAL_IMPORT_JOB_TYPE:
+        job = run_demo_import_orchestration(
+            db,
+            provider=str(request.get("provider") or "steam"),
+            payload=payload,
+            user_id=_optional_int(request.get("user_id")),
+            steam_account_id=_optional_int(request.get("steam_account_id")),
+            logical_target_key=request.get("logical_target_key"),
+        )
+        return serialize_import_job(job)
+
     job = create_import_request(
         db,
         provider=str(request.get("provider") or "manual"),
-        job_type=str(request.get("job_type") or "demo_import_request"),
+        job_type=job_type,
         payload=payload,
         user_id=_optional_int(request.get("user_id")),
         steam_account_id=_optional_int(request.get("steam_account_id")),

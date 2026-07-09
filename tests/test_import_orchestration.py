@@ -1,0 +1,176 @@
+import json
+from pathlib import Path
+
+from app.api.routes import create_import_job_endpoint, import_job_endpoint
+from app.db.models import Match
+from app.services.import_jobs import (
+    IMPORT_JOB_COMPLETED,
+    IMPORT_JOB_FAILED,
+    IMPORT_JOB_SKIPPED_DUPLICATE,
+    create_import_request,
+)
+from app.services.import_orchestration import (
+    CANONICAL_IMPORT_JOB_TYPE,
+    STORAGE_ALREADY_AVAILABLE,
+    STORAGE_DUPLICATE,
+    STORAGE_MISSING_FILE,
+    STORAGE_STORED,
+    run_demo_import_orchestration,
+)
+from app.services.steam_demo_acquisition import (
+    DEMO_ALREADY_AVAILABLE,
+    DEMO_AUTH_MISSING,
+    DEMO_DOWNLOAD_QUEUED_OR_READY,
+)
+
+SHARE_CODE = "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL"
+
+
+def test_deterministic_import_orchestration_stores_parser_handoff(db, monkeypatch, tmp_path):
+    upload_dir = tmp_path / "uploads"
+    source = tmp_path / "fixture.dem"
+    source.write_bytes(b"HL2DEMO deterministic import orchestration")
+    monkeypatch.setenv("UPLOAD_DIR", str(upload_dir))
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        job = run_demo_import_orchestration(
+            db,
+            payload={"share_code": SHARE_CODE, "fixture_demo_path": str(source)},
+            user_id=11,
+        )
+    finally:
+        get_settings.cache_clear()
+
+    result = json.loads(job.result_json)
+    match = db.query(Match).filter(Match.external_match_id == SHARE_CODE).one()
+    assert job.status == IMPORT_JOB_COMPLETED
+    assert result["acquisition"]["outcome"] == DEMO_DOWNLOAD_QUEUED_OR_READY
+    assert result["storage"]["outcome"] == STORAGE_STORED
+    assert Path(result["storage"]["artifact"]["path"]).is_file()
+    assert result["parser_handoff"]["path"] == result["storage"]["artifact"]["parser_handoff_path"]
+    assert match.demo_file == result["parser_handoff"]["path"]
+    assert json.loads(match.raw_json)["parser_handoff"]["field"] == "Match.demo_file"
+
+
+def test_import_orchestration_auth_missing_fails_with_actionable_result(db, monkeypatch):
+    monkeypatch.setenv("STEAM_BOT_USERNAME", "")
+    monkeypatch.setenv("STEAM_BOT_PASSWORD", "")
+    monkeypatch.setenv("STEAM_BOT_REFRESH_TOKEN", "")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        job = run_demo_import_orchestration(db, payload={"share_code": SHARE_CODE})
+    finally:
+        get_settings.cache_clear()
+
+    result = json.loads(job.result_json)
+    assert job.status == IMPORT_JOB_FAILED
+    assert result["acquisition"]["outcome"] == DEMO_AUTH_MISSING
+    assert result["storage"] is None
+    assert "fixture demo path" in result["error"]["message"]
+    assert "secret" not in json.dumps(result).lower()
+
+
+def test_import_orchestration_reuses_already_available_artifact(db, tmp_path):
+    existing = tmp_path / "existing.dem"
+    existing.write_bytes(b"HL2DEMO existing retained")
+    match = Match(
+        source="steam_history",
+        external_match_id=SHARE_CODE,
+        demo_file=str(existing),
+        raw_json=json.dumps({"share_code": SHARE_CODE, "status": "demo_imported"}),
+    )
+    db.add(match)
+    db.commit()
+
+    job = run_demo_import_orchestration(db, payload={"share_code": SHARE_CODE})
+
+    result = json.loads(job.result_json)
+    assert job.status == IMPORT_JOB_COMPLETED
+    assert result["acquisition"]["outcome"] == DEMO_ALREADY_AVAILABLE
+    assert result["storage"]["outcome"] == STORAGE_ALREADY_AVAILABLE
+    assert result["parser_handoff"]["path"] == str(existing.resolve())
+
+
+def test_import_orchestration_duplicate_storage_reuses_retained_path(db, monkeypatch, tmp_path):
+    upload_dir = tmp_path / "uploads"
+    source = tmp_path / "fixture.dem"
+    source.write_bytes(b"HL2DEMO duplicate storage")
+    monkeypatch.setenv("UPLOAD_DIR", str(upload_dir))
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        first = run_demo_import_orchestration(db, payload={"fixture_demo_path": str(source)})
+        second = run_demo_import_orchestration(db, payload={"fixture_demo_path": str(source)})
+    finally:
+        get_settings.cache_clear()
+
+    first_result = json.loads(first.result_json)
+    second_result = json.loads(second.result_json)
+    assert first.status == IMPORT_JOB_COMPLETED
+    assert first_result["storage"]["outcome"] == STORAGE_STORED
+    assert second.status == IMPORT_JOB_COMPLETED
+    assert second_result["storage"]["outcome"] == STORAGE_DUPLICATE
+    assert second_result["parser_handoff"]["path"] == first_result["parser_handoff"]["path"]
+
+
+def test_import_orchestration_active_duplicate_is_skipped(db, tmp_path):
+    source = tmp_path / "fixture.dem"
+    source.write_bytes(b"HL2DEMO active duplicate")
+    active = create_import_request(
+        db,
+        provider="steam",
+        job_type=CANONICAL_IMPORT_JOB_TYPE,
+        payload={"share_code": SHARE_CODE, "fixture_demo_path": str(source)},
+    )
+
+    duplicate = run_demo_import_orchestration(db, payload={"share_code": SHARE_CODE, "fixture_demo_path": str(source)})
+
+    result = json.loads(duplicate.result_json)
+    assert active.id == result["duplicate_of_job_id"]
+    assert duplicate.status == IMPORT_JOB_SKIPPED_DUPLICATE
+
+
+def test_import_orchestration_storage_missing_file_is_actionable(db, tmp_path):
+    missing = tmp_path / "missing.dem"
+
+    job = run_demo_import_orchestration(db, payload={"fixture_demo_path": str(missing)})
+
+    result = json.loads(job.result_json)
+    assert job.status == IMPORT_JOB_FAILED
+    assert result["acquisition"]["outcome"] == DEMO_DOWNLOAD_QUEUED_OR_READY
+    assert result["storage"]["outcome"] == STORAGE_MISSING_FILE
+    assert "was not found" in result["error"]["message"]
+
+
+def test_import_jobs_api_starts_and_inspects_canonical_orchestration(db, monkeypatch, tmp_path):
+    upload_dir = tmp_path / "uploads"
+    source = tmp_path / "api-fixture.dem"
+    source.write_bytes(b"HL2DEMO api deterministic")
+    monkeypatch.setenv("UPLOAD_DIR", str(upload_dir))
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        created = create_import_job_endpoint(
+            db,
+            {
+                "provider": "steam",
+                "job_type": CANONICAL_IMPORT_JOB_TYPE,
+                "payload": {"share_code": SHARE_CODE, "fixture_demo_path": str(source)},
+            },
+        )
+        inspected = import_job_endpoint(db, created["id"])
+    finally:
+        get_settings.cache_clear()
+
+    assert created["status"] == IMPORT_JOB_COMPLETED
+    assert inspected["id"] == created["id"]
+    assert inspected["logical_target_key"] == f"steam:{CANONICAL_IMPORT_JOB_TYPE}:{SHARE_CODE}"
+    assert inspected["result"]["acquisition"]["outcome"] == DEMO_DOWNLOAD_QUEUED_OR_READY
+    assert inspected["result"]["storage"]["outcome"] == STORAGE_STORED
+    assert Path(inspected["result"]["parser_handoff"]["path"]).is_file()

@@ -1,0 +1,517 @@
+from __future__ import annotations
+
+import json
+from collections.abc import Callable
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import ImportJob, Match
+from app.services.demo_storage import store_demo_file
+from app.services.import_jobs import (
+    IMPORT_JOB_COMPLETED,
+    IMPORT_JOB_FAILED,
+    IMPORT_JOB_IN_PROGRESS,
+    IMPORT_JOB_QUEUED,
+    IMPORT_JOB_SKIPPED_DUPLICATE,
+    complete_import_job,
+    create_import_request,
+    fail_import_job,
+    import_job_result,
+    queue_import_job,
+    start_import_job,
+)
+from app.services.steam_demo_acquisition import (
+    DEMO_ACQUISITION_SUCCESS_OUTCOMES,
+    DEMO_ALREADY_AVAILABLE,
+    DEMO_AUTH_MISSING,
+    DEMO_DOWNLOAD_QUEUED_OR_READY,
+    DEMO_FAILED_WITH_ACTIONABLE_ERROR,
+    DEMO_NOT_FOUND,
+    acquire_steam_demo_reference,
+    validate_steam_demo_acquisition_config,
+)
+
+CANONICAL_IMPORT_JOB_TYPE = "demo_import_orchestration"
+
+STORAGE_ALREADY_AVAILABLE = "already_available"
+STORAGE_STORED = "stored"
+STORAGE_DUPLICATE = "storage_duplicate"
+STORAGE_MISSING_FILE = "storage_missing_file"
+STORAGE_FAILED_WITH_ACTIONABLE_ERROR = "failed_with_actionable_error"
+
+AcquisitionAdapter = Callable[[Session, dict[str, Any]], dict[str, Any]]
+
+
+def run_demo_import_orchestration(
+    db: Session,
+    *,
+    provider: str = "steam",
+    payload: dict[str, Any] | None = None,
+    user_id: int | None = None,
+    steam_account_id: int | None = None,
+    logical_target_key: str | None = None,
+    acquisition_adapter: AcquisitionAdapter | None = None,
+) -> ImportJob:
+    payload = dict(payload or {})
+    job = create_or_reuse_job(
+        db,
+        provider=provider,
+        payload=payload,
+        user_id=user_id,
+        steam_account_id=steam_account_id,
+        logical_target_key=logical_target_key,
+    )
+    if job.status == IMPORT_JOB_SKIPPED_DUPLICATE:
+        return job
+    if job.status in {IMPORT_JOB_COMPLETED, IMPORT_JOB_FAILED}:
+        return job
+    if job.status not in {IMPORT_JOB_QUEUED, IMPORT_JOB_IN_PROGRESS}:
+        job = queue_import_job(db, job)
+    if job.status != IMPORT_JOB_IN_PROGRESS:
+        job = start_import_job(db, job)
+
+    try:
+        acquisition_config = validate_acquisition_config(payload)
+        acquisition = run_acquisition_or_fixture_adapter(
+            db,
+            payload=payload,
+            acquisition_config=acquisition_config,
+            acquisition_adapter=acquisition_adapter,
+        )
+        if acquisition["outcome"] not in DEMO_ACQUISITION_SUCCESS_OUTCOMES:
+            result = serialize_result(
+                job=job,
+                payload=payload,
+                acquisition=acquisition,
+                storage=None,
+                error_message=_actionable_message(acquisition),
+            )
+            return fail_import_job(db, job, str(result["error"]["message"]), result=result)
+
+        storage = store_artifact_metadata(db, job=job, payload=payload, acquisition=acquisition)
+        result = serialize_result(job=job, payload=payload, acquisition=acquisition, storage=storage)
+        if storage["outcome"] in {STORAGE_ALREADY_AVAILABLE, STORAGE_STORED, STORAGE_DUPLICATE}:
+            return complete_import_job(db, job, result=result)
+
+        result["overall_outcome"] = IMPORT_JOB_FAILED
+        result["job"]["status"] = IMPORT_JOB_FAILED
+        result["error"] = {
+            "message": storage.get("actionable_reason") or "Demo storage failed.",
+            "type": storage.get("error_type"),
+        }
+        return fail_import_job(db, job, str(result["error"]["message"]), result=result)
+    except Exception as exc:
+        result = serialize_result(
+            job=job,
+            payload=payload,
+            acquisition={
+                "outcome": DEMO_FAILED_WITH_ACTIONABLE_ERROR,
+                "config": None,
+                "raw": None,
+                "actionable_reason": "Unexpected import orchestration failure.",
+            },
+            storage=None,
+            error_message=str(exc) or type(exc).__name__,
+            error_type=type(exc).__name__,
+        )
+        return fail_import_job(db, job, str(result["error"]["message"]), result=result)
+
+
+def create_or_reuse_job(
+    db: Session,
+    *,
+    provider: str,
+    payload: dict[str, Any],
+    user_id: int | None,
+    steam_account_id: int | None,
+    logical_target_key: str | None,
+) -> ImportJob:
+    return create_import_request(
+        db,
+        provider=provider,
+        job_type=CANONICAL_IMPORT_JOB_TYPE,
+        payload=payload,
+        user_id=user_id,
+        steam_account_id=steam_account_id,
+        logical_target_key=logical_target_key,
+    )
+
+
+def validate_acquisition_config(payload: dict[str, Any]) -> dict[str, Any]:
+    if _fixture_source_path(payload) is not None or isinstance(payload.get("acquisition_result"), dict):
+        return {
+            "configured": True,
+            "auth_configured": True,
+            "helper_installed": True,
+            "credential_mode": "deterministic_fixture",
+            "missing": [],
+            "timeout_seconds": None,
+        }
+    return validate_steam_demo_acquisition_config()
+
+
+def run_acquisition_or_fixture_adapter(
+    db: Session,
+    *,
+    payload: dict[str, Any],
+    acquisition_config: dict[str, Any],
+    acquisition_adapter: AcquisitionAdapter | None = None,
+) -> dict[str, Any]:
+    if acquisition_adapter is not None:
+        return _normalize_acquisition(acquisition_adapter(db, payload), acquisition_config=acquisition_config)
+
+    share_code = _share_code(payload)
+    existing = _existing_available_match(db, share_code)
+    if existing is not None:
+        return {
+            "outcome": DEMO_ALREADY_AVAILABLE,
+            "share_code": share_code,
+            "match_id": existing.id,
+            "source_path": existing.demo_file,
+            "config": acquisition_config,
+            "raw": {
+                "overall_outcome": DEMO_ALREADY_AVAILABLE,
+                "next_action": "Use the existing stored demo; no Steam acquisition is needed.",
+            },
+            "actionable_reason": None,
+        }
+
+    fixture_path = _fixture_source_path(payload)
+    if fixture_path is not None:
+        return {
+            "outcome": DEMO_DOWNLOAD_QUEUED_OR_READY,
+            "share_code": share_code,
+            "match_id": None,
+            "source_path": str(fixture_path),
+            "config": acquisition_config,
+            "raw": {
+                "overall_outcome": DEMO_DOWNLOAD_QUEUED_OR_READY,
+                "acquisition_outcome": DEMO_DOWNLOAD_QUEUED_OR_READY,
+                "fixture": True,
+                "demo_reference": {"kind": "local_demo_file", "has_path": True},
+                "next_action": "Store the deterministic local demo fixture for parser handoff.",
+            },
+            "actionable_reason": None,
+        }
+
+    provided = payload.get("acquisition_result")
+    if isinstance(provided, dict):
+        return _normalize_acquisition(provided, acquisition_config=acquisition_config)
+
+    if not acquisition_config.get("auth_configured"):
+        return {
+            "outcome": DEMO_AUTH_MISSING,
+            "share_code": share_code,
+            "match_id": None,
+            "source_path": None,
+            "config": acquisition_config,
+            "raw": {
+                "overall_outcome": DEMO_AUTH_MISSING,
+                "acquisition_outcome": DEMO_AUTH_MISSING,
+                "config": _public_config(acquisition_config),
+                "next_action": "Configure Steam bot credentials or provide a deterministic fixture demo path.",
+            },
+            "actionable_reason": "Steam bot credentials are missing; provide credentials or a fixture demo path.",
+        }
+
+    if not share_code:
+        return {
+            "outcome": DEMO_FAILED_WITH_ACTIONABLE_ERROR,
+            "share_code": None,
+            "match_id": None,
+            "source_path": None,
+            "config": acquisition_config,
+            "raw": {
+                "overall_outcome": DEMO_FAILED_WITH_ACTIONABLE_ERROR,
+                "next_action": "Provide payload.share_code or payload.fixture_demo_path.",
+            },
+            "actionable_reason": "share_code or fixture_demo_path is required.",
+        }
+
+    return _normalize_acquisition(
+        acquire_steam_demo_reference(db, share_code=share_code),
+        acquisition_config=acquisition_config,
+    )
+
+
+def store_artifact_metadata(
+    db: Session,
+    *,
+    job: ImportJob,
+    payload: dict[str, Any],
+    acquisition: dict[str, Any],
+) -> dict[str, Any]:
+    source_path = _source_path(payload, acquisition)
+    match = _match_for_storage(db, payload=payload, acquisition=acquisition)
+
+    if acquisition["outcome"] == DEMO_ALREADY_AVAILABLE and source_path:
+        path = Path(str(source_path))
+        if path.is_file():
+            storage = {
+                "outcome": STORAGE_ALREADY_AVAILABLE,
+                "artifact": {
+                    "path": str(path.resolve()),
+                    "parser_handoff_path": str(path.resolve()),
+                    "match_demo_file": match.demo_file if match is not None else str(path.resolve()),
+                },
+                "raw": {"storage_status": STORAGE_ALREADY_AVAILABLE, "path": str(path.resolve())},
+                "actionable_reason": None,
+            }
+            _persist_match_storage(db, match=match, storage=storage, import_job_id=job.id)
+            return storage
+
+    if not source_path:
+        return {
+            "outcome": DEMO_NOT_FOUND,
+            "artifact": None,
+            "raw": None,
+            "actionable_reason": "Acquisition did not provide a local demo file path to store.",
+            "error_type": "MissingDemoSource",
+        }
+
+    try:
+        stored = store_demo_file(Path(str(source_path)), _original_filename(payload, source_path))
+    except FileNotFoundError as exc:
+        return {
+            "outcome": STORAGE_MISSING_FILE,
+            "artifact": None,
+            "raw": None,
+            "actionable_reason": str(exc),
+            "error_type": type(exc).__name__,
+        }
+    except Exception as exc:
+        return {
+            "outcome": STORAGE_FAILED_WITH_ACTIONABLE_ERROR,
+            "artifact": None,
+            "raw": None,
+            "actionable_reason": str(exc) or type(exc).__name__,
+            "error_type": type(exc).__name__,
+        }
+
+    storage = {
+        "outcome": STORAGE_STORED if stored["storage_status"] == "stored" else STORAGE_DUPLICATE,
+        "artifact": {
+            "storage_kind": stored["storage_kind"],
+            "sha1": stored["sha1"],
+            "size_bytes": stored["size_bytes"],
+            "path": stored["path"],
+            "relative_path": stored["relative_path"],
+            "parser_handoff_path": stored["parser_handoff_path"],
+        },
+        "raw": stored,
+        "actionable_reason": None,
+    }
+    _persist_match_storage(db, match=match, storage=storage, import_job_id=job.id)
+    return storage
+
+
+def serialize_result(
+    *,
+    job: ImportJob,
+    payload: dict[str, Any],
+    acquisition: dict[str, Any],
+    storage: dict[str, Any] | None,
+    error_message: str | None = None,
+    error_type: str | None = None,
+) -> dict[str, Any]:
+    artifact = (storage or {}).get("artifact") if storage else None
+    parser_handoff_path = artifact.get("parser_handoff_path") if isinstance(artifact, dict) else None
+    result = {
+        "overall_outcome": IMPORT_JOB_FAILED if error_message else IMPORT_JOB_COMPLETED,
+        "logical_target_key": job.logical_target_key,
+        "job": {
+            "id": job.id,
+            "status": IMPORT_JOB_FAILED if error_message else IMPORT_JOB_COMPLETED,
+            "job_type": job.job_type,
+        },
+        "request": {
+            "provider": job.provider,
+            "share_code": _share_code(payload),
+            "has_fixture_demo_path": _fixture_source_path(payload) is not None,
+        },
+        "acquisition": {
+            "outcome": acquisition["outcome"],
+            "share_code": acquisition.get("share_code"),
+            "match_id": acquisition.get("match_id"),
+            "config": _public_config(acquisition.get("config")),
+            "result": acquisition.get("raw"),
+        },
+        "storage": None
+        if storage is None
+        else {
+            "outcome": storage["outcome"],
+            "artifact": artifact,
+            "result": storage.get("raw"),
+        },
+        "parser_handoff": {
+            "field": "parser_handoff_path",
+            "path": parser_handoff_path,
+            "match_demo_file": artifact.get("match_demo_file") if isinstance(artifact, dict) else None,
+            "next_step": "run_parser_with_parser_handoff_path" if parser_handoff_path else None,
+        },
+        "error": {"message": error_message, "type": error_type} if error_message else None,
+        "created_at": _now_iso(),
+    }
+    return result
+
+
+def serialize_orchestration_job(job: ImportJob) -> dict[str, Any]:
+    return {
+        "id": job.id,
+        "status": job.status,
+        "logical_target_key": job.logical_target_key,
+        "result": import_job_result(job),
+        "error_message": job.error_message,
+    }
+
+
+def _normalize_acquisition(result: dict[str, Any], *, acquisition_config: dict[str, Any]) -> dict[str, Any]:
+    outcome = str(result.get("outcome") or result.get("acquisition_outcome") or result.get("overall_outcome") or "")
+    if not outcome:
+        outcome = DEMO_FAILED_WITH_ACTIONABLE_ERROR
+    error = result.get("error") if isinstance(result.get("error"), dict) else {}
+    return {
+        "outcome": outcome,
+        "share_code": result.get("share_code"),
+        "match_id": result.get("match_id"),
+        "source_path": result.get("source_path") or result.get("demo_file") or result.get("artifact_path"),
+        "config": acquisition_config,
+        "raw": result,
+        "actionable_reason": result.get("next_action") or error.get("message"),
+    }
+
+
+def _existing_available_match(db: Session, share_code: str | None) -> Match | None:
+    if not share_code:
+        return None
+    match = db.scalar(
+        select(Match)
+        .where(Match.source == "steam_history")
+        .where(Match.external_match_id == share_code)
+        .where(Match.demo_file.is_not(None))
+        .order_by(Match.id.desc())
+    )
+    if match is None or not match.demo_file:
+        return None
+    return match if Path(match.demo_file).is_file() else None
+
+
+def _match_for_storage(db: Session, *, payload: dict[str, Any], acquisition: dict[str, Any]) -> Match | None:
+    match_id = acquisition.get("match_id")
+    if match_id:
+        match = db.get(Match, int(match_id))
+        if match is not None:
+            return match
+
+    share_code = _share_code(payload) or acquisition.get("share_code")
+    if share_code:
+        match = db.scalar(
+            select(Match)
+            .where(Match.source == "steam_history")
+            .where(Match.external_match_id == str(share_code))
+            .order_by(Match.id.desc())
+        )
+        if match is not None:
+            return match
+        match = Match(
+            source="steam_history",
+            external_match_id=str(share_code),
+            raw_json=json.dumps({"share_code": str(share_code), "status": "demo_orchestration_requested"}),
+        )
+        db.add(match)
+        db.commit()
+        db.refresh(match)
+        return match
+
+    return None
+
+
+def _persist_match_storage(
+    db: Session,
+    *,
+    match: Match | None,
+    storage: dict[str, Any],
+    import_job_id: int,
+) -> None:
+    if match is None or not isinstance(storage.get("artifact"), dict):
+        return
+    artifact = storage["artifact"]
+    parser_handoff_path = artifact.get("parser_handoff_path") or artifact.get("path")
+    if parser_handoff_path:
+        match.demo_file = str(parser_handoff_path)
+    raw = _json_loads(match.raw_json)
+    raw.update(
+        {
+            "status": "demo_storage_ready",
+            "storage": {
+                "outcome": storage["outcome"],
+                "artifact": artifact,
+                "import_job_id": import_job_id,
+            },
+            "parser_handoff": {
+                "field": "Match.demo_file",
+                "path": parser_handoff_path,
+            },
+            "next_step": "parse_demo_from_match_demo_file",
+        }
+    )
+    match.raw_json = json.dumps(raw, ensure_ascii=False, sort_keys=True, default=str)
+    db.commit()
+
+
+def _source_path(payload: dict[str, Any], acquisition: dict[str, Any]) -> str | None:
+    fixture = _fixture_source_path(payload)
+    if fixture is not None:
+        return str(fixture)
+    value = acquisition.get("source_path")
+    return str(value) if value else None
+
+
+def _fixture_source_path(payload: dict[str, Any]) -> Path | None:
+    value = payload.get("fixture_demo_path") or payload.get("source_demo_path") or payload.get("local_demo_path")
+    return Path(str(value)) if value else None
+
+
+def _original_filename(payload: dict[str, Any], source_path: str | Path) -> str:
+    return str(payload.get("original_filename") or Path(str(source_path)).name)
+
+
+def _share_code(payload: dict[str, Any]) -> str | None:
+    value = payload.get("share_code") or payload.get("match_share_code")
+    normalized = str(value).strip() if value is not None else ""
+    return normalized or None
+
+
+def _actionable_message(acquisition: dict[str, Any]) -> str:
+    return str(acquisition.get("actionable_reason") or acquisition.get("outcome") or "Import acquisition failed.")
+
+
+def _public_config(config: dict[str, Any] | None) -> dict[str, Any] | None:
+    if config is None:
+        return None
+    return {
+        "configured": config.get("configured"),
+        "auth_configured": config.get("auth_configured"),
+        "helper_installed": config.get("helper_installed"),
+        "credential_mode": config.get("credential_mode"),
+        "missing": config.get("missing") or [],
+        "timeout_seconds": config.get("timeout_seconds"),
+    }
+
+
+def _json_loads(value: str | None) -> dict[str, Any]:
+    if not value:
+        return {}
+    try:
+        loaded = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _now_iso() -> str:
+    return datetime.now(UTC).replace(tzinfo=None).isoformat()
