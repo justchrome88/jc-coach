@@ -1,0 +1,61 @@
+{
+  "parser_name": "demoparser2",
+  "parser_version": "synthetic-test-version",
+  "payload_version": "synthetic-c05",
+  "status": "parsed",
+  "source_demo_file": "/opt/jc-coach/data/uploads/retained/05/0505050505050505050505050505050505050506.dem",
+  "demo_sha1": "0505050505050505050505050505050505050506",
+  "event_counts": {
+    "player_death": 1,
+    "player_hurt": 1
+  },
+  "confidence": {
+    "parser_confidence": "medium",
+    "metric_confidence": {
+      "kills": "high",
+      "deaths": "high",
+      "adr": "medium"
+    }
+  },
+  "payload": {
+    "parser": "demoparser2",
+    "parser_version": "synthetic-test-version",
+    "payload_version": "synthetic-c05",
+    "file": "/opt/jc-coach/data/uploads/retained/05/0505050505050505050505050505050505050506.dem",
+    "demo_sha1": "0505050505050505050505050505050505050506",
+    "parser_confidence": "medium",
+    "metric_confidence": {
+      "kills": "high",
+      "deaths": "high",
+      "adr": "medium"
+    },
+    "deep": {
+      "player_death": [
+        {
+          "round_number": 1,
+          "tick": 2500,
+          "attacker_name": "Synthetic Player",
+          "attacker_steamid": "SYNTHETIC_STEAM_ID",
+          "user_name": "Synthetic Opponent",
+          "user_steamid": "SYNTHETIC_OPPONENT_ID",
+          "weapon": "ak47"
+        }
+      ],
+      "player_hurt": [
+        {
+          "round_number": 1,
+          "tick": 2450,
+          "attacker_name": "Synthetic Player",
+          "attacker_steamid": "SYNTHETIC_STEAM_ID",
+          "user_name": "Synthetic Opponent",
+          "user_steamid": "SYNTHETIC_OPPONENT_ID",
+          "weapon": "ak47",
+          "dmg_health": 28
+        }
+      ],
+      "data_gaps": [
+        "utility events are missing from this artifact."
+      ]
+    }
+  }
+}

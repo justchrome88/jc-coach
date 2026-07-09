@@ -1,0 +1,120 @@
+{
+  "parser_name": "demoparser2",
+  "parser_version": "synthetic-test-version",
+  "payload_version": "synthetic-c05",
+  "status": "parsed",
+  "source_demo_file": "/opt/jc-coach/data/uploads/retained/05/0505050505050505050505050505050505050505.dem",
+  "demo_sha1": "0505050505050505050505050505050505050505",
+  "event_counts": {
+    "player_hurt": 1,
+    "player_blind": 1,
+    "grenade_events": 4
+  },
+  "confidence": {
+    "parser_confidence": "medium",
+    "metric_confidence": {
+      "flash": "medium",
+      "grenades": "medium",
+      "utility": "medium"
+    }
+  },
+  "payload": {
+    "parser": "demoparser2",
+    "parser_version": "synthetic-test-version",
+    "payload_version": "synthetic-c05",
+    "file": "/opt/jc-coach/data/uploads/retained/05/0505050505050505050505050505050505050505.dem",
+    "demo_sha1": "0505050505050505050505050505050505050505",
+    "parser_confidence": "medium",
+    "metric_confidence": {
+      "flash": "medium",
+      "grenades": "medium",
+      "utility": "medium"
+    },
+    "deep": {
+      "player_hurt": [
+        {
+          "round_number": 1,
+          "tick": 2100,
+          "attacker_name": "Synthetic Player",
+          "attacker_steamid": "SYNTHETIC_STEAM_ID",
+          "user_name": "Synthetic Opponent",
+          "user_steamid": "SYNTHETIC_OPPONENT_ID",
+          "weapon": "hegrenade",
+          "dmg_health": 42,
+          "dmg_armor": 0,
+          "health": 58
+        }
+      ],
+      "player_blind": [
+        {
+          "round_number": 1,
+          "tick": 1800,
+          "attacker_name": "Synthetic Player",
+          "attacker_steamid": "SYNTHETIC_STEAM_ID",
+          "user_name": "Synthetic Opponent",
+          "user_steamid": "SYNTHETIC_OPPONENT_ID",
+          "blind_duration": 1.8,
+          "entityid": 7
+        }
+      ],
+      "grenade_events": [
+        {
+          "round_number": 1,
+          "tick": 1800,
+          "event_type": "flashbang_detonate",
+          "grenade_type": "flashbang",
+          "player_name": "Synthetic Player",
+          "player_steamid": "SYNTHETIC_STEAM_ID",
+          "entity_id": 7,
+          "x": 100.0,
+          "y": 200.0,
+          "z": 32.0,
+          "flashed_count": 1,
+          "damage": 0
+        },
+        {
+          "round_number": 1,
+          "tick": 2000,
+          "event_type": "smokegrenade_detonate",
+          "grenade_type": "smokegrenade",
+          "player_name": "Synthetic Player",
+          "player_steamid": "SYNTHETIC_STEAM_ID",
+          "x": 110.0,
+          "y": 210.0,
+          "z": 36.0,
+          "flashed_count": 0,
+          "damage": 0
+        },
+        {
+          "round_number": 1,
+          "tick": 2100,
+          "event_type": "hegrenade_detonate",
+          "grenade_type": "hegrenade",
+          "player_name": "Synthetic Player",
+          "player_steamid": "SYNTHETIC_STEAM_ID",
+          "x": 120.0,
+          "y": 220.0,
+          "z": 40.0,
+          "flashed_count": 0,
+          "damage": 42
+        },
+        {
+          "round_number": 1,
+          "tick": 2300,
+          "event_type": "inferno_startburn",
+          "grenade_type": "inferno",
+          "player_name": "Synthetic Player",
+          "player_steamid": "SYNTHETIC_STEAM_ID",
+          "x": 130.0,
+          "y": 230.0,
+          "z": 44.0,
+          "flashed_count": 0,
+          "damage": 7
+        }
+      ],
+      "data_gaps": [
+        "grenade trajectories were not parsed; only detonation/blind/damage events are available."
+      ]
+    }
+  }
+}

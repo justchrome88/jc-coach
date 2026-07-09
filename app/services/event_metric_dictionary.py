@@ -163,6 +163,14 @@ EVENT_METRIC_DICTIONARY: dict[str, EventMetricDefinition] = {
         ("flash_assists", "enemies_flashed"),
         ("Blind duration and kill correlation are best-effort; do not claim exact flash value.",),
     ),
+    "utility_detonation": EventMetricDefinition(
+        "utility_detonation",
+        "utility",
+        "weak",
+        ("grenade_events",),
+        ("grenade_rating",),
+        ("Detonation events prove utility was thrown/detonated, not that it had useful tactical value.",),
+    ),
     "grenade_path": EventMetricDefinition(
         "grenade_path",
         "utility",
@@ -186,6 +194,14 @@ EVENT_METRIC_DICTIONARY: dict[str, EventMetricDefinition] = {
         ("item_pickup",),
         (),
         ("Item pickup is counted by the parser but has no accepted v0.10 metric consumer.",),
+    ),
+    "utility_data_gap": EventMetricDefinition(
+        "utility_data_gap",
+        "utility",
+        "unsupported",
+        ("data_gaps",),
+        (),
+        ("Missing or weak utility source data must suppress precise utility-quality claims.",),
     ),
     "traded_death": EventMetricDefinition(
         "traded_death",

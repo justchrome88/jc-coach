@@ -75,10 +75,13 @@ def normalized_events_from_parser_artifact(
     events.extend(_raw_round_boundary_events(deep, source, confidence))
     events.extend(_raw_player_death_events(deep, source, confidence))
     events.extend(_raw_player_hurt_events(deep, source, confidence))
+    events.extend(_raw_player_blind_events(deep, source, confidence))
     events.extend(_round_events(deep, source, confidence))
     events.extend(_duel_events(deep, source, confidence))
     events.extend(_damage_events(deep, source, confidence))
+    events.extend(_blind_events(deep, source, confidence))
     events.extend(_grenade_events(deep, source, confidence))
+    events.extend(_utility_data_gap_events(deep, source, confidence))
     events.extend(_weapon_accuracy_events(deep, source, confidence))
     events.extend(_survival_events(deep, source, confidence))
 
@@ -400,11 +403,23 @@ def _grenade_events(
     for row in _rows(deep, "grenade_events"):
         context = {
             "grenade_type": row.get("grenade_type"),
+            "utility_type": _utility_type(row.get("grenade_type") or row.get("event_type")),
             "parser_event_type": row.get("event_type"),
+            "entity_id": row.get("entity_id") or row.get("entityid"),
             "flashed_count": _int_or_none(row.get("flashed_count")),
             "damage": _int_or_none(row.get("damage")),
             "position": _position(row),
         }
+        events.append(
+            _grenade_event(
+                "utility_detonation",
+                row,
+                source,
+                confidence,
+                context,
+                caveats=["Utility detonation does not prove damage, flash value or lineup quality."],
+            )
+        )
         if _int_or_none(row.get("flashed_count")):
             events.append(_grenade_event("flash_effect", row, source, confidence, context))
         if _int_or_none(row.get("damage")):
@@ -412,6 +427,66 @@ def _grenade_events(
         if _position(row):
             events.append(_grenade_event("grenade_path", row, source, confidence, context))
     return events
+
+
+def _utility_data_gap_events(
+    deep: Mapping[str, Any],
+    source: Mapping[str, Any],
+    confidence: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    grenade_rows = _rows(deep, "grenade_events")
+    blind_rows = [
+        *_rows(deep, "blind_events"),
+        *[row for row, _ in _raw_rows(deep, ("player_blind_events", "player_blind"), {})],
+    ]
+    trajectory_rows = _rows(deep, "grenade_trajectories")
+    utility_damage_rows = [
+        row
+        for row in [
+            *_rows(deep, "damage_events"),
+            *[row for row, _ in _raw_rows(deep, ("player_hurt_events", "player_hurt"), {})],
+        ]
+        if _utility_type(row.get("weapon"))
+        and (_int_or_none(row.get("damage_health") or row.get("dmg_health")) or 0) > 0
+    ]
+    missing_sources = []
+    if not grenade_rows:
+        missing_sources.append("grenade_events")
+    if not blind_rows:
+        missing_sources.append("player_blind")
+    if not trajectory_rows:
+        missing_sources.append("grenade_trajectories")
+    if not utility_damage_rows and not any((_int_or_none(row.get("damage")) or 0) > 0 for row in grenade_rows):
+        missing_sources.append("utility_damage")
+
+    if not missing_sources:
+        return []
+
+    data_gaps = deep.get("data_gaps") if isinstance(deep.get("data_gaps"), list) else []
+    return [
+        _event(
+            "utility_data_gap",
+            "data_gaps",
+            source,
+            confidence,
+            context={
+                "missing_sources": missing_sources,
+                "available_sources": {
+                    "grenade_events": bool(grenade_rows),
+                    "player_blind": bool(blind_rows),
+                    "grenade_trajectories": bool(trajectory_rows),
+                    "utility_damage": bool(utility_damage_rows)
+                    or any((_int_or_none(row.get("damage")) or 0) > 0 for row in grenade_rows),
+                },
+                "unsupported_metrics": ["grenade_rating"],
+            },
+            payload={"data_gaps": data_gaps},
+            caveats=[
+                "Unsupported utility metrics are represented as a data gap, not as inferred performance.",
+                "Downstream coach and metrics layers must not infer grenade quality from missing utility data.",
+            ],
+        )
+    ]
 
 
 def _weapon_accuracy_events(
@@ -565,6 +640,22 @@ def _raw_player_hurt_events(
         tick = _int_or_none(row.get("tick"))
         damage_health = _int_or_none(row.get("damage_health") or row.get("dmg_health") or row.get("health_damage"))
         damage_armor = _int_or_none(row.get("damage_armor") or row.get("dmg_armor"))
+        context = {
+            "weapon": row.get("weapon"),
+            "hitgroup": row.get("hitgroup"),
+            "damage_health": damage_health,
+            "damage_armor": damage_armor,
+            "victim_health_after": _int_or_none(row.get("victim_health_after") or row.get("health")),
+            "victim_armor_after": _int_or_none(row.get("victim_armor_after") or row.get("armor")),
+        }
+        caveats = [
+            *_availability_caveats(round_number=round_number, tick=tick, actor=actor, victim=victim),
+            *(
+                ["Source row omitted health damage; ADR consumers must ignore this row."]
+                if damage_health is None
+                else []
+            ),
+        ]
         events.append(
             _event(
                 "damage",
@@ -575,20 +666,108 @@ def _raw_player_hurt_events(
                 tick=tick,
                 actor=actor,
                 victim=victim,
+                context=context,
+                payload=row,
+                caveats=caveats,
+            )
+        )
+        utility_type = _utility_type(row.get("weapon"))
+        if utility_type and damage_health is not None and damage_health > 0:
+            events.append(
+                _event(
+                    "utility_damage",
+                    "player_hurt",
+                    source,
+                    confidence,
+                    round_number=round_number,
+                    tick=tick,
+                    actor=actor,
+                    victim=victim,
+                    context={**context, "utility_type": utility_type},
+                    payload=row,
+                    caveats=[
+                        *caveats,
+                        "Utility damage is inferred from parser weapon name on player_hurt.",
+                    ],
+                )
+            )
+    return events
+
+
+def _raw_player_blind_events(
+    deep: Mapping[str, Any],
+    source: Mapping[str, Any],
+    confidence: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    events = []
+    for row, _source_event in _raw_rows(deep, ("player_blind_events", "player_blind"), {}):
+        actor = _player_from_fields(row, ("attacker_name", "attacker"), ("attacker_steamid",))
+        victim = _player_from_fields(row, ("victim_name", "user_name", "user"), ("victim_steamid", "user_steamid"))
+        round_number = _int_or_none(row.get("round_number") or row.get("round") or row.get("total_rounds_played"))
+        tick = _int_or_none(row.get("tick"))
+        blind_duration = _float_or_none(row.get("blind_duration"))
+        events.append(
+            _event(
+                "flash_effect",
+                "player_blind",
+                source,
+                confidence,
+                round_number=round_number,
+                tick=tick,
+                actor=actor,
+                victim=victim,
                 context={
-                    "weapon": row.get("weapon"),
-                    "hitgroup": row.get("hitgroup"),
-                    "damage_health": damage_health,
-                    "damage_armor": damage_armor,
-                    "victim_health_after": _int_or_none(row.get("victim_health_after") or row.get("health")),
-                    "victim_armor_after": _int_or_none(row.get("victim_armor_after") or row.get("armor")),
+                    "utility_type": "flashbang",
+                    "blind_duration": blind_duration,
+                    "entity_id": row.get("entity_id") or row.get("entityid"),
                 },
                 payload=row,
                 caveats=[
                     *_availability_caveats(round_number=round_number, tick=tick, actor=actor, victim=victim),
                     *(
-                        ["Source row omitted health damage; ADR consumers must ignore this row."]
-                        if damage_health is None
+                        ["Source row omitted blind duration; flash value must remain low-confidence."]
+                        if blind_duration is None
+                        else []
+                    ),
+                ],
+            )
+        )
+    return events
+
+
+def _blind_events(
+    deep: Mapping[str, Any],
+    source: Mapping[str, Any],
+    confidence: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    events = []
+    for row in _rows(deep, "blind_events"):
+        actor = _player(row, "attacker")
+        victim = _player(row, "victim")
+        round_number = _int_or_none(row.get("round_number"))
+        tick = _int_or_none(row.get("tick"))
+        blind_duration = _float_or_none(row.get("blind_duration"))
+        events.append(
+            _event(
+                "flash_effect",
+                "player_blind",
+                source,
+                confidence,
+                round_number=round_number,
+                tick=tick,
+                actor=actor,
+                victim=victim,
+                context={
+                    "utility_type": "flashbang",
+                    "blind_duration": blind_duration,
+                    "entity_id": row.get("entity_id") or row.get("entityid"),
+                },
+                payload=row,
+                caveats=[
+                    *_availability_caveats(round_number=round_number, tick=tick, actor=actor, victim=victim),
+                    *(
+                        ["Source row omitted blind duration; flash value must remain low-confidence."]
+                        if blind_duration is None
                         else []
                     ),
                 ],
@@ -603,6 +782,8 @@ def _grenade_event(
     source: Mapping[str, Any],
     confidence: Mapping[str, Any],
     context: Mapping[str, Any],
+    *,
+    caveats: list[str] | None = None,
 ) -> dict[str, Any]:
     return _event(
         event_type,
@@ -614,6 +795,7 @@ def _grenade_event(
         actor={"name": row.get("player_name"), "steamid": row.get("player_steamid")},
         context=context,
         payload=row,
+        caveats=caveats,
     )
 
 
@@ -652,6 +834,8 @@ def _event(
 
 
 def _event_confidence(event_type: str, confidence: Mapping[str, Any]) -> str:
+    if EVENT_METRIC_DICTIONARY[event_type].support == "unsupported":
+        return "low"
     metric_key = {
         "round_summary": None,
         "round_timing": "early_deaths",
@@ -664,6 +848,7 @@ def _event_confidence(event_type: str, confidence: Mapping[str, Any]) -> str:
         "round_survival": "kast",
         "utility_damage": "utility",
         "flash_effect": "flash",
+        "utility_detonation": "grenades",
         "grenade_path": "utility",
         "objective_event": "swing",
     }.get(event_type)
@@ -795,6 +980,23 @@ def _first_present(row: Mapping[str, Any], fields: tuple[str, ...]) -> Any:
         value = row.get(field)
         if value not in (None, ""):
             return value
+    return None
+
+
+def _utility_type(value: Any) -> str | None:
+    text = str(value or "").lower()
+    if "flash" in text:
+        return "flashbang"
+    if "smoke" in text:
+        return "smoke"
+    if "hegrenade" in text or text == "he":
+        return "hegrenade"
+    if "molotov" in text:
+        return "molotov"
+    if "incgrenade" in text or "inferno" in text:
+        return "incendiary"
+    if "decoy" in text:
+        return "decoy"
     return None
 
 

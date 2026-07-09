@@ -17,6 +17,8 @@ from app.services.parser_artifact_reader import (
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "parser"
 ARTIFACT_PATH = FIXTURE_DIR / "parser_artifact_c02.json"
 C03_ARTIFACT_PATH = FIXTURE_DIR / "parser_artifact_c03_combat.json"
+C05_UTILITY_SUPPORTED_PATH = FIXTURE_DIR / "parser_artifact_c05_utility_supported.json"
+C05_UTILITY_MISSING_PATH = FIXTURE_DIR / "parser_artifact_c05_utility_missing.json"
 HANDOFF_PATH = "/opt/jc-coach/data/uploads/retained/00/0000000000000000000000000000000000000000.dem"
 
 
@@ -144,6 +146,62 @@ def test_c03_missing_combat_fields_are_caveated_without_crashing():
     assert "Source row omitted actor steamid; player joins may require name fallback." in damage["caveats"]
     assert "Source row omitted victim steamid; player joins may require name fallback." in damage["caveats"]
     assert "Source row omitted health damage; ADR consumers must ignore this row." in damage["caveats"]
+
+
+def test_c05_supported_utility_events_extract_first_pass_facts():
+    events = read_normalized_events_from_artifact_file(C05_UTILITY_SUPPORTED_PATH)
+
+    detonations = [event for event in events if event["event_type"] == "utility_detonation"]
+    assert {event["context"]["utility_type"] for event in detonations} == {
+        "flashbang",
+        "smoke",
+        "hegrenade",
+        "incendiary",
+    }
+    assert all(event["support"] == "weak" for event in detonations)
+    assert all(event["confidence"] == "medium" for event in detonations)
+
+    raw_utility_damage = next(
+        event
+        for event in events
+        if event["event_type"] == "utility_damage" and event["source_event"] == "player_hurt"
+    )
+    assert raw_utility_damage["context"]["utility_type"] == "hegrenade"
+    assert raw_utility_damage["context"]["damage_health"] == 42
+    assert "Utility damage is inferred from parser weapon name on player_hurt." in raw_utility_damage["caveats"]
+
+    flash = next(
+        event for event in events if event["event_type"] == "flash_effect" and event["source_event"] == "player_blind"
+    )
+    assert flash["actor"] == {"name": "Synthetic Player", "steamid": "SYNTHETIC_STEAM_ID"}
+    assert flash["victim"] == {"name": "Synthetic Opponent", "steamid": "SYNTHETIC_OPPONENT_ID"}
+    assert flash["context"]["blind_duration"] == 1.8
+    assert flash["support"] == "weak"
+
+    data_gap = next(event for event in events if event["event_type"] == "utility_data_gap")
+    assert data_gap["support"] == "unsupported"
+    assert data_gap["confidence"] == "low"
+    assert data_gap["context"]["missing_sources"] == ["grenade_trajectories"]
+    assert data_gap["context"]["unsupported_metrics"] == ["grenade_rating"]
+
+
+def test_c05_missing_utility_data_is_explicitly_unsupported():
+    events = read_normalized_events_from_artifact_file(C05_UTILITY_MISSING_PATH)
+    utility_events = [event for event in events if event["category"] == "utility"]
+
+    assert [event["event_type"] for event in utility_events] == ["utility_data_gap"]
+    data_gap = utility_events[0]
+    assert data_gap["support"] == "unsupported"
+    assert data_gap["confidence"] == "low"
+    assert data_gap["context"]["missing_sources"] == [
+        "grenade_events",
+        "player_blind",
+        "grenade_trajectories",
+        "utility_damage",
+    ]
+    assert "Downstream coach and metrics layers must not infer grenade quality from missing utility data." in data_gap[
+        "caveats"
+    ]
 
 
 def test_retained_demo_handoff_path_reads_existing_parser_artifact():
