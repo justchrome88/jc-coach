@@ -167,6 +167,7 @@ def calculate_utility_metrics(
                 metrics=metrics,
                 confidence_baseline={
                     "source": UTILITY_METRICS_VERSION,
+                    "confidence": _overall_confidence(confidence, metrics),
                     "metrics": confidence,
                     "event_coverage": {
                         "utility_damage_events": len(utility_damage_events),
@@ -297,6 +298,21 @@ def _known_players(
             _add_player(known, event.get("actor"))
             _add_player(known, event.get("victim"))
     return known
+
+
+def _overall_confidence(confidence: Mapping[str, Any], metrics: Mapping[str, Any]) -> str:
+    levels = [
+        str(record.get("level"))
+        for metric_name, record in confidence.items()
+        if metric_name in metrics and isinstance(record, Mapping) and record.get("level")
+    ]
+    if not levels:
+        return "unavailable"
+    if "low" in levels or "unavailable" in levels:
+        return "low"
+    if "medium" in levels:
+        return "medium"
+    return "high"
 
 
 def _add_player(known: dict[str, Mapping[str, Any]], player: Any) -> None:
