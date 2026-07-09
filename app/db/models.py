@@ -103,6 +103,124 @@ class MetricSnapshot(Base):
     )
 
 
+class AnalysisRun(Base):
+    __tablename__ = "analysis_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    owner_steam_id: Mapped[str | None] = mapped_column(String(32), index=True)
+    mode: Mapped[str] = mapped_column(String(50), default="personal", nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(40), default="created", nullable=False, index=True)
+    window_start: Mapped[datetime | None] = mapped_column(DateTime, index=True)
+    window_end: Mapped[datetime | None] = mapped_column(DateTime, index=True)
+    source: Mapped[str | None] = mapped_column(String(80), index=True)
+    selected_metric_snapshot_ids_json: Mapped[str] = mapped_column(Text, nullable=False)
+    analysis_scope_json: Mapped[str] = mapped_column(Text, nullable=False)
+    source_payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class CoachHypothesis(Base):
+    __tablename__ = "coach_hypotheses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    analysis_run_id: Mapped[int] = mapped_column(ForeignKey("analysis_runs.id"), nullable=False, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    owner_steam_id: Mapped[str | None] = mapped_column(String(32), index=True)
+    status: Mapped[str] = mapped_column(String(40), default="candidate", nullable=False, index=True)
+    source_insight_card_id: Mapped[str | None] = mapped_column(String(120), index=True)
+    problem: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_json: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence: Mapped[float | None] = mapped_column(Float)
+    caveats_json: Mapped[str] = mapped_column(Text, nullable=False)
+    recommended_focus: Mapped[str] = mapped_column(Text, nullable=False)
+    mission_readiness_json: Mapped[str] = mapped_column(Text, nullable=False)
+    target_metric_candidates_json: Mapped[str] = mapped_column(Text, nullable=False)
+    source_card_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class CoachMission(Base):
+    __tablename__ = "coach_missions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    hypothesis_id: Mapped[int | None] = mapped_column(ForeignKey("coach_hypotheses.id"), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    owner_steam_id: Mapped[str | None] = mapped_column(String(32), index=True)
+    status: Mapped[str] = mapped_column(String(40), default="active", nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    focus: Mapped[str] = mapped_column(Text, nullable=False)
+    source_payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+    activated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class MissionCriteria(Base):
+    __tablename__ = "mission_criteria"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    mission_id: Mapped[int] = mapped_column(ForeignKey("coach_missions.id"), nullable=False, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    owner_steam_id: Mapped[str | None] = mapped_column(String(32), index=True)
+    metric_name: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    direction: Mapped[str] = mapped_column(String(40), nullable=False)
+    baseline_value: Mapped[float | None] = mapped_column(Float)
+    target_value: Mapped[float | None] = mapped_column(Float)
+    min_sample_matches: Mapped[int | None] = mapped_column(Integer)
+    min_sample_rounds: Mapped[int | None] = mapped_column(Integer)
+    confidence_required: Mapped[float | None] = mapped_column(Float)
+    rule_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class MissionProgressEvaluation(Base):
+    __tablename__ = "mission_progress_evaluations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    mission_id: Mapped[int] = mapped_column(ForeignKey("coach_missions.id"), nullable=False, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    owner_steam_id: Mapped[str | None] = mapped_column(String(32), index=True)
+    evaluation_window_start: Mapped[datetime | None] = mapped_column(DateTime, index=True)
+    evaluation_window_end: Mapped[datetime | None] = mapped_column(DateTime, index=True)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    result_json: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence: Mapped[float | None] = mapped_column(Float)
+    caveats_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
 class DemoRound(Base):
     __tablename__ = "demo_rounds"
     __table_args__ = (UniqueConstraint("match_id", "round_number", name="uq_demo_round_match_round"),)
