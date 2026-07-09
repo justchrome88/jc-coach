@@ -137,7 +137,33 @@ Stop and report `BLOCKED` when:
   `docs/project_management/ACCEPTANCE_MATRIX.md`.
 - Historical reports and audits are task-relevant evidence only.
 
-## 10. Token Economy And Context Budget
+## 10. Manual Task Commit Policy
+
+For manually executed Codex task cards, local commit is authorized by default
+when the task finishes with `PASS` or `PASS_WITH_WARNINGS`.
+
+The executor must:
+
+1. complete the implementation;
+2. run the required focused checks;
+3. write the task report;
+4. review `git status --short`;
+5. commit only task-scoped product changes in `/opt/jc-coach`.
+
+The executor must not commit if:
+
+- the task result is `BLOCKED` or `FAIL`;
+- unrelated pre-existing dirty files are present;
+- changed files are outside the task scope;
+- tests/checks required by the task were not run;
+- secrets, credentials, local DB dumps, raw demo archives or temporary files would be committed.
+
+The executor must never push unless the user explicitly requests it.
+
+Use short commit messages describing the product change.
+
+
+## 11. Token Economy And Context Budget
 
 Every task must minimize context and token usage.
 
