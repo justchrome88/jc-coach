@@ -23,6 +23,7 @@ from app.services.ai_coach import (
 )
 from app.services.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, RETENTION_CLASS_FINAL_OUTPUT
 from app.services.importer import import_rows
+from app.services.metric_snapshots import create_metric_snapshot
 from app.services.metric_truth import METRIC_REGISTRY_VERSION
 
 
@@ -108,6 +109,48 @@ def test_ai_coach_prompt_carries_contract_snapshot_without_removing_caveats(db, 
         assert f'"accepted_playlist": "{unsupported_mode}"' not in payload_json
     assert '"v1_0_claim_allowed": true' not in payload_json
     assert '"public_or_friends_claim_allowed": true' not in payload_json
+
+
+def test_ai_coach_payload_includes_deterministic_bad_fight_trade_insight_cards(db):
+    match = Match(source="demo", external_match_id="trade-insight-ai")
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:76561198000000001",
+        player_name="Alpha",
+        player_steamid="76561198000000001",
+        source="core_combat_metrics",
+        source_event_set_id="fixture:e03",
+        metrics={
+            "rounds": 10,
+            "opening_deaths": 3,
+            "opening_death_rate": 0.3,
+            "untraded_deaths": 3,
+            "trade_status_known_deaths": 4,
+            "untraded_death_rate": 0.75,
+        },
+        confidence_baseline={
+            "source": "core-combat-metrics-v1",
+            "metrics": {
+                "opening_death_rate": {"level": "high"},
+                "untraded_death_rate": {"level": "high"},
+            },
+        },
+        caveats=[],
+        metadata={"schema_version": "core-combat-metrics-v1"},
+    )
+
+    payload = build_ai_coach_payload(db)
+
+    assert payload["coach_insight_cards"][0]["problem"] == (
+        "Untraded deaths show bad fight selection or poor trade spacing in this match snapshot."
+    )
+    assert payload["coach_insight_cards"][0]["evidence"][0]["metric_id"] == "untraded_death_rate"
+    assert payload["coach_insight_cards"][0]["evidence"][0]["sample_count"] == 4
+    assert payload["coach_insight_cards"][0]["confidence"] == "high"
 
 
 def test_ai_payload_uses_exact_recent_matches_and_reports_exclusions(db):

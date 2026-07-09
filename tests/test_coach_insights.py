@@ -1,6 +1,8 @@
 from app.services.coach_insights import (
     INSIGHT_CARD_SCHEMA_VERSION,
     MEDIUM_CONFIDENCE_CAVEAT,
+    bad_fight_trade_insight_from_snapshot,
+    coach_insights_from_snapshots,
     no_data_insight_card,
     serialize_insight_cards,
     survival_opening_death_insight_from_snapshot,
@@ -224,6 +226,131 @@ def test_survival_opening_death_insights_are_deterministically_prioritized():
     cards = survival_opening_death_insights_from_snapshots([survival, opening])
 
     assert [card["evidence"][0]["metric_id"] for card in cards] == ["opening_death_rate", "survival_rate"]
+
+
+def test_bad_fight_trade_insight_uses_untraded_death_evidence_with_counts_and_rates():
+    card = bad_fight_trade_insight_from_snapshot(
+        _snapshot(
+            metrics={
+                "rounds": 10,
+                "opening_deaths": 3,
+                "opening_death_rate": 0.3,
+                "untraded_deaths": 3,
+                "traded_deaths": 1,
+                "trade_status_known_deaths": 4,
+                "untraded_death_rate": 0.75,
+                "traded_death_rate": 0.25,
+            },
+            confidence={
+                "opening_death_rate": {"level": "high"},
+                "untraded_death_rate": {"level": "high"},
+                "traded_death_rate": {"level": "high"},
+            },
+        )
+    )
+
+    assert card is not None
+    assert validate_insight_cards([card]) == ()
+    assert card["problem"] == "Untraded deaths show bad fight selection or poor trade spacing in this match snapshot."
+    assert card["confidence"] == "high"
+    assert card["evidence"] == [
+        {
+            "metric_id": "untraded_death_rate",
+            "value": 0.75,
+            "threshold": 0.6,
+            "metric_confidence": "high",
+            "sample_count": 4,
+            "match_ids": [42],
+            "source": "core_combat_metrics",
+            "count": 3,
+            "known_trade_status_deaths": 4,
+            "rounds": 10,
+            "description": (
+                "Untraded deaths are 3 of 4 deaths with known trade status (0.750), meeting the 0.600 "
+                "insight threshold."
+            ),
+        },
+        {
+            "metric_id": "opening_death_rate",
+            "value": 0.3,
+            "threshold": 0.22,
+            "metric_confidence": "high",
+            "sample_count": 10,
+            "match_ids": [42],
+            "source": "core_combat_metrics",
+            "description": "Opening deaths are 3 over 10 rounds (0.300), meeting the 0.220 insight threshold.",
+        },
+    ]
+    assert "Untraded death evidence depends on parser trade window and side inference." in card["caveats"]
+    assert "Opening death evidence depends on parser opening duel event order." in card["caveats"]
+
+
+def test_bad_fight_trade_insight_caveats_ambiguous_trade_data_without_hard_claim():
+    card = bad_fight_trade_insight_from_snapshot(
+        _snapshot(
+            metrics={
+                "rounds": 10,
+                "ambiguous_traded_deaths": 2,
+                "trade_status_known_deaths": 0,
+            },
+            confidence={
+                "traded_death_rate": {"level": "low"},
+                "untraded_death_rate": {"level": "low"},
+            },
+            caveats=["Source events do not include both actor/victim team side; traded death is ambiguous."],
+        )
+    )
+
+    assert card is not None
+    assert validate_insight_cards([card]) == ()
+    assert card["problem"] == "Trade behavior cannot be judged confidently from this match snapshot."
+    assert card["confidence"] == "low"
+    assert card["evidence"] == [
+        {
+            "metric_id": "ambiguous_traded_deaths",
+            "value": 2,
+            "metric_confidence": "low",
+            "sample_count": 2,
+            "match_ids": [42],
+            "source": "core_combat_metrics",
+            "description": (
+                "2 death(s) have ambiguous trade status and were excluded from traded/untraded death rates."
+            ),
+        }
+    ]
+    assert "Weak or ambiguous trade data cannot support a hard bad-fight or trade recommendation." in card["caveats"]
+    assert "Source events do not include both actor/victim team side; traded death is ambiguous." in card["caveats"]
+
+
+def test_combined_coach_insights_prioritize_bad_fight_trade_before_prior_survival_insight():
+    trade = _snapshot(
+        match_id=7,
+        metrics={
+            "rounds": 10,
+            "opening_deaths": 3,
+            "opening_death_rate": 0.3,
+            "untraded_deaths": 3,
+            "trade_status_known_deaths": 4,
+            "untraded_death_rate": 0.75,
+        },
+        confidence={
+            "opening_death_rate": {"level": "high"},
+            "untraded_death_rate": {"level": "high"},
+        },
+    )
+    survival = _snapshot(
+        match_id=8,
+        metrics={"rounds": 10, "survived_rounds": 4, "survival_rate": 0.4},
+        confidence={"survival_rate": {"level": "high"}},
+    )
+
+    cards = coach_insights_from_snapshots([survival, trade])
+
+    assert [card["evidence"][0]["metric_id"] for card in cards] == [
+        "untraded_death_rate",
+        "opening_death_rate",
+        "survival_rate",
+    ]
 
 
 def _snapshot(

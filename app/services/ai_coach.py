@@ -13,11 +13,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.db.models import CoachReport, Match
+from app.db.models import CoachReport, Match, MetricSnapshot
 from app.services.ai_validator import render_ai_output_markdown, validate_ai_coach_output
 from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
-from app.services.coach_insights import no_data_insight_card, serialize_insight_cards
+from app.services.coach_insights import coach_insights_from_snapshots, no_data_insight_card, serialize_insight_cards
 from app.services.coach_rules import build_coach_focus
 from app.services.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, artifact_retention_metadata
 from app.services.match_queries import playable_match_select
@@ -27,6 +27,7 @@ from app.services.metric_confidence import (
     metric_confidence_map,
     metric_context,
 )
+from app.services.metric_snapshots import metric_snapshot_payload
 from app.services.metric_truth import (
     METRIC_REGISTRY_VERSION,
     metric_truth_payload,
@@ -274,6 +275,8 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
     recommendation_progress = get_active_recommendation_progress(db)
     all_recommendation_progress = get_all_recommendation_progress(db)
     recent_matches = exact_recent_matches(matches, 10, context=context)
+    metric_snapshot_payloads = _recent_metric_snapshot_payloads(db)
+    coach_insight_cards = coach_insights_from_snapshots(metric_snapshot_payloads)
     confidence_metadata = {
         "date_window": exact_date_window_metadata(matches, required_sample=15, context=context),
         "metrics": metric_confidence_map(
@@ -316,6 +319,7 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
         "structured_mistakes": structured_mistakes,
         "coach_categories": category_scorecard(structured_mistakes),
         "coach_focus": focus,
+        "coach_insight_cards": coach_insight_cards,
         "metric_truth": {
             "metric_registry_version": METRIC_REGISTRY_VERSION,
             "definitions": metric_truth_payload(
@@ -370,6 +374,8 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
             "- Верни строго JSON по схеме: summary, diagnoses[], recommendations[], warnings[], "
             "evidence[], insight_cards[], confidence.",
             "- В insight_cards указывай problem, evidence[], confidence, caveats[], recommended_focus.",
+            "- Если coach_insight_cards есть в payload, используй их как детерминированные evidence-backed "
+            "cards и не усиливай confidence сверх указанного.",
             "- Insight card без evidence допустим только как low confidence no-data card с caveats.",
             "- В diagnoses указывай category, severity, claim, evidence_metric_ids[], confidence, caveats[].",
             "- В recommendations указывай category, action, rationale, target_metric_ids[], confidence, caveats[].",
@@ -398,6 +404,13 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
             "```",
         ]
     )
+
+
+def _recent_metric_snapshot_payloads(db: Session, *, limit: int = 50) -> list[dict[str, Any]]:
+    snapshots = db.scalars(
+        select(MetricSnapshot).order_by(MetricSnapshot.created_at.desc(), MetricSnapshot.id.desc()).limit(limit)
+    )
+    return [metric_snapshot_payload(snapshot) for snapshot in snapshots]
 
 
 def _provider() -> AIProvider:

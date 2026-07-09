@@ -202,6 +202,22 @@ def _valid_ai_output() -> dict:
                 "caveats": ["Source/order dependent."],
             }
         ],
+        "insight_cards": [
+            {
+                "problem": "Opening duel survival is the current evidence-backed focus.",
+                "evidence": [
+                    {
+                        "metric_id": "entry_deaths",
+                        "value": 3,
+                        "metric_confidence": "medium",
+                        "description": "Entry deaths are elevated in the current sample.",
+                    }
+                ],
+                "confidence": "medium",
+                "caveats": ["Opening duel detection depends on parser/source order."],
+                "recommended_focus": "Review first-contact deaths before changing broader coach goals.",
+            }
+        ],
         "confidence": "medium",
     }
 
