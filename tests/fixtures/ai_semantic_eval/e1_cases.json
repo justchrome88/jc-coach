@@ -17,6 +17,25 @@
       },
       "output": {
         "summary": "Opening death evidence is usable but source/order caveats remain.",
+        "insight_cards": [
+          {
+            "problem": "Opening duel survival is elevated in the supplied match window.",
+            "evidence": [
+              {
+                "metric_id": "entry_deaths",
+                "value": 7,
+                "metric_confidence": "medium",
+                "problem": "survival_opening_deaths",
+                "match_ids": [101, 102, 103],
+                "recommendation_id": "rec-survival-1",
+                "description": "Entry deaths are elevated in the supplied match window."
+              }
+            ],
+            "confidence": "medium",
+            "caveats": ["Opening duel detection depends on parser/source order."],
+            "recommended_focus": "Use bounded review focus on first-contact spacing for the next five matches."
+          }
+        ],
         "diagnoses": [
           {
             "category": "survival",

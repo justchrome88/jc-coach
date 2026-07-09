@@ -5,11 +5,24 @@ import re
 from dataclasses import asdict, dataclass
 from typing import Any, Literal
 
+from app.services.coach_insights import (
+    no_data_insight_card,
+    serialize_insight_cards,
+    validate_insight_cards,
+)
 from app.services.metric_truth import metric_definition, usage_decision
 
 AIConfidence = Literal["low", "medium", "high"]
 
-REQUIRED_TOP_LEVEL_KEYS = ("summary", "diagnoses", "recommendations", "warnings", "evidence", "confidence")
+REQUIRED_TOP_LEVEL_KEYS = (
+    "summary",
+    "insight_cards",
+    "diagnoses",
+    "recommendations",
+    "warnings",
+    "evidence",
+    "confidence",
+)
 VALID_CONFIDENCE: set[str] = {"low", "medium", "high"}
 REQUIRED_CONTRACT_SNAPSHOT_KEYS = (
     "ai_coach_prompt_version",
@@ -132,6 +145,7 @@ def validate_ai_coach_output(
     _validate_list(output, "recommendations", issues)
     _validate_list(output, "warnings", issues)
     _validate_list(output, "evidence", issues)
+    _validate_insight_cards(output.get("insight_cards"), issues)
 
     for index, diagnosis in enumerate(output.get("diagnoses") or []):
         if not isinstance(diagnosis, dict):
@@ -187,6 +201,19 @@ def validate_ai_coach_output(
                 path=f"$.evidence[{index}].metric_id",
                 issues=issues,
             )
+    for card_index, card in enumerate(output.get("insight_cards") or []):
+        if not isinstance(card, dict):
+            continue
+        for evidence_index, evidence in enumerate(card.get("evidence") or []):
+            if not isinstance(evidence, dict) or evidence.get("metric_id") is None:
+                continue
+            _validate_metric_claims(
+                [evidence.get("metric_id")],
+                usage="ai",
+                caveats=evidence.get("caveats") or card.get("caveats"),
+                path=f"$.insight_cards[{card_index}].evidence[{evidence_index}].metric_id",
+                issues=issues,
+            )
 
     if payload_snapshot is not None:
         _validate_runtime_metadata(payload_snapshot, issues)
@@ -206,8 +233,21 @@ def render_ai_output_markdown(output: dict[str, Any]) -> str:
         "",
         f"Confidence: {output.get('confidence')}",
         "",
-        "## Диагнозы",
+        "## Insight Cards",
     ]
+    for card in serialize_insight_cards(output.get("insight_cards")):
+        caveats = "; ".join(card["caveats"])
+        suffix = f" Caveats: {caveats}" if caveats else ""
+        lines.append(
+            f"- {card['problem']} Focus: {card['recommended_focus']} "
+            f"Confidence: {card['confidence']}.{suffix}"
+        )
+    lines.extend(
+        [
+            "",
+            "## Диагнозы",
+        ]
+    )
     for diagnosis in output.get("diagnoses") or []:
         metrics = ", ".join(diagnosis.get("evidence_metric_ids") or []) or "no metrics"
         caveats = "; ".join(diagnosis.get("caveats") or [])
@@ -230,6 +270,7 @@ def render_ai_output_markdown(output: dict[str, Any]) -> str:
 
 
 def safe_ai_fallback_markdown(issues: list[AIValidationIssue] | tuple[AIValidationIssue, ...]) -> str:
+    card = no_data_insight_card("AI output was rejected by validation; no evidence-backed insight card was accepted.")
     lines = [
         "# AI Coach Report",
         "",
@@ -238,6 +279,10 @@ def safe_ai_fallback_markdown(issues: list[AIValidationIssue] | tuple[AIValidati
         "Этот отчёт не принят как уверенный coaching advice, потому что структура или metric evidence "
         "не прошли проверку.",
         "Используйте dashboard, Metric Truth Layer и текущие рекомендации как source of truth.",
+        "",
+        "## Insight Cards",
+        f"- {card['problem']} Focus: {card['recommended_focus']} Confidence: {card['confidence']}. "
+        f"Caveats: {'; '.join(card['caveats'])}",
         "",
         "## Validation issues",
     ]
@@ -280,6 +325,11 @@ def _extract_json_candidate(text: str) -> str:
 def _validate_list(output: dict[str, Any], key: str, issues: list[AIValidationIssue]) -> None:
     if key in output and not isinstance(output[key], list):
         issues.append(AIValidationIssue("invalid_section_type", f"{key} must be a list.", f"$.{key}"))
+
+
+def _validate_insight_cards(raw_cards: Any, issues: list[AIValidationIssue]) -> None:
+    for issue in validate_insight_cards(raw_cards):
+        issues.append(AIValidationIssue(issue.code, issue.message, issue.path))
 
 
 def _require_string(item: dict[str, Any], key: str, path: str, issues: list[AIValidationIssue]) -> None:

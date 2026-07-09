@@ -17,6 +17,7 @@ from app.db.models import CoachReport, Match
 from app.services.ai_validator import render_ai_output_markdown, validate_ai_coach_output
 from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
+from app.services.coach_insights import no_data_insight_card, serialize_insight_cards
 from app.services.coach_rules import build_coach_focus
 from app.services.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, artifact_retention_metadata
 from app.services.match_queries import playable_match_select
@@ -188,6 +189,11 @@ def save_ai_coach_result(
     metadata["ai_validation"] = validation.to_dict()
     if validation.valid and validation.output is not None:
         metadata["ai_structured_output"] = validation.output
+        metadata["insight_cards"] = serialize_insight_cards(validation.output.get("insight_cards"))
+    else:
+        metadata["insight_cards"] = [
+            no_data_insight_card("AI output was rejected by validation; no evidence-backed insight card was accepted.")
+        ]
     report = CoachReport(
         user_id=user_id,
         source_metric_snapshot_id=source_metric_snapshot_id,
@@ -240,6 +246,7 @@ def serialize_ai_coach_report(report: CoachReport) -> dict[str, Any]:
         "payload_matches_count": (metadata.get("payload_summary") or {}).get("matches_count"),
         "content_chars": metadata.get("content_chars"),
         "report_markdown": report.report_markdown,
+        "insight_cards": metadata.get("insight_cards") or [],
         "metadata": metadata,
     }
 
@@ -361,7 +368,9 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
             "- Если данных мало или confidence низкий, прямо скажи об этом.",
             "- Используй metric_truth: suppressed metrics нельзя превращать в уверенный диагноз или рекомендацию.",
             "- Верни строго JSON по схеме: summary, diagnoses[], recommendations[], warnings[], "
-            "evidence[], confidence.",
+            "evidence[], insight_cards[], confidence.",
+            "- В insight_cards указывай problem, evidence[], confidence, caveats[], recommended_focus.",
+            "- Insight card без evidence допустим только как low confidence no-data card с caveats.",
             "- В diagnoses указывай category, severity, claim, evidence_metric_ids[], confidence, caveats[].",
             "- В recommendations указывай category, action, rationale, target_metric_ids[], confidence, caveats[].",
             "- В evidence указывай metric_id, metric_confidence, caveats[] и, если есть в payload, "

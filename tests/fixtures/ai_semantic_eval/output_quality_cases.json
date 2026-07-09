@@ -30,6 +30,25 @@
       },
       "output": {
         "summary": "Recommendation #5 remains the current tracked survival focus with medium confidence, not a verified top-problem claim.",
+        "insight_cards": [
+          {
+            "problem": "Opening duel survival is the current evidence-backed coach problem.",
+            "evidence": [
+              {
+                "metric_id": "entry_deaths",
+                "value": 7,
+                "metric_confidence": "medium",
+                "problem": "survival_opening_deaths",
+                "match_ids": [72, 75, 76],
+                "recommendation_id": 5,
+                "description": "Entry deaths are elevated in the supplied exact-date match window."
+              }
+            ],
+            "confidence": "medium",
+            "caveats": ["Opening-duel facts depend on parser/source ordering and should be reviewed over more matches."],
+            "recommended_focus": "Use recommendation #5 as the bounded survival focus for the next review window."
+          }
+        ],
         "diagnoses": [
           {
             "category": "survival",
@@ -87,6 +106,15 @@
       },
       "output": {
         "summary": "There is not enough accepted metric evidence for confident coach advice yet.",
+        "insight_cards": [
+          {
+            "problem": "No validated coach insight is available from the current evidence payload.",
+            "evidence": [],
+            "confidence": "low",
+            "caveats": ["No accepted metric evidence is available for an evidence-backed insight card."],
+            "recommended_focus": "Use the dashboard and current tracked recommendation as source of truth."
+          }
+        ],
         "diagnoses": [],
         "recommendations": [],
         "warnings": [

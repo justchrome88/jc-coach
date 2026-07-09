@@ -19,6 +19,22 @@ from app.services.metric_truth import METRIC_REGISTRY_VERSION
 def _valid_output(**overrides):
     payload = {
         "summary": "Main issue is survivability in opening duels.",
+        "insight_cards": [
+            {
+                "problem": "Opening duel survival is the current evidence-backed focus.",
+                "evidence": [
+                    {
+                        "metric_id": "entry_deaths",
+                        "value": 3,
+                        "metric_confidence": "medium",
+                        "description": "Entry deaths are elevated in the current sample.",
+                    }
+                ],
+                "confidence": "medium",
+                "caveats": ["Opening duel detection depends on parser/source order."],
+                "recommended_focus": "Play first 20 seconds slower and avoid isolated opening fights.",
+            }
+        ],
         "diagnoses": [
             {
                 "category": "survival",
@@ -129,6 +145,63 @@ def test_missing_required_sections_rejected_with_fallback():
     assert result.valid is False
     assert result.fallback_markdown
     assert any(issue.code == "missing_required_key" for issue in result.issues)
+
+
+def test_missing_insight_card_required_field_is_rejected():
+    output = _valid_output(
+        insight_cards=[
+            {
+                "problem": "Opening deaths are elevated.",
+                "evidence": [{"metric_id": "entry_deaths", "metric_confidence": "medium"}],
+                "confidence": "medium",
+                "caveats": ["Source/order dependent."],
+            }
+        ]
+    )
+
+    result = validate_ai_coach_output(output)
+
+    assert result.valid is False
+    assert any(issue.code == "missing_insight_card_field" for issue in result.issues)
+
+
+def test_no_data_insight_card_requires_low_confidence_and_caveat():
+    output = _valid_output(
+        insight_cards=[
+            {
+                "problem": "No validated coach insight is available yet.",
+                "evidence": [],
+                "confidence": "low",
+                "caveats": ["No supported evidence was available for this card."],
+                "recommended_focus": "Use the current accepted recommendation until more evidence exists.",
+            }
+        ]
+    )
+
+    result = validate_ai_coach_output(output)
+
+    assert result.valid is True
+
+
+def test_no_data_insight_card_without_caveat_is_rejected():
+    output = _valid_output(
+        insight_cards=[
+            {
+                "problem": "No validated coach insight is available yet.",
+                "evidence": [],
+                "confidence": "medium",
+                "caveats": [],
+                "recommended_focus": "Use the current accepted recommendation until more evidence exists.",
+            }
+        ]
+    )
+
+    result = validate_ai_coach_output(output)
+
+    assert result.valid is False
+    codes = {issue.code for issue in result.issues}
+    assert "insight_no_evidence_requires_low_confidence" in codes
+    assert "insight_no_evidence_requires_caveat" in codes
 
 
 def test_unknown_metric_id_rejected():
@@ -374,6 +447,9 @@ def test_invalid_provider_output_does_not_crash_and_saves_safe_fallback(db, samp
     serialized = serialize_ai_coach_report(report)
 
     assert "AI output rejected by validator" in report.report_markdown
+    assert serialized["insight_cards"][0]["confidence"] == "low"
+    assert serialized["insight_cards"][0]["evidence"] == []
+    assert serialized["insight_cards"][0]["caveats"]
     assert serialized["metadata"]["ai_validation"]["valid"] is False
     assert serialized["metadata"]["ai_validation"]["fallback_used"] is True
     assert serialized["metadata"]["ai_coach_prompt_version"] == AI_COACH_PROMPT_VERSION
@@ -412,6 +488,9 @@ def test_valid_json_output_is_rendered_and_metadata_keeps_structured_output(db, 
     serialized = serialize_ai_coach_report(report)
 
     assert "Entry deaths are too frequent" in report.report_markdown
+    assert "Insight Cards" in report.report_markdown
+    assert serialized["insight_cards"][0]["problem"] == "Opening duel survival is the current evidence-backed focus."
+    assert serialized["metadata"]["insight_cards"] == serialized["insight_cards"]
     assert serialized["metadata"]["ai_validation"]["valid"] is True
     assert serialized["metadata"]["ai_structured_output"]["confidence"] == "medium"
     assert serialized["metadata"]["ai_coach_prompt_version"] == AI_COACH_PROMPT_VERSION

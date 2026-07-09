@@ -201,6 +201,9 @@ def test_save_ai_coach_result_persists_ai_report(db, sample_rows):
     assert serialized["metadata"]["public_readiness_policy"]["friends_readiness"] == "blocked"
     assert serialized["metadata"]["artifact_retention"]["category"] == ARTIFACT_CATEGORY_COACH_OUTPUT
     assert serialized["metadata"]["artifact_retention"]["retention_class"] == RETENTION_CLASS_FINAL_OUTPUT
+    assert serialized["insight_cards"][0]["confidence"] == "low"
+    assert serialized["insight_cards"][0]["evidence"] == []
+    assert serialized["insight_cards"][0]["caveats"]
     assert (
         serialized["metadata"]["contract_snapshot"]
         == serialized["metadata"]["payload_snapshot"]["contract_snapshot"]
