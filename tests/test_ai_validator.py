@@ -1,6 +1,11 @@
 import json
 
-from app.services.ai_coach import AI_COACH_PROMPT_VERSION, save_ai_coach_result, serialize_ai_coach_report
+from app.services.ai_coach import (
+    AI_COACH_DOMAIN_CONTRACT_VERSION,
+    AI_COACH_PROMPT_VERSION,
+    save_ai_coach_result,
+    serialize_ai_coach_report,
+)
 from app.services.ai_validator import validate_ai_coach_output
 from app.services.importer import import_rows
 from app.services.metric_truth import METRIC_REGISTRY_VERSION
@@ -144,6 +149,12 @@ def test_invalid_provider_output_does_not_crash_and_saves_safe_fallback(db, samp
     assert serialized["metadata"]["ai_validation"]["fallback_used"] is True
     assert serialized["metadata"]["ai_coach_prompt_version"] == AI_COACH_PROMPT_VERSION
     assert serialized["metadata"]["metric_registry_version"] == METRIC_REGISTRY_VERSION
+    assert serialized["metadata"]["domain_contract_version"] == AI_COACH_DOMAIN_CONTRACT_VERSION
+    assert serialized["metadata"]["domain_constraints"]["accepted_active_hard_recommendation_id"] == 5
+    assert serialized["metadata"]["metric_confidence_policy"]["weak_metrics_must_remain_caveated"] is True
+    assert serialized["metadata"]["playlist_mode_policy"]["mode_status"] == "unknown_or_provenance_only"
+    assert serialized["metadata"]["public_readiness_policy"]["v1_0_claim_allowed"] is False
+    assert serialized["metadata"]["public_readiness_policy"]["friends_readiness"] == "blocked"
 
 
 def test_valid_json_output_is_rendered_and_metadata_keeps_structured_output(db, sample_rows):

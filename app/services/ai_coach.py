@@ -38,6 +38,7 @@ AI_COACH_PROMPT_VERSION = "ai-coach-prompt-v1"
 AI_COACH_PAYLOAD_SCHEMA_VERSION = "ai-coach-payload-v1"
 AI_COACH_SNAPSHOT_CONTRACT_VERSION = "ai-coach-snapshot-v1"
 AI_COACH_SNAPSHOT_GENERATED_BY = "app.services.ai_coach"
+AI_COACH_DOMAIN_CONTRACT_VERSION = "cs2-domain-contract-v1"
 
 
 class AIProvider(Protocol):
@@ -71,6 +72,7 @@ class CodexCliHandoffProvider:
             "status": "handoff_ready",
             "created_at": datetime.now(UTC).isoformat(),
             **_ai_coach_contract_snapshot(payload),
+            **_ai_coach_domain_contract(payload),
             "prompt_path": str(prompt_path),
             "payload_path": str(payload_path),
             "result_path": str(result_path),
@@ -283,10 +285,12 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
             context=context,
         ),
     }
+    domain_contract = _ai_coach_domain_contract()
     return {
         "product": "CS2 Personal Coach",
         "ai_role": "AI coach over structured CS2 analytics, not raw demo parser",
         "contract_snapshot": _ai_coach_contract_snapshot(),
+        **domain_contract,
         "summary": summary,
         "dashboard_status": get_dashboard_status(matches, context=context),
         "aim_profile": get_aim_profile(matches, context=context),
@@ -328,6 +332,9 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
             "mention_data_gaps": True,
             "use_exact_date_windows_for_trends": True,
             "do_not_treat_low_confidence_as_hard_evidence": True,
+            "obey_domain_constraints": True,
+            "do_not_claim_v1_0": True,
+            "do_not_claim_public_or_friends_readiness": True,
             "primary_goal": "give one main training focus and measurable next-match actions",
         },
     }
@@ -350,10 +357,20 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
             "- В recommendations указывай category, action, rationale, target_metric_ids[], confidence, caveats[].",
             "- Для approximate/warn metrics обязательно добавляй caveats; suppressed/unavailable metrics "
             "не используй как evidence.",
+            "- Соблюдай domain_constraints, claim_guardrails, metric_confidence_policy, playlist_mode_policy, "
+            "recommendation_policy и public_readiness_policy из payload.",
+            "- Weak/low/unavailable metrics и missing metric_confidence не превращай в hard diagnosis, "
+            "progress, failure или priority claim.",
+            "- Playlist/mode остается unknown/provenance-only: не утверждай Premier, Competitive, Wingman, "
+            "Casual, Deathmatch, FACEIT или custom, если reliable persisted metadata нет в payload.",
+            "- Public/friends readiness заблокирован, v1.0 не заявлен, Steam import cap остается 1.",
+            "- Не выдумывай parser data, exact match dates, confidence, economy model, positioning model, "
+            "clutch model, trade model или map-specific certainty.",
             "- Не делай общий motivational текст. Дай конкретный фокус, причины и действия.",
             "- Главный результат: что игрок должен изменить в следующих 5-10 матчах.",
-            "- Разбирай отдельно aim, map, crosshair placement, grenades, entry duels и survival.",
-            "- Если по crosshair placement нет данных, не делай выводы, а отметь data gap.",
+            "- Разбирай aim, map, grenades, entry duels и survival только в пределах поддержанных metrics.",
+            "- Economy, positioning, clutch, hard trade и crosshair placement описывай только как data gap, "
+            "если payload явно не содержит accepted evidence.",
             "",
             "JSON payload:",
             "```json",
@@ -408,6 +425,7 @@ def _ai_report_metadata(
     payload_json = json.dumps(payload_snapshot, ensure_ascii=False, sort_keys=True, default=str)
     provider = (latest_handoff or {}).get("provider") or _provider().name
     contract_snapshot = _ai_coach_contract_snapshot(payload_snapshot)
+    domain_contract = _ai_coach_domain_contract(payload_snapshot)
     return {
         "type": "ai_coach",
         "status": "saved",
@@ -415,7 +433,9 @@ def _ai_report_metadata(
         "source_ref": source_ref,
         "handoff": latest_handoff,
         **contract_snapshot,
+        **domain_contract,
         "contract_snapshot": contract_snapshot,
+        "domain_contract": domain_contract,
         "payload_hash": hashlib.sha256(payload_json.encode("utf-8")).hexdigest()[:16],
         "payload_summary": {
             "matches_count": (payload_snapshot.get("summary") or {}).get("matches_count"),
@@ -452,6 +472,125 @@ def _ai_coach_contract_snapshot(payload: dict[str, Any] | None = None) -> dict[s
         "snapshot_contract_version": str(
             snapshot.get("snapshot_contract_version") or AI_COACH_SNAPSHOT_CONTRACT_VERSION
         ),
+    }
+
+
+def _ai_coach_domain_contract(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    contract = payload.get("domain_contract") if isinstance(payload, dict) else None
+    if not isinstance(contract, dict):
+        contract = payload if isinstance(payload, dict) else {}
+    if contract.get("domain_contract_version") == AI_COACH_DOMAIN_CONTRACT_VERSION:
+        return {
+            "domain_contract_version": AI_COACH_DOMAIN_CONTRACT_VERSION,
+            "domain_constraints": contract.get("domain_constraints") or {},
+            "claim_guardrails": contract.get("claim_guardrails") or {},
+            "metric_confidence_policy": contract.get("metric_confidence_policy") or {},
+            "playlist_mode_policy": contract.get("playlist_mode_policy") or {},
+            "recommendation_policy": contract.get("recommendation_policy") or {},
+            "public_readiness_policy": contract.get("public_readiness_policy") or {},
+        }
+    return {
+        "domain_contract_version": AI_COACH_DOMAIN_CONTRACT_VERSION,
+        "domain_constraints": {
+            "current_product_version": "v0.9",
+            "v1_0_claim_allowed": False,
+            "steam_import_max_demos_per_run": 1,
+            "playlist_mode_status": "unknown_or_provenance_only",
+            "public_friends_readiness": "blocked",
+            "ready_for_major_cs2_feature_work": False,
+            "accepted_active_hard_recommendation_id": 5,
+            "legacy_recommendation_ids_blocked_for_new_hard_evaluations": [1, 3, 4],
+            "unavailable_models": [
+                "economy_model",
+                "positioning_model",
+                "clutch_model",
+                "canonical_map_registry",
+                "hard_trade_model",
+                "crosshair_placement_model",
+            ],
+            "display_only_or_weak_domains": [
+                "side_split_metrics",
+                "trade_kills",
+                "current_map_labels",
+            ],
+        },
+        "claim_guardrails": {
+            "use_only_payload_data": True,
+            "do_not_invent_parser_data": True,
+            "do_not_invent_exact_playlist_labels": True,
+            "do_not_invent_match_dates": True,
+            "do_not_invent_confidence": True,
+            "do_not_invent_models": [
+                "economy",
+                "positioning",
+                "clutch",
+                "trade",
+            ],
+            "unsupported_claim_boundaries": [
+                "exact_playlist_or_mode",
+                "economy_decisions",
+                "positioning_rotations_spacing_or_angles",
+                "clutch_winrate_or_clutch_mistakes",
+                "hard_trade_recommendations",
+                "crosshair_placement_diagnosis",
+                "canonical_map_or_map_specific_certainty",
+            ],
+            "unavailable_concepts_must_be_worded_as_data_gaps": True,
+        },
+        "metric_confidence_policy": {
+            "metric_confidence_required_for_hard_claims": True,
+            "missing_metric_confidence_blocks_hard_advice": True,
+            "weak_metrics_must_remain_caveated": True,
+            "low_or_unavailable_metrics_are_context_only": True,
+            "warn_metrics_require_visible_caveats": True,
+            "suppressed_metrics_cannot_support_diagnosis_or_recommendation": True,
+            "confidence_cannot_exceed_weakest_evidence_link": True,
+            "weak_or_suppressed_metric_examples": [
+                "early_deaths",
+                "kast",
+                "hltv_rating",
+                "swing_score",
+                "flash_assists",
+                "trade_kills",
+                "traded_deaths",
+                "side_split_metrics",
+                "crosshair_placement",
+            ],
+        },
+        "playlist_mode_policy": {
+            "mode_status": "unknown_or_provenance_only",
+            "accepted_current_labels": [
+                "mode_unknown",
+                "provenance_demo",
+                "provenance_valve_matchmaking",
+            ],
+            "accepted_exact_date_source": "steam_gc_match_time",
+            "unsupported_exact_playlist_claims": [
+                "Premier",
+                "Competitive",
+                "Wingman",
+                "Casual",
+                "Deathmatch",
+                "FACEIT",
+                "custom",
+            ],
+            "source_labels_are_provenance_not_playlist": True,
+        },
+        "recommendation_policy": {
+            "current_accepted_active_hard_recommendation_id": 5,
+            "current_accepted_active_hard_recommendation_status": "accepted_active",
+            "legacy_recommendations_not_for_new_hard_evaluations": [1, 3, 4],
+            "one_primary_active_focus_contract": True,
+            "hard_recommendation_evidence_chain": "problem -> metric -> match -> recommendation",
+            "do_not_change_recommendation_selection": True,
+        },
+        "public_readiness_policy": {
+            "current_product_version": "v0.9",
+            "v1_0_claim_allowed": False,
+            "public_readiness": "blocked",
+            "friends_readiness": "blocked",
+            "public_or_friends_claim_allowed": False,
+        },
     }
 
 

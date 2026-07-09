@@ -100,6 +100,25 @@ coach reports copy the same fields into `coach_reports.report_json` metadata
 and keep the full `payload_snapshot` in that existing flexible JSON field. No
 DB schema change is required.
 
+Runtime payloads and persisted report metadata also include the deterministic
+CS2 domain constraint contract:
+
+- `domain_contract_version`
+- `domain_constraints`
+- `claim_guardrails`
+- `metric_confidence_policy`
+- `playlist_mode_policy`
+- `recommendation_policy`
+- `public_readiness_policy`
+
+This block carries the current `v0.9` boundaries into auditable coach output:
+recommendation `#5` remains the accepted active hard recommendation; legacy
+recommendations `#1`, `#3` and `#4` are blocked from new hard evaluations
+unless refreshed; weak metrics and missing `metric_confidence` must remain
+caveated; playlist/mode is unknown or provenance-only; public/friends
+readiness is blocked; `v1.0` is not claimed; Steam import cap remains `1`; and
+unavailable parser/domain models must be treated as data gaps.
+
 The current snapshot preserves the prompt version, payload schema version,
 Metric Truth registry version, included metric definitions,
 suppressed/unavailable metric ids, confidence/window metadata, evidence links
