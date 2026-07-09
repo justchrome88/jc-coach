@@ -1,0 +1,387 @@
+{
+  "cases": [
+    {
+      "id": "accepted_evidence_bound_recommendation_5",
+      "acceptance": "accepted",
+      "coverage": [
+        "recommendation_5",
+        "metric_confidence",
+        "weak_metric_caveats",
+        "playlist_mode_uncertainty",
+        "public_readiness_blocked",
+        "v0_9_not_v1",
+        "unsupported_models_as_data_gaps",
+        "evidence_chain_complete"
+      ],
+      "payload_snapshot": "valid",
+      "expected_runtime_issue_codes": [],
+      "expected_semantic_issue_codes": [],
+      "evidence_payload": {
+        "available_metric_ids": ["entry_deaths"],
+        "metric_confidence": {"entry_deaths": "medium"},
+        "required_evidence_links": [
+          {
+            "problem": "survival_opening_deaths",
+            "metric_id": "entry_deaths",
+            "match_ids": [72, 75, 76],
+            "recommendation_id": 5
+          }
+        ]
+      },
+      "output": {
+        "summary": "Recommendation #5 remains the current tracked survival focus with medium confidence, not a verified top-problem claim.",
+        "diagnoses": [
+          {
+            "category": "survival",
+            "severity": "medium",
+            "claim": "Entry deaths are elevated in the supplied exact-date match window.",
+            "evidence_metric_ids": ["entry_deaths"],
+            "confidence": "medium",
+            "caveats": ["Opening-duel facts depend on parser/source ordering and should be reviewed over more matches."]
+          }
+        ],
+        "recommendations": [
+          {
+            "category": "survival",
+            "action": "Use a bounded first-contact routine for recommendation #5: delay wide opening fights and take early contact only with support.",
+            "rationale": "The supplied entry-death evidence supports a medium-confidence survival focus for the current tracked recommendation.",
+            "target_metric_ids": ["entry_deaths"],
+            "confidence": "medium",
+            "caveats": ["Keep weak metrics such as early_deaths, KAST and trade facts as context only."]
+          }
+        ],
+        "warnings": [
+          "Playlist/mode remains unknown or provenance-only; do not call these matches Premier, Competitive or Wingman.",
+          "Public/friends readiness remains blocked, and this is v0.9 rather than v1.0.",
+          "Economy, positioning, clutch, hard trade, parser-only match-date certainty and crosshair-placement models are unavailable data gaps."
+        ],
+        "evidence": [
+          {
+            "metric_id": "entry_deaths",
+            "value": 7,
+            "metric_confidence": "medium",
+            "problem": "survival_opening_deaths",
+            "match_ids": [72, 75, 76],
+            "recommendation_id": 5,
+            "caveats": ["Parser/source order caveat applies."]
+          }
+        ],
+        "confidence": "medium"
+      }
+    },
+    {
+      "id": "accepted_fallback_safe_no_verified_data",
+      "acceptance": "accepted",
+      "coverage": [
+        "safe_fallback_expectations",
+        "data_gap_language",
+        "no_hard_advice_without_evidence"
+      ],
+      "payload_snapshot": "valid",
+      "expected_runtime_issue_codes": [],
+      "expected_semantic_issue_codes": [],
+      "evidence_payload": {
+        "no_data": true,
+        "available_metric_ids": [],
+        "metric_confidence": {}
+      },
+      "output": {
+        "summary": "There is not enough accepted metric evidence for confident coach advice yet.",
+        "diagnoses": [],
+        "recommendations": [],
+        "warnings": [
+          "No data gap: add accepted matches with metric_confidence before treating advice as more than review guidance.",
+          "Safe fallback expectation: use the dashboard and current tracked recommendation as source of truth."
+        ],
+        "evidence": [],
+        "confidence": "low"
+      }
+    },
+    {
+      "id": "rejected_public_friends_and_v1_claim",
+      "acceptance": "rejected",
+      "coverage": ["public_readiness_blocked", "v1_claim_blocked"],
+      "payload_snapshot": "valid",
+      "expected_runtime_issue_codes": [
+        "unsupported_public_readiness_claim",
+        "unsupported_v1_claim"
+      ],
+      "expected_semantic_issue_codes": [],
+      "evidence_payload": {
+        "available_metric_ids": ["entry_deaths"],
+        "metric_confidence": {"entry_deaths": "medium"}
+      },
+      "output": {
+        "summary": "JC Coach is v1.0 ready and safe for public and friends use.",
+        "diagnoses": [],
+        "recommendations": [],
+        "warnings": ["Ready for external users."],
+        "evidence": [],
+        "confidence": "high"
+      }
+    },
+    {
+      "id": "rejected_exact_premier_mode_claim",
+      "acceptance": "rejected",
+      "coverage": ["playlist_mode_uncertainty"],
+      "payload_snapshot": "valid",
+      "expected_runtime_issue_codes": ["unsupported_exact_playlist_claim"],
+      "expected_semantic_issue_codes": [],
+      "evidence_payload": {
+        "available_metric_ids": ["entry_deaths"],
+        "metric_confidence": {"entry_deaths": "medium"}
+      },
+      "output": {
+        "summary": "Mode-specific advice is being attempted.",
+        "diagnoses": [
+          {
+            "category": "mode",
+            "severity": "medium",
+            "claim": "This Premier match shows the current mode-specific survival issue.",
+            "evidence_metric_ids": ["entry_deaths"],
+            "confidence": "medium",
+            "caveats": ["Opening-duel facts depend on parser/source order."]
+          }
+        ],
+        "recommendations": [],
+        "warnings": ["Fixture intentionally claims exact mode."],
+        "evidence": [
+          {
+            "metric_id": "entry_deaths",
+            "value": 4,
+            "metric_confidence": "medium",
+            "caveats": ["Source/order dependent."]
+          }
+        ],
+        "confidence": "medium"
+      }
+    },
+    {
+      "id": "rejected_weak_metric_hard_advice_without_caveat",
+      "acceptance": "rejected",
+      "coverage": ["weak_metric_caveats", "semantic_overclaiming"],
+      "payload_snapshot": "valid",
+      "expected_runtime_issue_codes": [
+        "metric_requires_caveat",
+        "weak_metric_hard_advice"
+      ],
+      "expected_semantic_issue_codes": [
+        "advice_confidence_overstated",
+        "missing_weak_metric_caveat",
+        "unsupported_hard_claim"
+      ],
+      "evidence_payload": {
+        "available_metric_ids": ["early_deaths"],
+        "metric_confidence": {"early_deaths": "low"}
+      },
+      "output": {
+        "summary": "Early deaths prove the main issue.",
+        "diagnoses": [],
+        "recommendations": [
+          {
+            "category": "survival",
+            "action": "You must change opening pathing because early deaths prove the main issue.",
+            "rationale": "This is a hard recommendation from early deaths.",
+            "target_metric_ids": ["early_deaths"],
+            "confidence": "high",
+            "caveats": []
+          }
+        ],
+        "warnings": ["Fixture intentionally omits the weak-metric caveat."],
+        "evidence": [
+          {
+            "metric_id": "early_deaths",
+            "value": 2,
+            "metric_confidence": "low",
+            "caveats": ["Parser timing anchors are limited."]
+          }
+        ],
+        "confidence": "high"
+      }
+    },
+    {
+      "id": "rejected_legacy_recommendation_hard_evaluation",
+      "acceptance": "rejected",
+      "coverage": ["legacy_recommendation_refresh_boundary"],
+      "payload_snapshot": "valid",
+      "expected_runtime_issue_codes": ["legacy_recommendation_hard_evaluation"],
+      "expected_semantic_issue_codes": [],
+      "evidence_payload": {
+        "available_metric_ids": ["entry_deaths"],
+        "metric_confidence": {"entry_deaths": "medium"}
+      },
+      "output": {
+        "summary": "Recommendation #3 is completed and working.",
+        "diagnoses": [],
+        "recommendations": [],
+        "warnings": ["Fixture intentionally hard-evaluates a legacy recommendation."],
+        "evidence": [
+          {
+            "metric_id": "entry_deaths",
+            "value": 2,
+            "metric_confidence": "medium",
+            "recommendation_id": 3,
+            "caveats": []
+          }
+        ],
+        "confidence": "medium"
+      }
+    },
+    {
+      "id": "rejected_unsupported_cs2_model_certainty",
+      "acceptance": "rejected",
+      "coverage": [
+        "unsupported_economy_claim",
+        "unsupported_positioning_claim",
+        "unsupported_clutch_claim",
+        "unsupported_trade_claim",
+        "unsupported_parser_claim",
+        "unsupported_exact_match_date_claim"
+      ],
+      "payload_snapshot": "valid",
+      "expected_runtime_issue_codes": [
+        "unsupported_economy_model_claim",
+        "unsupported_positioning_model_claim",
+        "unsupported_clutch_model_claim",
+        "unsupported_trade_model_claim",
+        "unsupported_parser_data_claim",
+        "unsupported_exact_match_date_claim"
+      ],
+      "expected_semantic_issue_codes": [],
+      "evidence_payload": {
+        "available_metric_ids": ["entry_deaths"],
+        "metric_confidence": {"entry_deaths": "medium"}
+      },
+      "output": {
+        "summary": "Unsupported domain certainty is being attempted.",
+        "diagnoses": [],
+        "recommendations": [
+          {
+            "category": "domain",
+            "action": "Use a new buy strategy because the economy model proves bad force-buy choices.",
+            "rationale": "The positioning model, clutch conversion, trade model and parser data shows exact match date 2026-06-01 for this mistake.",
+            "target_metric_ids": ["entry_deaths"],
+            "confidence": "medium",
+            "caveats": ["Fixture intentionally overclaims unsupported CS2 models."]
+          }
+        ],
+        "warnings": ["Fixture intentionally overclaims unsupported models."],
+        "evidence": [
+          {
+            "metric_id": "entry_deaths",
+            "value": 3,
+            "metric_confidence": "medium",
+            "caveats": ["Source/order dependent."]
+          }
+        ],
+        "confidence": "medium"
+      }
+    },
+    {
+      "id": "rejected_missing_metric_confidence",
+      "acceptance": "rejected",
+      "coverage": ["metric_confidence_required", "evidence_chain_completeness"],
+      "payload_snapshot": "valid",
+      "expected_runtime_issue_codes": ["missing_metric_confidence"],
+      "expected_semantic_issue_codes": ["missing_metric_confidence"],
+      "evidence_payload": {
+        "available_metric_ids": ["entry_deaths"],
+        "metric_confidence": {"entry_deaths": "medium"},
+        "required_evidence_links": [
+          {
+            "problem": "survival_opening_deaths",
+            "metric_id": "entry_deaths",
+            "match_ids": [201, 202, 203],
+            "recommendation_id": 5
+          }
+        ]
+      },
+      "output": {
+        "summary": "Advice exists but omits metric confidence in evidence.",
+        "diagnoses": [
+          {
+            "category": "survival",
+            "severity": "medium",
+            "claim": "Entry deaths are elevated in this window.",
+            "evidence_metric_ids": ["entry_deaths"],
+            "confidence": "medium",
+            "caveats": ["Parser/source order caveat applies."]
+          }
+        ],
+        "recommendations": [
+          {
+            "category": "survival",
+            "action": "Review first-contact spacing for recommendation #5.",
+            "rationale": "Entry-death evidence supports a bounded review.",
+            "target_metric_ids": ["entry_deaths"],
+            "confidence": "medium",
+            "caveats": ["Review after more exact-date demos."]
+          }
+        ],
+        "warnings": ["Evidence link intentionally omits metric_confidence."],
+        "evidence": [
+          {
+            "metric_id": "entry_deaths",
+            "value": 5,
+            "problem": "survival_opening_deaths",
+            "match_ids": [201, 202, 203],
+            "recommendation_id": 5,
+            "caveats": ["Parser/source order caveat applies."]
+          }
+        ],
+        "confidence": "medium"
+      }
+    },
+    {
+      "id": "rejected_missing_wp018_metadata",
+      "acceptance": "rejected",
+      "coverage": ["wp018_02_metadata_required", "wp018_03_domain_metadata_required"],
+      "payload_snapshot": "missing_metadata",
+      "expected_runtime_issue_codes": [
+        "missing_contract_metadata",
+        "missing_domain_contract_metadata"
+      ],
+      "expected_semantic_issue_codes": [],
+      "evidence_payload": {
+        "available_metric_ids": ["entry_deaths"],
+        "metric_confidence": {"entry_deaths": "medium"}
+      },
+      "output": {
+        "summary": "Entry-death evidence is bounded and otherwise structurally valid.",
+        "diagnoses": [
+          {
+            "category": "survival",
+            "severity": "medium",
+            "claim": "Entry deaths are elevated in the supplied match window.",
+            "evidence_metric_ids": ["entry_deaths"],
+            "confidence": "medium",
+            "caveats": ["Opening-duel facts depend on parser/source ordering."]
+          }
+        ],
+        "recommendations": [
+          {
+            "category": "survival",
+            "action": "Use a bounded first-contact routine for recommendation #5.",
+            "rationale": "The supplied entry-death evidence supports a medium-confidence survival review.",
+            "target_metric_ids": ["entry_deaths"],
+            "confidence": "medium",
+            "caveats": ["Review again after more exact-date demo evidence."]
+          }
+        ],
+        "warnings": ["Fixture intentionally uses a payload snapshot with missing metadata."],
+        "evidence": [
+          {
+            "metric_id": "entry_deaths",
+            "value": 7,
+            "metric_confidence": "medium",
+            "problem": "survival_opening_deaths",
+            "match_ids": [72, 75, 76],
+            "recommendation_id": 5,
+            "caveats": ["Parser/source order caveat applies."]
+          }
+        ],
+        "confidence": "medium"
+      }
+    }
+  ]
+}
