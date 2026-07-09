@@ -2,8 +2,10 @@ from app.services.coach_insights import (
     INSIGHT_CARD_SCHEMA_VERSION,
     MEDIUM_CONFIDENCE_CAVEAT,
     bad_fight_trade_insight_from_snapshot,
+    coach_insight_candidates_from_snapshots,
     coach_insights_from_snapshots,
     no_data_insight_card,
+    prioritize_coach_insights,
     serialize_insight_cards,
     survival_opening_death_insight_from_snapshot,
     survival_opening_death_insights_from_snapshots,
@@ -331,7 +333,7 @@ def test_bad_fight_trade_insight_caveats_ambiguous_trade_data_without_hard_claim
     assert "Source events do not include both actor/victim team side; traded death is ambiguous." in card["caveats"]
 
 
-def test_combined_coach_insights_prioritize_bad_fight_trade_before_prior_survival_insight():
+def test_combined_coach_insights_select_top_two_prioritized_cards():
     trade = _snapshot(
         match_id=7,
         metrics={
@@ -355,11 +357,137 @@ def test_combined_coach_insights_prioritize_bad_fight_trade_before_prior_surviva
 
     cards = coach_insights_from_snapshots([survival, trade])
 
+    assert len(cards) == 2
+    assert [card["evidence"][0]["metric_id"] for card in cards] == [
+        "untraded_death_rate",
+        "opening_death_rate",
+    ]
+
+
+def test_coach_insight_candidates_preserve_full_ranked_candidate_list_for_diagnostics():
+    trade = _snapshot(
+        match_id=7,
+        metrics={
+            "rounds": 10,
+            "opening_deaths": 3,
+            "opening_death_rate": 0.3,
+            "untraded_deaths": 3,
+            "trade_status_known_deaths": 4,
+            "untraded_death_rate": 0.75,
+        },
+        confidence={
+            "opening_death_rate": {"level": "high"},
+            "untraded_death_rate": {"level": "high"},
+        },
+    )
+    survival = _snapshot(
+        match_id=8,
+        metrics={"rounds": 10, "survived_rounds": 4, "survival_rate": 0.4},
+        confidence={"survival_rate": {"level": "high"}},
+    )
+
+    cards = coach_insight_candidates_from_snapshots([survival, trade])
+
     assert [card["evidence"][0]["metric_id"] for card in cards] == [
         "untraded_death_rate",
         "opening_death_rate",
         "survival_rate",
     ]
+
+
+def test_prioritizer_uses_confidence_before_evidence_strength_within_same_severity():
+    high_confidence = utility_value_insight_from_snapshot(
+        _utility_snapshot(
+            match_id=10,
+            metrics={"utility_damage": 45},
+            confidence={"utility_damage": {"level": "high", "usable_for_insights": True}},
+        )
+    )
+    medium_confidence_with_more_damage = utility_value_insight_from_snapshot(
+        _utility_snapshot(
+            match_id=11,
+            metrics={"utility_damage": 120},
+            confidence={"utility_damage": {"level": "medium", "usable_for_insights": True}},
+        )
+    )
+
+    cards = prioritize_coach_insights([medium_confidence_with_more_damage, high_confidence])
+
+    assert [card["evidence"][0]["match_ids"] for card in cards] == [[10], [11]]
+    assert [card["confidence"] for card in cards] == ["high", "medium"]
+
+
+def test_prioritizer_uses_evidence_strength_then_sample_count_as_tie_breakers():
+    weaker_opening = survival_opening_death_insight_from_snapshot(
+        _snapshot(
+            match_id=12,
+            metrics={
+                "rounds": 10,
+                "opening_deaths": 3,
+                "opening_death_rate": 0.3,
+                "survived_rounds": 8,
+                "survival_rate": 0.8,
+            },
+            confidence={"opening_death_rate": {"level": "high"}},
+        )
+    )
+    stronger_opening = survival_opening_death_insight_from_snapshot(
+        _snapshot(
+            match_id=13,
+            metrics={
+                "rounds": 10,
+                "opening_deaths": 4,
+                "opening_death_rate": 0.4,
+                "survived_rounds": 8,
+                "survival_rate": 0.8,
+            },
+            confidence={"opening_death_rate": {"level": "high"}},
+        )
+    )
+    same_strength_larger_sample = survival_opening_death_insight_from_snapshot(
+        _snapshot(
+            match_id=14,
+            metrics={
+                "rounds": 14,
+                "opening_deaths": 4,
+                "opening_death_rate": 0.3,
+                "survived_rounds": 10,
+                "survival_rate": 0.714,
+            },
+            confidence={"opening_death_rate": {"level": "high"}},
+        )
+    )
+
+    cards = prioritize_coach_insights([weaker_opening, stronger_opening, same_strength_larger_sample], limit=3)
+
+    assert [card["evidence"][0]["match_ids"] for card in cards] == [[13], [14], [12]]
+
+
+def test_low_confidence_context_cannot_outrank_high_confidence_critical_problem():
+    low_confidence_context = bad_fight_trade_insight_from_snapshot(
+        _snapshot(
+            match_id=15,
+            metrics={"rounds": 10, "ambiguous_traded_deaths": 9, "trade_status_known_deaths": 0},
+            confidence={"untraded_death_rate": {"level": "low"}},
+        )
+    )
+    high_confidence_critical = bad_fight_trade_insight_from_snapshot(
+        _snapshot(
+            match_id=16,
+            metrics={
+                "rounds": 10,
+                "untraded_deaths": 2,
+                "trade_status_known_deaths": 3,
+                "untraded_death_rate": 0.667,
+            },
+            confidence={"untraded_death_rate": {"level": "high"}},
+        )
+    )
+
+    cards = prioritize_coach_insights([low_confidence_context, high_confidence_critical])
+
+    assert cards[0]["confidence"] == "high"
+    assert cards[0]["evidence"][0]["metric_id"] == "untraded_death_rate"
 
 
 def test_utility_value_insight_uses_supported_damage_without_grenade_rating_claim():

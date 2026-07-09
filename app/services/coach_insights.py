@@ -19,6 +19,7 @@ MIN_TRADE_STATUS_KNOWN_DEATHS = 2
 MIN_UNTRADED_DEATHS = 2
 UNTRADED_DEATH_RATE_THRESHOLD = 0.60
 MIN_UTILITY_DAMAGE_FOR_INSIGHT = 40
+MAX_PRIORITIZED_COACH_INSIGHTS = 2
 MEDIUM_CONFIDENCE_CAVEAT = "Metric confidence is medium, so treat this as a bounded review signal."
 
 
@@ -264,13 +265,28 @@ def utility_value_insights_from_snapshots(
     return sorted(candidates, key=_insight_sort_key)
 
 
-def coach_insights_from_snapshots(snapshots: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+def coach_insight_candidates_from_snapshots(snapshots: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     candidates = [
         *bad_fight_trade_insights_from_snapshots(snapshots),
         *survival_opening_death_insights_from_snapshots(snapshots),
         *utility_value_insights_from_snapshots(snapshots),
     ]
     return sorted(candidates, key=_insight_sort_key)
+
+
+def prioritize_coach_insights(
+    candidates: Sequence[Mapping[str, Any]],
+    *,
+    limit: int = MAX_PRIORITIZED_COACH_INSIGHTS,
+) -> list[dict[str, Any]]:
+    if limit <= 0:
+        return []
+    ordered = sorted((dict(card) for card in candidates), key=_insight_sort_key)
+    return ordered[:limit]
+
+
+def coach_insights_from_snapshots(snapshots: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    return prioritize_coach_insights(coach_insight_candidates_from_snapshots(snapshots))
 
 
 def _insight_card_model(card: dict[str, Any]) -> InsightCard | None:
@@ -742,25 +758,74 @@ def _card_confidence(evidence: Sequence[Mapping[str, Any]]) -> Literal["medium",
     return "medium" if "medium" in levels else "high"
 
 
-def _insight_sort_key(card: Mapping[str, Any]) -> tuple[int, float, int]:
+def _insight_sort_key(card: Mapping[str, Any]) -> tuple[int, int, float, int, int, int, str]:
     evidence = card.get("evidence") if isinstance(card.get("evidence"), list) else []
     primary = evidence[0] if evidence and isinstance(evidence[0], Mapping) else {}
-    metric_id = primary.get("metric_id")
-    value = _number(primary.get("value")) or 0.0
-    confidence = card.get("confidence")
+    metric_id = str(primary.get("metric_id") or "")
+    sample_count = int(_number(primary.get("sample_count")) or 0)
+    match_ids = primary.get("match_ids") if isinstance(primary.get("match_ids"), list) else []
+    match_id = min((item for item in match_ids if isinstance(item, int)), default=0)
+    return (
+        -_insight_severity_score(metric_id, card.get("confidence")),
+        -_confidence_score(card.get("confidence")),
+        -_evidence_strength_score(metric_id, primary),
+        -sample_count,
+        _metric_priority(metric_id),
+        match_id,
+        str(card.get("problem") or ""),
+    )
+
+
+def _insight_severity_score(metric_id: str, confidence: Any) -> int:
     if metric_id == "untraded_death_rate":
-        return (0, -value, -int(primary.get("sample_count") or 0))
+        return 100
     if metric_id == "opening_death_rate":
-        return (1, -value, -int(primary.get("sample_count") or 0))
+        return 90
     if metric_id == "survival_rate":
-        return (2, value, -int(primary.get("sample_count") or 0))
-    if metric_id == "utility_damage":
-        return (3 if confidence in USABLE_INSIGHT_CONFIDENCE else 5, -value, 0)
+        return 80
+    if metric_id == "utility_damage" and confidence in USABLE_INSIGHT_CONFIDENCE:
+        return 60
     if metric_id == "ambiguous_traded_deaths":
-        return (4, -value, -int(primary.get("sample_count") or 0))
-    if metric_id in {"enemies_flashed", "flash_detonations", "smoke_detonations", "he_detonations"}:
-        return (5, -value, -int(primary.get("sample_count") or 0))
-    return (5, 0.0, 0)
+        return 20
+    if metric_id in {"utility_damage", "enemies_flashed", "flash_detonations", "smoke_detonations", "he_detonations"}:
+        return 10
+    return 0
+
+
+def _confidence_score(confidence: Any) -> int:
+    if confidence == "high":
+        return 3
+    if confidence == "medium":
+        return 2
+    if confidence == "low":
+        return 1
+    return 0
+
+
+def _evidence_strength_score(metric_id: str, evidence: Mapping[str, Any]) -> float:
+    value = _number(evidence.get("value")) or 0.0
+    threshold = _number(evidence.get("threshold"))
+    if metric_id == "survival_rate":
+        return max(0.0, (threshold if threshold is not None else SURVIVAL_RATE_THRESHOLD) - value)
+    if threshold is not None:
+        return max(0.0, value - threshold)
+    return value
+
+
+def _metric_priority(metric_id: str) -> int:
+    order = {
+        "untraded_death_rate": 0,
+        "opening_death_rate": 1,
+        "survival_rate": 2,
+        "utility_damage": 3,
+        "ambiguous_traded_deaths": 4,
+        "enemies_flashed": 5,
+        "flash_detonations": 6,
+        "smoke_detonations": 7,
+        "he_detonations": 8,
+        "molotov_detonations": 9,
+    }
+    return order.get(metric_id, 99)
 
 
 def _metric_confidence_level(value: Any) -> str | None:
