@@ -16,6 +16,7 @@ from app.services.parser_artifact_reader import (
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "parser"
 ARTIFACT_PATH = FIXTURE_DIR / "parser_artifact_c02.json"
+C03_ARTIFACT_PATH = FIXTURE_DIR / "parser_artifact_c03_combat.json"
 HANDOFF_PATH = "/opt/jc-coach/data/uploads/retained/00/0000000000000000000000000000000000000000.dem"
 
 
@@ -71,6 +72,78 @@ def test_parser_artifact_fixture_reads_normalized_events():
     assert kill["victim"] == {"name": "Synthetic Opponent", "steamid": "SYNTHETIC_OPPONENT_ID"}
     assert kill["context"]["weapon"] == "ak47"
     assert kill["confidence"] == "high"
+
+
+def test_c03_round_boundary_fixture_extracts_expected_values():
+    events = read_normalized_events_from_artifact_file(C03_ARTIFACT_PATH)
+    round_events = [event for event in events if event["event_type"] == "round_timing"]
+
+    assert [(event["source_event"], event["tick"], event["time_seconds"]) for event in round_events] == [
+        ("round_start", 640, 10.0),
+        ("round_freeze_end", 960, 15.0),
+        ("round_end", 7800, 121.875),
+    ]
+    assert all(event["round_number"] == 1 for event in round_events)
+    assert round_events[-1]["context"] == {
+        "boundary": "round_end",
+        "winner_side": "CT",
+        "end_reason": "target_saved",
+    }
+
+
+def test_c03_kill_death_damage_fixture_extracts_expected_player_context():
+    events = read_normalized_events_from_artifact_file(C03_ARTIFACT_PATH)
+    kill = next(event for event in events if event["event_type"] == "player_kill")
+    death = next(event for event in events if event["event_type"] == "player_death")
+    damage = next(event for event in events if event["event_type"] == "damage")
+
+    assert kill["source_event"] == "player_death"
+    assert kill["round_number"] == 1
+    assert kill["tick"] == 2500
+    assert kill["actor"] == {"name": "Synthetic Player", "steamid": "SYNTHETIC_STEAM_ID"}
+    assert kill["victim"] == {"name": "Synthetic Opponent", "steamid": "SYNTHETIC_OPPONENT_ID"}
+    assert kill["context"]["assister"] == {"name": "Synthetic Teammate", "steamid": "SYNTHETIC_TEAMMATE_ID"}
+    assert kill["context"]["weapon"] == "ak47"
+    assert kill["context"]["headshot"] is True
+    assert death["actor"] == kill["actor"]
+    assert death["victim"] == kill["victim"]
+
+    assert damage["source_event"] == "player_hurt"
+    assert damage["round_number"] == 1
+    assert damage["tick"] == 2450
+    assert damage["actor"] == kill["actor"]
+    assert damage["victim"] == kill["victim"]
+    assert damage["context"] == {
+        "weapon": "ak47",
+        "hitgroup": "chest",
+        "damage_health": 28,
+        "damage_armor": 4,
+        "victim_health_after": 72,
+        "victim_armor_after": 96,
+    }
+    assert damage["confidence"] == "medium"
+
+
+def test_c03_missing_combat_fields_are_caveated_without_crashing():
+    artifact = json.loads(C03_ARTIFACT_PATH.read_text())
+    row = artifact["payload"]["deep"]["player_hurt"][0]
+    row.pop("tick")
+    row.pop("attacker_steamid")
+    row.pop("user_steamid")
+    row.pop("dmg_health")
+
+    damage = next(
+        event for event in normalized_events_from_parser_artifact(artifact) if event["event_type"] == "damage"
+    )
+
+    assert damage["tick"] is None
+    assert damage["time_seconds"] is None
+    assert damage["actor"] == {"name": "Synthetic Player"}
+    assert damage["victim"] == {"name": "Synthetic Opponent"}
+    assert "Source row omitted tick; time_seconds is unavailable." in damage["caveats"]
+    assert "Source row omitted actor steamid; player joins may require name fallback." in damage["caveats"]
+    assert "Source row omitted victim steamid; player joins may require name fallback." in damage["caveats"]
+    assert "Source row omitted health damage; ADR consumers must ignore this row." in damage["caveats"]
 
 
 def test_retained_demo_handoff_path_reads_existing_parser_artifact():

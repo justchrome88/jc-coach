@@ -1,0 +1,90 @@
+{
+  "parser_name": "demoparser2",
+  "parser_version": "synthetic-test-version",
+  "payload_version": "synthetic-c03",
+  "status": "parsed",
+  "source_demo_file": "/opt/jc-coach/data/uploads/retained/03/0303030303030303030303030303030303030303.dem",
+  "demo_sha1": "0303030303030303030303030303030303030303",
+  "event_counts": {
+    "round_start": 1,
+    "round_freeze_end": 1,
+    "round_end": 1,
+    "player_death": 1,
+    "player_hurt": 1
+  },
+  "confidence": {
+    "parser_confidence": "medium",
+    "metric_confidence": {
+      "adr": "medium",
+      "early_deaths": "medium",
+      "kills": "high",
+      "deaths": "high"
+    }
+  },
+  "payload": {
+    "parser": "demoparser2",
+    "parser_version": "synthetic-test-version",
+    "payload_version": "synthetic-c03",
+    "file": "/opt/jc-coach/data/uploads/retained/03/0303030303030303030303030303030303030303.dem",
+    "demo_sha1": "0303030303030303030303030303030303030303",
+    "parser_confidence": "medium",
+    "metric_confidence": {
+      "adr": "medium",
+      "early_deaths": "medium",
+      "kills": "high",
+      "deaths": "high"
+    },
+    "deep": {
+      "round_boundaries": [
+        {
+          "round_number": 1,
+          "tick": 640,
+          "source_event": "round_start"
+        },
+        {
+          "round_number": 1,
+          "tick": 960,
+          "source_event": "round_freeze_end"
+        },
+        {
+          "round_number": 1,
+          "tick": 7800,
+          "source_event": "round_end",
+          "winner_side": "CT",
+          "end_reason": "target_saved"
+        }
+      ],
+      "player_death": [
+        {
+          "round_number": 1,
+          "tick": 2500,
+          "attacker_name": "Synthetic Player",
+          "attacker_steamid": "SYNTHETIC_STEAM_ID",
+          "user_name": "Synthetic Opponent",
+          "user_steamid": "SYNTHETIC_OPPONENT_ID",
+          "assister_name": "Synthetic Teammate",
+          "assister_steamid": "SYNTHETIC_TEAMMATE_ID",
+          "weapon": "ak47",
+          "headshot": true,
+          "hitgroup": "head"
+        }
+      ],
+      "player_hurt": [
+        {
+          "round_number": 1,
+          "tick": 2450,
+          "attacker_name": "Synthetic Player",
+          "attacker_steamid": "SYNTHETIC_STEAM_ID",
+          "user_name": "Synthetic Opponent",
+          "user_steamid": "SYNTHETIC_OPPONENT_ID",
+          "weapon": "ak47",
+          "hitgroup": "chest",
+          "dmg_health": 28,
+          "dmg_armor": 4,
+          "health": 72,
+          "armor": 96
+        }
+      ]
+    }
+  }
+}

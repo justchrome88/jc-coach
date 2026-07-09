@@ -72,6 +72,9 @@ def normalized_events_from_parser_artifact(
     confidence = _confidence_descriptor(document, payload)
     events: list[dict[str, Any]] = []
 
+    events.extend(_raw_round_boundary_events(deep, source, confidence))
+    events.extend(_raw_player_death_events(deep, source, confidence))
+    events.extend(_raw_player_hurt_events(deep, source, confidence))
     events.extend(_round_events(deep, source, confidence))
     events.extend(_duel_events(deep, source, confidence))
     events.extend(_damage_events(deep, source, confidence))
@@ -469,6 +472,131 @@ def _survival_events(
     return events
 
 
+def _raw_round_boundary_events(
+    deep: Mapping[str, Any],
+    source: Mapping[str, Any],
+    confidence: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows = _raw_rows(
+        deep,
+        ("round_boundaries",),
+        {
+            "round_start_events": "round_start",
+            "round_freeze_end_events": "round_freeze_end",
+            "round_end_events": "round_end",
+        },
+    )
+    events = []
+    for row, fallback_source_event in rows:
+        source_event = _round_boundary_source_event(row, fallback_source_event)
+        round_number = _int_or_none(row.get("round_number") or row.get("round") or row.get("total_rounds_played"))
+        tick = _int_or_none(row.get("tick"))
+        events.append(
+            _event(
+                "round_timing",
+                source_event,
+                source,
+                confidence,
+                round_number=round_number,
+                tick=tick,
+                context={
+                    "boundary": source_event,
+                    "winner_side": row.get("winner_side") or row.get("winner"),
+                    "end_reason": row.get("end_reason") or row.get("reason"),
+                },
+                payload=row,
+                caveats=_availability_caveats(round_number=round_number, tick=tick),
+            )
+        )
+    return events
+
+
+def _raw_player_death_events(
+    deep: Mapping[str, Any],
+    source: Mapping[str, Any],
+    confidence: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    events = []
+    for row, _source_event in _raw_rows(deep, ("player_death_events", "player_death"), {}):
+        actor = _player_from_fields(row, ("attacker_name", "attacker"), ("attacker_steamid",))
+        victim = _player_from_fields(row, ("victim_name", "user_name", "user"), ("victim_steamid", "user_steamid"))
+        round_number = _int_or_none(row.get("round_number") or row.get("round") or row.get("total_rounds_played"))
+        tick = _int_or_none(row.get("tick"))
+        context = {
+            "weapon": row.get("weapon"),
+            "headshot": bool(row.get("headshot")),
+            "assister": _player_from_fields(row, ("assister_name", "assister"), ("assister_steamid",)),
+            "attacker_blind": _bool_or_none(row.get("attackerblind") or row.get("attacker_blind")),
+            "through_smoke": _bool_or_none(row.get("thrusmoke") or row.get("through_smoke")),
+            "noscope": _bool_or_none(row.get("noscope")),
+            "penetrated": _int_or_none(row.get("penetrated")),
+            "hitgroup": row.get("hitgroup"),
+        }
+        caveats = _availability_caveats(round_number=round_number, tick=tick, actor=actor, victim=victim)
+        for event_type in ("player_kill", "player_death"):
+            events.append(
+                _event(
+                    event_type,
+                    "player_death",
+                    source,
+                    confidence,
+                    round_number=round_number,
+                    tick=tick,
+                    actor=actor,
+                    victim=victim,
+                    context=context,
+                    payload=row,
+                    caveats=caveats,
+                )
+            )
+    return events
+
+
+def _raw_player_hurt_events(
+    deep: Mapping[str, Any],
+    source: Mapping[str, Any],
+    confidence: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    events = []
+    for row, _source_event in _raw_rows(deep, ("player_hurt_events", "player_hurt"), {}):
+        actor = _player_from_fields(row, ("attacker_name", "attacker"), ("attacker_steamid",))
+        victim = _player_from_fields(row, ("victim_name", "user_name", "user"), ("victim_steamid", "user_steamid"))
+        round_number = _int_or_none(row.get("round_number") or row.get("round") or row.get("total_rounds_played"))
+        tick = _int_or_none(row.get("tick"))
+        damage_health = _int_or_none(row.get("damage_health") or row.get("dmg_health") or row.get("health_damage"))
+        damage_armor = _int_or_none(row.get("damage_armor") or row.get("dmg_armor"))
+        events.append(
+            _event(
+                "damage",
+                "player_hurt",
+                source,
+                confidence,
+                round_number=round_number,
+                tick=tick,
+                actor=actor,
+                victim=victim,
+                context={
+                    "weapon": row.get("weapon"),
+                    "hitgroup": row.get("hitgroup"),
+                    "damage_health": damage_health,
+                    "damage_armor": damage_armor,
+                    "victim_health_after": _int_or_none(row.get("victim_health_after") or row.get("health")),
+                    "victim_armor_after": _int_or_none(row.get("victim_armor_after") or row.get("armor")),
+                },
+                payload=row,
+                caveats=[
+                    *_availability_caveats(round_number=round_number, tick=tick, actor=actor, victim=victim),
+                    *(
+                        ["Source row omitted health damage; ADR consumers must ignore this row."]
+                        if damage_health is None
+                        else []
+                    ),
+                ],
+            )
+        )
+    return events
+
+
 def _grenade_event(
     event_type: str,
     row: Mapping[str, Any],
@@ -501,6 +629,7 @@ def _event(
     victim: Mapping[str, Any] | None = None,
     context: Mapping[str, Any] | None = None,
     payload: Mapping[str, Any] | None = None,
+    caveats: list[str] | None = None,
 ) -> dict[str, Any]:
     definition = EVENT_METRIC_DICTIONARY[event_type]
     return {
@@ -517,7 +646,7 @@ def _event(
         "context": _clean_mapping(context or {}),
         "source_event": source_event,
         "confidence": _event_confidence(event_type, confidence),
-        "caveats": list(definition.caveats),
+        "caveats": _ordered_unique([*definition.caveats, *(caveats or [])]),
         "payload": _clean_mapping(payload or {}),
     }
 
@@ -551,12 +680,47 @@ def _rows(deep: Mapping[str, Any], key: str) -> list[Mapping[str, Any]]:
     return rows
 
 
+def _raw_rows(
+    deep: Mapping[str, Any],
+    direct_keys: tuple[str, ...],
+    keyed_sources: Mapping[str, str],
+) -> list[tuple[Mapping[str, Any], str | None]]:
+    rows = []
+    for key in direct_keys:
+        rows.extend((row, None) for row in _rows(deep, key))
+    for key, source_event in keyed_sources.items():
+        rows.extend((row, source_event) for row in _rows(deep, key))
+    return rows
+
+
+def _round_boundary_source_event(row: Mapping[str, Any], fallback: str | None) -> str:
+    raw = str(row.get("source_event") or row.get("event_name") or row.get("event_type") or fallback or "").lower()
+    if raw in {"round_start", "start"}:
+        return "round_start"
+    if raw in {"round_freeze_end", "freeze_end", "freezetime_end"}:
+        return "round_freeze_end"
+    return "round_end"
+
+
 def _player(row: Mapping[str, Any], prefix: str) -> dict[str, Any] | None:
     player = {
         "name": row.get(f"{prefix}_name"),
         "steamid": row.get(f"{prefix}_steamid"),
     }
     return _clean_player(player)
+
+
+def _player_from_fields(
+    row: Mapping[str, Any],
+    name_fields: tuple[str, ...],
+    steamid_fields: tuple[str, ...],
+) -> dict[str, Any] | None:
+    return _clean_player(
+        {
+            "name": _first_present(row, name_fields),
+            "steamid": _first_present(row, steamid_fields),
+        }
+    )
 
 
 def _clean_player(player: Mapping[str, Any] | None) -> dict[str, Any] | None:
@@ -613,11 +777,48 @@ def _float_or_none(value: Any) -> float | None:
         return None
 
 
+def _bool_or_none(value: Any) -> bool | None:
+    if value is None:
+        return None
+    return bool(value)
+
+
 def _string_or_none(value: Any) -> str | None:
     if value is None:
         return None
     text = str(value)
     return text or None
+
+
+def _first_present(row: Mapping[str, Any], fields: tuple[str, ...]) -> Any:
+    for field in fields:
+        value = row.get(field)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _availability_caveats(
+    *,
+    round_number: int | None,
+    tick: int | None,
+    actor: Mapping[str, Any] | None = None,
+    victim: Mapping[str, Any] | None = None,
+) -> list[str]:
+    caveats = []
+    if round_number is None:
+        caveats.append("Source row omitted round number; round attribution is unavailable.")
+    if tick is None:
+        caveats.append("Source row omitted tick; time_seconds is unavailable.")
+    if actor is None:
+        caveats.append("Source row omitted actor identity; actor metrics must ignore this row.")
+    elif not actor.get("steamid"):
+        caveats.append("Source row omitted actor steamid; player joins may require name fallback.")
+    if victim is None:
+        caveats.append("Source row omitted victim identity; victim metrics must ignore this row.")
+    elif not victim.get("steamid"):
+        caveats.append("Source row omitted victim steamid; player joins may require name fallback.")
+    return caveats
 
 
 def _confidence_or_unavailable(value: Any) -> str:
