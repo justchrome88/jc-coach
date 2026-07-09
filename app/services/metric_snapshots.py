@@ -1,0 +1,214 @@
+from __future__ import annotations
+
+import json
+from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
+from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import Match, MetricSnapshot
+
+MetricPayload = Mapping[str, Any]
+
+
+def create_metric_snapshot(
+    db: Session,
+    *,
+    match_id: int,
+    player_key: str,
+    source: str,
+    metrics: MetricPayload,
+    confidence_baseline: MetricPayload,
+    player_name: str | None = None,
+    player_steamid: str | None = None,
+    source_parser_artifact_id: int | None = None,
+    source_event_set_id: str | None = None,
+    caveats: Sequence[str] | None = None,
+    metadata: MetricPayload | None = None,
+) -> MetricSnapshot:
+    _validate_match(db, match_id)
+    snapshot = MetricSnapshot(
+        match_id=match_id,
+        player_key=_required_text(player_key, "player_key"),
+        player_name=_optional_text(player_name),
+        player_steamid=_optional_text(player_steamid),
+        source=_required_text(source, "source"),
+        source_parser_artifact_id=source_parser_artifact_id,
+        source_event_set_id=_optional_text(source_event_set_id),
+        metrics_json=_dumps_dict(metrics, "metrics"),
+        confidence_baseline_json=_dumps_dict(confidence_baseline, "confidence_baseline"),
+        caveats_json=_dumps_list(caveats or []),
+        metadata_json=_dumps_dict(metadata or {}, "metadata"),
+    )
+    db.add(snapshot)
+    db.commit()
+    db.refresh(snapshot)
+    return snapshot
+
+
+def get_metric_snapshot(db: Session, snapshot_id: int) -> MetricSnapshot | None:
+    return db.get(MetricSnapshot, snapshot_id)
+
+
+def find_metric_snapshot(db: Session, *, match_id: int, player_key: str, source: str) -> MetricSnapshot | None:
+    return db.scalar(
+        select(MetricSnapshot)
+        .where(MetricSnapshot.match_id == match_id)
+        .where(MetricSnapshot.player_key == player_key)
+        .where(MetricSnapshot.source == source)
+    )
+
+
+def list_metric_snapshots(
+    db: Session,
+    *,
+    match_id: int | None = None,
+    player_key: str | None = None,
+    source: str | None = None,
+    limit: int = 100,
+) -> list[MetricSnapshot]:
+    stmt = select(MetricSnapshot).order_by(MetricSnapshot.created_at.desc(), MetricSnapshot.id.desc()).limit(limit)
+    if match_id is not None:
+        stmt = stmt.where(MetricSnapshot.match_id == match_id)
+    if player_key is not None:
+        stmt = stmt.where(MetricSnapshot.player_key == player_key)
+    if source is not None:
+        stmt = stmt.where(MetricSnapshot.source == source)
+    return list(db.scalars(stmt).all())
+
+
+def update_metric_snapshot(
+    db: Session,
+    snapshot: MetricSnapshot,
+    *,
+    metrics: MetricPayload | None = None,
+    confidence_baseline: MetricPayload | None = None,
+    source_parser_artifact_id: int | None = None,
+    source_event_set_id: str | None = None,
+    caveats: Sequence[str] | None = None,
+    metadata: MetricPayload | None = None,
+) -> MetricSnapshot:
+    if metrics is not None:
+        snapshot.metrics_json = _dumps_dict(metrics, "metrics")
+    if confidence_baseline is not None:
+        snapshot.confidence_baseline_json = _dumps_dict(confidence_baseline, "confidence_baseline")
+    if source_parser_artifact_id is not None:
+        snapshot.source_parser_artifact_id = source_parser_artifact_id
+    if source_event_set_id is not None:
+        snapshot.source_event_set_id = _optional_text(source_event_set_id)
+    if caveats is not None:
+        snapshot.caveats_json = _dumps_list(caveats)
+    if metadata is not None:
+        snapshot.metadata_json = _dumps_dict(metadata, "metadata")
+    snapshot.updated_at = _now()
+    db.commit()
+    db.refresh(snapshot)
+    return snapshot
+
+
+def upsert_metric_snapshot(
+    db: Session,
+    *,
+    match_id: int,
+    player_key: str,
+    source: str,
+    metrics: MetricPayload,
+    confidence_baseline: MetricPayload,
+    player_name: str | None = None,
+    player_steamid: str | None = None,
+    source_parser_artifact_id: int | None = None,
+    source_event_set_id: str | None = None,
+    caveats: Sequence[str] | None = None,
+    metadata: MetricPayload | None = None,
+) -> MetricSnapshot:
+    existing = find_metric_snapshot(db, match_id=match_id, player_key=player_key, source=source)
+    if existing is None:
+        return create_metric_snapshot(
+            db,
+            match_id=match_id,
+            player_key=player_key,
+            source=source,
+            metrics=metrics,
+            confidence_baseline=confidence_baseline,
+            player_name=player_name,
+            player_steamid=player_steamid,
+            source_parser_artifact_id=source_parser_artifact_id,
+            source_event_set_id=source_event_set_id,
+            caveats=caveats,
+            metadata=metadata,
+        )
+    existing.player_name = _optional_text(player_name) if player_name is not None else existing.player_name
+    existing.player_steamid = _optional_text(player_steamid) if player_steamid is not None else existing.player_steamid
+    return update_metric_snapshot(
+        db,
+        existing,
+        metrics=metrics,
+        confidence_baseline=confidence_baseline,
+        source_parser_artifact_id=source_parser_artifact_id,
+        source_event_set_id=source_event_set_id,
+        caveats=caveats,
+        metadata=metadata,
+    )
+
+
+def metric_snapshot_payload(snapshot: MetricSnapshot) -> dict[str, Any]:
+    return {
+        "id": snapshot.id,
+        "match_id": snapshot.match_id,
+        "player_key": snapshot.player_key,
+        "player_name": snapshot.player_name,
+        "player_steamid": snapshot.player_steamid,
+        "source": snapshot.source,
+        "source_parser_artifact_id": snapshot.source_parser_artifact_id,
+        "source_event_set_id": snapshot.source_event_set_id,
+        "metrics": _loads(snapshot.metrics_json, fallback={}),
+        "confidence_baseline": _loads(snapshot.confidence_baseline_json, fallback={}),
+        "caveats": _loads(snapshot.caveats_json, fallback=[]),
+        "metadata": _loads(snapshot.metadata_json, fallback={}),
+        "created_at": snapshot.created_at.isoformat() if snapshot.created_at else None,
+        "updated_at": snapshot.updated_at.isoformat() if snapshot.updated_at else None,
+    }
+
+
+def _validate_match(db: Session, match_id: int) -> None:
+    if db.get(Match, match_id) is None:
+        raise ValueError(f"Metric snapshot match_id does not exist: {match_id}")
+
+
+def _required_text(value: str, field: str) -> str:
+    text = str(value).strip()
+    if not text:
+        raise ValueError(f"{field} is required")
+    return text
+
+
+def _optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _dumps_dict(value: MetricPayload, field: str) -> str:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{field} must be a mapping")
+    return json.dumps(dict(value), ensure_ascii=False, sort_keys=True, default=str)
+
+
+def _dumps_list(value: Sequence[str]) -> str:
+    if isinstance(value, str):
+        raise ValueError("caveats must be a sequence of strings")
+    return json.dumps([str(item) for item in value], ensure_ascii=False, sort_keys=True, default=str)
+
+
+def _loads(value: str, *, fallback: Any) -> Any:
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return fallback
+
+
+def _now() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)

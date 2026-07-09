@@ -72,6 +72,33 @@ class DemoParseArtifact(Base):
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
 
 
+class MetricSnapshot(Base):
+    __tablename__ = "metric_snapshots"
+    __table_args__ = (
+        UniqueConstraint("match_id", "player_key", "source", name="uq_metric_snapshot_match_player_source"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"), nullable=False, index=True)
+    player_key: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    player_name: Mapped[str | None] = mapped_column(String(255), index=True)
+    player_steamid: Mapped[str | None] = mapped_column(String(32), index=True)
+    source: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    source_parser_artifact_id: Mapped[int | None] = mapped_column(ForeignKey("demo_parse_artifacts.id"), index=True)
+    source_event_set_id: Mapped[str | None] = mapped_column(String(255), index=True)
+    metrics_json: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence_baseline_json: Mapped[str] = mapped_column(Text, nullable=False)
+    caveats_json: Mapped[str] = mapped_column(Text, nullable=False)
+    metadata_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
 class DemoRound(Base):
     __tablename__ = "demo_rounds"
     __table_args__ = (UniqueConstraint("match_id", "round_number", name="uq_demo_round_match_round"),)
