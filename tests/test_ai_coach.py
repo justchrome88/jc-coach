@@ -789,6 +789,26 @@ def test_post_metrics_owner_match_coach_loop_persists_analysis_and_evaluates_act
     assert summary["target_met"] is True
     assert "reached without failing guardrails" in summary["why_counted_or_not"]
 
+    repeated = process_owner_match_metric_snapshots_for_coach_loop(
+        db,
+        user_id=owner.id,
+        match_id=evaluation_match.id,
+        metric_snapshot_ids=(owner_evaluation_snapshot.id, other_evaluation_snapshot.id),
+        evaluation_window_start=datetime(2026, 7, 10),
+        evaluation_window_end=datetime(2026, 7, 10),
+    )
+
+    assert repeated["analysis_run_id"] == result["analysis_run_id"]
+    assert repeated["coach_hypothesis_ids"] == result["coach_hypothesis_ids"]
+    assert repeated["mission_progress_evaluation_ids"] == result["mission_progress_evaluation_ids"]
+    assert repeated["idempotency"]["reused_analysis_run"] is True
+    assert repeated["idempotency"]["reused_mission_progress_evaluation_ids"] == result[
+        "mission_progress_evaluation_ids"
+    ]
+    assert db.query(AnalysisRun).count() == 2
+    assert db.query(CoachHypothesis).count() == 2
+    assert len(list_mission_progress_evaluations(db, user_id=owner.id, mission_id=mission.id)) == 1
+
 
 def test_ai_payload_uses_exact_recent_matches_and_reports_exclusions(db):
     db.add_all(

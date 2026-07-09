@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from app.db.models import DemoParseArtifact, Match, MetricSnapshot
+from app.db.models import DemoParseArtifact, Match, MetricSnapshot, SteamAccount, User
 from app.services.demo_retention import ARTIFACT_CATEGORY_METRIC_SNAPSHOT, RETENTION_CLASS_DERIVED_REBUILDABLE
 from app.services.metric_snapshots import (
     MetricSnapshotAnalysisScope,
@@ -12,6 +12,7 @@ from app.services.metric_snapshots import (
     get_metric_snapshot,
     list_metric_snapshots,
     metric_snapshot_payload,
+    process_persisted_match_metric_snapshots_for_coach_loop,
     select_metric_snapshots_for_analysis_scope,
     update_metric_snapshot,
     upsert_metric_snapshot,
@@ -241,6 +242,63 @@ def test_admin_debug_scope_preserves_all_snapshot_selection_for_explicit_use(db)
     )
 
     assert {snapshot.id for snapshot in selected} == {first.id, second.id}
+
+
+def test_process_persisted_match_metric_snapshots_invokes_owner_coach_loop_after_persistence(db, monkeypatch):
+    owner = User(email="metric-helper-owner@example.test", display_name="Owner", password_hash="hash")
+    db.add(owner)
+    db.commit()
+    db.refresh(owner)
+    db.add(SteamAccount(user_id=owner.id, steam_id="owner", persona_name="Owner"))
+    match = _persist_match(db)
+    owner_snapshot = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:owner",
+        player_steamid="owner",
+        source="core_combat_metrics",
+        metrics={"survival_rate": 0.5},
+        confidence_baseline={"metrics": {"survival_rate": {"level": "medium"}}},
+    )
+    other_snapshot = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:other",
+        player_steamid="other",
+        source="core_combat_metrics",
+        metrics={"survival_rate": 0.1},
+        confidence_baseline={"metrics": {"survival_rate": {"level": "medium"}}},
+    )
+    calls = []
+
+    def fake_hook(db_arg, **kwargs):
+        calls.append({"db": db_arg, **kwargs})
+        return {
+            "backend_loop": "owner_match_post_metrics_coach_loop",
+            "selected_metric_snapshot_ids": [owner_snapshot.id],
+            "mission_status_summaries": [],
+        }
+
+    monkeypatch.setattr("app.services.ai_coach.process_owner_match_metric_snapshots_for_coach_loop", fake_hook)
+
+    result = process_persisted_match_metric_snapshots_for_coach_loop(
+        db,
+        user_id=owner.id,
+        match_id=match.id,
+        metric_snapshots=[owner_snapshot, other_snapshot],
+    )
+
+    assert result["selected_metric_snapshot_ids"] == [owner_snapshot.id]
+    assert calls == [
+        {
+            "db": db,
+            "user_id": owner.id,
+            "match_id": match.id,
+            "metric_snapshot_ids": [owner_snapshot.id, other_snapshot.id],
+            "evaluation_window_start": None,
+            "evaluation_window_end": None,
+        }
+    ]
 
 
 def _persist_match(db) -> Match:

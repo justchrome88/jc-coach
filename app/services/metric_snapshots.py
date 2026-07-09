@@ -248,6 +248,31 @@ def upsert_metric_snapshot(
     )
 
 
+def process_persisted_match_metric_snapshots_for_coach_loop(
+    db: Session,
+    *,
+    user_id: int,
+    match_id: int,
+    metric_snapshots: Sequence[MetricSnapshot],
+    evaluation_window_start: datetime | None = None,
+    evaluation_window_end: datetime | None = None,
+) -> dict[str, Any]:
+    mismatched = [snapshot.id for snapshot in metric_snapshots if snapshot.match_id != match_id]
+    if mismatched:
+        raise ValueError("Post-metrics coach loop received snapshots for a different match.")
+    metric_snapshot_ids = [snapshot.id for snapshot in metric_snapshots]
+    from app.services.ai_coach import process_owner_match_metric_snapshots_for_coach_loop
+
+    return process_owner_match_metric_snapshots_for_coach_loop(
+        db,
+        user_id=user_id,
+        match_id=match_id,
+        metric_snapshot_ids=metric_snapshot_ids,
+        evaluation_window_start=evaluation_window_start,
+        evaluation_window_end=evaluation_window_end,
+    )
+
+
 def metric_snapshot_payload(snapshot: MetricSnapshot) -> dict[str, Any]:
     return {
         "id": snapshot.id,

@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.db.models import AnalysisRun, CoachHypothesis, CoachReport, Match
+from app.db.models import AnalysisRun, CoachHypothesis, CoachReport, Match, MissionProgressEvaluation
 from app.services.ai_validator import render_ai_output_markdown, validate_ai_coach_output
 from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
@@ -63,6 +63,8 @@ AI_COACH_SNAPSHOT_CONTRACT_VERSION = "ai-coach-snapshot-v1"
 AI_COACH_SNAPSHOT_GENERATED_BY = "app.services.ai_coach"
 AI_COACH_DOMAIN_CONTRACT_VERSION = "cs2-domain-contract-v1"
 ANALYSIS_RUN_SOURCE = "ai_coach_owner_scoped_insights"
+POST_METRICS_COACH_LOOP_HOOK = "process_owner_match_metric_snapshots_for_coach_loop"
+POST_METRICS_COACH_LOOP_SOURCE = "post_metrics_owner_match_loop"
 ANALYSIS_WINDOW_PLACEHOLDERS = {"last_30", "last_60", "all_time", "custom", "match_set"}
 
 
@@ -249,36 +251,64 @@ def process_owner_match_metric_snapshots_for_coach_loop(
         mode="personal",
     )
     owner_snapshot_payloads = _metric_snapshot_payloads_for_scope(db, analysis_scope)
+    selected_snapshot_ids = [payload["id"] for payload in owner_snapshot_payloads]
     coach_payload = build_ai_coach_payload(db, analysis_scope=analysis_scope)
     insight_cards = coach_payload["coach_insight_cards"]
     analysis_run: AnalysisRun | None = None
     hypotheses: list[CoachHypothesis] = []
+    reused_analysis_run = False
     if insight_cards:
-        analysis_run, hypotheses = persist_owner_scoped_coach_hypotheses(
+        existing_analysis_run = _find_existing_post_metrics_analysis_run(
             db,
-            analysis_scope=analysis_scope,
-            insight_cards=insight_cards,
-            source_payload={
-                "post_metrics_hook": "process_owner_match_metric_snapshots_for_coach_loop",
-                "match_id": match_id,
-            },
+            user_id=user_id,
+            match_id=match_id,
+            selected_metric_snapshot_ids=selected_snapshot_ids,
         )
+        if existing_analysis_run is not None:
+            analysis_run = existing_analysis_run
+            hypotheses = _analysis_run_hypotheses(db, user_id=user_id, analysis_run_id=analysis_run.id)
+            reused_analysis_run = True
+        else:
+            analysis_run, hypotheses = persist_owner_scoped_coach_hypotheses(
+                db,
+                analysis_scope=analysis_scope,
+                insight_cards=insight_cards,
+                source_payload={
+                    "post_metrics_hook": POST_METRICS_COACH_LOOP_HOOK,
+                    "match_id": match_id,
+                },
+            )
 
-    evaluations = [
-        evaluate_mission_progress(
+    evaluations = []
+    reused_evaluation_ids = []
+    for mission in list_active_coach_missions(db, user_id=user_id):
+        existing_evaluation = _find_existing_post_metrics_mission_evaluation(
             db,
             user_id=user_id,
             mission_id=mission.id,
-            evaluation_metric_snapshots=owner_snapshot_payloads,
+            match_id=match_id,
+            selected_metric_snapshot_ids=selected_snapshot_ids,
             evaluation_window_start=evaluation_window_start,
             evaluation_window_end=evaluation_window_end,
-            evaluation_window={
-                "match_ids": [match_id],
-                "source": "post_metrics_owner_match_loop",
-            },
         )
-        for mission in list_active_coach_missions(db, user_id=user_id)
-    ]
+        if existing_evaluation is not None:
+            evaluations.append(existing_evaluation)
+            reused_evaluation_ids.append(existing_evaluation.id)
+            continue
+        evaluations.append(
+            evaluate_mission_progress(
+                db,
+                user_id=user_id,
+                mission_id=mission.id,
+                evaluation_metric_snapshots=owner_snapshot_payloads,
+                evaluation_window_start=evaluation_window_start,
+                evaluation_window_end=evaluation_window_end,
+                evaluation_window={
+                    "match_ids": [match_id],
+                    "source": POST_METRICS_COACH_LOOP_SOURCE,
+                },
+            )
+        )
     db.commit()
     if analysis_run is not None:
         db.refresh(analysis_run)
@@ -287,7 +317,6 @@ def process_owner_match_metric_snapshots_for_coach_loop(
     for evaluation in evaluations:
         db.refresh(evaluation)
 
-    selected_snapshot_ids = [payload["id"] for payload in owner_snapshot_payloads]
     return {
         "backend_loop": "owner_match_post_metrics_coach_loop",
         "user_id": user_id,
@@ -297,11 +326,105 @@ def process_owner_match_metric_snapshots_for_coach_loop(
         "analysis_run_id": analysis_run.id if analysis_run is not None else None,
         "coach_hypothesis_ids": [hypothesis.id for hypothesis in hypotheses],
         "mission_progress_evaluation_ids": [evaluation.id for evaluation in evaluations],
+        "idempotency": {
+            "reused_analysis_run": reused_analysis_run,
+            "reused_mission_progress_evaluation_ids": reused_evaluation_ids,
+        },
         "mission_status_summaries": [
             serialize_mission_progress_evaluation(evaluation)
             for evaluation in evaluations
         ],
     }
+
+
+def _find_existing_post_metrics_analysis_run(
+    db: Session,
+    *,
+    user_id: int,
+    match_id: int,
+    selected_metric_snapshot_ids: Sequence[int],
+) -> AnalysisRun | None:
+    expected_ids = [int(item) for item in selected_metric_snapshot_ids]
+    stmt = (
+        select(AnalysisRun)
+        .where(AnalysisRun.user_id == user_id)
+        .where(AnalysisRun.mode == "personal")
+        .where(AnalysisRun.source == ANALYSIS_RUN_SOURCE)
+        .order_by(AnalysisRun.created_at.desc(), AnalysisRun.id.desc())
+    )
+    for run in db.scalars(stmt).all():
+        source_payload = _json_loads(run.source_payload_json)
+        if source_payload.get("post_metrics_hook") != POST_METRICS_COACH_LOOP_HOOK:
+            continue
+        if _optional_int(source_payload.get("match_id")) != match_id:
+            continue
+        if _json_list_loads(run.selected_metric_snapshot_ids_json) == expected_ids:
+            return run
+    return None
+
+
+def _analysis_run_hypotheses(db: Session, *, user_id: int, analysis_run_id: int) -> list[CoachHypothesis]:
+    return list(
+        db.scalars(
+            select(CoachHypothesis)
+            .where(CoachHypothesis.user_id == user_id)
+            .where(CoachHypothesis.analysis_run_id == analysis_run_id)
+            .order_by(CoachHypothesis.id.asc())
+        ).all()
+    )
+
+
+def _find_existing_post_metrics_mission_evaluation(
+    db: Session,
+    *,
+    user_id: int,
+    mission_id: int,
+    match_id: int,
+    selected_metric_snapshot_ids: Sequence[int],
+    evaluation_window_start: datetime | None,
+    evaluation_window_end: datetime | None,
+) -> MissionProgressEvaluation | None:
+    expected_ids = [int(item) for item in selected_metric_snapshot_ids]
+    stmt = (
+        select(MissionProgressEvaluation)
+        .where(MissionProgressEvaluation.user_id == user_id)
+        .where(MissionProgressEvaluation.mission_id == mission_id)
+        .order_by(MissionProgressEvaluation.created_at.desc(), MissionProgressEvaluation.id.desc())
+    )
+    for evaluation in db.scalars(stmt).all():
+        if evaluation.evaluation_window_start != evaluation_window_start:
+            continue
+        if evaluation.evaluation_window_end != evaluation_window_end:
+            continue
+        result = _json_loads(evaluation.result_json)
+        window = result.get("evaluation_window_json")
+        window = window if isinstance(window, Mapping) else {}
+        if window.get("source") != POST_METRICS_COACH_LOOP_SOURCE:
+            continue
+        if _int_list(window.get("match_ids")) != [match_id]:
+            continue
+        if _int_list(result.get("source_metric_snapshot_ids")) == expected_ids:
+            return evaluation
+    return None
+
+
+def _optional_int(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _json_list_loads(value: str | None) -> list[int]:
+    if not value:
+        return []
+    try:
+        loaded = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    return _int_list(loaded)
 
 
 def ai_provider_health() -> dict[str, Any]:
