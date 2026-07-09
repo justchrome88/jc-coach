@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from app.db.models import Match
+from app.services.combat_event_derivation import derive_combat_events
 from app.services.core_combat_metrics import (
     CORE_COMBAT_METRICS_VERSION,
     calculate_and_store_core_combat_metrics,
@@ -10,6 +11,7 @@ from app.services.core_combat_metrics import (
 from app.services.metric_snapshots import metric_snapshot_payload
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "metrics" / "core_combat_events_d02.json"
+C04_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "parser" / "combat_derivation_c04_events.json"
 
 
 def _fixture_payload():
@@ -23,6 +25,19 @@ def _metrics_by_player(events=None, players=None):
         players=players if players is not None else payload["players"],
     )
     return {result.player_key: result for result in results}
+
+
+def _c04_payload():
+    return json.loads(C04_FIXTURE_PATH.read_text())
+
+
+def _c04_derived_metric_input():
+    payload = _c04_payload()
+    derived = derive_combat_events(payload["events"], tracked_players=payload["players"])
+    return {
+        "players": payload["players"],
+        "events": [*payload["events"], *derived],
+    }
 
 
 def test_core_combat_metrics_are_deterministic_for_fixture_events():
@@ -60,6 +75,58 @@ def test_core_combat_metrics_are_deterministic_for_fixture_events():
     }
     assert by_player["steam:T1"].confidence_baseline["source"] == CORE_COMBAT_METRICS_VERSION
     assert by_player["steam:T1"].confidence_baseline["metrics"]["kills"] == "high"
+
+
+def test_opening_trade_and_survival_metrics_are_deterministic_for_c04_events():
+    payload = _c04_derived_metric_input()
+    by_player = _metrics_by_player(events=payload["events"], players=payload["players"])
+
+    alpha = by_player["steam:T1"]
+    assert alpha.metrics["rounds"] == 3
+    assert alpha.metrics["opening_duels"] == 1
+    assert alpha.metrics["opening_duel_wins"] == 1
+    assert alpha.metrics["opening_deaths"] == 0
+    assert alpha.metrics["opening_death_rate"] == 0.0
+    assert alpha.metrics["opening_duel_win_rate"] == 1.0
+    assert alpha.metrics["traded_deaths"] == 0
+    assert alpha.metrics["untraded_deaths"] == 1
+    assert alpha.metrics["traded_death_rate"] == 0.0
+    assert alpha.metrics["untraded_death_rate"] == 1.0
+    assert alpha.metrics["survival_rate"] == 0.667
+
+    bravo = by_player["steam:CT1"]
+    assert bravo.metrics["opening_duels"] == 1
+    assert bravo.metrics["opening_deaths"] == 1
+    assert bravo.metrics["opening_death_rate"] == 0.333
+    assert bravo.metrics["opening_duel_win_rate"] == 0.0
+    assert bravo.metrics["traded_deaths"] == 1
+    assert bravo.metrics["traded_death_rate"] == 1.0
+    assert bravo.metrics["untraded_death_rate"] == 0.0
+    assert bravo.metrics["survival_rate"] == 0.667
+
+    assert alpha.confidence_baseline["metrics"]["opening_death_rate"] == "medium"
+    assert alpha.confidence_baseline["metrics"]["opening_duel_win_rate"] == "high"
+    assert alpha.confidence_baseline["metrics"]["traded_death_rate"] == "high"
+    assert alpha.confidence_baseline["event_coverage"]["opening_duel_events"] == 3
+    assert alpha.confidence_baseline["event_coverage"]["traded_death_events"] == 5
+
+
+def test_ambiguous_trade_metrics_exclude_unknown_status_and_carry_caveat():
+    payload = _c04_derived_metric_input()
+    by_player = _metrics_by_player(events=payload["events"], players=payload["players"])
+
+    unknown_b = by_player["steam:UB"]
+    assert unknown_b.metrics["ambiguous_traded_deaths"] == 1
+    assert unknown_b.metrics["trade_status_known_deaths"] == 0
+    assert "traded_death_rate" not in unknown_b.metrics
+    assert "untraded_death_rate" not in unknown_b.metrics
+    assert unknown_b.confidence_baseline["metrics"]["traded_death_rate"] == "low"
+    assert unknown_b.confidence_baseline["metrics"]["untraded_death_rate"] == "low"
+    assert "Ambiguous traded death events were excluded from traded/untraded death rates." in unknown_b.caveats
+    assert (
+        "Source events do not include both actor/victim team side; traded death is ambiguous."
+        in unknown_b.caveats
+    )
 
 
 def test_missing_event_streams_produce_partial_metrics_and_caveats_not_fake_zeroes():
@@ -151,3 +218,31 @@ def test_core_combat_metrics_store_and_read_through_metric_snapshots(db):
     assert snapshot_payload["metrics"]["adr"] == 40.0
     assert snapshot_payload["confidence_baseline"]["source"] == CORE_COMBAT_METRICS_VERSION
     assert snapshot_payload["metadata"]["input_event_schema"] == "normalized-parser-events-v1"
+
+
+def test_c04_opening_trade_survival_metrics_store_in_metric_snapshots(db):
+    payload = _c04_derived_metric_input()
+    match = Match(source="test", external_match_id="core-combat-d03")
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+
+    snapshots = calculate_and_store_core_combat_metrics(
+        db,
+        match_id=match.id,
+        normalized_events=payload["events"],
+        players=payload["players"],
+        source_event_set_id="fixture:c04-derived:d03",
+    )
+
+    alpha = next(snapshot for snapshot in snapshots if snapshot.player_key == "steam:T1")
+    snapshot_payload = metric_snapshot_payload(alpha)
+    assert snapshot_payload["source"] == "core_combat_metrics"
+    assert snapshot_payload["source_event_set_id"] == "fixture:c04-derived:d03"
+    assert snapshot_payload["metrics"]["opening_duel_win_rate"] == 1.0
+    assert snapshot_payload["metrics"]["opening_death_rate"] == 0.0
+    assert snapshot_payload["metrics"]["traded_death_rate"] == 0.0
+    assert snapshot_payload["metrics"]["untraded_death_rate"] == 1.0
+    assert snapshot_payload["metrics"]["survival_rate"] == 0.667
+    assert snapshot_payload["confidence_baseline"]["source"] == CORE_COMBAT_METRICS_VERSION
+    assert snapshot_payload["metadata"]["schema_version"] == CORE_COMBAT_METRICS_VERSION

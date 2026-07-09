@@ -46,6 +46,8 @@ def calculate_core_combat_metrics(
     kills_from_deaths = bool(death_events and not kill_events)
     damage_events = [event for event in events if event.get("event_type") == "damage"]
     survival_events = [event for event in events if event.get("event_type") == "round_survival"]
+    opening_duel_events = [event for event in events if event.get("event_type") == "opening_duel"]
+    traded_death_events = [event for event in events if event.get("event_type") == "traded_death"]
     assists_available = _assists_available(kill_source_events)
 
     results = []
@@ -121,6 +123,22 @@ def calculate_core_combat_metrics(
         else:
             caveats.append("Round survival events unavailable or incomplete; survival metrics are omitted.")
 
+        _add_opening_duel_metrics(
+            metrics,
+            confidence,
+            caveats,
+            player_key=player_key,
+            opening_duel_events=opening_duel_events,
+            player_round_count=metrics.get("rounds"),
+        )
+        _add_trade_death_metrics(
+            metrics,
+            confidence,
+            caveats,
+            player_key=player_key,
+            traded_death_events=traded_death_events,
+        )
+
         results.append(
             CoreCombatMetricsResult(
                 player_key=player_key,
@@ -136,6 +154,8 @@ def calculate_core_combat_metrics(
                         "damage_events": len(damage_events),
                         "rounds": len(round_numbers),
                         "survival_events": len(survival_events),
+                        "opening_duel_events": len(opening_duel_events),
+                        "traded_death_events": len(traded_death_events),
                         "assists_available": assists_available,
                     },
                 },
@@ -178,6 +198,83 @@ def calculate_and_store_core_combat_metrics(
         )
         for result in results
     ]
+
+
+def _add_opening_duel_metrics(
+    metrics: dict[str, Any],
+    confidence: dict[str, str],
+    caveats: list[str],
+    *,
+    player_key: str,
+    opening_duel_events: Sequence[Mapping[str, Any]],
+    player_round_count: Any,
+) -> None:
+    if not opening_duel_events:
+        caveats.append("Opening duel events unavailable; opening duel rates are omitted.")
+        return
+
+    player_duels = [
+        event
+        for event in opening_duel_events
+        if _player_key(event.get("actor")) == player_key or _player_key(event.get("victim")) == player_key
+    ]
+    opening_duel_wins = sum(1 for event in player_duels if _player_key(event.get("actor")) == player_key)
+    opening_deaths = sum(1 for event in player_duels if _player_key(event.get("victim")) == player_key)
+    metrics["opening_duels"] = len(player_duels)
+    metrics["opening_duel_wins"] = opening_duel_wins
+    metrics["opening_deaths"] = opening_deaths
+
+    if isinstance(player_round_count, int) and player_round_count > 0:
+        metrics["opening_death_rate"] = round(opening_deaths / player_round_count, 3)
+        confidence["opening_death_rate"] = _event_confidence(player_duels, "victim", player_key)
+    else:
+        caveats.append("Round count unavailable; opening death rate is omitted.")
+
+    if player_duels:
+        metrics["opening_duel_win_rate"] = round(opening_duel_wins / len(player_duels), 3)
+        confidence["opening_duel_win_rate"] = _event_confidence(player_duels, "actor", player_key)
+        caveats.extend(_event_caveats(player_duels))
+    else:
+        caveats.append("Player had no derived opening duel events; opening duel win rate is omitted.")
+
+
+def _add_trade_death_metrics(
+    metrics: dict[str, Any],
+    confidence: dict[str, str],
+    caveats: list[str],
+    *,
+    player_key: str,
+    traded_death_events: Sequence[Mapping[str, Any]],
+) -> None:
+    if not traded_death_events:
+        caveats.append("Traded death events unavailable; trade death rates are omitted.")
+        return
+
+    player_deaths = [event for event in traded_death_events if _player_key(event.get("victim")) == player_key]
+    traded_deaths = sum(1 for event in player_deaths if _trade_status(event) == "traded")
+    untraded_deaths = sum(1 for event in player_deaths if _trade_status(event) == "untraded")
+    ambiguous_deaths = sum(1 for event in player_deaths if _trade_status(event) == "ambiguous")
+    known_trade_deaths = traded_deaths + untraded_deaths
+
+    metrics["traded_deaths"] = traded_deaths
+    metrics["untraded_deaths"] = untraded_deaths
+    metrics["ambiguous_traded_deaths"] = ambiguous_deaths
+    metrics["trade_status_known_deaths"] = known_trade_deaths
+
+    if known_trade_deaths:
+        metrics["traded_death_rate"] = round(traded_deaths / known_trade_deaths, 3)
+        metrics["untraded_death_rate"] = round(untraded_deaths / known_trade_deaths, 3)
+        confidence["traded_death_rate"] = _event_confidence(player_deaths, "victim", player_key)
+        confidence["untraded_death_rate"] = _event_confidence(player_deaths, "victim", player_key)
+    else:
+        if player_deaths:
+            confidence["traded_death_rate"] = "low"
+            confidence["untraded_death_rate"] = "low"
+        caveats.append("No deaths with known trade status for this player; trade death rates are omitted.")
+
+    if ambiguous_deaths:
+        caveats.append("Ambiguous traded death events were excluded from traded/untraded death rates.")
+    caveats.extend(_event_caveats(player_deaths))
 
 
 def _known_players(
@@ -275,6 +372,21 @@ def _damage_health(event: Mapping[str, Any]) -> int | None:
     return max(damage, 0)
 
 
+def _trade_status(event: Mapping[str, Any]) -> str | None:
+    context = event.get("context")
+    if not isinstance(context, Mapping):
+        return None
+    status = _clean_text(context.get("trade_status"))
+    if status in {"traded", "untraded", "ambiguous"}:
+        return status
+    traded = context.get("traded")
+    if traded is True:
+        return "traded"
+    if traded is False:
+        return "untraded"
+    return "ambiguous"
+
+
 def _event_confidence(events: Sequence[Mapping[str, Any]], role: str, player_key: str) -> str:
     values = []
     for event in events:
@@ -288,6 +400,15 @@ def _event_confidence(events: Sequence[Mapping[str, Any]], role: str, player_key
     if "medium" in values:
         return "medium"
     return "high"
+
+
+def _event_caveats(events: Sequence[Mapping[str, Any]]) -> list[str]:
+    caveats: list[str] = []
+    for event in events:
+        values = event.get("caveats")
+        if isinstance(values, Sequence) and not isinstance(values, str):
+            caveats.extend(str(value) for value in values if value)
+    return _ordered_unique(caveats)
 
 
 def _player_key(player: Any) -> str | None:
