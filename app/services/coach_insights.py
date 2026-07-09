@@ -289,6 +289,91 @@ def coach_insights_from_snapshots(snapshots: Sequence[Mapping[str, Any]]) -> lis
     return prioritize_coach_insights(coach_insight_candidates_from_snapshots(snapshots))
 
 
+def coach_insights_with_mission_readiness_from_snapshots(
+    snapshots: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    cards = coach_insights_from_snapshots(snapshots)
+    return attach_mission_readiness(cards, snapshots)
+
+
+def attach_mission_readiness(
+    cards: Sequence[Mapping[str, Any]],
+    snapshots: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    return [_card_with_mission_readiness(card, snapshots) for card in cards]
+
+
+def _card_with_mission_readiness(
+    card: Mapping[str, Any],
+    snapshots: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    enriched = dict(card)
+    enriched["mission_readiness"] = mission_readiness_for_card(card, snapshots)
+    return enriched
+
+
+def mission_readiness_for_card(
+    card: Mapping[str, Any],
+    snapshots: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    evidence = card.get("evidence") if isinstance(card.get("evidence"), list) else []
+    primary = evidence[0] if evidence and isinstance(evidence[0], Mapping) else {}
+    target_metric = str(primary.get("metric_id") or "").strip() or None
+    baseline = _number(primary.get("value"))
+    snapshot = _source_snapshot_for_evidence(primary, snapshots) if target_metric else None
+    confidence_record = _confidence_record(snapshot, target_metric) if snapshot is not None and target_metric else {}
+    confidence_level = _metric_confidence_level(confidence_record) or _metric_confidence_level(
+        primary.get("metric_confidence")
+    )
+    missing_requirements: list[str] = []
+    blocking_reason_codes: list[str] = []
+
+    if target_metric is None:
+        missing_requirements.append("target_metric")
+        blocking_reason_codes.append("missing_target_metric")
+    if baseline is None:
+        missing_requirements.append("baseline_value")
+        blocking_reason_codes.append("missing_baseline_value")
+    if snapshot is None:
+        missing_requirements.append("source_metric_snapshot")
+        blocking_reason_codes.append("missing_source_metric_snapshot")
+    confidence_blocked = False
+    if confidence_level not in USABLE_INSIGHT_CONFIDENCE:
+        missing_requirements.append("mission_eligible_confidence")
+        blocking_reason_codes.append("low_or_unavailable_confidence")
+        confidence_blocked = True
+    if isinstance(confidence_record, Mapping):
+        if confidence_record.get("usable_for_missions") is not True:
+            missing_requirements.append("usable_for_missions")
+            blocking_reason_codes.append("confidence_not_mission_eligible")
+            confidence_blocked = True
+        if confidence_record.get("hard_recommendation_eligible") is not True:
+            missing_requirements.append("hard_recommendation_eligible")
+            blocking_reason_codes.append("metric_not_hard_recommendation_eligible")
+            confidence_blocked = True
+        if confidence_blocked:
+            blocking_reason_codes.extend(_string_list(confidence_record.get("reason_codes")))
+    else:
+        missing_requirements.append("metric_confidence_baseline")
+        blocking_reason_codes.append("missing_metric_confidence_baseline")
+
+    blocking_reason_codes = _ordered_unique(blocking_reason_codes)
+    return {
+        "can_become_mission": not blocking_reason_codes,
+        "target_metric_candidate": target_metric,
+        "baseline_value": baseline,
+        "confidence_eligibility": {
+            "level": confidence_level,
+            "usable_for_missions": (
+                confidence_record.get("usable_for_missions") if isinstance(confidence_record, Mapping) else None
+            ),
+            "hard_recommendation_eligible": _hard_recommendation_eligible(confidence_record),
+        },
+        "missing_requirements": _ordered_unique(missing_requirements),
+        "blocking_reason_codes": blocking_reason_codes,
+    }
+
+
 def _insight_card_model(card: dict[str, Any]) -> InsightCard | None:
     if validate_insight_cards([card]):
         return None
@@ -841,6 +926,41 @@ def _metric_confidence_level(value: Any) -> str | None:
     if level in VALID_INSIGHT_CONFIDENCE:
         return level
     return None
+
+
+def _source_snapshot_for_evidence(
+    evidence: Mapping[str, Any],
+    snapshots: Sequence[Mapping[str, Any]],
+) -> Mapping[str, Any] | None:
+    metric_id = str(evidence.get("metric_id") or "")
+    match_ids = evidence.get("match_ids") if isinstance(evidence.get("match_ids"), list) else []
+    value = _number(evidence.get("value"))
+    source = evidence.get("source")
+    for snapshot in snapshots:
+        metrics = _mapping(snapshot.get("metrics"))
+        if metric_id not in metrics:
+            continue
+        if source is not None and snapshot.get("source") != source:
+            continue
+        if match_ids and snapshot.get("match_id") not in match_ids:
+            continue
+        metric_value = _number(metrics.get(metric_id))
+        if value is not None and metric_value is not None and round(metric_value, 3) != round(value, 3):
+            continue
+        return snapshot
+    return None
+
+
+def _confidence_record(snapshot: Mapping[str, Any], metric_id: str) -> Any:
+    confidence_baseline = _mapping(snapshot.get("confidence_baseline"))
+    metrics = _mapping(confidence_baseline.get("metrics"))
+    return metrics.get(metric_id)
+
+
+def _hard_recommendation_eligible(confidence_record: Any) -> Any:
+    if not isinstance(confidence_record, Mapping):
+        return None
+    return confidence_record.get("hard_recommendation_eligible")
 
 
 def _number(value: Any) -> float | None:

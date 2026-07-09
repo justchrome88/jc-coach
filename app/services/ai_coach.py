@@ -13,11 +13,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.db.models import CoachReport, Match, MetricSnapshot
+from app.db.models import CoachReport, Match
 from app.services.ai_validator import render_ai_output_markdown, validate_ai_coach_output
 from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
-from app.services.coach_insights import coach_insights_from_snapshots, no_data_insight_card, serialize_insight_cards
+from app.services.coach_insights import (
+    coach_insights_with_mission_readiness_from_snapshots,
+    no_data_insight_card,
+    serialize_insight_cards,
+)
 from app.services.coach_rules import build_coach_focus
 from app.services.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, artifact_retention_metadata
 from app.services.match_queries import playable_match_select
@@ -27,7 +31,12 @@ from app.services.metric_confidence import (
     metric_confidence_map,
     metric_context,
 )
-from app.services.metric_snapshots import metric_snapshot_payload
+from app.services.metric_snapshots import (
+    MetricSnapshotAnalysisScope,
+    default_owner_player_metric_snapshot_scope,
+    metric_snapshot_payload,
+    select_metric_snapshots_for_analysis_scope,
+)
 from app.services.metric_truth import (
     METRIC_REGISTRY_VERSION,
     metric_truth_payload,
@@ -126,8 +135,12 @@ class LocalLLMProvider:
         )
 
 
-def prepare_ai_coach_handoff(db: Session) -> dict[str, Any]:
-    payload = build_ai_coach_payload(db)
+def prepare_ai_coach_handoff(
+    db: Session,
+    *,
+    analysis_scope: MetricSnapshotAnalysisScope | None = None,
+) -> dict[str, Any]:
+    payload = build_ai_coach_payload(db, analysis_scope=analysis_scope)
     provider = _provider()
     result = provider.prepare(payload)
     result["matches_count"] = payload["summary"]["matches_count"]
@@ -135,11 +148,15 @@ def prepare_ai_coach_handoff(db: Session) -> dict[str, Any]:
     return result
 
 
-def generate_ai_coach_with_provider(db: Session) -> CoachReport:
-    payload = build_ai_coach_payload(db)
+def generate_ai_coach_with_provider(
+    db: Session,
+    *,
+    analysis_scope: MetricSnapshotAnalysisScope | None = None,
+) -> CoachReport:
+    payload = build_ai_coach_payload(db, analysis_scope=analysis_scope)
     provider = _provider()
     content = provider.generate(payload)
-    return save_ai_coach_result(db, content, source_ref=provider.name)
+    return save_ai_coach_result(db, content, source_ref=provider.name, payload_snapshot=payload)
 
 
 def ai_provider_health() -> dict[str, Any]:
@@ -164,6 +181,7 @@ def save_ai_coach_result(
     payload_snapshot: dict[str, Any] | None = None,
     user_id: int | None = None,
     source_metric_snapshot_id: int | None = None,
+    analysis_scope: MetricSnapshotAnalysisScope | None = None,
 ) -> CoachReport:
     raw_content = markdown.strip()
     if not raw_content:
@@ -173,7 +191,7 @@ def save_ai_coach_result(
     if user_id is not None and source_metric_snapshot_id is not None:
         if get_owned_metric_snapshot(db, user_id=user_id, snapshot_id=source_metric_snapshot_id) is None:
             raise PermissionError("Metric snapshot belongs to a different user.")
-    snapshot = payload_snapshot or build_ai_coach_payload(db)
+    snapshot = payload_snapshot or build_ai_coach_payload(db, analysis_scope=analysis_scope)
     validation = validate_ai_coach_output(raw_content, payload_snapshot=snapshot)
     content = (
         render_ai_output_markdown(validation.output)
@@ -263,7 +281,11 @@ def latest_ai_handoff() -> dict[str, Any] | None:
         return None
 
 
-def build_ai_coach_payload(db: Session) -> dict[str, Any]:
+def build_ai_coach_payload(
+    db: Session,
+    *,
+    analysis_scope: MetricSnapshotAnalysisScope | None = None,
+) -> dict[str, Any]:
     matches = list(db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())))
     context = metric_context(matches)
     summary = get_summary(matches, context=context)
@@ -275,8 +297,9 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
     recommendation_progress = get_active_recommendation_progress(db)
     all_recommendation_progress = get_all_recommendation_progress(db)
     recent_matches = exact_recent_matches(matches, 10, context=context)
-    metric_snapshot_payloads = _recent_metric_snapshot_payloads(db)
-    coach_insight_cards = coach_insights_from_snapshots(metric_snapshot_payloads)
+    scope = analysis_scope or default_owner_player_metric_snapshot_scope(db)
+    metric_snapshot_payloads = _metric_snapshot_payloads_for_scope(db, scope)
+    coach_insight_cards = coach_insights_with_mission_readiness_from_snapshots(metric_snapshot_payloads)
     confidence_metadata = {
         "date_window": exact_date_window_metadata(matches, required_sample=15, context=context),
         "metrics": metric_confidence_map(
@@ -319,6 +342,9 @@ def build_ai_coach_payload(db: Session) -> dict[str, Any]:
         "structured_mistakes": structured_mistakes,
         "coach_categories": category_scorecard(structured_mistakes),
         "coach_focus": focus,
+        "analysis_scope": scope.to_dict(
+            resolved_metric_snapshot_ids=[payload["id"] for payload in metric_snapshot_payloads]
+        ),
         "coach_insight_cards": coach_insight_cards,
         "metric_truth": {
             "metric_registry_version": METRIC_REGISTRY_VERSION,
@@ -406,10 +432,13 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
     )
 
 
-def _recent_metric_snapshot_payloads(db: Session, *, limit: int = 50) -> list[dict[str, Any]]:
-    snapshots = db.scalars(
-        select(MetricSnapshot).order_by(MetricSnapshot.created_at.desc(), MetricSnapshot.id.desc()).limit(limit)
-    )
+def _metric_snapshot_payloads_for_scope(
+    db: Session,
+    scope: MetricSnapshotAnalysisScope,
+    *,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    snapshots = select_metric_snapshots_for_analysis_scope(db, scope, limit=limit)
     return [metric_snapshot_payload(snapshot) for snapshot in snapshots]
 
 

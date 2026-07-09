@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.db.models import Match
+from app.db.models import Match, SteamAccount, User
 from app.services.ai_coach import (
     AI_COACH_DOMAIN_CONTRACT_VERSION,
     AI_COACH_PAYLOAD_SCHEMA_VERSION,
@@ -23,14 +23,18 @@ from app.services.ai_coach import (
 )
 from app.services.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, RETENTION_CLASS_FINAL_OUTPUT
 from app.services.importer import import_rows
-from app.services.metric_snapshots import create_metric_snapshot
+from app.services.metric_snapshots import (
+    MetricSnapshotAnalysisScope,
+    admin_debug_all_metric_snapshots_scope,
+    create_metric_snapshot,
+)
 from app.services.metric_truth import METRIC_REGISTRY_VERSION
 
 
 def test_build_ai_coach_payload_uses_structured_match_data(db, sample_rows):
     import_rows(db, sample_rows, source="test")
 
-    payload = build_ai_coach_payload(db)
+    payload = build_ai_coach_payload(db, analysis_scope=admin_debug_all_metric_snapshots_scope())
 
     assert payload["product"] == "CS2 Personal Coach"
     assert payload["summary"]["matches_count"] == 2
@@ -87,7 +91,7 @@ def test_ai_coach_payload_includes_deterministic_domain_constraints(db, sample_r
 def test_ai_coach_prompt_carries_contract_snapshot_without_removing_caveats(db, sample_rows):
     import_rows(db, sample_rows, source="test")
 
-    payload = build_ai_coach_payload(db)
+    payload = build_ai_coach_payload(db, analysis_scope=admin_debug_all_metric_snapshots_scope())
     prompt = build_ai_coach_prompt(payload)
     payload_json = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
 
@@ -143,7 +147,7 @@ def test_ai_coach_payload_includes_deterministic_bad_fight_trade_insight_cards(d
         metadata={"schema_version": "core-combat-metrics-v1"},
     )
 
-    payload = build_ai_coach_payload(db)
+    payload = build_ai_coach_payload(db, analysis_scope=admin_debug_all_metric_snapshots_scope())
 
     assert payload["coach_insight_cards"][0]["problem"] == (
         "Untraded deaths show bad fight selection or poor trade spacing in this match snapshot."
@@ -180,7 +184,7 @@ def test_ai_coach_payload_includes_deterministic_utility_value_insight_cards(db)
         metadata={"schema_version": "utility-metrics-v1"},
     )
 
-    payload = build_ai_coach_payload(db)
+    payload = build_ai_coach_payload(db, analysis_scope=admin_debug_all_metric_snapshots_scope())
 
     card = payload["coach_insight_cards"][0]
     assert card["problem"] == "Utility damage is the only supported utility value signal in this match snapshot."
@@ -188,6 +192,187 @@ def test_ai_coach_payload_includes_deterministic_utility_value_insight_cards(db)
     assert card["evidence"][0]["value"] == 49
     assert card["confidence"] == "medium"
     assert "grenade_rating" not in card["evidence"][0]
+
+
+def test_ai_coach_payload_defaults_to_owner_player_metric_snapshot_scope(db):
+    owner = User(email="owner@example.test", display_name="Owner", password_hash="hash")
+    db.add(owner)
+    db.commit()
+    db.refresh(owner)
+    db.add(
+        SteamAccount(
+            user_id=owner.id,
+            steam_id="owner-steam",
+            persona_name="JC",
+        )
+    )
+    match = Match(source="demo", external_match_id="owner-scope-ai")
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    owner_snapshot = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:owner-steam",
+        player_name="JC",
+        player_steamid="owner-steam",
+        source="utility_metrics",
+        source_event_set_id="fixture:owner:utility",
+        metrics={"utility_damage": 94, "molotov_damage": 93},
+        confidence_baseline={
+            "source": "utility-metrics-v1",
+            "metrics": {
+                "utility_damage": {
+                    "level": "medium",
+                    "usable_for_insights": True,
+                    "usable_for_missions": True,
+                    "hard_recommendation_eligible": True,
+                }
+            },
+        },
+        metadata={"schema_version": "utility-metrics-v1"},
+    )
+    other_snapshot = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:other",
+        player_name="Other",
+        player_steamid="other",
+        source="core_combat_metrics",
+        source_event_set_id="fixture:other:core",
+        metrics={
+            "rounds": 14,
+            "opening_deaths": 5,
+            "opening_death_rate": 0.357,
+            "survived_rounds": 0,
+            "survival_rate": 0.0,
+        },
+        confidence_baseline={
+            "source": "core-combat-metrics-v1",
+            "metrics": {
+                "opening_death_rate": {"level": "high"},
+                "survival_rate": {"level": "high"},
+            },
+        },
+        metadata={"schema_version": "core-combat-metrics-v1"},
+    )
+
+    payload = build_ai_coach_payload(db)
+
+    assert payload["analysis_scope"]["mode"] == "personal"
+    assert payload["analysis_scope"]["owner_steam_id"] == "owner-steam"
+    assert payload["analysis_scope"]["resolved_metric_snapshot_ids"] == [owner_snapshot.id]
+    assert other_snapshot.id not in payload["analysis_scope"]["resolved_metric_snapshot_ids"]
+    assert [card["evidence"][0]["metric_id"] for card in payload["coach_insight_cards"]] == ["utility_damage"]
+    assert payload["coach_insight_cards"][0]["mission_readiness"]["can_become_mission"] is True
+
+
+def test_owner_scoped_scope_prioritizes_jc_snapshot_rows_after_filtering(db):
+    match = Match(source="demo", external_match_id="match-76-fixture")
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    jc_core = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:jc",
+        player_name="JC",
+        player_steamid="jc",
+        source="core_combat_metrics",
+        source_event_set_id="fixture:jc:core",
+        metrics={
+            "rounds": 14,
+            "opening_deaths": 3,
+            "opening_death_rate": 0.214,
+            "survived_rounds": 5,
+            "survival_rate": 0.357,
+        },
+        confidence_baseline={
+            "source": "core-combat-metrics-v1",
+            "metrics": {
+                "opening_death_rate": {
+                    "level": "medium",
+                    "usable_for_insights": False,
+                    "usable_for_missions": False,
+                    "hard_recommendation_eligible": False,
+                    "reason_codes": ["suppressed_metric_blocks_hard_recommendation"],
+                },
+                "survival_rate": {
+                    "level": "medium",
+                    "usable_for_insights": True,
+                    "usable_for_missions": False,
+                    "hard_recommendation_eligible": False,
+                    "reason_codes": ["suppressed_metric_blocks_hard_recommendation"],
+                },
+            },
+        },
+        metadata={"schema_version": "core-combat-metrics-v1"},
+    )
+    jc_utility = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:jc",
+        player_name="JC",
+        player_steamid="jc",
+        source="utility_metrics",
+        source_event_set_id="fixture:jc:utility",
+        metrics={"utility_damage": 94, "molotov_damage": 93},
+        confidence_baseline={
+            "source": "utility-metrics-v1",
+            "metrics": {
+                "utility_damage": {
+                    "level": "medium",
+                    "usable_for_insights": True,
+                    "usable_for_missions": True,
+                    "hard_recommendation_eligible": True,
+                }
+            },
+        },
+        metadata={"schema_version": "utility-metrics-v1"},
+    )
+    other = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:other",
+        player_name="Other",
+        player_steamid="other",
+        source="core_combat_metrics",
+        metrics={
+            "rounds": 14,
+            "opening_deaths": 5,
+            "opening_death_rate": 0.357,
+            "survived_rounds": 0,
+            "survival_rate": 0.0,
+        },
+        confidence_baseline={
+            "source": "core-combat-metrics-v1",
+            "metrics": {
+                "opening_death_rate": {"level": "high"},
+                "survival_rate": {"level": "high"},
+            },
+        },
+    )
+    scope = MetricSnapshotAnalysisScope(
+        match_ids=(match.id,),
+        source="steam",
+        owner_steam_id="jc",
+        player_key="steam:jc",
+        player_steamid="jc",
+        selected_metric_snapshot_ids=(jc_core.id, jc_utility.id, other.id),
+    )
+
+    payload = build_ai_coach_payload(db, analysis_scope=scope)
+
+    assert payload["analysis_scope"]["resolved_metric_snapshot_ids"] == [jc_utility.id, jc_core.id]
+    assert [card["evidence"][0]["metric_id"] for card in payload["coach_insight_cards"]] == [
+        "survival_rate",
+        "utility_damage",
+    ]
+    assert payload["coach_insight_cards"][0]["mission_readiness"]["can_become_mission"] is False
+    assert "confidence_not_mission_eligible" in payload["coach_insight_cards"][0]["mission_readiness"][
+        "blocking_reason_codes"
+    ]
+    assert payload["coach_insight_cards"][1]["mission_readiness"]["can_become_mission"] is True
 
 
 def test_ai_payload_uses_exact_recent_matches_and_reports_exclusions(db):

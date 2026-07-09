@@ -4,6 +4,7 @@ from app.services.coach_insights import (
     bad_fight_trade_insight_from_snapshot,
     coach_insight_candidates_from_snapshots,
     coach_insights_from_snapshots,
+    coach_insights_with_mission_readiness_from_snapshots,
     no_data_insight_card,
     prioritize_coach_insights,
     serialize_insight_cards,
@@ -629,6 +630,86 @@ def test_utility_value_confidence_gate_blocks_hard_claim_from_low_confidence_dam
         }
     ]
     assert "Utility damage source events are incomplete." in card["caveats"]
+
+
+def test_mission_readiness_allows_mission_eligible_owner_card():
+    utility = _utility_snapshot(
+        metrics={"utility_damage": 94, "molotov_damage": 93},
+        confidence={
+            "utility_damage": {
+                "level": "medium",
+                "usable_for_insights": True,
+                "usable_for_missions": True,
+                "hard_recommendation_eligible": True,
+            }
+        },
+    )
+
+    cards = coach_insights_with_mission_readiness_from_snapshots([utility])
+
+    readiness = cards[0]["mission_readiness"]
+    assert readiness["can_become_mission"] is True
+    assert readiness["target_metric_candidate"] == "utility_damage"
+    assert readiness["baseline_value"] == 94
+    assert readiness["confidence_eligibility"] == {
+        "level": "medium",
+        "usable_for_missions": True,
+        "hard_recommendation_eligible": True,
+    }
+    assert readiness["missing_requirements"] == []
+    assert readiness["blocking_reason_codes"] == []
+
+
+def test_mission_readiness_blocks_suppressed_snapshot_metric_with_reason_codes():
+    survival = _snapshot(
+        metrics={"rounds": 14, "survived_rounds": 5, "survival_rate": 0.357},
+        confidence={
+            "survival_rate": {
+                "level": "medium",
+                "usable_for_insights": True,
+                "usable_for_missions": False,
+                "hard_recommendation_eligible": False,
+                "reason_codes": ["suppressed_metric_blocks_hard_recommendation"],
+            }
+        },
+    )
+
+    cards = coach_insights_with_mission_readiness_from_snapshots([survival])
+
+    readiness = cards[0]["mission_readiness"]
+    assert readiness["can_become_mission"] is False
+    assert readiness["target_metric_candidate"] == "survival_rate"
+    assert readiness["baseline_value"] == 0.357
+    assert "usable_for_missions" in readiness["missing_requirements"]
+    assert "hard_recommendation_eligible" in readiness["missing_requirements"]
+    assert "confidence_not_mission_eligible" in readiness["blocking_reason_codes"]
+    assert "metric_not_hard_recommendation_eligible" in readiness["blocking_reason_codes"]
+    assert "suppressed_metric_blocks_hard_recommendation" in readiness["blocking_reason_codes"]
+
+
+def test_low_or_unavailable_confidence_cannot_become_hard_mission():
+    low_confidence_utility = _utility_snapshot(
+        metrics={"utility_damage": 90},
+        confidence={
+            "utility_damage": {
+                "level": "low",
+                "usable_for_insights": False,
+                "usable_for_missions": False,
+                "hard_recommendation_eligible": False,
+                "reason_codes": ["low_confidence_blocks_hard_recommendation"],
+            }
+        },
+    )
+
+    cards = coach_insights_with_mission_readiness_from_snapshots([low_confidence_utility])
+
+    readiness = cards[0]["mission_readiness"]
+    assert readiness["can_become_mission"] is False
+    assert readiness["target_metric_candidate"] == "utility_damage"
+    assert readiness["confidence_eligibility"]["level"] == "low"
+    assert "mission_eligible_confidence" in readiness["missing_requirements"]
+    assert "low_or_unavailable_confidence" in readiness["blocking_reason_codes"]
+    assert "low_confidence_blocks_hard_recommendation" in readiness["blocking_reason_codes"]
 
 
 def _snapshot(

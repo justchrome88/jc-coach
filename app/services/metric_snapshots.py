@@ -2,16 +2,103 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal, cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Match, MetricSnapshot
+from app.db.models import Match, MetricSnapshot, SteamAccount
 from app.services.demo_retention import ARTIFACT_CATEGORY_METRIC_SNAPSHOT, artifact_retention_metadata
 
 MetricPayload = Mapping[str, Any]
+AnalysisScopeSource = Literal["steam", "faceit", "unknown"]
+AnalysisScopeMode = Literal["personal", "admin_debug_all_snapshots"]
+
+
+@dataclass(frozen=True)
+class MetricSnapshotAnalysisScope:
+    match_ids: tuple[int, ...] = ()
+    window: Mapping[str, Any] | None = None
+    source: AnalysisScopeSource = "unknown"
+    owner_user_id: int | None = None
+    owner_steam_id: str | None = None
+    player_key: str | None = None
+    player_name: str | None = None
+    player_steamid: str | None = None
+    selected_metric_snapshot_ids: tuple[int, ...] = ()
+    mode: AnalysisScopeMode = "personal"
+
+    def to_dict(self, *, resolved_metric_snapshot_ids: Sequence[int] | None = None) -> dict[str, Any]:
+        return {
+            "mode": self.mode,
+            "match_ids": list(self.match_ids),
+            "window": dict(self.window) if isinstance(self.window, Mapping) else None,
+            "source": self.source,
+            "owner_user_id": self.owner_user_id,
+            "owner_steam_id": self.owner_steam_id,
+            "player_identity": {
+                "player_key": self.player_key,
+                "player_name": self.player_name,
+                "player_steamid": self.player_steamid,
+            },
+            "selected_metric_snapshot_ids": list(self.selected_metric_snapshot_ids),
+            "resolved_metric_snapshot_ids": list(resolved_metric_snapshot_ids or ()),
+        }
+
+
+def admin_debug_all_metric_snapshots_scope(
+    *,
+    match_ids: Sequence[int] | None = None,
+    source: AnalysisScopeSource = "unknown",
+) -> MetricSnapshotAnalysisScope:
+    return MetricSnapshotAnalysisScope(
+        match_ids=_int_tuple(match_ids),
+        source=_analysis_scope_source(source),
+        mode="admin_debug_all_snapshots",
+    )
+
+
+def default_owner_player_metric_snapshot_scope(db: Session) -> MetricSnapshotAnalysisScope:
+    account = db.scalar(select(SteamAccount).order_by(SteamAccount.user_id.asc().nulls_last(), SteamAccount.id.asc()))
+    if account is None:
+        return MetricSnapshotAnalysisScope(source="unknown")
+    return MetricSnapshotAnalysisScope(
+        source="steam",
+        owner_user_id=account.user_id,
+        owner_steam_id=account.steam_id,
+        player_key=f"steam:{account.steam_id}",
+        player_steamid=account.steam_id,
+    )
+
+
+def select_metric_snapshots_for_analysis_scope(
+    db: Session,
+    scope: MetricSnapshotAnalysisScope,
+    *,
+    limit: int = 100,
+) -> list[MetricSnapshot]:
+    if limit <= 0:
+        return []
+    _validate_analysis_scope(scope)
+    stmt = select(MetricSnapshot).order_by(MetricSnapshot.created_at.desc(), MetricSnapshot.id.desc()).limit(limit)
+    if scope.match_ids:
+        stmt = stmt.where(MetricSnapshot.match_id.in_(scope.match_ids))
+    if scope.selected_metric_snapshot_ids:
+        stmt = stmt.where(MetricSnapshot.id.in_(scope.selected_metric_snapshot_ids))
+    if scope.mode == "personal":
+        identity_filters = []
+        if scope.player_key:
+            identity_filters.append(MetricSnapshot.player_key == scope.player_key)
+        if scope.player_steamid:
+            identity_filters.append(MetricSnapshot.player_steamid == scope.player_steamid)
+        if scope.player_name:
+            identity_filters.append(MetricSnapshot.player_name == scope.player_name)
+        if not identity_filters:
+            return []
+        stmt = stmt.where(*identity_filters)
+    return list(db.scalars(stmt).all())
 
 
 def create_metric_snapshot(
@@ -171,6 +258,24 @@ def metric_snapshot_payload(snapshot: MetricSnapshot) -> dict[str, Any]:
         "created_at": snapshot.created_at.isoformat() if snapshot.created_at else None,
         "updated_at": snapshot.updated_at.isoformat() if snapshot.updated_at else None,
     }
+
+
+def _validate_analysis_scope(scope: MetricSnapshotAnalysisScope) -> None:
+    if scope.source not in {"steam", "faceit", "unknown"}:
+        raise ValueError("analysis scope source must be steam, faceit or unknown")
+    if scope.mode not in {"personal", "admin_debug_all_snapshots"}:
+        raise ValueError("analysis scope mode is invalid")
+
+
+def _analysis_scope_source(source: str) -> AnalysisScopeSource:
+    normalized = str(source).strip().lower()
+    if normalized not in {"steam", "faceit", "unknown"}:
+        raise ValueError("analysis scope source must be steam, faceit or unknown")
+    return cast(AnalysisScopeSource, normalized)
+
+
+def _int_tuple(values: Sequence[int] | None) -> tuple[int, ...]:
+    return tuple(int(value) for value in (values or ()))
 
 
 def _validate_match(db: Session, match_id: int) -> None:

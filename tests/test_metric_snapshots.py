@@ -5,11 +5,14 @@ import pytest
 from app.db.models import DemoParseArtifact, Match, MetricSnapshot
 from app.services.demo_retention import ARTIFACT_CATEGORY_METRIC_SNAPSHOT, RETENTION_CLASS_DERIVED_REBUILDABLE
 from app.services.metric_snapshots import (
+    MetricSnapshotAnalysisScope,
+    admin_debug_all_metric_snapshots_scope,
     create_metric_snapshot,
     find_metric_snapshot,
     get_metric_snapshot,
     list_metric_snapshots,
     metric_snapshot_payload,
+    select_metric_snapshots_for_analysis_scope,
     update_metric_snapshot,
     upsert_metric_snapshot,
 )
@@ -165,6 +168,79 @@ def test_metric_snapshot_rejects_missing_match(db):
             metrics={"kills": 1},
             confidence_baseline={"metrics": {"kills": "medium"}},
         )
+
+
+def test_analysis_scope_selects_only_requested_owner_player_snapshots(db):
+    match = _persist_match(db)
+    owner_core = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:owner",
+        player_name="JC",
+        player_steamid="owner",
+        source="core_combat_metrics",
+        metrics={"survival_rate": 0.4},
+        confidence_baseline={"metrics": {"survival_rate": {"level": "medium"}}},
+    )
+    other_core = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:other",
+        player_name="Other",
+        player_steamid="other",
+        source="core_combat_metrics",
+        metrics={"survival_rate": 0.0},
+        confidence_baseline={"metrics": {"survival_rate": {"level": "medium"}}},
+    )
+    owner_utility = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:owner",
+        player_name="JC",
+        player_steamid="owner",
+        source="utility_metrics",
+        metrics={"utility_damage": 90},
+        confidence_baseline={"metrics": {"utility_damage": {"level": "medium"}}},
+    )
+    scope = MetricSnapshotAnalysisScope(
+        match_ids=(match.id,),
+        source="steam",
+        owner_steam_id="owner",
+        player_key="steam:owner",
+        player_steamid="owner",
+        selected_metric_snapshot_ids=(owner_core.id, other_core.id, owner_utility.id),
+    )
+
+    selected = select_metric_snapshots_for_analysis_scope(db, scope)
+
+    assert {snapshot.id for snapshot in selected} == {owner_core.id, owner_utility.id}
+
+
+def test_admin_debug_scope_preserves_all_snapshot_selection_for_explicit_use(db):
+    match = _persist_match(db)
+    first = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:first",
+        source="core_combat_metrics",
+        metrics={"survival_rate": 0.4},
+        confidence_baseline={"metrics": {"survival_rate": {"level": "medium"}}},
+    )
+    second = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:second",
+        source="core_combat_metrics",
+        metrics={"survival_rate": 0.0},
+        confidence_baseline={"metrics": {"survival_rate": {"level": "medium"}}},
+    )
+
+    selected = select_metric_snapshots_for_analysis_scope(
+        db,
+        admin_debug_all_metric_snapshots_scope(match_ids=(match.id,)),
+    )
+
+    assert {snapshot.id for snapshot in selected} == {first.id, second.id}
 
 
 def _persist_match(db) -> Match:
