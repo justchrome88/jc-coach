@@ -1,0 +1,140 @@
+{
+  "parser_name": "demoparser2",
+  "parser_version": "synthetic-test-version",
+  "payload_version": "synthetic-c02",
+  "status": "parsed",
+  "source_demo_file": "/opt/jc-coach/data/uploads/retained/00/0000000000000000000000000000000000000000.dem",
+  "demo_sha1": "0000000000000000000000000000000000000000",
+  "event_counts": {
+    "rounds": 1,
+    "player_death": 1,
+    "player_hurt": 1,
+    "weapon_fire": 1,
+    "grenade_events": 1,
+    "player_blind": 1,
+    "round_end": 1
+  },
+  "confidence": {
+    "parser_confidence": "medium",
+    "metric_confidence": {
+      "adr": "medium",
+      "early_deaths": "medium",
+      "entry_duels": "medium",
+      "flash": "medium",
+      "kast": "medium",
+      "kills": "high",
+      "deaths": "high",
+      "swing": "medium",
+      "trade_kills": "low",
+      "utility": "medium",
+      "weapon_accuracy": "medium"
+    }
+  },
+  "payload": {
+    "parser": "demoparser2",
+    "parser_version": "synthetic-test-version",
+    "payload_version": "synthetic-c02",
+    "file": "/opt/jc-coach/data/uploads/retained/00/0000000000000000000000000000000000000000.dem",
+    "demo_sha1": "0000000000000000000000000000000000000000",
+    "parser_confidence": "medium",
+    "metric_confidence": {
+      "adr": "medium",
+      "early_deaths": "medium",
+      "entry_duels": "medium",
+      "flash": "medium",
+      "kast": "medium",
+      "kills": "high",
+      "deaths": "high",
+      "swing": "medium",
+      "trade_kills": "low",
+      "utility": "medium",
+      "weapon_accuracy": "medium"
+    },
+    "deep": {
+      "rounds": [
+        {
+          "round_number": 1,
+          "start_tick": 640,
+          "freeze_end_tick": 960,
+          "end_tick": 7800,
+          "winner_side": "CT",
+          "end_reason": "target_saved",
+          "bomb_planted_tick": 6400,
+          "bomb_site": "A",
+          "bomb_outcome": "defused"
+        }
+      ],
+      "duels": [
+        {
+          "round_number": 1,
+          "tick": 2500,
+          "attacker_name": "Synthetic Player",
+          "attacker_steamid": "SYNTHETIC_STEAM_ID",
+          "victim_name": "Synthetic Opponent",
+          "victim_steamid": "SYNTHETIC_OPPONENT_ID",
+          "assister_name": "Synthetic Teammate",
+          "assister_steamid": "SYNTHETIC_TEAMMATE_ID",
+          "weapon": "ak47",
+          "headshot": true,
+          "opening_duel": true,
+          "trade_kill": false,
+          "distance": 412.5
+        }
+      ],
+      "damage_events": [
+        {
+          "round_number": 1,
+          "tick": 2450,
+          "attacker_name": "Synthetic Player",
+          "attacker_steamid": "SYNTHETIC_STEAM_ID",
+          "victim_name": "Synthetic Opponent",
+          "victim_steamid": "SYNTHETIC_OPPONENT_ID",
+          "weapon": "ak47",
+          "hitgroup": "chest",
+          "damage_health": 28,
+          "damage_armor": 4,
+          "victim_health_after": 72
+        }
+      ],
+      "grenade_events": [
+        {
+          "round_number": 1,
+          "tick": 1800,
+          "event_type": "flashbang_detonate",
+          "grenade_type": "flashbang",
+          "player_name": "Synthetic Player",
+          "player_steamid": "SYNTHETIC_STEAM_ID",
+          "x": 100.0,
+          "y": 200.0,
+          "z": 32.0,
+          "flashed_count": 2,
+          "damage": 12
+        }
+      ],
+      "weapon_stats": [
+        {
+          "player_name": "Synthetic Player",
+          "player_steamid": "SYNTHETIC_STEAM_ID",
+          "weapon": "ak47",
+          "shots": 10,
+          "hits": 4,
+          "kills": 1,
+          "damage": 128,
+          "headshots": 1,
+          "accuracy": 0.4,
+          "headshot_percent": 100.0
+        }
+      ],
+      "player_rounds": [
+        {
+          "round_number": 1,
+          "player_name": "Synthetic Player",
+          "player_steamid": "SYNTHETIC_STEAM_ID",
+          "team_side": "CT",
+          "survived": 1,
+          "kast": 1
+        }
+      ]
+    }
+  }
+}

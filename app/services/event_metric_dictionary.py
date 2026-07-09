@@ -31,14 +31,20 @@ V0_10_REQUIRED_EVENT_CATEGORIES: tuple[EventCategory, ...] = (
 )
 
 NORMALIZED_EVENT_SCHEMA: dict[str, str] = {
+    "schema_version": "Normalized event schema version.",
     "event_type": "Canonical event type from EVENT_METRIC_DICTIONARY.",
     "category": "High-level CS2 event category.",
+    "support": "supported, weak or unsupported from EVENT_METRIC_DICTIONARY.",
+    "source": "Parser artifact identity and retained demo handoff reference.",
     "round_number": "Round number when available; null for match-level aggregates.",
     "tick": "Demo tick when available; null for aggregate or source-only facts.",
-    "actor_steamid": "Primary player Steam ID when available.",
-    "target_steamid": "Target/victim Steam ID when available.",
+    "time_seconds": "Demo time in seconds when available; null when unavailable.",
+    "actor": "Primary actor object with name/steamid when available; null otherwise.",
+    "victim": "Victim/target object with name/steamid when available; null otherwise.",
+    "context": "Typed event context that is useful to downstream consumers.",
     "source_event": "Parser event or aggregate that produced the normalized fact.",
     "confidence": "high, medium, low or unavailable.",
+    "caveats": "Event caveats inherited from EVENT_METRIC_DICTIONARY and source confidence.",
     "payload": "Event-specific source fields preserved without inventing missing precision.",
 }
 
