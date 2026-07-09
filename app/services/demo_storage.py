@@ -12,9 +12,17 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.models import Match
+from app.services.artifact_integrity import (
+    ARTIFACT_STATE_AVAILABLE,
+    ARTIFACT_STATE_MISSING,
+    artifact_file_integrity,
+    file_sha1,
+    parser_artifact_integrity_report,
+)
 from app.services.demo_retention import (
     ARTIFACT_CATEGORY_RAW_DEMO,
     ARTIFACT_RETENTION_CLASSES,
+    CONSISTENCY_DB_REFERENCES_FILE_CHANGED,
     CONSISTENCY_DB_REFERENCES_FILE_EXISTS,
     CONSISTENCY_DB_REFERENCES_FILE_MISSING,
     CONSISTENCY_FILE_WITHOUT_DB_REFERENCE,
@@ -120,6 +128,7 @@ def demo_storage_report(db: Session, write_manifest: bool = False) -> dict[str, 
             "future_reclaimable_mb": _bytes_to_mb(
                 sum(file_by_path[path]["size_bytes"] for path in deletion_candidate_paths)
             ),
+            "changed_files": consistency["counts"].get(CONSISTENCY_DB_REFERENCES_FILE_CHANGED, 0),
         },
         "largest_files": largest,
         "unreferenced_files": unreferenced,
@@ -127,6 +136,7 @@ def demo_storage_report(db: Session, write_manifest: bool = False) -> dict[str, 
         "suspicious_files": suspicious,
         "future_deletion_candidates": deletion_candidates,
         "file_db_consistency": consistency,
+        "parser_artifact_integrity": parser_artifact_integrity_report(db),
     }
     if write_manifest:
         manifest_path = Path(report["manifest_path"])
@@ -152,18 +162,31 @@ def classify_demo_file_consistency(db: Session, upload_dir: Path | None = None) 
         resolved = _resolve_demo_path(match.demo_file, upload_dir)
         path_key = str(resolved)
         referenced_paths.add(path_key)
+        expected = _expected_raw_demo_integrity(_json_loads(match.raw_json))
+        integrity = artifact_file_integrity(
+            resolved,
+            expected_sha1=expected.get("sha1"),
+            expected_size_bytes=expected.get("size_bytes"),
+            reparse_on_problem=True,
+        )
         if not match.demo_file:
             status = CONSISTENCY_LEGACY_UNKNOWN
-        elif resolved.exists():
+        elif integrity["state"] == ARTIFACT_STATE_AVAILABLE:
             status = CONSISTENCY_DB_REFERENCES_FILE_EXISTS
-        else:
+        elif integrity["state"] == ARTIFACT_STATE_MISSING:
             status = CONSISTENCY_DB_REFERENCES_FILE_MISSING
+        else:
+            status = CONSISTENCY_DB_REFERENCES_FILE_CHANGED
         items.append(
             {
                 "status": status,
                 "match_id": match.id,
                 "demo_file": match.demo_file,
                 "path": path_key,
+                "artifact_integrity": integrity,
+                "rebuild_needed": integrity["rebuild_needed"],
+                "reparse_needed": integrity["reparse_needed"],
+                "action": integrity["action"],
             }
         )
 
@@ -176,6 +199,10 @@ def classify_demo_file_consistency(db: Session, upload_dir: Path | None = None) 
                 "match_id": None,
                 "demo_file": None,
                 "path": path_key,
+                "artifact_integrity": artifact_file_integrity(path_key, reparse_on_problem=False),
+                "rebuild_needed": False,
+                "reparse_needed": False,
+                "action": None,
             }
         )
 
@@ -212,7 +239,7 @@ def store_demo_file(
 
     upload_dir = Path(get_settings().upload_dir).resolve()
     upload_dir.mkdir(parents=True, exist_ok=True)
-    sha1 = _sha1(source)
+    sha1 = file_sha1(source)
     destination = deterministic_demo_path(sha1, upload_dir=upload_dir)
     destination.parent.mkdir(parents=True, exist_ok=True)
     source_size = source.stat().st_size
@@ -220,7 +247,7 @@ def store_demo_file(
     status = "already_stored"
 
     if destination.exists():
-        if _sha1(destination) != sha1:
+        if file_sha1(destination) != sha1:
             raise ValueError(f"Stored demo path collision for sha1 {sha1}.")
     elif source == destination:
         status = "already_stored"
@@ -233,11 +260,18 @@ def store_demo_file(
         if storage_budget is not None:
             storage_budget.record_stored(destination.stat().st_size)
 
+    integrity = artifact_file_integrity(
+        destination,
+        expected_sha1=sha1,
+        expected_size_bytes=destination.stat().st_size,
+        reparse_on_problem=True,
+    )
     return {
         "storage_schema_version": RAW_DEMO_STORAGE_VERSION,
         "storage_kind": "retained_raw_demo",
         "storage_status": status,
         "copied": copied,
+        "state": integrity["state"],
         "sha1": sha1,
         "size_bytes": destination.stat().st_size,
         "original_filename": Path(original_filename or source.name).name,
@@ -246,6 +280,7 @@ def store_demo_file(
         "relative_path": str(destination.relative_to(upload_dir)),
         "parser_handoff_path": str(destination),
         "retention": artifact_retention_metadata(ARTIFACT_CATEGORY_RAW_DEMO, path=destination),
+        "integrity": integrity,
         "temporary_source": {
             "path": str(source),
             "cleanup_owner": "caller" if not source.is_relative_to(upload_dir) else "retained_storage",
@@ -282,14 +317,6 @@ def _sha256_short(path: Path) -> str:
     return digest.hexdigest()[:16]
 
 
-def _sha1(path: Path) -> str:
-    digest = hashlib.sha1()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _bytes_to_mb(value: int) -> float:
     return round(value / 1024 / 1024, 2)
 
@@ -302,3 +329,27 @@ def _json_loads(value: str | None) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return loaded if isinstance(loaded, dict) else {}
+
+
+def _expected_raw_demo_integrity(raw: dict[str, Any]) -> dict[str, Any]:
+    candidates = [
+        raw.get("storage", {}).get("artifact") if isinstance(raw.get("storage"), dict) else None,
+        raw.get("storage") if isinstance(raw.get("storage"), dict) else None,
+        raw.get("parser_handoff") if isinstance(raw.get("parser_handoff"), dict) else None,
+        raw,
+    ]
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        sha1 = candidate.get("sha1") or candidate.get("demo_sha1")
+        size_bytes = _int_or_none(candidate.get("size_bytes") or candidate.get("raw_demo_size_bytes"))
+        if sha1 or size_bytes is not None:
+            return {"sha1": str(sha1) if sha1 else None, "size_bytes": size_bytes}
+    return {"sha1": None, "size_bytes": None}
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None

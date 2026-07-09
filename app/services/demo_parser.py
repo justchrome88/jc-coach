@@ -114,7 +114,10 @@ def import_demo_file(
     parsed["parser_handoff"] = {
         "kind": "raw_demo_file",
         "path": storage_metadata["parser_handoff_path"],
+        "state": storage_metadata["state"],
         "sha1": storage_metadata["sha1"],
+        "size_bytes": storage_metadata["size_bytes"],
+        "integrity": storage_metadata["integrity"],
         "retention": artifact_retention_metadata(
             ARTIFACT_CATEGORY_RAW_DEMO,
             path=storage_metadata["parser_handoff_path"],
@@ -531,11 +534,13 @@ def _storage_metadata(
         "schema_version": stored["storage_schema_version"],
         "kind": stored["storage_kind"],
         "status": stored["storage_status"],
+        "state": stored["state"],
         "path": stored["path"],
         "relative_path": stored["relative_path"],
         "parser_handoff_path": stored["parser_handoff_path"],
         "sha1": stored["sha1"],
         "size_bytes": stored["size_bytes"],
+        "integrity": stored["integrity"],
         "original_filename": stored["original_filename"],
         "retention": stored["retention"],
         "temporary_source": stored["temporary_source"],
@@ -1519,6 +1524,7 @@ def _save_demo_parse_artifacts(db: Session, match: Match, parsed: dict[str, Any]
                     "available_players": parsed.get("available_players") or [],
                     "deep": deep,
                     "artifact_retention": artifact_retention_metadata(ARTIFACT_CATEGORY_PARSER_ARTIFACT),
+                    "source_artifact": parsed.get("storage", {}).get("integrity"),
                 }
             ),
         )

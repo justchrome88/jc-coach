@@ -81,7 +81,11 @@ def test_import_demo_file_persists_match(monkeypatch, tmp_path, db):
     assert result["parser_success"] is True
     assert result["raw_demo_size_bytes"] is not None
     assert result["storage"]["kind"] == "retained_raw_demo"
+    assert result["storage"]["state"] == "available"
+    assert result["storage"]["integrity"]["path"] == result["stored_path"]
+    assert result["storage"]["integrity"]["rebuild_needed"] is False
     assert result["parser_handoff"]["path"] == result["stored_path"]
+    assert result["parser_handoff"]["state"] == "available"
     assert "retain_raw_for_parser_development" in match.raw_json
 
 
@@ -179,6 +183,8 @@ def test_import_demo_file_persists_storage_links_and_parser_handoff(monkeypatch,
     artifact_payload = json.loads(artifact.payload_json)
     assert artifact_payload["artifact_retention"]["category"] == ARTIFACT_CATEGORY_PARSER_ARTIFACT
     assert artifact_payload["artifact_retention"]["retention_class"] == RETENTION_CLASS_DERIVED_REBUILDABLE
+    assert artifact_payload["source_artifact"]["path"] == result["stored_path"]
+    assert artifact_payload["source_artifact"]["sha1"] == result["storage"]["sha1"]
 
 
 def test_import_demo_file_persists_deep_parse_artifacts(monkeypatch, tmp_path, db):

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ImportJob, Match
+from app.services.artifact_integrity import artifact_file_integrity
 from app.services.demo_retention import ARTIFACT_CATEGORY_RAW_DEMO, artifact_retention_metadata
 from app.services.demo_storage import store_demo_file
 from app.services.import_jobs import (
@@ -332,13 +333,18 @@ def store_artifact_metadata(
     if acquisition["outcome"] == DEMO_ALREADY_AVAILABLE and source_path:
         path = Path(str(source_path))
         if path.is_file():
+            integrity = artifact_file_integrity(path, reparse_on_problem=True)
             storage = {
                 "outcome": STORAGE_ALREADY_AVAILABLE,
                 "artifact": {
                     "path": str(path.resolve()),
+                    "state": integrity["state"],
+                    "sha1": integrity["sha1"],
+                    "size_bytes": integrity["size_bytes"],
                     "parser_handoff_path": str(path.resolve()),
                     "match_demo_file": match.demo_file if match is not None else str(path.resolve()),
                     "retention": artifact_retention_metadata(ARTIFACT_CATEGORY_RAW_DEMO, path=path.resolve()),
+                    "integrity": integrity,
                 },
                 "raw": {"storage_status": STORAGE_ALREADY_AVAILABLE, "path": str(path.resolve())},
                 "actionable_reason": None,
@@ -378,12 +384,14 @@ def store_artifact_metadata(
         "outcome": STORAGE_STORED if stored["storage_status"] == "stored" else STORAGE_DUPLICATE,
         "artifact": {
             "storage_kind": stored["storage_kind"],
+            "state": stored["state"],
             "sha1": stored["sha1"],
             "size_bytes": stored["size_bytes"],
             "path": stored["path"],
             "relative_path": stored["relative_path"],
             "parser_handoff_path": stored["parser_handoff_path"],
             "retention": stored["retention"],
+            "integrity": stored["integrity"],
         },
         "raw": stored,
         "actionable_reason": None,

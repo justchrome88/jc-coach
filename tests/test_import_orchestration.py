@@ -53,6 +53,10 @@ def test_deterministic_import_orchestration_stores_parser_handoff(db, monkeypatc
     assert result["acquisition"]["outcome"] == DEMO_DOWNLOAD_QUEUED_OR_READY
     assert result["storage"]["outcome"] == STORAGE_STORED
     assert Path(result["storage"]["artifact"]["path"]).is_file()
+    assert result["storage"]["artifact"]["state"] == "available"
+    assert result["storage"]["artifact"]["sha1"]
+    assert result["storage"]["artifact"]["size_bytes"] == len(b"HL2DEMO deterministic import orchestration")
+    assert result["storage"]["artifact"]["integrity"]["rebuild_needed"] is False
     assert result["storage"]["artifact"]["retention"]["category"] == ARTIFACT_CATEGORY_RAW_DEMO
     assert result["storage"]["artifact"]["retention"]["retention_class"] == RETENTION_CLASS_RETAINED_RAW
     assert result["parser_handoff"]["path"] == result["storage"]["artifact"]["parser_handoff_path"]

@@ -48,6 +48,7 @@ DEMO_RETENTION_STATUS_NOT_APPLICABLE = "not_applicable"
 
 CONSISTENCY_DB_REFERENCES_FILE_EXISTS = "db_references_file_and_file_exists"
 CONSISTENCY_DB_REFERENCES_FILE_MISSING = "db_references_file_but_file_missing"
+CONSISTENCY_DB_REFERENCES_FILE_CHANGED = "db_references_file_but_integrity_changed"
 CONSISTENCY_FILE_WITHOUT_DB_REFERENCE = "file_exists_without_clear_db_reference"
 CONSISTENCY_LEGACY_UNKNOWN = "legacy_unknown"
 
