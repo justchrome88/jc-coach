@@ -18,6 +18,7 @@ from app.services.import_orchestration import (
     STORAGE_STORED,
     import_block_handoff_contract,
     run_demo_import_orchestration,
+    storage_acceptance_for_import_job,
 )
 from app.services.parser_artifact_reader import read_normalized_events
 from app.services.steam_demo_acquisition import (
@@ -67,6 +68,96 @@ def test_deterministic_import_orchestration_stores_parser_handoff(db, monkeypatc
     assert match.user_id == 11
     assert match.import_job_id == job.id
     assert json.loads(match.raw_json)["parser_handoff"]["field"] == "Match.demo_file"
+
+
+def test_storage_acceptance_validates_imported_match_and_retained_artifact(db, monkeypatch, tmp_path):
+    upload_dir = tmp_path / "uploads"
+    source = tmp_path / "fixture.dem"
+    source.write_bytes(b"HL2DEMO storage acceptance imported artifact")
+    monkeypatch.setenv("UPLOAD_DIR", str(upload_dir))
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        job = run_demo_import_orchestration(
+            db,
+            payload={"share_code": SHARE_CODE, "fixture_demo_path": str(source)},
+            user_id=11,
+        )
+        acceptance = storage_acceptance_for_import_job(db, job.id, user_id=11)
+    finally:
+        get_settings.cache_clear()
+
+    result = json.loads(job.result_json)
+    parser_handoff_path = result["parser_handoff"]["path"]
+    assert acceptance["status"] == "accepted"
+    assert acceptance["accepted"] is True
+    assert acceptance["blockers"] == []
+    assert acceptance["job"]["id"] == job.id
+    assert acceptance["match"]["import_job_id"] == job.id
+    assert acceptance["match"]["demo_file"] == parser_handoff_path
+    assert acceptance["storage"]["integrity"]["state"] == "available"
+    assert acceptance["storage"]["integrity"]["sha1"] == result["storage"]["artifact"]["sha1"]
+    assert acceptance["parser_handoff"]["path"] == parser_handoff_path
+    assert acceptance["parser_handoff"]["result_field"] == "result_json.parser_handoff.path"
+    assert acceptance["parser_handoff"]["storage_artifact_field"] == "storage.artifact.parser_handoff_path"
+    assert Path(parser_handoff_path).is_file()
+    assert "/retained/" in parser_handoff_path
+
+
+def test_storage_acceptance_blocks_changed_retained_artifact(db, monkeypatch, tmp_path):
+    upload_dir = tmp_path / "uploads"
+    source = tmp_path / "fixture.dem"
+    source.write_bytes(b"HL2DEMO storage acceptance original")
+    monkeypatch.setenv("UPLOAD_DIR", str(upload_dir))
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        job = run_demo_import_orchestration(
+            db,
+            payload={"share_code": SHARE_CODE, "fixture_demo_path": str(source)},
+            user_id=11,
+        )
+        parser_handoff_path = json.loads(job.result_json)["parser_handoff"]["path"]
+        Path(parser_handoff_path).write_bytes(b"HL2DEMO storage acceptance changed")
+        acceptance = storage_acceptance_for_import_job(db, job.id, user_id=11)
+    finally:
+        get_settings.cache_clear()
+
+    blocker_codes = {blocker["code"] for blocker in acceptance["blockers"]}
+    assert acceptance["status"] == "blocked"
+    assert acceptance["accepted"] is False
+    assert "raw_demo_integrity_failed" in blocker_codes
+    assert acceptance["storage"]["integrity"]["state"] == "checksum_mismatch"
+
+
+def test_storage_acceptance_blocks_missing_retention_metadata(db, monkeypatch, tmp_path):
+    upload_dir = tmp_path / "uploads"
+    source = tmp_path / "fixture.dem"
+    source.write_bytes(b"HL2DEMO storage acceptance missing retention")
+    monkeypatch.setenv("UPLOAD_DIR", str(upload_dir))
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        job = run_demo_import_orchestration(
+            db,
+            payload={"share_code": SHARE_CODE, "fixture_demo_path": str(source)},
+            user_id=11,
+        )
+        result = json.loads(job.result_json)
+        del result["storage"]["artifact"]["retention"]
+        job.result_json = json.dumps(result)
+        db.commit()
+        acceptance = storage_acceptance_for_import_job(db, job.id, user_id=11)
+    finally:
+        get_settings.cache_clear()
+
+    blocker_codes = {blocker["code"] for blocker in acceptance["blockers"]}
+    assert acceptance["status"] == "blocked"
+    assert "retention_metadata_missing" in blocker_codes
+    assert acceptance["storage"]["integrity"]["state"] == "available"
 
 
 def test_import_orchestration_denies_cross_owner_share_code_reuse(db, monkeypatch, tmp_path):

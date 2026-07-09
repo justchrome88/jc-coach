@@ -9,10 +9,14 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ImportJob, Match
-from app.services.artifact_integrity import artifact_file_integrity
-from app.services.demo_retention import ARTIFACT_CATEGORY_RAW_DEMO, artifact_retention_metadata
-from app.services.demo_storage import store_demo_file
+from app.db.models import DemoParseArtifact, ImportJob, Match
+from app.services.artifact_integrity import ARTIFACT_STATE_AVAILABLE, artifact_file_integrity
+from app.services.demo_retention import (
+    ARTIFACT_CATEGORY_RAW_DEMO,
+    RETENTION_CLASS_RETAINED_RAW,
+    artifact_retention_metadata,
+)
+from app.services.demo_storage import deterministic_demo_path, store_demo_file
 from app.services.import_jobs import (
     IMPORT_JOB_COMPLETED,
     IMPORT_JOB_FAILED,
@@ -45,6 +49,8 @@ PARSER_HANDOFF_RESULT_PATH = "result_json.parser_handoff.path"
 PARSER_HANDOFF_STORAGE_PATH = "storage.artifact.parser_handoff_path"
 PARSER_HANDOFF_MATCH_FIELD = "Match.demo_file"
 PARSER_HANDOFF_ARTIFACT_FIELD = "DemoParseArtifact.source_demo_file"
+STORAGE_ACCEPTANCE_ACCEPTED = "accepted"
+STORAGE_ACCEPTANCE_BLOCKED = "blocked"
 
 STORAGE_ALREADY_AVAILABLE = "already_available"
 STORAGE_STORED = "stored"
@@ -460,6 +466,286 @@ def serialize_orchestration_job(job: ImportJob) -> dict[str, Any]:
         "result": import_job_result(job),
         "error_message": job.error_message,
     }
+
+
+def storage_acceptance_for_import_job(
+    db: Session,
+    job_id: int,
+    *,
+    user_id: int | None = None,
+) -> dict[str, Any]:
+    job = db.get(ImportJob, job_id)
+    blockers: list[dict[str, Any]] = []
+    if job is None:
+        return _storage_acceptance_result(
+            job=None,
+            blockers=[_blocker("import_job_not_found", f"Import job was not found: {job_id}")],
+        )
+
+    result = import_job_result(job)
+    artifact = _storage_artifact(result)
+    parser_handoff_path = _string_or_none((result.get("parser_handoff") or {}).get("path"))
+    storage_handoff_path = _string_or_none(artifact.get("parser_handoff_path"))
+    artifact_path = _string_or_none(artifact.get("path"))
+    accepted_path = parser_handoff_path or storage_handoff_path or artifact_path
+
+    if job.job_type != CANONICAL_IMPORT_JOB_TYPE:
+        blockers.append(_blocker("non_canonical_import_job_type", "Import job is not a demo import orchestration job."))
+    if job.status != IMPORT_JOB_COMPLETED:
+        blockers.append(_blocker("import_job_not_completed", "Import job has not completed successfully."))
+    if user_id is not None and job.user_id != user_id:
+        blockers.append(_blocker("import_job_owner_mismatch", "Import job does not belong to the requested user."))
+    if not artifact:
+        blockers.append(
+            _blocker("storage_artifact_missing", "Import result does not include storage.artifact metadata.")
+        )
+    if not accepted_path:
+        blockers.append(
+            _blocker("parser_handoff_path_missing", "Import result does not include a parser handoff path.")
+        )
+    if parser_handoff_path and storage_handoff_path and _resolve_path(parser_handoff_path) != _resolve_path(
+        storage_handoff_path
+    ):
+        blockers.append(
+            _blocker("parser_handoff_storage_path_mismatch", "result_json and storage artifact paths disagree.")
+        )
+    if parser_handoff_path and artifact_path and _resolve_path(parser_handoff_path) != _resolve_path(artifact_path):
+        blockers.append(
+            _blocker("parser_handoff_artifact_path_mismatch", "Parser handoff and artifact paths disagree.")
+        )
+
+    integrity = _storage_acceptance_integrity(accepted_path, artifact)
+    if integrity.get("state") != ARTIFACT_STATE_AVAILABLE:
+        blockers.append(
+            _blocker(
+                "raw_demo_integrity_failed",
+                "Retained raw demo is not available with the expected integrity metadata.",
+                state=integrity.get("state"),
+                reason=integrity.get("reason"),
+            )
+        )
+
+    if integrity.get("sha1") and accepted_path:
+        expected_path = deterministic_demo_path(str(integrity["sha1"]))
+        if _resolve_path(accepted_path) != expected_path:
+            blockers.append(
+                _blocker(
+                    "retained_raw_path_mismatch",
+                    "Retained raw demo is not stored at UPLOAD_DIR/retained/<sha1[0:2]>/<sha1>.dem.",
+                    expected_path=str(expected_path),
+                    actual_path=str(_resolve_path(accepted_path)),
+                )
+            )
+
+    retention = artifact.get("retention") if isinstance(artifact.get("retention"), dict) else {}
+    if not retention:
+        blockers.append(_blocker("retention_metadata_missing", "Storage artifact does not include retention metadata."))
+    elif (
+        retention.get("category") != ARTIFACT_CATEGORY_RAW_DEMO
+        or retention.get("retention_class") != RETENTION_CLASS_RETAINED_RAW
+        or retention.get("delete_allowed") is not False
+    ):
+        blockers.append(
+            _blocker("retention_metadata_invalid", "Storage artifact retention metadata is not retained raw demo.")
+        )
+
+    match, match_discovery = _storage_acceptance_match(
+        db,
+        job=job,
+        result=result,
+        parser_handoff_path=accepted_path,
+        user_id=user_id,
+    )
+    if match is None:
+        blockers.append(
+            _blocker("owned_match_not_found", "No owned match row references the imported storage artifact.")
+        )
+        parser_artifacts: list[DemoParseArtifact] = []
+    else:
+        if match.import_job_id != job.id:
+            blockers.append(
+                _blocker("match_import_job_link_missing", "Match.import_job_id does not reference the job.")
+            )
+        if accepted_path and _resolve_path(match.demo_file) != _resolve_path(accepted_path):
+            blockers.append(_blocker("match_demo_file_mismatch", "Match.demo_file does not match parser handoff path."))
+        raw = _json_loads(match.raw_json)
+        raw_handoff_path = _string_or_none((raw.get("parser_handoff") or {}).get("path"))
+        if raw_handoff_path and accepted_path and _resolve_path(raw_handoff_path) != _resolve_path(accepted_path):
+            blockers.append(
+                _blocker("match_raw_parser_handoff_mismatch", "Match.raw_json parser handoff path disagrees.")
+            )
+        parser_artifacts = list(
+            db.scalars(
+                select(DemoParseArtifact)
+                .where(DemoParseArtifact.match_id == match.id)
+                .order_by(DemoParseArtifact.id.asc())
+            )
+        )
+
+    parser_artifact_items = []
+    for parser_artifact in parser_artifacts:
+        source_demo_file = parser_artifact.source_demo_file
+        parser_artifact_items.append(
+            {
+                "id": parser_artifact.id,
+                "match_id": parser_artifact.match_id,
+                "source_demo_file": source_demo_file,
+                "status": parser_artifact.status,
+            }
+        )
+        if accepted_path and _resolve_path(source_demo_file) != _resolve_path(accepted_path):
+            blockers.append(
+                _blocker(
+                    "parser_artifact_source_demo_file_mismatch",
+                    "DemoParseArtifact.source_demo_file does not match parser handoff path.",
+                    artifact_id=parser_artifact.id,
+                )
+            )
+
+    return _storage_acceptance_result(
+        job=job,
+        blockers=blockers,
+        result=result,
+        storage_artifact=artifact,
+        parser_handoff_path=accepted_path,
+        integrity=integrity,
+        match=match,
+        match_discovery=match_discovery,
+        parser_artifacts=parser_artifact_items,
+    )
+
+
+def _storage_acceptance_result(
+    *,
+    job: ImportJob | None,
+    blockers: list[dict[str, Any]],
+    result: dict[str, Any] | None = None,
+    storage_artifact: dict[str, Any] | None = None,
+    parser_handoff_path: str | None = None,
+    integrity: dict[str, Any] | None = None,
+    match: Match | None = None,
+    match_discovery: str | None = None,
+    parser_artifacts: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    return {
+        "status": STORAGE_ACCEPTANCE_BLOCKED if blockers else STORAGE_ACCEPTANCE_ACCEPTED,
+        "accepted": not blockers,
+        "blockers": blockers,
+        "job": None
+        if job is None
+        else {
+            "id": job.id,
+            "job_type": job.job_type,
+            "status": job.status,
+            "user_id": job.user_id,
+            "steam_account_id": job.steam_account_id,
+            "logical_target_key": job.logical_target_key,
+        },
+        "storage": {
+            "artifact": storage_artifact or {},
+            "integrity": integrity or {},
+            "retained_raw_path_rule": "UPLOAD_DIR/retained/<sha1[0:2]>/<sha1>.dem",
+        },
+        "parser_handoff": {
+            "path": parser_handoff_path,
+            "result_field": PARSER_HANDOFF_RESULT_PATH,
+            "storage_artifact_field": PARSER_HANDOFF_STORAGE_PATH,
+            "match_field": PARSER_HANDOFF_MATCH_FIELD,
+            "parser_artifact_field": PARSER_HANDOFF_ARTIFACT_FIELD,
+        },
+        "match": None
+        if match is None
+        else {
+            "id": match.id,
+            "user_id": match.user_id,
+            "steam_account_id": match.steam_account_id,
+            "import_job_id": match.import_job_id,
+            "demo_file": match.demo_file,
+            "discovery": match_discovery,
+        },
+        "parser_artifacts": parser_artifacts or [],
+        "result_summary": {
+            "overall_outcome": (result or {}).get("overall_outcome"),
+            "storage_outcome": ((result or {}).get("storage") or {}).get("outcome"),
+            "acquisition_outcome": ((result or {}).get("acquisition") or {}).get("outcome"),
+        },
+    }
+
+
+def _storage_acceptance_match(
+    db: Session,
+    *,
+    job: ImportJob,
+    result: dict[str, Any],
+    parser_handoff_path: str | None,
+    user_id: int | None,
+) -> tuple[Match | None, str | None]:
+    user_filter = user_id if user_id is not None else job.user_id
+    selectors: list[tuple[str, Any]] = [
+        ("import_job_id", Match.import_job_id == job.id),
+    ]
+    acquisition_match_id = ((result.get("acquisition") or {}).get("match_id") if isinstance(result, dict) else None)
+    if acquisition_match_id is not None:
+        match = db.get(Match, int(acquisition_match_id))
+        if _match_is_visible(match, user_filter):
+            return match, "acquisition.match_id"
+    if parser_handoff_path:
+        selectors.append(("demo_file", Match.demo_file == str(parser_handoff_path)))
+    share_code = None
+    if isinstance(result, dict):
+        share_code = _string_or_none((result.get("request") or {}).get("share_code"))
+    if share_code:
+        selectors.append(("external_match_id", Match.external_match_id == share_code))
+
+    for discovery, condition in selectors:
+        stmt = select(Match).where(condition).order_by(Match.id.desc())
+        if user_filter is not None:
+            stmt = stmt.where(Match.user_id == user_filter)
+        match = db.scalar(stmt)
+        if match is not None:
+            return match, discovery
+    return None, None
+
+
+def _match_is_visible(match: Match | None, user_id: int | None) -> bool:
+    return match is not None and (user_id is None or match.user_id == user_id)
+
+
+def _storage_artifact(result: dict[str, Any]) -> dict[str, Any]:
+    storage = result.get("storage") if isinstance(result.get("storage"), dict) else {}
+    artifact = storage.get("artifact") if isinstance(storage.get("artifact"), dict) else {}
+    return dict(artifact)
+
+
+def _storage_acceptance_integrity(path: str | None, artifact: dict[str, Any]) -> dict[str, Any]:
+    expected_sha1 = _string_or_none(artifact.get("sha1"))
+    expected_size = _int_or_none(artifact.get("size_bytes"))
+    return artifact_file_integrity(
+        path,
+        expected_sha1=expected_sha1,
+        expected_size_bytes=expected_size,
+        reparse_on_problem=True,
+    )
+
+
+def _resolve_path(value: str | Path | None) -> Path | None:
+    return Path(str(value)).resolve() if value else None
+
+
+def _blocker(code: str, message: str, **details: Any) -> dict[str, Any]:
+    return {"code": code, "message": message, **details}
+
+
+def _string_or_none(value: Any) -> str | None:
+    text = str(value).strip() if value is not None else ""
+    return text or None
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _normalize_acquisition(result: dict[str, Any], *, acquisition_config: dict[str, Any]) -> dict[str, Any]:
