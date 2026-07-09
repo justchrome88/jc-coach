@@ -31,7 +31,11 @@ from app.services.import_jobs import (
     IMPORT_JOB_QUEUED,
     create_import_request,
 )
-from app.services.import_orchestration import CANONICAL_IMPORT_JOB_TYPE, run_demo_import_orchestration
+from app.services.import_orchestration import (
+    CANONICAL_IMPORT_JOB_TYPE,
+    import_block_handoff_contract,
+    run_demo_import_orchestration,
+)
 from app.services.importer import import_csv, import_json
 from app.services.match_queries import playable_match_select
 from app.services.recommendation_tracking import (
@@ -442,6 +446,11 @@ def write_demo_storage_manifest_endpoint(db: Annotated[Session, Depends(get_db)]
 @router.get("/import/jobs")
 def import_jobs_endpoint(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
     return [serialize_import_job(job) for job in list_import_jobs(db)]
+
+
+@router.get("/import/contract")
+def import_contract_endpoint() -> dict:
+    return import_block_handoff_contract()
 
 
 @router.get("/import/jobs/{job_id}")

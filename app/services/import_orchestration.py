@@ -36,6 +36,12 @@ from app.services.steam_demo_acquisition import (
 )
 
 CANONICAL_IMPORT_JOB_TYPE = "demo_import_orchestration"
+CANONICAL_IMPORT_ROUTE = "POST /api/import/jobs"
+IMPORT_INSPECTION_ROUTES = ("GET /api/import/jobs/{job_id}", "GET /api/import/jobs")
+PARSER_HANDOFF_RESULT_PATH = "result_json.parser_handoff.path"
+PARSER_HANDOFF_STORAGE_PATH = "storage.artifact.parser_handoff_path"
+PARSER_HANDOFF_MATCH_FIELD = "Match.demo_file"
+PARSER_HANDOFF_ARTIFACT_FIELD = "DemoParseArtifact.source_demo_file"
 
 STORAGE_ALREADY_AVAILABLE = "already_available"
 STORAGE_STORED = "stored"
@@ -44,6 +50,76 @@ STORAGE_MISSING_FILE = "storage_missing_file"
 STORAGE_FAILED_WITH_ACTIONABLE_ERROR = "failed_with_actionable_error"
 
 AcquisitionAdapter = Callable[[Session, dict[str, Any]], dict[str, Any]]
+
+
+def import_block_handoff_contract() -> dict[str, Any]:
+    return {
+        "canonical_import_path": {
+            "route": CANONICAL_IMPORT_ROUTE,
+            "job_type": CANONICAL_IMPORT_JOB_TYPE,
+            "provider": "steam",
+            "description": "Acquire a demo source, retain the raw .dem artifact, and persist parser handoff metadata.",
+        },
+        "inspection_routes": list(IMPORT_INSPECTION_ROUTES),
+        "retained_raw_demo_path_rule": "UPLOAD_DIR/retained/<sha1[0:2]>/<sha1>.dem",
+        "parser_handoff_fields": {
+            "result_path": PARSER_HANDOFF_RESULT_PATH,
+            "storage_artifact_path": PARSER_HANDOFF_STORAGE_PATH,
+            "match_field": PARSER_HANDOFF_MATCH_FIELD,
+            "parser_artifact_field": PARSER_HANDOFF_ARTIFACT_FIELD,
+        },
+        "legacy_import_paths": [
+            {
+                "route": "POST /api/import/demo",
+                "classification": "tolerated",
+                "reason": (
+                    "Manual .dem upload path still supports parser development but is not the canonical import "
+                    "block entrypoint."
+                ),
+            },
+            {
+                "route": "POST /api/import/demo/inbox",
+                "classification": "tolerated",
+                "reason": "Local inbox parsing remains useful for deterministic development and fixtures.",
+            },
+            {
+                "route": "POST /api/import/csv",
+                "classification": "tolerated",
+                "reason": "Stats-only import path does not acquire or retain raw demos for parser handoff.",
+            },
+            {
+                "route": "POST /api/import/json",
+                "classification": "tolerated",
+                "reason": "Stats-only import path does not acquire or retain raw demos for parser handoff.",
+            },
+            {
+                "route": "POST /api/steam/import/share-code",
+                "classification": "deprecated",
+                "reason": (
+                    "Legacy Steam share-code job path is superseded by demo_import_orchestration for new parser "
+                    "handoff work."
+                ),
+            },
+            {
+                "route": "POST /api/steam/import/jobs/{job_id}/run",
+                "classification": "deprecated",
+                "reason": "Legacy Steam job runner remains readable but is not the canonical import block entrypoint.",
+            },
+            {
+                "route": "POST /api/steam/import/jobs/run-queued",
+                "classification": "deprecated",
+                "reason": "Legacy queued Steam job runner remains compatibility-only for this import block.",
+            },
+            {
+                "route": "POST /api/steam/import/all",
+                "classification": "blocker",
+                "reason": (
+                    "Live Steam bulk import requires explicit task authorization and must not be used as the parser "
+                    "handoff starting point."
+                ),
+            },
+        ],
+    }
 
 
 def run_demo_import_orchestration(
@@ -351,6 +427,8 @@ def serialize_result(
             "field": "parser_handoff_path",
             "path": parser_handoff_path,
             "match_demo_file": artifact.get("match_demo_file") if isinstance(artifact, dict) else None,
+            "match_field": PARSER_HANDOFF_MATCH_FIELD,
+            "parser_artifact_field": PARSER_HANDOFF_ARTIFACT_FIELD,
             "next_step": "run_parser_with_parser_handoff_path" if parser_handoff_path else None,
         },
         "error": {"message": error_message, "type": error_type} if error_message else None,

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from app.api.routes import create_import_job_endpoint, import_job_endpoint
+from app.api.routes import create_import_job_endpoint, import_contract_endpoint, import_job_endpoint
 from app.db.models import Match
 from app.services.import_jobs import (
     IMPORT_JOB_COMPLETED,
@@ -15,6 +15,7 @@ from app.services.import_orchestration import (
     STORAGE_DUPLICATE,
     STORAGE_MISSING_FILE,
     STORAGE_STORED,
+    import_block_handoff_contract,
     run_demo_import_orchestration,
 )
 from app.services.steam_demo_acquisition import (
@@ -50,6 +51,9 @@ def test_deterministic_import_orchestration_stores_parser_handoff(db, monkeypatc
     assert result["storage"]["outcome"] == STORAGE_STORED
     assert Path(result["storage"]["artifact"]["path"]).is_file()
     assert result["parser_handoff"]["path"] == result["storage"]["artifact"]["parser_handoff_path"]
+    assert result["parser_handoff"]["field"] == "parser_handoff_path"
+    assert result["parser_handoff"]["match_field"] == "Match.demo_file"
+    assert result["parser_handoff"]["parser_artifact_field"] == "DemoParseArtifact.source_demo_file"
     assert match.demo_file == result["parser_handoff"]["path"]
     assert json.loads(match.raw_json)["parser_handoff"]["field"] == "Match.demo_file"
 
@@ -228,3 +232,28 @@ def test_import_jobs_api_starts_and_inspects_canonical_orchestration(db, monkeyp
     assert inspected["result"]["acquisition"]["outcome"] == DEMO_DOWNLOAD_QUEUED_OR_READY
     assert inspected["result"]["storage"]["outcome"] == STORAGE_STORED
     assert Path(inspected["result"]["parser_handoff"]["path"]).is_file()
+
+
+def test_import_block_contract_documents_canonical_path_and_legacy_classifications():
+    contract = import_contract_endpoint()
+    service_contract = import_block_handoff_contract()
+
+    assert contract == service_contract
+    assert contract["canonical_import_path"] == {
+        "route": "POST /api/import/jobs",
+        "job_type": CANONICAL_IMPORT_JOB_TYPE,
+        "provider": "steam",
+        "description": "Acquire a demo source, retain the raw .dem artifact, and persist parser handoff metadata.",
+    }
+    assert contract["inspection_routes"] == ["GET /api/import/jobs/{job_id}", "GET /api/import/jobs"]
+    assert contract["parser_handoff_fields"] == {
+        "result_path": "result_json.parser_handoff.path",
+        "storage_artifact_path": "storage.artifact.parser_handoff_path",
+        "match_field": "Match.demo_file",
+        "parser_artifact_field": "DemoParseArtifact.source_demo_file",
+    }
+    classifications = {item["classification"] for item in contract["legacy_import_paths"]}
+    assert {"tolerated", "deprecated", "blocker"} <= classifications
+    assert {
+        item["route"]: item["classification"] for item in contract["legacy_import_paths"]
+    }["POST /api/steam/import/all"] == "blocker"
