@@ -23,7 +23,7 @@ from app.services.import_jobs import (
     fail_import_job,
     start_import_job,
 )
-from app.services.steam_demo_downloader import _fetch_demo_urls, steam_demo_downloader_configured
+from app.services.steam_demo_downloader import _download_demo_file, _fetch_demo_urls, steam_demo_downloader_configured
 
 DEMO_REFERENCE_FOUND = "demo_reference_found"
 DEMO_DOWNLOAD_QUEUED_OR_READY = "demo_download_queued_or_ready"
@@ -43,6 +43,7 @@ DEMO_ACQUISITION_SUCCESS_OUTCOMES = frozenset(
 )
 
 DemoUrlFetcher = Callable[[list[str]], dict[str, Any]]
+DemoDownloader = Callable[[str, str], Any]
 
 
 def validate_steam_demo_acquisition_config() -> dict[str, Any]:
@@ -77,6 +78,8 @@ def acquire_steam_demo_reference(
     *,
     share_code: str,
     fetcher: DemoUrlFetcher | None = None,
+    download: bool = False,
+    downloader: DemoDownloader | None = None,
 ) -> dict[str, Any]:
     normalized_share_code = share_code.strip()
     started_at = _now_iso()
@@ -177,6 +180,20 @@ def acquire_steam_demo_reference(
             action="Inspect Steam helper output; the demo URL must be an HTTP(S) URL.",
         )
 
+    source_path = None
+    if download:
+        try:
+            download_demo_file = downloader or _download_demo_file
+            source_path = str(download_demo_file(demo_url, normalized_share_code))
+        except Exception as exc:
+            return _exception_result(
+                exc,
+                share_code=normalized_share_code,
+                started_at=started_at,
+                match=match,
+                config=config,
+            )
+
     result = _result(
         DEMO_DOWNLOAD_QUEUED_OR_READY,
         share_code=normalized_share_code,
@@ -190,7 +207,9 @@ def acquire_steam_demo_reference(
             "has_url": True,
             "match_id": item.get("match_id"),
             "match_time_available": item.get("match_time") is not None,
+            "downloaded": bool(source_path),
         },
+        source_path=source_path,
         action="Demo download source is available for the existing downloader/import path.",
     )
     _mark_match_acquisition_result(db, match, result)
@@ -309,6 +328,7 @@ def _result(
     config: dict[str, Any] | None = None,
     helper_payload_status: dict[str, Any] | None = None,
     demo_reference: dict[str, Any] | None = None,
+    source_path: str | None = None,
     error_message: str | None = None,
     error_type: str | None = None,
     action: str,
@@ -325,6 +345,7 @@ def _result(
         "config": _public_config_status(config) if config is not None else None,
         "helper_payload_status": helper_payload_status,
         "demo_reference": demo_reference,
+        "source_path": source_path,
         "error": None,
     }
     if error_message:

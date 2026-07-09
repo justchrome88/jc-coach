@@ -233,7 +233,7 @@ def run_acquisition_or_fixture_adapter(
         }
 
     return _normalize_acquisition(
-        acquire_steam_demo_reference(db, share_code=share_code),
+        acquire_steam_demo_reference(db, share_code=share_code, download=True),
         acquisition_config=acquisition_config,
     )
 

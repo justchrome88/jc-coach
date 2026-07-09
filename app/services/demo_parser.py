@@ -133,7 +133,12 @@ def import_demo_file(
         db.commit()
         db.refresh(existing)
         _save_demo_parse_artifacts(db, existing, parsed)
-        if stored.get("copied") and stored_path.exists() and stored_path.resolve() != Path(existing.demo_file).resolve():
+        copied_to_distinct_path = (
+            stored.get("copied")
+            and stored_path.exists()
+            and stored_path.resolve() != Path(existing.demo_file).resolve()
+        )
+        if copied_to_distinct_path:
             stored_path.unlink()
         duplicate_retention = retention_metadata(raw_demo_path=existing.demo_file, parser_success=True)
         evaluation_metadata = recommendation_evaluation_metadata(

@@ -1,5 +1,5 @@
-import json
 import hashlib
+import json
 from pathlib import Path
 
 from app.db.models import Match

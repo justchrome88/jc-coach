@@ -95,6 +95,60 @@ def test_import_orchestration_reuses_already_available_artifact(db, tmp_path):
     assert result["parser_handoff"]["path"] == str(existing.resolve())
 
 
+def test_import_orchestration_downloads_reference_for_storage(db, monkeypatch, tmp_path):
+    monkeypatch.setenv("STEAM_BOT_REFRESH_TOKEN", "test-refresh-token")
+    upload_dir = tmp_path / "uploads"
+    source = tmp_path / "downloaded.dem"
+    source.write_bytes(b"HL2DEMO downloaded orchestration")
+    monkeypatch.setenv("UPLOAD_DIR", str(upload_dir))
+    match = Match(
+        source="steam_history",
+        external_match_id=SHARE_CODE,
+        raw_json=json.dumps({"share_code": SHARE_CODE, "status": "demo_download_pending"}),
+    )
+    db.add(match)
+    db.commit()
+
+    def fake_fetcher(codes):
+        assert codes == [SHARE_CODE]
+        return {
+            "ok": True,
+            "results": [
+                {
+                    "ok": True,
+                    "share_code": SHARE_CODE,
+                    "match_id": "3822708819734036647",
+                    "match_time": 1783022400,
+                    "demo_url": "https://replay.example.test/demo.dem.bz2",
+                }
+            ],
+        }
+
+    def fake_downloader(url, share_code):
+        assert url == "https://replay.example.test/demo.dem.bz2"
+        assert share_code == SHARE_CODE
+        return source
+
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    monkeypatch.setattr("app.services.steam_demo_acquisition._fetch_demo_urls", fake_fetcher)
+    monkeypatch.setattr("app.services.steam_demo_acquisition._download_demo_file", fake_downloader)
+    try:
+        job = run_demo_import_orchestration(db, payload={"share_code": SHARE_CODE})
+    finally:
+        get_settings.cache_clear()
+
+    result = json.loads(job.result_json)
+    db.refresh(match)
+    assert job.status == IMPORT_JOB_COMPLETED
+    assert result["acquisition"]["outcome"] == DEMO_DOWNLOAD_QUEUED_OR_READY
+    assert result["acquisition"]["result"]["demo_reference"]["downloaded"] is True
+    assert result["storage"]["outcome"] == STORAGE_STORED
+    assert Path(result["parser_handoff"]["path"]).is_file()
+    assert match.demo_file == result["parser_handoff"]["path"]
+
+
 def test_import_orchestration_duplicate_storage_reuses_retained_path(db, monkeypatch, tmp_path):
     upload_dir = tmp_path / "uploads"
     source = tmp_path / "fixture.dem"
