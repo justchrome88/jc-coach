@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.api import routes as api_routes
-from app.db.models import CoachReport, Match, SteamAccount, User
+from app.db.models import AnalysisRun, CoachHypothesis, CoachReport, Match, SteamAccount, User
 from app.services.ai_coach import (
     AI_COACH_DOMAIN_CONTRACT_VERSION,
     AI_COACH_PAYLOAD_SCHEMA_VERSION,
@@ -19,6 +19,7 @@ from app.services.ai_coach import (
     build_ai_coach_prompt,
     latest_ai_coach_report,
     list_ai_coach_reports,
+    persist_owner_scoped_coach_hypotheses,
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
@@ -458,6 +459,195 @@ def test_owner_scoped_scope_prioritizes_jc_snapshot_rows_after_filtering(db):
         "blocking_reason_codes"
     ]
     assert payload["coach_insight_cards"][1]["mission_readiness"]["can_become_mission"] is True
+
+
+def test_persist_owner_scoped_coach_hypotheses_keeps_filtered_snapshot_scope(db):
+    owner = User(email="persist-owner@example.test", display_name="Owner", password_hash="hash")
+    db.add(owner)
+    db.commit()
+    db.refresh(owner)
+    match = Match(id=76, source="demo", external_match_id="match-76-fixture-persist-owner-scope")
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    owner_snapshot = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:persist-owner",
+        player_name="JC",
+        player_steamid="persist-owner",
+        source="utility_metrics",
+        source_event_set_id="fixture:persist-owner:utility",
+        metrics={"utility_damage": 95, "he_damage": 95},
+        confidence_baseline={
+            "source": "utility-metrics-v1",
+            "metrics": {
+                "utility_damage": {
+                    "level": "medium",
+                    "usable_for_insights": True,
+                    "usable_for_missions": True,
+                    "hard_recommendation_eligible": True,
+                }
+            },
+        },
+        metadata={"schema_version": "utility-metrics-v1"},
+    )
+    other_snapshot = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:other",
+        player_name="Other",
+        player_steamid="other",
+        source="core_combat_metrics",
+        metrics={
+            "rounds": 12,
+            "opening_deaths": 5,
+            "opening_death_rate": 0.417,
+            "survived_rounds": 1,
+            "survival_rate": 0.083,
+        },
+        confidence_baseline={
+            "source": "core-combat-metrics-v1",
+            "metrics": {
+                "opening_death_rate": {"level": "high"},
+                "survival_rate": {"level": "high"},
+            },
+        },
+    )
+    scope = MetricSnapshotAnalysisScope(
+        match_ids=(match.id,),
+        source="steam",
+        owner_user_id=owner.id,
+        owner_steam_id="persist-owner",
+        player_key="steam:persist-owner",
+        player_steamid="persist-owner",
+        selected_metric_snapshot_ids=(owner_snapshot.id, other_snapshot.id),
+    )
+    payload = build_ai_coach_payload(db, analysis_scope=scope)
+
+    run, hypotheses = persist_owner_scoped_coach_hypotheses(
+        db,
+        analysis_scope=scope,
+        insight_cards=payload["coach_insight_cards"],
+        source_payload={"payload_hash": "fixture"},
+    )
+
+    assert run.user_id == owner.id
+    assert run.owner_steam_id == "persist-owner"
+    assert run.source == "ai_coach_owner_scoped_insights"
+    assert json.loads(run.selected_metric_snapshot_ids_json) == [owner_snapshot.id]
+    persisted_scope = json.loads(run.analysis_scope_json)
+    assert persisted_scope["mode"] == "personal"
+    assert persisted_scope["source_placeholder"] == "steam"
+    assert persisted_scope["window_placeholder"] == "match_set"
+    assert persisted_scope["requested_metric_snapshot_ids"] == [owner_snapshot.id, other_snapshot.id]
+    assert persisted_scope["selected_metric_snapshot_ids"] == [owner_snapshot.id]
+    assert persisted_scope["resolved_metric_snapshot_ids"] == [owner_snapshot.id]
+    assert len(hypotheses) == 1
+    hypothesis = hypotheses[0]
+    assert hypothesis.analysis_run_id == run.id
+    assert hypothesis.user_id == owner.id
+    assert hypothesis.owner_steam_id == "persist-owner"
+    assert hypothesis.confidence == 0.6
+    assert json.loads(hypothesis.evidence_json)[0]["metric_id"] == "utility_damage"
+    assert json.loads(hypothesis.source_card_json)["confidence"] == "medium"
+    assert json.loads(hypothesis.mission_readiness_json)["can_become_mission"] is True
+    assert db.query(AnalysisRun).count() == 1
+    assert db.query(CoachHypothesis).count() == 1
+
+
+def test_persist_owner_scoped_coach_hypotheses_rejects_non_owner_card(db):
+    owner = User(email="persist-reject@example.test", display_name="Owner", password_hash="hash")
+    db.add(owner)
+    db.commit()
+    db.refresh(owner)
+    match = Match(source="demo", external_match_id="persist-non-owner-card")
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:owner",
+        player_name="Owner",
+        player_steamid="owner",
+        source="utility_metrics",
+        metrics={"utility_damage": 80},
+        confidence_baseline={
+            "source": "utility-metrics-v1",
+            "metrics": {"utility_damage": {"level": "medium", "usable_for_insights": True}},
+        },
+    )
+    other_snapshot = create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:other",
+        player_name="Other",
+        player_steamid="other",
+        source="core_combat_metrics",
+        metrics={
+            "rounds": 12,
+            "opening_deaths": 5,
+            "opening_death_rate": 0.417,
+        },
+        confidence_baseline={
+            "source": "core-combat-metrics-v1",
+            "metrics": {"opening_death_rate": {"level": "high"}},
+        },
+    )
+    scope = MetricSnapshotAnalysisScope(
+        match_ids=(match.id,),
+        source="steam",
+        owner_user_id=owner.id,
+        owner_steam_id="owner",
+        player_key="steam:owner",
+        player_steamid="owner",
+        selected_metric_snapshot_ids=(other_snapshot.id,),
+    )
+    non_owner_card = {
+        "problem": "Other player's opening deaths should not persist.",
+        "evidence": [
+            {
+                "metric_id": "opening_death_rate",
+                "value": 0.417,
+                "match_ids": [match.id],
+                "source": "core_combat_metrics",
+            }
+        ],
+        "confidence": "high",
+        "caveats": [],
+        "recommended_focus": "Do not persist.",
+    }
+
+    with pytest.raises(PermissionError, match="owner-scoped metric snapshots"):
+        persist_owner_scoped_coach_hypotheses(
+            db,
+            analysis_scope=scope,
+            insight_cards=[non_owner_card],
+        )
+
+    assert db.query(AnalysisRun).count() == 0
+    assert db.query(CoachHypothesis).count() == 0
+
+
+def test_persist_owner_scoped_coach_hypotheses_rejects_admin_debug_scope(db):
+    debug_card = {
+        "problem": "Debug all snapshots.",
+        "evidence": [{"metric_id": "survival_rate", "value": 0.1, "match_ids": [76]}],
+        "confidence": "high",
+        "caveats": [],
+        "recommended_focus": "Do not persist.",
+    }
+
+    with pytest.raises(ValueError, match="personal analysis scope"):
+        persist_owner_scoped_coach_hypotheses(
+            db,
+            analysis_scope=admin_debug_all_metric_snapshots_scope(match_ids=[76]),
+            insight_cards=[debug_card],
+        )
+
+    assert db.query(AnalysisRun).count() == 0
+    assert db.query(CoachHypothesis).count() == 0
 
 
 def test_ai_payload_uses_exact_recent_matches_and_reports_exclusions(db):

@@ -4,6 +4,7 @@ import hashlib
 import json
 import urllib.error
 import urllib.request
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -13,11 +14,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.db.models import CoachReport, Match
+from app.db.models import AnalysisRun, CoachHypothesis, CoachReport, Match
 from app.services.ai_validator import render_ai_output_markdown, validate_ai_coach_output
 from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
 from app.services.coach_insights import (
+    MAX_PRIORITIZED_COACH_INSIGHTS,
     coach_insights_with_mission_readiness_from_snapshots,
     no_data_insight_card,
     serialize_insight_cards,
@@ -43,6 +45,7 @@ from app.services.metric_truth import (
     metric_truth_payload,
     suppressed_metrics_for_usage,
 )
+from app.services.mission_domain import create_analysis_run, create_coach_hypothesis
 from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
 from app.services.ownership import get_owned_metric_snapshot
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_all_recommendation_progress
@@ -53,6 +56,8 @@ AI_COACH_PAYLOAD_SCHEMA_VERSION = "ai-coach-payload-v1"
 AI_COACH_SNAPSHOT_CONTRACT_VERSION = "ai-coach-snapshot-v1"
 AI_COACH_SNAPSHOT_GENERATED_BY = "app.services.ai_coach"
 AI_COACH_DOMAIN_CONTRACT_VERSION = "cs2-domain-contract-v1"
+ANALYSIS_RUN_SOURCE = "ai_coach_owner_scoped_insights"
+ANALYSIS_WINDOW_PLACEHOLDERS = {"last_30", "last_60", "all_time", "custom", "match_set"}
 
 
 class AIProvider(Protocol):
@@ -162,6 +167,56 @@ def generate_ai_coach_with_provider(
 
 def personal_ai_coach_analysis_scope(db: Session, *, user_id: int | None = None) -> MetricSnapshotAnalysisScope:
     return owner_player_metric_snapshot_scope(db, user_id=user_id)
+
+
+def persist_owner_scoped_coach_hypotheses(
+    db: Session,
+    *,
+    analysis_scope: MetricSnapshotAnalysisScope,
+    insight_cards: Sequence[Mapping[str, Any]],
+    source_payload: Mapping[str, Any] | None = None,
+) -> tuple[AnalysisRun, list[CoachHypothesis]]:
+    if analysis_scope.mode != "personal":
+        raise ValueError("Coach hypotheses can only be persisted from personal analysis scope.")
+    if analysis_scope.owner_user_id is None:
+        raise ValueError("Owner-scoped coach hypotheses require owner_user_id.")
+    owner_snapshot_payloads = _metric_snapshot_payloads_for_scope(db, analysis_scope)
+    if len(insight_cards) > MAX_PRIORITIZED_COACH_INSIGHTS:
+        raise ValueError("Personal hypothesis persistence accepts at most two prioritized insight cards.")
+    cards = [dict(card) for card in insight_cards]
+    for card in cards:
+        _require_owner_backed_insight_card(card, owner_snapshot_payloads)
+
+    resolved_snapshot_ids = [payload["id"] for payload in owner_snapshot_payloads]
+    analysis_scope_metadata = _analysis_run_scope_metadata(
+        analysis_scope,
+        resolved_metric_snapshot_ids=resolved_snapshot_ids,
+    )
+    run = create_analysis_run(
+        db,
+        user_id=analysis_scope.owner_user_id,
+        owner_steam_id=analysis_scope.owner_steam_id,
+        mode="personal",
+        status="created",
+        source=ANALYSIS_RUN_SOURCE,
+        selected_metric_snapshot_ids=resolved_snapshot_ids,
+        analysis_scope=analysis_scope_metadata,
+        source_payload=dict(source_payload or {}),
+    )
+    hypotheses = [
+        create_coach_hypothesis(
+            db,
+            user_id=analysis_scope.owner_user_id,
+            analysis_run_id=run.id,
+            insight_card=card,
+        )
+        for card in cards
+    ]
+    db.commit()
+    db.refresh(run)
+    for hypothesis in hypotheses:
+        db.refresh(hypothesis)
+    return run, hypotheses
 
 
 def ai_provider_health() -> dict[str, Any]:
@@ -453,6 +508,77 @@ def _metric_snapshot_payloads_for_scope(
     return [metric_snapshot_payload(snapshot) for snapshot in snapshots]
 
 
+def _analysis_run_scope_metadata(
+    scope: MetricSnapshotAnalysisScope,
+    *,
+    resolved_metric_snapshot_ids: Sequence[int],
+) -> dict[str, Any]:
+    metadata = scope.to_dict(resolved_metric_snapshot_ids=resolved_metric_snapshot_ids)
+    requested_snapshot_ids = _int_list(metadata.get("selected_metric_snapshot_ids"))
+    metadata["requested_metric_snapshot_ids"] = requested_snapshot_ids
+    metadata["selected_metric_snapshot_ids"] = list(resolved_metric_snapshot_ids)
+    metadata["source_placeholder"] = scope.source if scope.source in {"steam", "faceit"} else "unknown"
+    metadata["window_placeholder"] = _analysis_window_placeholder(scope)
+    return metadata
+
+
+def _analysis_window_placeholder(scope: MetricSnapshotAnalysisScope) -> str:
+    if scope.match_ids:
+        return "match_set"
+    window = scope.window if isinstance(scope.window, Mapping) else {}
+    for key in ("placeholder", "window", "type", "range"):
+        value = str(window.get(key) or "").strip()
+        if value in ANALYSIS_WINDOW_PLACEHOLDERS:
+            return value
+    if window:
+        return "custom"
+    return "all_time"
+
+
+def _require_owner_backed_insight_card(
+    card: Mapping[str, Any],
+    owner_snapshot_payloads: Sequence[Mapping[str, Any]],
+) -> bool:
+    evidence = card.get("evidence") if isinstance(card.get("evidence"), list) else []
+    if not evidence:
+        raise ValueError("Personal coach hypotheses require evidence-backed insight cards.")
+    if not any(
+        isinstance(item, Mapping) and _evidence_matches_owner_snapshot(item, owner_snapshot_payloads)
+        for item in evidence
+    ):
+        raise PermissionError("Insight card is not backed by owner-scoped metric snapshots.")
+    return True
+
+
+def _evidence_matches_owner_snapshot(
+    evidence: Mapping[str, Any],
+    owner_snapshot_payloads: Sequence[Mapping[str, Any]],
+) -> bool:
+    metric_id = str(evidence.get("metric_id") or "").strip()
+    if not metric_id:
+        return False
+    evidence_match_ids = {int(item) for item in _int_list(evidence.get("match_ids"))}
+    evidence_value = _number(evidence.get("value"))
+    evidence_source = evidence.get("source")
+    for snapshot in owner_snapshot_payloads:
+        metrics = snapshot.get("metrics") if isinstance(snapshot.get("metrics"), Mapping) else {}
+        if metric_id not in metrics:
+            continue
+        if evidence_source is not None and snapshot.get("source") != evidence_source:
+            continue
+        snapshot_match_id = snapshot.get("match_id")
+        if evidence_match_ids and snapshot_match_id not in evidence_match_ids:
+            continue
+        snapshot_value = _number(metrics.get(metric_id))
+        if evidence_value is not None and snapshot_value is not None and round(evidence_value, 3) != round(
+            snapshot_value,
+            3,
+        ):
+            continue
+        return True
+    return False
+
+
 def _provider() -> AIProvider:
     provider = get_settings().ai_provider.strip().lower()
     if provider == "local_llm":
@@ -586,6 +712,15 @@ def _int_list(value: Any) -> list[int]:
         except (TypeError, ValueError):
             continue
     return output
+
+
+def _number(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _report_has_presentable_personal_scope(report: CoachReport) -> bool:

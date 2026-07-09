@@ -17,6 +17,11 @@ MISSION_PROGRESS_STATUSES = {
     "insufficient_data",
     "not_following",
 }
+INSIGHT_CONFIDENCE_SCORES = {
+    "low": 0.25,
+    "medium": 0.6,
+    "high": 0.9,
+}
 
 
 def create_analysis_run(
@@ -310,6 +315,10 @@ def _target_metric_candidates(insight_card: Mapping[str, Any]) -> Any:
 def _optional_float(value: Any) -> float | None:
     if value is None:
         return None
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in INSIGHT_CONFIDENCE_SCORES:
+            return INSIGHT_CONFIDENCE_SCORES[normalized]
     return float(value)
 
 
