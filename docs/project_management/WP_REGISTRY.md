@@ -135,11 +135,61 @@ overlay, not as a replacement for a planned product WP.
   tests/evals, gates, confidence/caveats or foundation readiness and does not
   add unsupported CS2/domain claims.
 
+## WP-018 Current Scope
+
+WP-018 preparation/prelude is completed. This does not mark `WP-018` complete
+and does not promote `v0.10`.
+
+Completed prelude evidence:
+
+- `WP-018-01_AI_COACH_QUALITY_BASELINE_AND_GAP_MAP`
+- `WP-018-02_AI_COACH_PROMPT_PAYLOAD_VERSION_SNAPSHOT`
+- `WP-018-03_AI_COACH_DOMAIN_CONSTRAINTS_IN_RUNTIME_PAYLOAD`
+- `WP-018-04_AI_COACH_SEMANTIC_VALIDATOR_CONTRACT`
+- `WP-018-05_AI_COACH_OUTPUT_QUALITY_ACCEPTANCE_FIXTURES`
+- `WP-018-PRELUDE-CLOSE_QUALITY_INFRASTRUCTURE_READY`
+
+Quality infrastructure now available for real WP-018 work:
+
+- version/snapshot metadata;
+- runtime CS2 domain constraints;
+- semantic validator checks;
+- safe fallback behavior;
+- accepted/rejected output-quality fixtures.
+
+Next active scoped task: `WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
+
+Canonical WP-018A-J sequence remains:
+
+| WP ID | Title | Status |
+|---|---|---|
+| `WP-018A` | Coach Output Quality Diagnosis | `planned / next active scoped task` |
+| `WP-018B` | Recommendation Category Quality Review | `planned` |
+| `WP-018C` | Survival Recommendation Calibration | `planned` |
+| `WP-018D` | Aim Recommendation Calibration | `planned` |
+| `WP-018E` | Utility / Grenade Recommendation Calibration | `planned` |
+| `WP-018F` | Map-Specific Recommendation Calibration | `planned` |
+| `WP-018G` | Weak Metric Claim Suppression Review | `planned` |
+| `WP-018H` | Coach Explanation / Actionability Repair | `planned` |
+| `WP-018I` | 5-10 Match Real Usage Acceptance | `planned` |
+| `WP-018J` | Promote Coach Quality Calibration to v0.10 | `planned` |
+
+Can-carry warnings:
+
+- Starlette/TestClient deprecation warning remains known.
+- Provider-specific structured response enforcement remains shallow.
+- Deterministic semantic checks are not a full entailment proof.
+- Wording calibration remains future WP-018 work.
+- No `v1.0` claim, public/friends readiness, major CS2 expansion, Steam import
+  cap raise, playlist/mode certainty or weak-metric hardening is accepted.
+- DB/schema/data/import/parser/evaluator/runtime/deploy/package work still
+  requires explicit task scope.
+
 ## Future Version Registry
 
 | WP ID | Title | Version target | Status | Report path | Dependencies | Notes / warnings |
 |---|---|---|---|---|---|---|
-| `WP-018` | Coach Quality Calibration | `v0.10` | `planned / restart-authorized for scoped AI coach quality lane` | TBD | `WP-017K` promotion, `WP-017Z1`/`WP-017Z2` governance workflow updates, 2026-07-06 foundation hardening closure, `POST-FOUNDATION-01` audit/stabilization `PASS_WITH_WARNINGS`, `PF-STAB-01` restart scope lock | Calibrate coach claims, output quality, progress scoring and weak-metric caveats. Restart is authorized only for narrow AI coach quality/calibration/output-quality tasks. Major coach/domain expansion remains paused; do not mark WP-018 complete or claim full CS2 readiness. Recommended first task: `WP-018-01_AI_COACH_QUALITY_BASELINE_AND_GAP_MAP`. |
+| `WP-018` | Coach Quality Calibration | `v0.10` | `planned / restart-authorized for scoped AI coach quality lane` | TBD | `WP-017K` promotion, `WP-017Z1`/`WP-017Z2` governance workflow updates, 2026-07-06 foundation hardening closure, `POST-FOUNDATION-01` audit/stabilization `PASS_WITH_WARNINGS`, `PF-STAB-01` restart scope lock, completed WP-018 preparation/prelude layer | Calibrate coach claims, output quality, progress scoring and weak-metric caveats. Restart is authorized only for narrow AI coach quality/calibration/output-quality tasks. Major coach/domain expansion remains paused; do not mark WP-018 complete, promote `v0.10` or claim full CS2 readiness. Next active scoped task: `WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`. |
 | `WP-019` | Personal Daily Use UX | `v0.11` | `planned` | TBD | `WP-018` | Daily owner workflow polish without friends/public claims. |
 | `WP-020` | Deployment / Backup / Storage Hardening | `v0.12` | `planned` | TBD | `WP-019` | VPS operation, backup/restore and storage hardening. |
 | `WP-021` | Personal MVP Lock | `v1.0` | `planned` | TBD | `WP-020` | Controlled personal MVP lock; public/friends readiness remains separate. |

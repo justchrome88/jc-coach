@@ -7,25 +7,26 @@ Last updated: 2026-07-09.
 - Product identity: JC Coach remains the primary product. Do not build JC
   Forge unless a future explicit task changes product scope.
 - Current organizational mini-phase: `LEAN_DOCS_CLEANUP` /
-  `CODEX_NATIVE_SIMPLIFICATION`, closed by `LEAN-DOCS-06`; return to scoped
-  JC Coach product work.
+  `CODEX_NATIVE_SIMPLIFICATION`, closed by `LEAN-DOCS-06`; do not return to
+  docs cleanup unless explicitly scoped.
 - One Codex workspace convention: start the main Codex working session from
   `/opt/jc-coach`.
 - Codex PM, Executor, Reviewer and Documentation Steward are prompt roles in
   the same product workspace unless a future explicit task asks for separate
   windows. They are not mandatory separate Codex sessions.
 - Product version: `v0.9`.
-- Current lane: scoped WP-018 restart preparation after
-  `POST_FOUNDATION_AUDIT_AND_STABILIZATION` produced `PASS_WITH_WARNINGS`.
+- Current lane: real WP-018 coach quality work in the scoped AI coach
+  quality/calibration/output-quality lane.
 - Post-foundation audit/stabilization result:
   `POST-FOUNDATION-01_DEFECT_WARNING_AUDIT_AND_STABILIZATION_PLAN` produced
   `PASS_WITH_WARNINGS`; no broad product/runtime remediation is required before
   a narrow WP-018 restart.
-- Current active WP: none; latest completed product WP is `WP-017K Real Data
-  Onboarding Promotion to v0.9`.
-- Next product lane: `WP-018 Coach Quality Calibration`, restart-authorized
-  only for narrow AI coach quality, calibration and output-quality scope. This
-  is not authorization for broad WP-018 expansion or major CS2 product work.
+- Current active WP: `WP-018 Coach Quality Calibration` remains open and is
+  not complete; the preparation/prelude layer is closed.
+- Next scoped task: `WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
+- WP-018 is restart-authorized only for narrow AI coach quality, calibration
+  and output-quality scope. This is not authorization for broad WP-018
+  expansion or major CS2 product work.
 - Allowed WP-018 work is limited to narrow evidence, caveat, calibration,
   output-quality, docs or tests work that improves coach quality and does not
   add unsupported coach/domain claims.
@@ -93,20 +94,32 @@ Last updated: 2026-07-09.
   repo-native agent prompts; this did not change product status.
 - WP-017Z2 added a control-plane protection policy for governance docs; this
   did not change product status.
+- WP-018 preparation/prelude is closed by
+  `WP-018-PRELUDE-CLOSE_QUALITY_INFRASTRUCTURE_READY` and
+  `WP-018-PRELUDE-DOC-SYNC_QUALITY_INFRASTRUCTURE_CANONICAL_UPDATE`.
+- AI coach quality infrastructure now available for real WP-018 work:
+  version/snapshot metadata, runtime CS2 domain constraints, semantic
+  validator checks, safe fallback behavior and accepted/rejected
+  output-quality fixtures.
 
 ## Current Blockers And Limitations
 
 - The lean docs cleanup is organizational work only. It does not authorize JC
-  Forge work, WP-018 restart, major CS2 product work, public/friends access or
-  a `v1.0` claim.
+  Forge work, major CS2 product work, public/friends access or a `v1.0` claim.
 - Foundation hardening is closed only as
   `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
 - Post-foundation audit/stabilization has passed with warnings and authorizes
   only a scoped WP-018 restart for AI coach quality/calibration/output quality.
+- WP-018 prelude closed the quality-infrastructure blocker, but WP-018 itself
+  remains open; do not mark `v0.10` promoted.
 - `READY_FOR_MAJOR_CS2_FEATURE_WORK` is not `YES`; major CS2 feature work and
   unrestricted WP-018 expansion remain paused/blocked.
 - System `v1.0` is not claimed. It remains gated behind future post-foundation
   audit/remediation, later roadmap WPs and explicit acceptance.
+- AI coach can-carry warnings: Starlette/TestClient deprecation warning remains
+  known; provider-specific structured response enforcement remains shallow;
+  deterministic semantic checks are not a full entailment proof; wording
+  calibration remains future WP-018 work.
 
 - Match playlist mode is not accepted as exact in `v0.9`. Current persisted data distinguishes parser/import provenance (`demo`) and generic Valve share-code provenance (`Valve Matchmaking`), but it does not reliably distinguish Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom modes.
 - No playlist-specific claims, filters or recommendations are accepted in `v0.9` unless a future WP captures reliable mode metadata.
@@ -124,11 +137,15 @@ Last updated: 2026-07-09.
 - Do not run live Steam/Valve import, parser jobs, evaluator jobs or manual evaluator unless the current WP explicitly authorizes them.
 - Do not mutate production DB, schema, production files or generated app reports unless the current WP explicitly authorizes them with backup/SHA evidence.
 - Do not raise `STEAM_IMPORT_MAX_DEMOS_PER_RUN` without an explicit cap-change WP.
-- Do not start or change WP-018 product work without an explicit WP-018 prompt.
+- Do not start or change WP-018 product work without an explicit WP-018 prompt;
+  the next authorized prompt should start from
+  `WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
 - Do not start major WP-018/CS2 feature expansion. WP-018 restart is authorized
   only for narrow AI coach quality/calibration/output-quality work when
   explicitly scoped, and it must not add unsupported claims or weaken foundation
   readiness.
+- Do not change DB/schema/data/import/parser/evaluator/runtime/deploy/package
+  files unless the active task explicitly scopes that risk.
 - Do not run `git add`, commit or push without explicit user approval.
 
 ## Source Of Truth

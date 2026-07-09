@@ -14,15 +14,17 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - JC Forge is not the active product and must not be built unless a future
   explicit task changes product scope.
 - Current organizational mini-phase: `LEAN_DOCS_CLEANUP` /
-  `CODEX_NATIVE_SIMPLIFICATION`, closed by `LEAN-DOCS-06`; return to scoped
-  JC Coach product work.
+  `CODEX_NATIVE_SIMPLIFICATION`, closed by `LEAN-DOCS-06`; do not return to
+  docs cleanup unless explicitly scoped.
 - Current product version: `v0.9`.
-- Current lane: scoped WP-018 restart preparation after
-  `POST_FOUNDATION_AUDIT_AND_STABILIZATION` produced `PASS_WITH_WARNINGS`.
-- Current active WP: none; latest completed product WP is `WP-017K Real Data Onboarding Promotion to v0.9`.
-- Next product lane: `WP-018 Coach Quality Calibration` targeting `v0.10`,
-  restart-authorized only for narrow AI coach quality, calibration and
-  output-quality scope. This is not a broad product expansion.
+- Current lane: real WP-018 coach quality work in the scoped AI coach
+  quality/calibration/output-quality lane.
+- Current active WP: `WP-018 Coach Quality Calibration` remains open and is
+  not complete; the preparation/prelude layer is closed.
+- Next scoped task: `WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
+- WP-018 targets `v0.10`, but `v0.10` is not promoted. Work remains authorized
+  only for narrow AI coach quality, calibration and output-quality scope. This
+  is not a broad product expansion.
 - Runtime: FastAPI / Uvicorn service `jc-coach.service` on `127.0.0.1:8010`.
 - Production DB: `data/cs2_coach.db`.
 
@@ -32,9 +34,9 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 2. Read `docs/CURRENT_STATUS.md`.
 3. Read `docs/project_management/WP_REGISTRY.md`.
 4. For a new long session or chat handoff, also read this file.
-5. Use `/opt/jc-coach-pm` only as PM memory, archive or reference when the
-   active task explicitly needs that context. It is not the primary Codex
-   launch workspace.
+5. Use `/opt/jc-coach-pm` only as legacy archive/reference when the active
+   task explicitly needs that context. It is not the primary Codex launch
+   workspace.
 6. Treat Codex PM, Executor, Reviewer and Documentation Steward as prompt
    roles, not mandatory separate Codex windows.
 7. Read Warm docs only when the task requires them, and state which files are needed and why before reading them.
@@ -71,6 +73,12 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
   with `PASS_WITH_WARNINGS`.
 - PF-STAB-01 closed the restart authorization/scope-lock gate for narrow
   WP-018 AI coach quality/calibration/output-quality work only.
+- WP-018-01 through WP-018-05 plus
+  `WP-018-PRELUDE-CLOSE_QUALITY_INFRASTRUCTURE_READY` closed the WP-018
+  preparation/prelude layer.
+- Runtime AI coach quality infrastructure now available: version/snapshot
+  metadata, runtime CS2 domain constraints, semantic validator checks, safe
+  fallback behavior and accepted/rejected output-quality fixtures.
 
 ## Data And Product Facts To Carry Forward
 
@@ -95,19 +103,25 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - Narrow WP-018 AI coach quality, calibration, output-quality, evidence,
   caveat, docs or tests work may proceed only when explicitly scoped and when
   it improves readiness without adding unsupported claims.
+- Can-carry warnings: Starlette/TestClient deprecation warning remains known;
+  provider-specific structured response enforcement remains shallow;
+  deterministic semantic checks are not a full entailment proof; wording
+  calibration remains future WP-018 work.
 - Docs-only roadmap edits, H1 PASS evidence and H2 closure do not change the
   readiness flag; `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`.
 
 ## Next Safe Step
 
-Proceed to the first narrow WP-018 task:
-`WP-018-01_AI_COACH_QUALITY_BASELINE_AND_GAP_MAP`.
+Proceed to the first real WP-018 task after the closed prelude:
+`WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
 
-That task should be an audit/design baseline for AI coach quality, accepted
-caveats and output-quality gaps. It should not implement broad product
-features, claim major CS2 readiness or change DB/import/parser/evaluator/
-runtime/deploy/package behavior unless a later prompt explicitly scopes that
-risk.
+That task should diagnose real coach output quality against the available
+quality infrastructure: contract snapshot metadata, CS2 domain constraints,
+semantic validator checks, safe fallback behavior and output-quality fixtures.
+It should not return to docs cleanup, Forge, Codex Native, PM repo workflow,
+broad product features, major CS2 readiness claims or DB/import/parser/
+evaluator/runtime/deploy/package behavior unless a later prompt explicitly
+scopes that risk.
 
 ## Forbidden Without Explicit WP Authorization
 

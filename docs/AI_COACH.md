@@ -1,6 +1,6 @@
 # AI Coach
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-09.
 
 ## Current Truth
 
@@ -13,6 +13,12 @@ Stage 5 payloads include `metric_truth`: selected metric definitions plus metric
 Stage 6 parser payloads add clearer warnings for early-death timing, KAST trade component, traded deaths, side stats and utility/flash confidence. AI must treat those warnings as constraints, not as coachable facts by themselves.
 
 Stage 8 adds AI Output Validator without schema changes and without live AI calls. Structured AI output is validated before persistence/display; invalid or free-form output is replaced by safe fallback Markdown and validation metadata is stored in `coach_reports.report_json`.
+
+WP-018 preparation/prelude is closed. Runtime AI coach quality infrastructure
+now includes version/snapshot metadata, runtime CS2 domain constraints,
+semantic validation, safe fallback behavior and accepted/rejected
+output-quality fixtures. The next real WP-018 task is
+`WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
 
 WP-018-04 extends runtime validation to enforce the current semantic coach
 contract when a payload snapshot is available. Persisted AI coach output is
@@ -195,9 +201,13 @@ Free-form Markdown is no longer accepted as confident coach advice. It is stored
 
 - Provider-specific structured response enforcement is still shallow; current prompt asks for JSON, and validator rejects invalid output after generation/paste.
 - Validation metadata is stored inside existing `coach_reports.report_json`; there is no separate structured AI output table.
+- Deterministic semantic checks and fixtures cover known unsafe claim classes,
+  but they are not a full natural-language entailment proof for every possible
+  unsafe phrasing.
+- Wording calibration remains future WP-018 work.
 
 ## Next Work
 
-- Runtime CS2 domain-constraint block in the AI coach payload.
+- `WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
 - Richer provider-specific structured response mode.
 - Recommendation planner integration after verified problem snapshots exist.
