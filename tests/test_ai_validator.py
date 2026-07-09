@@ -272,6 +272,48 @@ def test_weak_metric_hard_advice_without_caveat_is_rejected():
     assert "weak_metric_hard_advice" in codes
 
 
+def test_unavailable_utility_metric_cannot_support_hard_advice_without_caveat():
+    payload_snapshot = deepcopy(_valid_payload_snapshot())
+    payload_snapshot["metric_confidence"]["metrics"]["grenade_rating"] = {"level": "unavailable"}
+    output = _valid_output(
+        diagnoses=[
+            {
+                "category": "grenades",
+                "severity": "high",
+                "claim": "Grenade rating proves utility quality is poor.",
+                "evidence_metric_ids": ["grenade_rating"],
+                "confidence": "high",
+                "caveats": [],
+            }
+        ],
+        recommendations=[
+            {
+                "category": "grenades",
+                "action": "Replace all grenade routines because grenade rating is bad.",
+                "rationale": "The metric is treated as hard evidence.",
+                "target_metric_ids": ["grenade_rating"],
+                "confidence": "high",
+                "caveats": [],
+            }
+        ],
+        evidence=[
+            {
+                "metric_id": "grenade_rating",
+                "value": None,
+                "metric_confidence": "unavailable",
+                "caveats": ["Unsupported grenade_rating is omitted rather than inferred from weak utility events."],
+            }
+        ],
+    )
+
+    result = validate_ai_coach_output(output, payload_snapshot=payload_snapshot)
+
+    assert result.valid is False
+    codes = {issue.code for issue in result.issues}
+    assert "suppressed_metric_claim" in codes
+    assert "weak_metric_hard_advice" in codes
+
+
 def test_legacy_recommendation_hard_evaluation_is_rejected_without_refresh():
     output = _valid_output(
         summary="Recommendation #1 is working and completed successfully.",
