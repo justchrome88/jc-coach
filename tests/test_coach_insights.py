@@ -522,12 +522,14 @@ def test_utility_value_insight_uses_supported_damage_without_grenade_rating_clai
         {
             "metric_id": "utility_damage",
             "value": 49,
-            "threshold": 40,
+            "positive_activity_signal": True,
+            "positive_activity_signal_threshold": 40,
             "metric_confidence": "medium",
             "match_ids": [42],
             "source": "utility_metrics",
             "description": (
-                "Utility damage is 49 in this snapshot, meeting the 40 first-pass insight threshold. "
+                "Utility damage is 49 in this snapshot, meeting the 40 descriptive positive-activity signal. "
+                "This descriptive single-match signal does not establish a rolling deficiency. "
                 "Supported damage breakdown: he_damage=42, molotov_damage=7."
             ),
             "breakdown": {"he_damage": 42, "molotov_damage": 7},
@@ -568,7 +570,7 @@ def test_unsupported_utility_data_produces_low_confidence_no_claim_with_caveat()
     assert card["problem"] == "Utility value cannot be judged confidently from this match snapshot."
     assert card["confidence"] == "low"
     assert card["evidence"] == []
-    assert "No supported utility_damage evidence met the first-pass utility insight gate." in card["caveats"]
+    assert "No supported utility_damage evidence was available for a descriptive utility insight." in card["caveats"]
     assert (
         "Downstream coach and metrics layers must not infer grenade quality from missing utility data."
         in card["caveats"]
@@ -576,17 +578,16 @@ def test_unsupported_utility_data_produces_low_confidence_no_claim_with_caveat()
 
 
 def test_weak_flash_utility_data_stays_low_confidence_context_only():
-    card = utility_value_insight_from_snapshot(
-        _utility_snapshot(
-            metrics={"enemies_flashed": 1, "flash_detonations": 1},
-            confidence={
-                "enemies_flashed": {"level": "low", "usable_for_insights": False},
-                "flash_detonations": {"level": "low", "usable_for_insights": False},
-                "utility_damage": {"level": "unavailable", "usable_for_insights": False},
-            },
-            caveats=["Source row omitted blind duration; flash value must remain low-confidence."],
-        )
+    snapshot = _utility_snapshot(
+        metrics={"enemies_flashed": 1, "flash_detonations": 1},
+        confidence={
+            "enemies_flashed": {"level": "low", "usable_for_insights": False},
+            "flash_detonations": {"level": "low", "usable_for_insights": False},
+            "utility_damage": {"level": "unavailable", "usable_for_insights": False},
+        },
+        caveats=["Source row omitted blind duration; flash value must remain low-confidence."],
     )
+    card = utility_value_insight_from_snapshot(snapshot)
 
     assert card is not None
     assert validate_insight_cards([card]) == ()
@@ -595,6 +596,30 @@ def test_weak_flash_utility_data_stays_low_confidence_context_only():
     assert all(item["metric_confidence"] == "low" for item in card["evidence"])
     assert UTILITY_WEAK_DATA_CAVEAT in card["caveats"]
     assert "Source row omitted blind duration; flash value must remain low-confidence." in card["caveats"]
+    assert coach_insights_with_mission_readiness_from_snapshots([snapshot])[0]["mission_readiness"][
+        "can_become_mission"
+    ] is False
+
+
+def test_high_confidence_detonation_proxy_cannot_become_utility_mission():
+    snapshot = _utility_snapshot(
+        metrics={"flash_detonations": 3},
+        confidence={
+            "flash_detonations": {
+                "level": "high",
+                "usable_for_insights": True,
+                "usable_for_missions": True,
+                "hard_recommendation_eligible": True,
+            },
+            "utility_damage": {"level": "unavailable", "usable_for_insights": False},
+        },
+    )
+
+    card = coach_insights_with_mission_readiness_from_snapshots([snapshot])[0]
+
+    assert card["evidence"][0]["metric_id"] == "flash_detonations"
+    assert card["mission_readiness"]["can_become_mission"] is False
+    assert "unsupported_utility_proxy_for_mission" in card["mission_readiness"]["blocking_reason_codes"]
 
 
 def test_utility_value_confidence_gate_blocks_hard_claim_from_low_confidence_damage():
@@ -626,13 +651,13 @@ def test_utility_value_confidence_gate_blocks_hard_claim_from_low_confidence_dam
                 "utility_damage is present but did not pass the supported utility insight gate; "
                 "treat it as caveated context only."
             ),
-            "threshold": 40,
+            "positive_activity_signal_threshold": 40,
         }
     ]
     assert "Utility damage source events are incomplete." in card["caveats"]
 
 
-def test_mission_readiness_allows_mission_eligible_owner_card():
+def test_single_match_utility_insight_is_descriptive_but_not_mission_ready():
     utility = _utility_snapshot(
         metrics={"utility_damage": 94, "molotov_damage": 93},
         confidence={
@@ -648,7 +673,7 @@ def test_mission_readiness_allows_mission_eligible_owner_card():
     cards = coach_insights_with_mission_readiness_from_snapshots([utility])
 
     readiness = cards[0]["mission_readiness"]
-    assert readiness["can_become_mission"] is True
+    assert readiness["can_become_mission"] is False
     assert readiness["target_metric_candidate"] == "utility_damage"
     assert readiness["baseline_value"] == 94
     assert readiness["confidence_eligibility"] == {
@@ -656,8 +681,32 @@ def test_mission_readiness_allows_mission_eligible_owner_card():
         "usable_for_missions": True,
         "hard_recommendation_eligible": True,
     }
-    assert readiness["missing_requirements"] == []
-    assert readiness["blocking_reason_codes"] == []
+    assert readiness["missing_requirements"] == ["personal_utility_trend_evidence"]
+    assert readiness["blocking_reason_codes"] == ["utility_trend_evidence_required"]
+
+
+def test_low_supported_utility_value_remains_descriptive_evidence_without_mission_readiness():
+    utility = _utility_snapshot(
+        metrics={"utility_damage": 12},
+        confidence={
+            "utility_damage": {
+                "level": "high",
+                "usable_for_insights": True,
+                "usable_for_missions": True,
+                "hard_recommendation_eligible": True,
+            }
+        },
+    )
+
+    cards = coach_insights_with_mission_readiness_from_snapshots([utility])
+
+    assert cards[0]["confidence"] == "high"
+    assert cards[0]["evidence"][0]["value"] == 12
+    assert cards[0]["evidence"][0]["positive_activity_signal"] is False
+    assert cards[0]["mission_readiness"]["can_become_mission"] is False
+    assert cards[0]["mission_readiness"]["blocking_reason_codes"] == [
+        "utility_trend_evidence_required"
+    ]
 
 
 def test_mission_readiness_blocks_suppressed_snapshot_metric_with_reason_codes():

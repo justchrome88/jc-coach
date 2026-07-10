@@ -18,7 +18,16 @@ SURVIVAL_RATE_THRESHOLD = 0.55
 MIN_TRADE_STATUS_KNOWN_DEATHS = 2
 MIN_UNTRADED_DEATHS = 2
 UNTRADED_DEATH_RATE_THRESHOLD = 0.60
-MIN_UTILITY_DAMAGE_FOR_INSIGHT = 40
+MIN_UTILITY_DAMAGE_FOR_POSITIVE_ACTIVITY_SIGNAL = 40
+UTILITY_CONTEXT_ONLY_METRICS = {
+    "enemies_flashed",
+    "flash_assists",
+    "flash_detonations",
+    "smoke_detonations",
+    "he_detonations",
+    "molotov_detonations",
+    "grenade_rating",
+}
 MAX_PRIORITIZED_COACH_INSIGHTS = 2
 MEDIUM_CONFIDENCE_CAVEAT = "Metric confidence is medium, so treat this as a bounded review signal."
 
@@ -357,6 +366,13 @@ def mission_readiness_for_card(
         missing_requirements.append("metric_confidence_baseline")
         blocking_reason_codes.append("missing_metric_confidence_baseline")
 
+    if target_metric == "utility_damage":
+        missing_requirements.append("personal_utility_trend_evidence")
+        blocking_reason_codes.append("utility_trend_evidence_required")
+    elif target_metric in UTILITY_CONTEXT_ONLY_METRICS:
+        missing_requirements.append("supported_utility_damage_trend")
+        blocking_reason_codes.append("unsupported_utility_proxy_for_mission")
+
     blocking_reason_codes = _ordered_unique(blocking_reason_codes)
     return {
         "can_become_mission": not blocking_reason_codes,
@@ -622,24 +638,33 @@ def _utility_damage_evidence(
     utility_damage = _number(metrics.get("utility_damage"))
     confidence_record = metric_confidence.get("utility_damage")
     confidence = _metric_confidence_level(confidence_record)
+    match_ids = _match_ids(snapshot)
     if (
         utility_damage is None
-        or utility_damage < MIN_UTILITY_DAMAGE_FOR_INSIGHT
+        or not match_ids
         or confidence not in USABLE_INSIGHT_CONFIDENCE
         or not _confidence_usable_for_insights(confidence_record)
     ):
         return None
 
+    positive_activity_signal = utility_damage >= MIN_UTILITY_DAMAGE_FOR_POSITIVE_ACTIVITY_SIGNAL
+    signal_description = (
+        f"meeting the {MIN_UTILITY_DAMAGE_FOR_POSITIVE_ACTIVITY_SIGNAL} descriptive positive-activity signal"
+        if positive_activity_signal
+        else f"below the {MIN_UTILITY_DAMAGE_FOR_POSITIVE_ACTIVITY_SIGNAL} descriptive positive-activity signal"
+    )
+
     evidence: dict[str, Any] = {
         "metric_id": "utility_damage",
         "value": int(utility_damage),
-        "threshold": MIN_UTILITY_DAMAGE_FOR_INSIGHT,
+        "positive_activity_signal": positive_activity_signal,
+        "positive_activity_signal_threshold": MIN_UTILITY_DAMAGE_FOR_POSITIVE_ACTIVITY_SIGNAL,
         "metric_confidence": confidence,
-        "match_ids": _match_ids(snapshot),
+        "match_ids": match_ids,
         "source": snapshot.get("source"),
         "description": (
-            f"Utility damage is {int(utility_damage)} in this snapshot, meeting the "
-            f"{MIN_UTILITY_DAMAGE_FOR_INSIGHT} first-pass insight threshold."
+            f"Utility damage is {int(utility_damage)} in this snapshot, {signal_description}. "
+            "This descriptive single-match signal does not establish a rolling deficiency."
         ),
     }
     breakdown = _utility_damage_breakdown(metrics)
@@ -714,17 +739,12 @@ def _unsupported_utility_caveats(
     metric_confidence: Mapping[str, Any],
 ) -> list[str]:
     caveats = [
-        "No supported utility_damage evidence met the first-pass utility insight gate.",
+        "No supported utility_damage evidence was available for a descriptive utility insight.",
         (
             "Weak flash and detonation facts cannot be converted into grenade value, flash assists, lineups, "
             "or grenade_rating."
         ),
     ]
-    utility_damage = _number(metrics.get("utility_damage"))
-    if utility_damage is not None and utility_damage < MIN_UTILITY_DAMAGE_FOR_INSIGHT:
-        caveats.append(
-            f"Utility damage is below the {MIN_UTILITY_DAMAGE_FOR_INSIGHT} first-pass insight threshold."
-        )
     utility_confidence = _mapping(metric_confidence.get("utility_damage"))
     caveats.extend(_string_list(utility_confidence.get("reasons")))
     caveats.extend(_string_list(snapshot.get("caveats")))
@@ -807,7 +827,7 @@ def _weak_utility_evidence(
             ),
         }
         if metric_id == "utility_damage":
-            item["threshold"] = MIN_UTILITY_DAMAGE_FOR_INSIGHT
+            item["positive_activity_signal_threshold"] = MIN_UTILITY_DAMAGE_FOR_POSITIVE_ACTIVITY_SIGNAL
         evidence.append(item)
     return evidence[:3]
 
@@ -890,6 +910,8 @@ def _confidence_score(confidence: Any) -> int:
 def _evidence_strength_score(metric_id: str, evidence: Mapping[str, Any]) -> float:
     value = _number(evidence.get("value")) or 0.0
     threshold = _number(evidence.get("threshold"))
+    if metric_id == "utility_damage":
+        return 0.0
     if metric_id == "survival_rate":
         return max(0.0, (threshold if threshold is not None else SURVIVAL_RATE_THRESHOLD) - value)
     if threshold is not None:

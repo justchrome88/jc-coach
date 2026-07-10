@@ -40,8 +40,8 @@ from app.services.mission_domain import (
     create_coach_hypothesis,
     create_draft_coach_mission,
     list_mission_progress_evaluations,
+    persist_rolling_mission_candidates,
     record_mission_progress_evaluation,
-    validate_mission_payload,
 )
 
 
@@ -286,33 +286,10 @@ def test_ai_coach_payload_defaults_to_owner_player_metric_snapshot_scope(db):
     assert other_snapshot.id not in payload["analysis_scope"]["resolved_metric_snapshot_ids"]
     assert [card["evidence"][0]["metric_id"] for card in payload["coach_insight_cards"]] == ["utility_damage"]
     assert validate_insight_cards(payload["coach_insight_cards"]) == ()
-    assert payload["coach_insight_cards"][0]["mission_readiness"]["can_become_mission"] is True
-    assert len(payload["coach_mission_payloads"]) == 1
-    mission_payload = payload["coach_mission_payloads"][0]
-    assert validate_mission_payload(mission_payload) == ()
-    assert (
-        mission_payload["title"]
-        == "Utility damage is the only supported utility value signal in this match snapshot"
-    )
-    assert mission_payload["success_metric"] == {
-        "metric_name": "utility_damage",
-        "direction": "higher_is_better",
-        "baseline_value": 94,
-        "target_value": 103.4,
-        "min_sample_matches": None,
-        "min_sample_rounds": None,
-        "confidence_required": 0.6,
-    }
-    assert mission_payload["failure_condition"] == {
-        "metric_name": "utility_damage",
-        "direction": "stay_above",
-        "threshold_value": 94,
-        "reason": "Mission fails if this condition regresses or cannot be evaluated with supported metrics.",
-    }
-    assert mission_payload["linked_insight"] == {
-        "source_insight_card_id": None,
-        "source": "insight_card",
-    }
+    readiness = payload["coach_insight_cards"][0]["mission_readiness"]
+    assert readiness["can_become_mission"] is False
+    assert readiness["blocking_reason_codes"] == ["utility_trend_evidence_required"]
+    assert payload["coach_mission_payloads"] == []
 
 
 def test_ai_coach_payload_reports_active_mission_and_suppresses_duplicate_candidate(db):
@@ -457,7 +434,7 @@ def test_ai_coach_payload_reports_active_mission_and_suppresses_duplicate_candid
 
     mission_metrics = [item["success_metric"]["metric_name"] for item in payload["coach_mission_payloads"]]
     assert "opening_death_rate" not in mission_metrics
-    assert "utility_damage" in mission_metrics
+    assert "utility_damage" not in mission_metrics
     suppression = payload["mission_recommendation_suppression"]
     assert suppression["reason_codes"] == ["active_mission_same_domain"]
     assert suppression["suppressed_recommendations"][0]["reason"] == "active_mission_same_domain"
@@ -655,7 +632,10 @@ def test_owner_scoped_scope_prioritizes_jc_snapshot_rows_after_filtering(db):
     assert "confidence_not_mission_eligible" in payload["coach_insight_cards"][0]["mission_readiness"][
         "blocking_reason_codes"
     ]
-    assert payload["coach_insight_cards"][1]["mission_readiness"]["can_become_mission"] is True
+    assert payload["coach_insight_cards"][1]["mission_readiness"]["can_become_mission"] is False
+    assert payload["coach_insight_cards"][1]["mission_readiness"]["blocking_reason_codes"] == [
+        "utility_trend_evidence_required"
+    ]
 
 
 def test_persist_owner_scoped_coach_hypotheses_keeps_filtered_snapshot_scope(db):
@@ -748,7 +728,9 @@ def test_persist_owner_scoped_coach_hypotheses_keeps_filtered_snapshot_scope(db)
     assert hypothesis.confidence == 0.6
     assert json.loads(hypothesis.evidence_json)[0]["metric_id"] == "utility_damage"
     assert json.loads(hypothesis.source_card_json)["confidence"] == "medium"
-    assert json.loads(hypothesis.mission_readiness_json)["can_become_mission"] is True
+    readiness = json.loads(hypothesis.mission_readiness_json)
+    assert readiness["can_become_mission"] is False
+    assert readiness["blocking_reason_codes"] == ["utility_trend_evidence_required"]
     assert db.query(AnalysisRun).count() == 1
     assert db.query(CoachHypothesis).count() == 1
 
@@ -853,8 +835,20 @@ def test_post_metrics_owner_match_coach_loop_persists_analysis_and_evaluates_act
     db.commit()
     db.refresh(owner)
     db.add(SteamAccount(user_id=owner.id, steam_id="76561198000000076", persona_name="JC"))
-    baseline_match = Match(id=76, source="demo", external_match_id="m02-baseline-match")
-    evaluation_match = Match(id=77, source="demo", external_match_id="m02-evaluation-match")
+    baseline_match = Match(
+        id=76,
+        user_id=owner.id,
+        source="demo",
+        external_match_id="m02-baseline-match",
+        played_at=datetime(2026, 7, 9),
+    )
+    evaluation_match = Match(
+        id=77,
+        user_id=owner.id,
+        source="demo",
+        external_match_id="m02-evaluation-match",
+        played_at=datetime(2026, 7, 10),
+    )
     db.add_all([baseline_match, evaluation_match])
     db.commit()
     baseline_snapshot = create_metric_snapshot(
@@ -880,6 +874,38 @@ def test_post_metrics_owner_match_coach_loop_persists_analysis_and_evaluates_act
         },
         metadata={"schema_version": "utility-metrics-v1", "sample_matches": 1, "sample_rounds": 24},
     )
+    for index, utility_damage in enumerate([*[110] * 5, *[95] * 4], start=1):
+        trend_match = Match(
+            id=59 + index,
+            user_id=owner.id,
+            source="demo",
+            external_match_id=f"m02-trend-match-{index}",
+            played_at=datetime(2026, 6, index),
+        )
+        db.add(trend_match)
+        db.flush()
+        create_metric_snapshot(
+            db,
+            match_id=trend_match.id,
+            player_key="steam:76561198000000076",
+            player_name="JC",
+            player_steamid="76561198000000076",
+            source="utility_metrics",
+            source_event_set_id=f"fixture:m02:trend-utility-{index}",
+            metrics={"utility_damage": utility_damage},
+            confidence_baseline={
+                "source": "utility-metrics-v1",
+                "metrics": {
+                    "utility_damage": {
+                        "level": "medium",
+                        "usable_for_insights": True,
+                        "usable_for_missions": True,
+                        "hard_recommendation_eligible": True,
+                    }
+                },
+            },
+            metadata={"schema_version": "utility-metrics-v1", "sample_matches": 1},
+        )
     baseline_scope = MetricSnapshotAnalysisScope(
         match_ids=(baseline_match.id,),
         source="steam",
@@ -896,11 +922,19 @@ def test_post_metrics_owner_match_coach_loop_persists_analysis_and_evaluates_act
         insight_cards=baseline_payload["coach_insight_cards"],
         source_payload={"acceptance": "m02-baseline"},
     )
+    assert baseline_hypotheses[0].mission_readiness_json
+    assert json.loads(baseline_hypotheses[0].mission_readiness_json)["can_become_mission"] is False
+    rolling = persist_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id="76561198000000076",
+    )
+    assert len(rolling["coach_hypothesis_ids"]) == 1
     draft = create_draft_coach_mission(
         db,
         user_id=owner.id,
-        hypothesis_id=baseline_hypotheses[0].id,
-        title="Improve utility damage",
+        hypothesis_id=rolling["coach_hypothesis_ids"][0],
+        title="Recover utility damage toward personal baseline",
     )
     mission = activate_draft_coach_mission(db, user_id=owner.id, mission_id=draft.id)
     owner_evaluation_snapshot = create_metric_snapshot(
@@ -973,12 +1007,12 @@ def test_post_metrics_owner_match_coach_loop_persists_analysis_and_evaluates_act
     assert summary["primary_metric_result"]["metric_name"] == "utility_damage"
     assert summary["primary_metric_result"]["baseline_value"] == 95
     assert summary["primary_metric_result"]["evaluation_value"] == 122
-    assert summary["primary_metric_result"]["delta"] == 27
-    assert summary["status"] == "improving"
-    assert summary["confidence"] == 0.6
-    assert summary["caveats"] == []
-    assert summary["target_met"] is True
-    assert "reached without failing guardrails" in summary["why_counted_or_not"]
+    assert summary["primary_metric_result"]["delta"] is None
+    assert summary["status"] == "insufficient_data"
+    assert summary["confidence"] == 0.25
+    assert "utility_damage:insufficient_sample_matches" in summary["caveats"]
+    assert summary["target_met"] is False
+    assert "insufficient_data" in summary["why_counted_or_not"]
 
     repeated = process_owner_match_metric_snapshots_for_coach_loop(
         db,
@@ -996,8 +1030,8 @@ def test_post_metrics_owner_match_coach_loop_persists_analysis_and_evaluates_act
     assert repeated["idempotency"]["reused_mission_progress_evaluation_ids"] == result[
         "mission_progress_evaluation_ids"
     ]
-    assert db.query(AnalysisRun).count() == 2
-    assert db.query(CoachHypothesis).count() == 2
+    assert db.query(AnalysisRun).count() == 3
+    assert db.query(CoachHypothesis).count() == 3
     assert len(list_mission_progress_evaluations(db, user_id=owner.id, mission_id=mission.id)) == 1
 
 

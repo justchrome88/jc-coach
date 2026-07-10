@@ -59,7 +59,10 @@ REQUIRED_MISSION_PAYLOAD_FIELDS = ("title", "goal", "rules", "duration", "succes
 SURVIVAL_OPENING_MISSION_METRICS = {"opening_death_rate", "survival_rate"}
 BAD_FIGHT_TRADE_MISSION_METRICS = {"untraded_death_rate"}
 UTILITY_VALUE_MISSION_METRICS = {"utility_damage", "he_damage", "flash_assists", "enemies_flashed"}
-UTILITY_DAMAGE_ROLLING_THRESHOLD = 40.0
+UTILITY_NEGATIVE_TREND_MATERIALITY = 0.10
+MAX_UTILITY_TREND_SUPPORTED_MATCHES = 30
+MIN_UTILITY_TREND_SUPPORTED_MATCHES = 10
+MIN_UTILITY_TREND_SEGMENT_MATCHES = 5
 ROLLING_MISSION_WINDOW_TYPES = {"last_30", "last_60", "custom_match_set"}
 ROLLING_MISSION_METRICS = {
     "survival_rate",
@@ -119,6 +122,59 @@ class MissionPayloadValidationIssue:
 
 
 @dataclass(frozen=True)
+class UtilityTrendEvidence:
+    evidence_available: bool
+    deficiency_detected: bool
+    mission_ready: bool
+    supported_match_ids: tuple[int, ...]
+    supported_snapshot_ids: tuple[int, ...]
+    ignored_oldest_match_ids: tuple[int, ...]
+    baseline_match_ids: tuple[int, ...]
+    recent_match_ids: tuple[int, ...]
+    baseline_snapshot_ids: tuple[int, ...]
+    recent_snapshot_ids: tuple[int, ...]
+    baseline_value: float | None
+    recent_value: float | None
+    absolute_change: float | None
+    absolute_gap: float
+    relative_change: float | None
+    relative_drop: float
+    severity: float
+    confidence: str
+    source: str
+    caveats: tuple[str, ...]
+    materiality_threshold: float
+    reason_codes: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "evidence_available": self.evidence_available,
+            "deficiency_detected": self.deficiency_detected,
+            "mission_ready": self.mission_ready,
+            "supported_match_ids": list(self.supported_match_ids),
+            "supported_snapshot_ids": list(self.supported_snapshot_ids),
+            "supported_match_count": len(self.supported_match_ids),
+            "ignored_oldest_match_ids": list(self.ignored_oldest_match_ids),
+            "baseline_match_ids": list(self.baseline_match_ids),
+            "recent_match_ids": list(self.recent_match_ids),
+            "baseline_snapshot_ids": list(self.baseline_snapshot_ids),
+            "recent_snapshot_ids": list(self.recent_snapshot_ids),
+            "baseline_value": self.baseline_value,
+            "recent_value": self.recent_value,
+            "absolute_change": self.absolute_change,
+            "absolute_gap": self.absolute_gap,
+            "relative_change": self.relative_change,
+            "relative_drop": self.relative_drop,
+            "severity": self.severity,
+            "confidence": self.confidence,
+            "source": self.source,
+            "caveats": list(self.caveats),
+            "materiality_threshold": self.materiality_threshold,
+            "reason_codes": list(self.reason_codes),
+        }
+
+
+@dataclass(frozen=True)
 class RollingMissionWindow:
     user_id: int
     owner_steam_id: str
@@ -133,6 +189,7 @@ class RollingMissionWindow:
     confidence: str
     confidence_score: float
     caveats: tuple[str, ...]
+    utility_trend: UtilityTrendEvidence
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -149,6 +206,7 @@ class RollingMissionWindow:
             "confidence": self.confidence,
             "confidence_score": self.confidence_score,
             "caveats": list(self.caveats),
+            "utility_trend": self.utility_trend.to_dict(),
         }
 
 
@@ -821,11 +879,24 @@ def build_rolling_mission_window(
         match_ids=match_ids,
         match_limit=match_limit,
     )
+    utility_snapshots = (
+        snapshots
+        if window_type == "custom_match_set"
+        else _select_owner_metric_snapshots_for_window(
+            db,
+            user_id=user_id,
+            owner_steam_id=owner_steam_id,
+            window_type=window_type,
+            match_ids=match_ids,
+            match_limit=None,
+        )
+    )
     return _rolling_window_from_snapshots(
         user_id=user_id,
         owner_steam_id=owner_steam_id,
         window_type=window_type,
         snapshots=snapshots,
+        utility_snapshots=utility_snapshots,
     )
 
 
@@ -851,6 +922,7 @@ def generate_rolling_mission_candidates(
     )
     return {
         "window": window.to_dict(),
+        "diagnostics": {"utility_damage": window.utility_trend.to_dict()},
         "active_mission_context": active_context,
         "candidates": [candidate.to_dict() for candidate in candidates],
     }
@@ -872,6 +944,7 @@ def persist_rolling_mission_candidates(
         match_ids=match_ids,
     )
     window = _mapping(result.get("window"))
+    utility_trend = _mapping(window.get("utility_trend"))
     analysis_run = create_analysis_run(
         db,
         user_id=user_id,
@@ -879,7 +952,13 @@ def persist_rolling_mission_candidates(
         mode="personal",
         status="candidate_generated",
         source="rolling_mission_window",
-        selected_metric_snapshot_ids=_int_list(window.get("metric_snapshot_ids")),
+        selected_metric_snapshot_ids=_ordered_ints(
+            [
+                *_int_list(window.get("metric_snapshot_ids")),
+                *_int_list(utility_trend.get("baseline_snapshot_ids")),
+                *_int_list(utility_trend.get("recent_snapshot_ids")),
+            ]
+        ),
         analysis_scope={
             "mode": "personal",
             "owner_user_id": user_id,
@@ -1114,6 +1193,13 @@ def mission_payload_from_insight_card(
     criteria_specs = _criteria_specs_from_insight_card(insight_card)
     if not criteria_specs:
         return None
+    linked_insight: dict[str, Any] = {
+        "source_insight_card_id": _optional_str(insight_card.get("id") or insight_card.get("card_id")),
+        "source": "insight_card",
+    }
+    trend_evidence = _mapping(readiness.get("trend_evidence"))
+    if trend_evidence:
+        linked_insight["trend_evidence"] = trend_evidence
     return _mission_payload_from_parts(
         title=title or _mission_title(
             problem=str(insight_card.get("problem") or ""),
@@ -1125,10 +1211,7 @@ def mission_payload_from_insight_card(
         readiness=readiness,
         criteria_specs=criteria_specs,
         duration=duration,
-        linked_insight={
-            "source_insight_card_id": _optional_str(insight_card.get("id") or insight_card.get("card_id")),
-            "source": "insight_card",
-        },
+        linked_insight=linked_insight,
     )
 
 
@@ -1144,6 +1227,15 @@ def mission_payload_from_hypothesis(
     criteria_specs = _criteria_specs_from_hypothesis(hypothesis)
     if not criteria_specs:
         return None
+    linked_insight: dict[str, Any] = {
+        "source_hypothesis_id": hypothesis.id,
+        "source_insight_card_id": hypothesis.source_insight_card_id,
+        "analysis_run_id": hypothesis.analysis_run_id,
+        "source": "coach_hypothesis",
+    }
+    trend_evidence = _mapping(readiness.get("trend_evidence"))
+    if trend_evidence:
+        linked_insight["trend_evidence"] = trend_evidence
     return _mission_payload_from_parts(
         title=title or _mission_title(problem=hypothesis.problem, primary_metric=str(criteria_specs[0]["metric_name"])),
         problem=hypothesis.problem,
@@ -1152,12 +1244,7 @@ def mission_payload_from_hypothesis(
         readiness=readiness,
         criteria_specs=criteria_specs,
         duration=duration,
-        linked_insight={
-            "source_hypothesis_id": hypothesis.id,
-            "source_insight_card_id": hypothesis.source_insight_card_id,
-            "analysis_run_id": hypothesis.analysis_run_id,
-            "source": "coach_hypothesis",
-        },
+        linked_insight=linked_insight,
     )
 
 
@@ -1273,7 +1360,10 @@ def _select_owner_metric_snapshots_for_window(
         return []
     identity_filter = (
         (MetricSnapshot.player_steamid == owner)
-        | (MetricSnapshot.player_key == f"steam:{owner}")
+        | (
+            MetricSnapshot.player_steamid.is_(None)
+            & (MetricSnapshot.player_key == f"steam:{owner}")
+        )
     )
     stmt = (
         select(MetricSnapshot)
@@ -1297,12 +1387,190 @@ def _select_owner_metric_snapshots_for_window(
     return selected
 
 
+def _utility_trend_evidence_from_snapshots(
+    snapshots: Sequence[MetricSnapshot],
+) -> UtilityTrendEvidence:
+    candidates_by_match: dict[int, list[dict[str, Any]]] = {}
+    match_ids_descending: list[int] = []
+    caveats: list[str] = []
+    blocking_reason_codes: set[str] = set()
+    metric_seen = False
+    accepted_source_seen = False
+    insufficient_confidence_seen = False
+    invalid_sample_identity_seen = False
+
+    for raw_snapshot in snapshots:
+        snapshot = _snapshot_to_mapping(raw_snapshot)
+        metrics = _snapshot_payload_mapping(snapshot, "metrics", "metrics_json")
+        if "utility_damage" not in metrics:
+            continue
+        metric_seen = True
+        value = _metric_numeric_value(metrics.get("utility_damage"))
+        if value is None:
+            continue
+        match_id = _optional_positive_int(snapshot.get("match_id"))
+        snapshot_id = _optional_positive_int(snapshot.get("id"))
+        if match_id is None or snapshot_id is None:
+            invalid_sample_identity_seen = True
+            continue
+        if match_id not in match_ids_descending:
+            match_ids_descending.append(match_id)
+        source = _optional_str(snapshot.get("source")) or "unknown"
+        confidence_payload = _snapshot_payload_mapping(
+            snapshot,
+            "confidence_baseline",
+            "confidence_baseline_json",
+        )
+        confidence = _metric_confidence_metadata(confidence_payload, "utility_damage")
+        candidates_by_match.setdefault(match_id, []).append(
+            {
+                "match_id": match_id,
+                "snapshot_id": snapshot_id,
+                "source": source,
+                "value": value,
+                "confidence": INSIGHT_CONFIDENCE_SCORES.get(confidence["level"]),
+                "confidence_level": confidence["level"],
+                "usable_for_missions": confidence["usable_for_missions"],
+                "sample_rounds": _metric_sample_rounds(snapshot, metrics),
+                "source_parser_artifact_id": _optional_int(snapshot.get("source_parser_artifact_id")),
+                "source_event_set_id": _optional_str(snapshot.get("source_event_set_id")),
+            }
+        )
+        caveats.extend(_snapshot_caveats(snapshot))
+
+    supported_observations: list[dict[str, Any]] = []
+    for match_id in reversed(match_ids_descending):
+        resolution = _resolve_metric_observation(
+            "utility_damage",
+            match_id,
+            candidates_by_match[match_id],
+        )
+        canonical = resolution["canonical"]
+        if canonical is None:
+            blocking_reason_codes.add("conflicting_metric_sources")
+            continue
+        if canonical.get("source") != UTILITY_SNAPSHOT_SOURCE:
+            continue
+        accepted_source_seen = True
+        if (
+            canonical.get("confidence_level") not in MISSION_ELIGIBLE_CONFIDENCE_LEVELS
+            or canonical.get("usable_for_missions") is not True
+        ):
+            insufficient_confidence_seen = True
+            continue
+        supported_observations.append(canonical)
+        if resolution["deduplicated_snapshot_ids"]:
+            caveats.append(
+                "Duplicate utility_damage source observations were canonically resolved without increasing "
+                "the supported match count."
+            )
+
+    if invalid_sample_identity_seen:
+        blocking_reason_codes.add("invalid_sample_identity")
+    if not metric_seen:
+        blocking_reason_codes.add("utility_damage_unavailable")
+    elif not accepted_source_seen:
+        blocking_reason_codes.add("utility_source_not_accepted")
+    if insufficient_confidence_seen and not supported_observations:
+        blocking_reason_codes.add("insufficient_confidence")
+
+    latest_supported = supported_observations[-MAX_UTILITY_TREND_SUPPORTED_MATCHES:]
+    ignored_observations = supported_observations[: -len(latest_supported)] if latest_supported else []
+    evidence_available = bool(latest_supported) and not {
+        "conflicting_metric_sources",
+        "invalid_sample_identity",
+    }.intersection(blocking_reason_codes)
+    if len(latest_supported) < MIN_UTILITY_TREND_SUPPORTED_MATCHES:
+        blocking_reason_codes.add("insufficient_supported_matches")
+
+    segment_size = len(latest_supported) // 2
+    if segment_size < MIN_UTILITY_TREND_SEGMENT_MATCHES:
+        blocking_reason_codes.update(
+            {"insufficient_baseline_segment", "insufficient_recent_segment"}
+        )
+
+    paired_observations: list[dict[str, Any]] = []
+    if segment_size >= MIN_UTILITY_TREND_SEGMENT_MATCHES:
+        paired_observations = latest_supported[-(segment_size * 2) :]
+        ignored_observations.extend(latest_supported[: len(latest_supported) - len(paired_observations)])
+    baseline_observations = paired_observations[:segment_size]
+    recent_observations = paired_observations[segment_size:]
+    baseline_value = (
+        sum(float(item["value"]) for item in baseline_observations) / len(baseline_observations)
+        if baseline_observations
+        else None
+    )
+    recent_value = (
+        sum(float(item["value"]) for item in recent_observations) / len(recent_observations)
+        if recent_observations
+        else None
+    )
+    absolute_change: float | None = None
+    absolute_gap = 0.0
+    relative_change: float | None = None
+    relative_drop = 0.0
+    deficiency_detected = False
+    if baseline_value is not None and recent_value is not None:
+        if baseline_value <= 0:
+            blocking_reason_codes.add("invalid_baseline")
+        else:
+            absolute_change = recent_value - baseline_value
+            absolute_gap = max(0.0, baseline_value - recent_value)
+            relative_change = absolute_change / baseline_value
+            relative_drop = absolute_gap / baseline_value
+            if recent_value >= baseline_value:
+                blocking_reason_codes.add("utility_trend_not_negative")
+            elif relative_drop < UTILITY_NEGATIVE_TREND_MATERIALITY:
+                blocking_reason_codes.add("utility_drop_below_materiality_gate")
+            else:
+                deficiency_detected = True
+
+    mission_ready = evidence_available and deficiency_detected and not blocking_reason_codes
+    used_observations = [*baseline_observations, *recent_observations]
+    confidence_observations = used_observations or latest_supported
+    confidence = _lowest_confidence_level(
+        [str(item.get("confidence_level") or "low") for item in confidence_observations]
+    )
+    sources = sorted({str(item.get("source")) for item in confidence_observations})
+    if sources:
+        trend_source = "+".join(sources)
+    elif accepted_source_seen:
+        trend_source = UTILITY_SNAPSHOT_SOURCE
+    else:
+        trend_source = "unavailable"
+    return UtilityTrendEvidence(
+        evidence_available=evidence_available,
+        deficiency_detected=deficiency_detected,
+        mission_ready=mission_ready,
+        supported_match_ids=tuple(int(item["match_id"]) for item in latest_supported),
+        supported_snapshot_ids=tuple(int(item["snapshot_id"]) for item in latest_supported),
+        ignored_oldest_match_ids=tuple(int(item["match_id"]) for item in ignored_observations),
+        baseline_match_ids=tuple(int(item["match_id"]) for item in baseline_observations),
+        recent_match_ids=tuple(int(item["match_id"]) for item in recent_observations),
+        baseline_snapshot_ids=tuple(int(item["snapshot_id"]) for item in baseline_observations),
+        recent_snapshot_ids=tuple(int(item["snapshot_id"]) for item in recent_observations),
+        baseline_value=round(baseline_value, 3) if baseline_value is not None else None,
+        recent_value=round(recent_value, 3) if recent_value is not None else None,
+        absolute_change=round(absolute_change, 3) if absolute_change is not None else None,
+        absolute_gap=round(absolute_gap, 3),
+        relative_change=round(relative_change, 6) if relative_change is not None else None,
+        relative_drop=round(relative_drop, 6),
+        severity=round(max(0.0, relative_drop), 6),
+        confidence=confidence,
+        source=trend_source,
+        caveats=tuple(sorted(set(caveats))),
+        materiality_threshold=UTILITY_NEGATIVE_TREND_MATERIALITY,
+        reason_codes=tuple(sorted(blocking_reason_codes)),
+    )
+
+
 def _rolling_window_from_snapshots(
     *,
     user_id: int,
     owner_steam_id: str,
     window_type: str,
     snapshots: Sequence[MetricSnapshot],
+    utility_snapshots: Sequence[MetricSnapshot],
 ) -> RollingMissionWindow:
     values_by_metric: dict[str, list[float]] = {}
     confidence_by_metric: dict[str, list[str]] = {}
@@ -1324,6 +1592,8 @@ def _rolling_window_from_snapshots(
             "confidence_baseline_json",
         )
         for metric_name in ROLLING_MISSION_METRICS:
+            if metric_name == "utility_damage":
+                continue
             if metric_name not in metrics:
                 continue
             value = _metric_numeric_value(metrics[metric_name])
@@ -1354,13 +1624,26 @@ def _rolling_window_from_snapshots(
         }
         for metric_name in sorted(values_by_metric)
     }
+    utility_trend = _utility_trend_evidence_from_snapshots(utility_snapshots)
+    if utility_trend.recent_value is not None:
+        metrics["utility_damage"] = utility_trend.recent_value
+    if utility_trend.supported_match_ids:
+        metric_samples["utility_damage"] = {
+            "snapshot_count": len(utility_trend.supported_snapshot_ids),
+            "sample_matches": len(utility_trend.supported_match_ids),
+            "sample_rounds": 0,
+            "confidence": utility_trend.confidence,
+            "usable_for_missions": utility_trend.evidence_available,
+            "canonical_source": utility_trend.source,
+            "reason_codes": list(utility_trend.reason_codes),
+        }
     eligible_confidences = [
         str(sample["confidence"])
         for sample in metric_samples.values()
         if sample.get("usable_for_missions") is True
     ]
     window_confidence = _lowest_confidence_level(eligible_confidences)
-    window_caveats = sorted(set(caveats))
+    window_caveats = sorted(set([*caveats, *utility_trend.caveats]))
     if not snapshots:
         window_caveats.append("No owner-scoped metric snapshots were available for the rolling window.")
     return RollingMissionWindow(
@@ -1377,6 +1660,7 @@ def _rolling_window_from_snapshots(
         confidence=window_confidence,
         confidence_score=INSIGHT_CONFIDENCE_SCORES.get(window_confidence, 0.25),
         caveats=tuple(window_caveats),
+        utility_trend=utility_trend,
     )
 
 
@@ -1452,7 +1736,11 @@ def _rolling_candidate_for_family(
     if not evidence:
         return None
     primary = evidence[0]
-    severity = _rolling_metric_severity(primary_metric, _optional_number(primary.get("value")))
+    severity = _rolling_metric_severity(
+        primary_metric,
+        _optional_number(primary.get("value")),
+        utility_trend=window.utility_trend,
+    )
     if severity <= 0:
         return None
     confidence_level = str(primary.get("metric_confidence") or "low")
@@ -1489,6 +1777,7 @@ def _rolling_candidate_for_family(
         "sample_rounds": window.sample_rounds,
         "confidence": confidence_level,
         "caveats": list(window.caveats),
+        "utility_trend": window.utility_trend.to_dict() if primary_metric == "utility_damage" else None,
     }
     explanation = _rolling_candidate_explanation(primary_metric, primary, window)
     return RollingMissionCandidate(
@@ -1516,10 +1805,36 @@ def _rolling_evidence_for_family(
     family: str,
     primary_metric: str,
 ) -> list[dict[str, Any]]:
+    if family == "utility_value":
+        trend = window.utility_trend
+        if primary_metric != "utility_damage" or not trend.mission_ready:
+            return []
+        return [
+            {
+                "metric_id": "utility_damage",
+                "metric_name": "utility_damage",
+                "value": trend.recent_value,
+                "personal_baseline_value": trend.baseline_value,
+                "materiality_threshold": trend.materiality_threshold,
+                "relative_change": trend.relative_change,
+                "relative_drop": trend.relative_drop,
+                "absolute_change": trend.absolute_change,
+                "absolute_gap": trend.absolute_gap,
+                "metric_confidence": trend.confidence,
+                "sample_count": len(trend.supported_match_ids),
+                "sample_matches": len(trend.supported_match_ids),
+                "source": trend.source,
+                "window_type": window.window_type,
+                "metric_snapshot_ids": [
+                    *trend.baseline_snapshot_ids,
+                    *trend.recent_snapshot_ids,
+                ],
+                "match_ids": [*trend.baseline_match_ids, *trend.recent_match_ids],
+                "trend_evidence": trend.to_dict(),
+            }
+        ]
     if family == "bad_fight_trade":
         metrics = (primary_metric, "opening_death_rate", "traded_death_rate")
-    elif family == "utility_value":
-        metrics = (primary_metric,)
     else:
         metrics = (primary_metric, "survival_rate" if primary_metric == "opening_death_rate" else "opening_death_rate")
     evidence: list[dict[str, Any]] = []
@@ -1534,7 +1849,7 @@ def _rolling_evidence_for_family(
                 "metric_id": metric_name,
                 "metric_name": metric_name,
                 "value": window.metrics[metric_name],
-                "threshold": UTILITY_DAMAGE_ROLLING_THRESHOLD if metric_name == "utility_damage" else None,
+                "threshold": None,
                 "metric_confidence": sample.get("confidence"),
                 "sample_count": sample.get("sample_rounds") or sample.get("snapshot_count") or None,
                 "rounds": sample.get("sample_rounds") or None,
@@ -1561,35 +1876,78 @@ def _rolling_insight_card(
         "opening_death_rate": "Rolling owner window shows too many opening deaths.",
         "survival_rate": "Rolling owner window shows low round survival.",
         "untraded_death_rate": "Rolling owner window shows too many untraded deaths.",
-        "utility_damage": "Increase utility damage.",
+        "utility_damage": "Recent utility damage has materially declined from the preceding personal baseline.",
     }.get(primary_metric, f"Rolling owner window supports a {primary_metric} mission.")
+    caveats = list(window.caveats)
+    if primary_metric == "utility_damage":
+        caveats.extend(
+            [
+                "Utility damage supports personal damage-trend review only; it does not prove grenade quality, "
+                "lineup quality, flash value, or an exact tactical cause.",
+                "The recovery target is the player's preceding owner-scoped utility_damage baseline segment.",
+            ]
+        )
+    readiness: dict[str, Any] = {
+        "can_become_mission": True,
+        "target_metric_candidate": primary_metric,
+        "baseline_value": primary_value,
+        "confidence_eligibility": {
+            "level": confidence_level,
+            "usable_for_missions": True,
+            "hard_recommendation_eligible": True,
+        },
+        "missing_requirements": [],
+        "blocking_reason_codes": [],
+        "source": "rolling_metric_window",
+        "family": family,
+        "window": window.to_dict(),
+    }
+    if primary_metric == "utility_damage":
+        trend = window.utility_trend
+        readiness["baseline_value"] = trend.recent_value
+        readiness["trend_evidence"] = trend.to_dict()
+        readiness["criteria"] = [
+            {
+                "metric_name": "utility_damage",
+                "role": "primary",
+                "direction": "higher_is_better",
+                "baseline_value": trend.recent_value,
+                "target_value": trend.baseline_value,
+                "min_sample_matches": 3,
+                "confidence_required": INSIGHT_CONFIDENCE_SCORES.get(confidence_level, 0.6),
+                "rule": {
+                    "source": "personal_utility_negative_trend",
+                    "target_source": "preceding_personal_baseline_segment",
+                },
+            },
+            {
+                "metric_name": "utility_damage",
+                "role": "guardrail",
+                "direction": "stay_above",
+                "baseline_value": trend.recent_value,
+                "target_value": trend.recent_value,
+                "confidence_required": INSIGHT_CONFIDENCE_SCORES.get(confidence_level, 0.6),
+                "rule": {
+                    "source": "recent_segment_deterioration_guardrail",
+                    "baseline_comparison": "do_not_drop_below_recent_personal_segment",
+                },
+            },
+        ]
     return {
         "id": f"rolling:{window.window_type}:{family}:{primary_metric}",
         "problem": problem,
         "evidence": [dict(item) for item in evidence],
         "confidence": confidence_level,
-        "caveats": list(window.caveats),
+        "caveats": sorted(set(caveats)),
         "recommended_focus": _rolling_recommended_focus(primary_metric),
         "target_metric_candidates": [primary_metric],
-        "mission_readiness": {
-            "can_become_mission": True,
-            "target_metric_candidate": primary_metric,
-            "baseline_value": primary_value,
-            "confidence_eligibility": {
-                "level": confidence_level,
-                "usable_for_missions": True,
-                "hard_recommendation_eligible": True,
-            },
-            "missing_requirements": [],
-            "blocking_reason_codes": [],
-            "source": "rolling_metric_window",
-            "family": family,
-            "window": window.to_dict(),
-        },
+        "mission_readiness": readiness,
     }
 
 
 def _rolling_metric_is_mission_ready(window: RollingMissionWindow, metric_name: str) -> bool:
+    if metric_name == "utility_damage":
+        return window.utility_trend.mission_ready
     sample = window.metric_samples.get(metric_name)
     if sample is None:
         return False
@@ -1601,19 +1959,16 @@ def _rolling_metric_is_mission_ready(window: RollingMissionWindow, metric_name: 
         return False
     if window.sample_matches < MIN_ROLLING_WINDOW_MATCHES:
         return False
-    if metric_name == "utility_damage":
-        value = _optional_number(window.metrics.get(metric_name))
-        snapshot_count = _optional_int(sample.get("snapshot_count")) or 0
-        return (
-            value is not None
-            and value >= UTILITY_DAMAGE_ROLLING_THRESHOLD
-            and snapshot_count >= MIN_ROLLING_WINDOW_MATCHES
-        )
     sample_rounds = _optional_int(sample.get("sample_rounds")) or 0
     return sample_rounds >= MIN_ROLLING_WINDOW_ROUNDS
 
 
-def _rolling_metric_severity(metric_name: str, value: float | None) -> float:
+def _rolling_metric_severity(
+    metric_name: str,
+    value: float | None,
+    *,
+    utility_trend: UtilityTrendEvidence | None = None,
+) -> float:
     if value is None:
         return 0.0
     if metric_name == "untraded_death_rate":
@@ -1623,7 +1978,7 @@ def _rolling_metric_severity(metric_name: str, value: float | None) -> float:
     if metric_name == "survival_rate":
         return round(max(0.0, 0.6 - value), 3)
     if metric_name == "utility_damage":
-        return round(max(0.0, value - UTILITY_DAMAGE_ROLLING_THRESHOLD), 3)
+        return utility_trend.severity if utility_trend is not None else 0.0
     return 0.0
 
 
@@ -1668,6 +2023,13 @@ def _rolling_candidate_explanation(
     primary: Mapping[str, Any],
     window: RollingMissionWindow,
 ) -> str:
+    if primary_metric == "utility_damage":
+        trend = window.utility_trend
+        return (
+            f"Generated from deterministic owner utility trend segments because recent utility_damage was "
+            f"{_format_metric_value(trend.recent_value)} versus the preceding personal baseline of "
+            f"{_format_metric_value(trend.baseline_value)} ({trend.relative_drop:.1%} decline)."
+        )
     value = _optional_number(primary.get("value"))
     value_text = _format_metric_value(value)
     return (
@@ -1684,7 +2046,9 @@ def _rolling_recommended_focus(primary_metric: str) -> str:
     if primary_metric == "survival_rate":
         return "Prioritize staying alive through early fights before taking isolated space."
     if primary_metric == "utility_damage":
-        return "Review damage-producing grenade rounds before making broader utility changes."
+        return (
+            "Recover supported utility damage toward the preceding personal baseline without inferring tactical cause."
+        )
     return f"Improve {primary_metric.replace('_', ' ')} with supported owner metrics."
 
 
@@ -2988,6 +3352,8 @@ def _mission_title(*, problem: str, primary_metric: str) -> str:
         return "Reduce opening deaths"
     if primary_metric == "survival_rate":
         return "Improve round survival"
+    if primary_metric == "utility_damage":
+        return "Recover utility damage toward personal baseline"
     cleaned_problem = problem.strip().rstrip(".")
     if cleaned_problem:
         return cleaned_problem[:120]
@@ -3013,6 +3379,11 @@ def _mission_goal(*, problem: str, primary: Mapping[str, Any]) -> str:
             return (
                 f"Raise survival_rate from {float(baseline):.3f} to {float(target):.3f} "
                 "over upcoming owner matches using supported metric snapshots."
+            )
+        if metric_name == "utility_damage":
+            return (
+                f"Recover recent utility_damage from {float(baseline):.3f} toward the player's preceding "
+                f"personal baseline of {float(target):.3f} using supported owner metric snapshots."
             )
         return (
             f"Move {metric_name} from {float(baseline):.3f} toward {float(target):.3f} "
@@ -3053,6 +3424,19 @@ def _mission_rules(
             (
                 "Failure is triggered if survival_rate drops below the activation baseline or cannot be "
                 "evaluated with supported metrics."
+            ),
+        ]
+    elif metric_name == "utility_damage":
+        rules = [
+            "Measure recovery only with canonical owner-scoped utility_damage observations.",
+            (
+                "Recover toward the preceding personal baseline without treating an absolute utility value "
+                "as universally good or bad."
+            ),
+            "Treat a drop below the recent-segment activation baseline as further deterioration.",
+            (
+                "Do not infer grenade quality, lineup quality, flash value, or an exact tactical cause "
+                "from utility damage."
             ),
         ]
     else:
@@ -3405,6 +3789,8 @@ def _failure_reason(source: Mapping[str, Any]) -> str:
             "Mission fails if survival_rate drops below the activation baseline or cannot be evaluated "
             "with supported metrics."
         )
+    if metric_name == "utility_damage":
+        return "Mission guardrail triggers if utility_damage drops below the recent personal-segment baseline."
     return "Mission fails if this condition regresses or cannot be evaluated with supported metrics."
 
 

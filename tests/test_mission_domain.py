@@ -1779,15 +1779,14 @@ def test_rolling_custom_match_set_uses_only_requested_owner_matches(db):
 def test_rolling_window_generates_and_suppresses_utility_value_candidate(db):
     owner = _user(db, "owner")
     owner_steam_id = "76561198000000001"
-    for index, utility_damage in enumerate((55, 52, 61), start=1):
-        match = _match(db, owner=owner, external_match_id=f"utility-{index}", day=index)
-        _rolling_metric_snapshot(
-            db,
-            match=match,
-            owner_steam_id=owner_steam_id,
-            metrics={"utility_damage": utility_damage},
-            confidence_level="medium",
-        )
+    matches, _ = _utility_trend_snapshots(
+        db,
+        owner=owner,
+        owner_steam_id=owner_steam_id,
+        values=[*[50] * 5, *[45] * 5],
+        prefix="utility",
+        confidence_level="medium",
+    )
 
     result = generate_rolling_mission_candidates(
         db,
@@ -1797,11 +1796,43 @@ def test_rolling_window_generates_and_suppresses_utility_value_candidate(db):
     )
 
     candidates = result["candidates"]
+    trend = result["diagnostics"]["utility_damage"]
+    assert trend["evidence_available"] is True
+    assert trend["deficiency_detected"] is True
+    assert trend["mission_ready"] is True
+    assert trend["baseline_match_ids"] == [match.id for match in matches[:5]]
+    assert trend["recent_match_ids"] == [match.id for match in matches[5:]]
+    assert set(trend["baseline_match_ids"]).isdisjoint(trend["recent_match_ids"])
+    assert trend["baseline_value"] == 50
+    assert trend["recent_value"] == 45
+    assert trend["relative_drop"] == 0.1
+    assert trend["severity"] == 0.1
     assert [candidate["primary_metric"] for candidate in candidates] == ["utility_damage"]
     assert candidates[0]["family"] == "utility_value"
-    assert candidates[0]["mission_payload"]["title"] == "Increase utility damage"
-    assert candidates[0]["mission_payload"]["success_metric"]["direction"] == "higher_is_better"
-    assert validate_mission_payload(candidates[0]["mission_payload"]) == ()
+    payload = candidates[0]["mission_payload"]
+    assert payload["title"] == "Recover utility damage toward personal baseline"
+    assert payload["success_metric"] == {
+        "metric_name": "utility_damage",
+        "direction": "higher_is_better",
+        "baseline_value": 45,
+        "target_value": 50,
+        "min_sample_matches": 3,
+        "min_sample_rounds": None,
+        "confidence_required": 0.6,
+    }
+    assert payload["duration"]["min_matches"] == 3
+    assert payload["duration"]["max_matches"] == 5
+    assert payload["linked_insight"]["trend_evidence"] == trend
+    assert validate_mission_payload(payload) == ()
+    payload_text = json.dumps(payload).lower()
+    assert "grenade quality" in payload_text
+    assert "lineup quality" in payload_text
+    assert "flash value" in payload_text
+    assert "exact tactical cause" in payload_text
+    assert all(
+        unsupported_claim not in payload["goal"].lower()
+        for unsupported_claim in ("grenade quality", "lineup quality", "flash value", "exact tactical cause")
+    )
 
     active_mission = _active_mission_from_card(
         db,
@@ -1824,6 +1855,344 @@ def test_rolling_window_generates_and_suppresses_utility_value_candidate(db):
     assert utility["suppression_reason_codes"] == ["active_mission_same_domain"]
     assert utility["suppression_key"]["domain_key"] == "utility_value"
     assert suppressed["coach_hypothesis_ids"] == []
+
+
+@pytest.mark.parametrize(
+    ("recent_value", "candidate_expected", "reason_code", "expected_severity"),
+    [
+        (55, False, "utility_trend_not_negative", 0.0),
+        (50, False, "utility_trend_not_negative", 0.0),
+        (46, False, "utility_drop_below_materiality_gate", 0.08),
+        (45.5, False, "utility_drop_below_materiality_gate", 0.09),
+        (45, True, None, 0.1),
+        (40, True, None, 0.2),
+    ],
+)
+def test_utility_trend_direction_and_materiality_gate(
+    db,
+    recent_value,
+    candidate_expected,
+    reason_code,
+    expected_severity,
+):
+    owner = _user(db, f"owner-{recent_value}")
+    owner_steam_id = f"7656119800000{int(recent_value * 10):04d}"
+    _utility_trend_snapshots(
+        db,
+        owner=owner,
+        owner_steam_id=owner_steam_id,
+        values=[*[50] * 5, *[recent_value] * 5],
+        prefix=f"direction-{recent_value}",
+    )
+
+    result = generate_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id=owner_steam_id,
+    )
+
+    trend = result["diagnostics"]["utility_damage"]
+    assert trend["severity"] == expected_severity
+    assert bool(result["candidates"]) is candidate_expected
+    if reason_code is None:
+        assert trend["reason_codes"] == []
+    else:
+        assert reason_code in trend["reason_codes"]
+
+
+def test_utility_trend_windows_are_chronological_deterministic_and_bounded(db):
+    owner_21 = _user(db, "owner-21")
+    owner_21_steam_id = "76561198000000021"
+    matches_21, _ = _utility_trend_snapshots(
+        db,
+        owner=owner_21,
+        owner_steam_id=owner_21_steam_id,
+        values=[999, *[50] * 10, *[45] * 10],
+        prefix="window-21",
+    )
+
+    result_21 = generate_rolling_mission_candidates(
+        db,
+        user_id=owner_21.id,
+        owner_steam_id=owner_21_steam_id,
+    )
+    trend_21 = result_21["diagnostics"]["utility_damage"]
+    assert trend_21["ignored_oldest_match_ids"] == [matches_21[0].id]
+    assert trend_21["baseline_match_ids"] == [match.id for match in matches_21[1:11]]
+    assert trend_21["recent_match_ids"] == [match.id for match in matches_21[11:]]
+
+    owner_31 = _user(db, "owner-31")
+    owner_31_steam_id = "76561198000000031"
+    matches_31, _ = _utility_trend_snapshots(
+        db,
+        owner=owner_31,
+        owner_steam_id=owner_31_steam_id,
+        values=[999, *[50] * 15, *[45] * 15],
+        prefix="window-31",
+    )
+
+    result_31 = generate_rolling_mission_candidates(
+        db,
+        user_id=owner_31.id,
+        owner_steam_id=owner_31_steam_id,
+    )
+    trend_31 = result_31["diagnostics"]["utility_damage"]
+    assert trend_31["supported_match_count"] == 30
+    assert matches_31[0].id not in trend_31["supported_match_ids"]
+    assert trend_31["ignored_oldest_match_ids"] == [matches_31[0].id]
+    assert trend_31["baseline_match_ids"] == [match.id for match in matches_31[1:16]]
+    assert trend_31["recent_match_ids"] == [match.id for match in matches_31[16:]]
+
+
+def test_utility_trend_deduplicates_sources_and_excludes_non_owner_snapshots(db):
+    owner = _user(db, "utility-owner-dedup")
+    other = _user(db, "utility-other-dedup")
+    owner_steam_id = "76561198000000101"
+    matches, canonical_snapshots = _utility_trend_snapshots(
+        db,
+        owner=owner,
+        owner_steam_id=owner_steam_id,
+        values=[*[50] * 5, *[45] * 5],
+        prefix="dedup-owner",
+    )
+    duplicate_snapshot_ids = []
+    for match, value in zip(matches, [*[50] * 5, *[45] * 5], strict=True):
+        duplicate_snapshot_ids.append(
+            _rolling_metric_snapshot(
+                db,
+                match=match,
+                owner_steam_id=owner_steam_id,
+                metrics={"utility_damage": value},
+                source="core_combat_metrics",
+            ).id
+        )
+    _utility_trend_snapshots(
+        db,
+        owner=other,
+        owner_steam_id="76561198000000999",
+        values=[*[500] * 5, *[1] * 5],
+        prefix="dedup-other",
+    )
+
+    result = generate_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id=owner_steam_id,
+    )
+
+    trend = result["diagnostics"]["utility_damage"]
+    assert trend["supported_match_count"] == 10
+    assert trend["supported_snapshot_ids"] == [snapshot.id for snapshot in canonical_snapshots]
+    assert set(duplicate_snapshot_ids).isdisjoint(trend["supported_snapshot_ids"])
+    assert "Duplicate utility_damage source observations" in " ".join(trend["caveats"])
+
+
+def test_utility_trend_fails_closed_for_insufficient_confidence_conflict_and_invalid_baseline(db):
+    insufficient_owner = _user(db, "utility-insufficient")
+    insufficient_steam_id = "76561198000000201"
+    _utility_trend_snapshots(
+        db,
+        owner=insufficient_owner,
+        owner_steam_id=insufficient_steam_id,
+        values=[*[50] * 4, *[45] * 5],
+        prefix="insufficient",
+    )
+    insufficient = persist_rolling_mission_candidates(
+        db,
+        user_id=insufficient_owner.id,
+        owner_steam_id=insufficient_steam_id,
+    )
+    assert insufficient["candidates"] == []
+    assert insufficient["coach_hypothesis_ids"] == []
+    assert "insufficient_supported_matches" in insufficient["diagnostics"]["utility_damage"]["reason_codes"]
+
+    low_owner = _user(db, "utility-low-confidence")
+    low_steam_id = "76561198000000202"
+    _utility_trend_snapshots(
+        db,
+        owner=low_owner,
+        owner_steam_id=low_steam_id,
+        values=[*[50] * 5, *[40] * 5],
+        prefix="low-confidence",
+        confidence_level="low",
+        usable_for_missions=False,
+    )
+    low = generate_rolling_mission_candidates(db, user_id=low_owner.id, owner_steam_id=low_steam_id)
+    assert low["candidates"] == []
+    assert "insufficient_confidence" in low["diagnostics"]["utility_damage"]["reason_codes"]
+
+    zero_owner = _user(db, "utility-zero-baseline")
+    zero_steam_id = "76561198000000203"
+    _utility_trend_snapshots(
+        db,
+        owner=zero_owner,
+        owner_steam_id=zero_steam_id,
+        values=[*[0] * 5, *[0] * 5],
+        prefix="zero-baseline",
+    )
+    zero = generate_rolling_mission_candidates(db, user_id=zero_owner.id, owner_steam_id=zero_steam_id)
+    assert zero["candidates"] == []
+    assert "invalid_baseline" in zero["diagnostics"]["utility_damage"]["reason_codes"]
+
+    conflict_owner = _user(db, "utility-conflict")
+    conflict_steam_id = "76561198000000204"
+    conflict_matches = []
+    for index, value in enumerate([*[50] * 5, *[40] * 5], start=1):
+        match = _match(db, owner=conflict_owner, external_match_id=f"conflict-{index}", day=index)
+        conflict_matches.append(match)
+        _rolling_metric_snapshot(
+            db,
+            match=match,
+            owner_steam_id=conflict_steam_id,
+            metrics={"utility_damage": value},
+            source="core_combat_metrics",
+        )
+    _rolling_metric_snapshot(
+        db,
+        match=conflict_matches[-1],
+        owner_steam_id=conflict_steam_id,
+        metrics={"utility_damage": 1},
+        source="legacy_owner_metrics",
+    )
+    conflict = generate_rolling_mission_candidates(
+        db,
+        user_id=conflict_owner.id,
+        owner_steam_id=conflict_steam_id,
+    )
+    assert conflict["candidates"] == []
+    assert "conflicting_metric_sources" in conflict["diagnostics"]["utility_damage"]["reason_codes"]
+
+
+def test_valid_utility_candidate_persists_trend_evidence_and_recovers_in_progress(db):
+    owner = _user(db, "utility-persistence")
+    owner_steam_id = "76561198000000301"
+    _utility_trend_snapshots(
+        db,
+        owner=owner,
+        owner_steam_id=owner_steam_id,
+        values=[*[50] * 5, *[45] * 5],
+        prefix="persistence",
+    )
+
+    result = persist_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id=owner_steam_id,
+    )
+
+    trend = result["diagnostics"]["utility_damage"]
+    assert len(result["coach_hypothesis_ids"]) == 1
+    analysis_run = get_analysis_run(db, user_id=owner.id, analysis_run_id=result["analysis_run_id"])
+    hypothesis = get_coach_hypothesis(
+        db,
+        user_id=owner.id,
+        hypothesis_id=result["coach_hypothesis_ids"][0],
+    )
+    assert analysis_run is not None
+    assert hypothesis is not None
+    assert json.loads(analysis_run.source_payload_json)["rolling_window"]["utility_trend"] == trend
+    source_card = json.loads(hypothesis.source_card_json)
+    assert source_card["mission_readiness"]["trend_evidence"] == trend
+    payload = mission_payload_from_insight_card(source_card)
+    assert payload is not None
+    assert payload["linked_insight"]["trend_evidence"] == trend
+
+    mission = activate_coach_mission(
+        db,
+        user_id=owner.id,
+        hypothesis_id=hypothesis.id,
+        title=payload["title"],
+    )
+    recovering_snapshots = [
+        _canonical_snapshot(
+            owner,
+            mission,
+            snapshot_id=4100 + match_id,
+            match_id=match_id,
+            source="utility_metrics",
+            metrics={"utility_damage": 50},
+            confidence={"utility_damage": "high"},
+        )
+        for match_id in (401, 402, 403)
+    ]
+    recovering = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=recovering_snapshots,
+    )
+    unchanged_snapshots = [
+        _canonical_snapshot(
+            owner,
+            mission,
+            snapshot_id=4200 + match_id,
+            match_id=match_id,
+            source="utility_metrics",
+            metrics={"utility_damage": 45},
+            confidence={"utility_damage": "high"},
+        )
+        for match_id in (411, 412, 413)
+    ]
+    unchanged = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=unchanged_snapshots,
+    )
+    assert recovering.status == "improving"
+    assert unchanged.status == "unchanged"
+
+
+def test_active_utility_mission_suppresses_only_equivalent_domain(db):
+    owner = _user(db, "utility-domain-suppression")
+    owner_steam_id = "76561198000000302"
+    matches, _ = _utility_trend_snapshots(
+        db,
+        owner=owner,
+        owner_steam_id=owner_steam_id,
+        values=[*[50] * 5, *[40] * 5],
+        prefix="domain-suppression",
+    )
+    for match in matches:
+        _rolling_metric_snapshot(
+            db,
+            match=match,
+            owner_steam_id=owner_steam_id,
+            metrics={
+                "rounds": 10,
+                "untraded_death_rate": 0.8,
+                "trade_status_known_deaths": 5,
+            },
+            source="core_combat_metrics",
+        )
+    active_utility = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_utility_card_with_follow_rule(),
+        title="Existing utility mission",
+    )
+    active_utility.owner_steam_id = owner_steam_id
+    db.flush()
+
+    result = persist_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id=owner_steam_id,
+    )
+
+    utility = next(candidate for candidate in result["candidates"] if candidate["family"] == "utility_value")
+    trade = next(candidate for candidate in result["candidates"] if candidate["family"] == "bad_fight_trade")
+    assert utility["suppressed_by_active_mission"] is True
+    assert utility["suppression_key"] == {
+        "owner_user_id": owner.id,
+        "owner_steam_id": owner_steam_id,
+        "domain_key": "utility_value",
+        "problem_key": "utility_value",
+        "target_metric": "utility_damage",
+        "mission_payload_type": "utility_value_mission",
+    }
+    assert trade["suppressed_by_active_mission"] is False
+    assert len(result["coach_hypothesis_ids"]) == 1
 
 
 def test_rolling_window_weak_or_unavailable_evidence_generates_no_candidate(db):
@@ -2142,6 +2511,7 @@ def _rolling_metric_snapshot(
     metrics: dict,
     confidence_level: str = "high",
     usable_for_missions: bool = True,
+    source: str = "core_combat_metrics",
 ) -> MetricSnapshot:
     confidence = {
         "source": "rolling-test",
@@ -2166,7 +2536,7 @@ def _rolling_metric_snapshot(
         match_id=match.id,
         player_key=f"steam:{owner_steam_id}",
         player_steamid=owner_steam_id,
-        source="core_combat_metrics",
+        source=source,
         metrics_json=json.dumps(metrics),
         confidence_baseline_json=json.dumps(confidence),
         caveats_json=json.dumps([]),
@@ -2175,6 +2545,35 @@ def _rolling_metric_snapshot(
     db.add(snapshot)
     db.flush()
     return snapshot
+
+
+def _utility_trend_snapshots(
+    db,
+    *,
+    owner: User,
+    owner_steam_id: str,
+    values: list[int | float],
+    prefix: str,
+    confidence_level: str = "high",
+    usable_for_missions: bool = True,
+) -> tuple[list[Match], list[MetricSnapshot]]:
+    matches: list[Match] = []
+    snapshots: list[MetricSnapshot] = []
+    for index, value in enumerate(values, start=1):
+        match = _match(db, owner=owner, external_match_id=f"{prefix}-{index}", day=index)
+        matches.append(match)
+        snapshots.append(
+            _rolling_metric_snapshot(
+                db,
+                match=match,
+                owner_steam_id=owner_steam_id,
+                metrics={"utility_damage": value},
+                confidence_level=confidence_level,
+                usable_for_missions=usable_for_missions,
+                source="utility_metrics",
+            )
+        )
+    return matches, snapshots
 
 
 def _ready_opening_death_card() -> dict:
