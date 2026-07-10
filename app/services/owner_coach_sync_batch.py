@@ -233,6 +233,11 @@ def _record_result(batch: dict[str, Any], result: dict[str, Any]) -> None:
         if summary["status"] == "failed_retryable":
             attempts = batch["runtime"]["retry_attempts"]
             attempts[str(source_id)] = int(attempts.get(str(source_id), 0)) + 1
+            summary["retry"] = {
+                "attempt_count": attempts[str(source_id)],
+                "last_reason_code": (summary.get("reason_codes") or ["retryable_failure"])[0],
+                "decision": "retry" if attempts[str(source_id)] < MAX_RETRYABLE_ATTEMPTS else "terminal_skip",
+            }
         if _is_newly_completed(summary) and source_id not in completed_before:
             batch["runtime"]["completed_source_match_ids"].append(source_id)
             completed_before.add(source_id)
@@ -268,6 +273,12 @@ def _decide_after_step(db: Session, batch: dict[str, Any], result: dict[str, Any
         and _success_count(batch) >= info["requested_successful_new_matches"]
     ):
         _finalize(db, batch, "target_reached", "successful_target_reached")
+        return
+    if any(
+        item.get("selected") and item.get("status") == "created" and not _is_newly_completed(item)
+        for item in batch["matches"]
+    ):
+        _finalize(db, batch, "blocked", "required_completion_lineage_missing")
         return
     if batch["runtime"]["no_progress_iterations"] >= MAX_NO_PROGRESS_ITERATIONS:
         _finalize(db, batch, "partial_success" if _success_count(batch) else "blocked", "no_progress_guard")

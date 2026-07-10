@@ -37,6 +37,9 @@ def test_successful_target_stops_exactly_at_31_and_skips_32nd_success(db, monkey
     assert batch["aggregate_totals"]["unavailable"] == 1
     assert batch["aggregate_totals"]["retryable_failures"] == 1
     assert batch["aggregate_totals"]["reused"] == 1
+    retry = next(item["retry"] for item in batch["matches"] if item["identity"]["source_match_id"] == 3)
+    assert retry["attempt_count"] == 2
+    assert retry["decision"] == "terminal_skip"
     assert len({item["identity"]["source_match_id"] for item in batch["matches"]}) == len(batch["matches"])
     assert json.loads(json.dumps(batch))["schema_version"] == batch_service.OWNER_COACH_SYNC_BATCH_RESULT_SCHEMA_VERSION
     assert "token" not in json.dumps(batch)
@@ -137,6 +140,20 @@ def test_exception_finalizes_and_releases_batch_lock(db, monkeypatch):
     assert batch["batch"]["status"] == "failed"
     assert batch["batch"]["stop_reason"] == "unexpected_failure"
     assert db.get(AppSetting, f"lock:owner_coach_sync_batch:{owner_id}") is None
+
+
+def test_missing_completion_lineage_blocks_without_counting(db, monkeypatch):
+    incomplete = _item(1, "success", selected=True)
+    incomplete["lineage"]["analysis_run"]["id"] = None
+    monkeypatch.setattr(batch_service, "run_owner_coach_sync", lambda _db, **_kwargs: _result([incomplete]))
+    batch = batch_service.start_owner_coach_sync_batch(
+        db, owner_user_id=303, mode="successful_target", target_successful_new_matches=31
+    )
+    batch = batch_service.run_owner_coach_sync_batch_step(db, owner_user_id=303, batch_id=batch["batch"]["batch_id"])
+
+    assert batch["batch"]["status"] == "blocked"
+    assert batch["batch"]["stop_reason"] == "required_completion_lineage_missing"
+    assert batch["batch"]["successful_new_matches"] == 0
 
 
 def _result(matches):
