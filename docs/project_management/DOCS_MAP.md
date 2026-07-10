@@ -1,6 +1,6 @@
 # Docs Map
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-10.
 
 This map connects project docs to the Project OS layer, architecture/product
 layers, guardian ownership, work packages and freshness risk. Current operating
@@ -11,9 +11,9 @@ For human navigation by category, start with `docs/README.md` and `docs/project_
 
 ## Current Routing
 
-F10_MISSION_BACKEND_REPAIR_SEQUENCE is current. The next task is
-F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN; UI/API presentation remains
-blocked until that final real acceptance rerun.
+MISSION_API_AND_UI is current. F10D accepted the mission backend for scoped
+UI/API work. The next task is G01_OWNER_SCOPED_MISSION_API_CONTRACT; public,
+friends and v1.0 claims remain blocked.
 
 ## Context Policy
 

@@ -47,12 +47,13 @@ Allowed statuses: `planned`, `active`, `in_progress`, `done`, `blocked`,
 | F10A_MISSION_PROGRESS_SAMPLE_AND_OBSERVATION_SEMANTICS_REPAIR | accepted | Product 7ee53e3d5ee04a63a5c7dc43803025c0f7d68dc7; PM f4bf9596474f9a0950ac31221b419b8dc246f6c7 | Canonical unique-match sample semantics. |
 | F10B_UTILITY_MISSION_TREND_AND_DEFICIENCY_SEMANTICS_REPAIR | accepted | Product 6925c5b9409b3ab1154938e49e2f5e11dbcd868e; PM ffc2ba8c1043990a726be268462fa786904041f7 | Utility mission requires a personal negative trend. |
 | F10C_F09_EVIDENCE_AND_CONTROL_PLANE_RECONCILIATION | completed | Documentation/control-plane only | Reconciled current routing; no runtime change. |
-| F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN | next | PM task card | Final real acceptance rerun. UI/API remains blocked until accepted. |
+| F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN | accepted_with_warnings | PM report and sanitized JSON artifact | Real owner-data acceptance passed; known Starlette warning only. |
+| G01_OWNER_SCOPED_MISSION_API_CONTRACT | next | Future scoped task card | Define the owner-scoped mission API contract; no public/friends scope. |
 
-Current lane: F10_MISSION_BACKEND_REPAIR_SEQUENCE. Current next task:
-F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN. Owner-only personal scope,
-fail-closed weak evidence, no public/friends readiness and no v1.0 claim
-remain mandatory.
+Current lane: MISSION_API_AND_UI. Mission backend status:
+ACCEPTED_FOR_UI_API. Current next task: G01_OWNER_SCOPED_MISSION_API_CONTRACT.
+Owner-only personal scope, fail-closed weak evidence, no public/friends
+readiness and no v1.0 claim remain mandatory.
 
 ## WP-017 Canonical Order
 

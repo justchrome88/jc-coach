@@ -6,17 +6,18 @@ Last updated: 2026-07-10.
 
 This file is the compact new-session bootstrap for JC Coach. It is not the full project history and must not duplicate `AGENTS.md`.
 
-## Current F10 Handoff
+## Current Mission Backend Handoff
 
-- Current lane: F10_MISSION_BACKEND_REPAIR_SEQUENCE.
-- F09 completed with warnings; the preserved JSON operation evidence identifies
-  parser artifact 90.
-- F10A and F10B are accepted repairs.
-- F10C completed documentation and PM routing synchronization.
-- Next task: F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN.
-- MISSION_BACKEND_ACCEPTED_FOR_UI_API: false. UI/API presentation remains
-  blocked until F10D accepts the final real rerun.
-- Owner-only personal scope, fail-closed weak evidence, no public/friends
+- CURRENT_LANE: MISSION_API_AND_UI.
+- MISSION_BACKEND_STATUS: ACCEPTED_FOR_UI_API.
+- MISSION_BACKEND_ACCEPTED_FOR_UI_API: true.
+- F10D_STATUS: PASS_WITH_WARNINGS.
+- NEXT_TASK: G01_OWNER_SCOPED_MISSION_API_CONTRACT.
+- ACTIVE_OUTBOX_TASK: none.
+- F10D accepted the repaired mission backend on real owner data. F09 remains
+  historical lifecycle evidence only; F10A/F10B semantics are current truth.
+- The accepted warning is the known Starlette/TestClient deprecation warning.
+  Owner-only personal scope, fail-closed weak evidence, no public/friends
   readiness, and no v1.0 claim remain mandatory.
 
 ## Historical Pre-F10 Handoff
@@ -138,9 +139,8 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Current Next Safe Step
 
-Run F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN manually against the
-accepted repaired semantics. Do not authorize mission UI/API work before it
-accepts.
+Run G01_OWNER_SCOPED_MISSION_API_CONTRACT as a narrowly scoped API-contract
+task. F10D acceptance does not authorize public/friends scope or v1.0 claims.
 
 ## Historical Pre-F10 Next Safe Step
 

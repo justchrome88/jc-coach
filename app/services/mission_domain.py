@@ -555,6 +555,7 @@ def update_coach_mission_status(
     mission_id: int,
     status: str,
     ended_at: datetime | None = None,
+    reason: str = "status_update",
 ) -> CoachMission:
     if status not in MISSION_STATUSES:
         raise ValueError(f"Unsupported mission status: {status}")
@@ -582,7 +583,7 @@ def update_coach_mission_status(
         mission,
         previous_status=previous_status,
         next_status=status,
-        reason="status_update",
+        reason=reason,
         occurred_at=mission.ended_at if status in TERMINAL_MISSION_STATUSES else None,
     )
     db.flush()
@@ -619,6 +620,7 @@ def cancel_coach_mission(
     user_id: int,
     mission_id: int,
     ended_at: datetime | None = None,
+    reason: str = "status_update",
 ) -> CoachMission:
     return update_coach_mission_status(
         db,
@@ -626,6 +628,7 @@ def cancel_coach_mission(
         mission_id=mission_id,
         status="cancelled",
         ended_at=ended_at or datetime.now(UTC),
+        reason=reason,
     )
 
 

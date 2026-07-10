@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-10.
 
 Human-readable navigation map. This file does not replace `AGENTS.md`,
 `docs/CURRENT_STATUS.md`, `docs/project_management/WP_REGISTRY.md` or
@@ -14,9 +14,10 @@ without moving or renaming files.
 
 ## Current Routing
 
-F10_MISSION_BACKEND_REPAIR_SEQUENCE is current. The next task is
-F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN. F09 is completed with
-warnings, F10A/F10B are accepted, and UI/API remains blocked until F10D.
+MISSION_API_AND_UI is current. F10D accepted the mission backend for scoped
+UI/API work with the known Starlette warning. The next task is
+G01_OWNER_SCOPED_MISSION_API_CONTRACT; owner-only and fail-closed constraints
+remain mandatory.
 
 ## Hot / Warm / Cold Context
 

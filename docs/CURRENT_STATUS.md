@@ -2,19 +2,22 @@
 
 Last updated: 2026-07-10.
 
-## Current F10 State
+## Current Mission Backend State
 
-- Current lane: F10_MISSION_BACKEND_REPAIR_SEQUENCE.
-- F09 completed with warnings. Its Markdown operation reference is corrected to
-  parser artifact 90, matching the preserved F09 JSON evidence.
-- F10A accepted canonical unique-match mission sample semantics.
-- F10B accepted utility evidence/deficiency separation and requires a personal
-  negative trend before a utility mission is ready.
-- F10C completed documentation and control-plane reconciliation only.
-- Next task: F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN.
-- MISSION_BACKEND_ACCEPTED_FOR_UI_API: false. UI/API presentation remains
-  unauthorized until F10D accepts the final real rerun.
-- Owner-only personal scope remains mandatory. Weak evidence fails closed; no
+- CURRENT_LANE: MISSION_API_AND_UI.
+- MISSION_BACKEND_STATUS: ACCEPTED_FOR_UI_API.
+- MISSION_BACKEND_ACCEPTED_FOR_UI_API: true.
+- F10D_STATUS: PASS_WITH_WARNINGS.
+- NEXT_TASK: G01_OWNER_SCOPED_MISSION_API_CONTRACT.
+- ACTIVE_OUTBOX_TASK: none.
+- F10D accepted corrected unique-match samples, personal-negative utility trend
+  semantics, owner isolation, mission lifecycle/progress, idempotent real match
+  processing, coach payload progress and domain-aware suppression on real owner
+  data. The only current F10D warning is the accepted Starlette/TestClient
+  deprecation warning.
+- F09 remains historical lifecycle evidence; its pre-F10B utility-candidate
+  semantics are superseded. F10A/F10B are current truth.
+- Owner-only personal scope and fail-closed weak evidence remain mandatory. No
   public/friends readiness or v1.0 claim is authorized.
 
 ## Historical Pre-F10 Snapshot
@@ -169,9 +172,9 @@ Last updated: 2026-07-10.
 
 ## Do Not Do Now
 
-- Current routing is F10D, not the historical WP-018/MVP routes below.
-- Do not start UI/API presentation work for the mission backend before F10D
-  accepts its final real rerun.
+- Current routing is G01 owner-scoped mission API contract, not the historical
+  WP-018/MVP routes below. F10D authorizes only the next scoped mission API/UI
+  lane; it does not authorize public/friends access or a v1.0 claim.
 
 - Do not run live Steam/Valve import, parser jobs, evaluator jobs or manual evaluator unless the current WP explicitly authorizes them.
 - Do not mutate production DB, schema, production files or generated app reports unless the current WP explicitly authorizes them with backup/SHA evidence.

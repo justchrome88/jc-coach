@@ -2314,9 +2314,17 @@ def test_pause_and_cancel_mission_status_helpers(db):
     mission = activate_coach_mission(db, user_id=owner.id, hypothesis_id=hypothesis.id, title="Opening deaths")
 
     assert pause_coach_mission(db, user_id=owner.id, mission_id=mission.id).status == "paused"
-    cancelled = cancel_coach_mission(db, user_id=owner.id, mission_id=mission.id)
+    cancelled = cancel_coach_mission(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        reason="superseded_by_utility_semantics_repair",
+    )
     assert cancelled.status == "cancelled"
     assert cancelled.ended_at is not None
+    assert json.loads(cancelled.source_payload_json)["lifecycle_events"][-1]["reason"] == (
+        "superseded_by_utility_semantics_repair"
+    )
 
 
 def test_mission_lifecycle_transitions_are_explicit_and_inactive_missions_do_not_evaluate(db):
