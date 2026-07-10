@@ -37,6 +37,7 @@ from app.services.mission_domain import (
     activate_draft_coach_mission,
     create_draft_coach_mission,
     list_mission_progress_evaluations,
+    validate_mission_payload,
 )
 
 
@@ -203,6 +204,13 @@ def test_ai_coach_payload_includes_deterministic_utility_value_insight_cards(db)
     assert "grenade_rating" not in card["evidence"][0]
 
 
+def test_ai_coach_payload_has_no_mission_payloads_without_insights(db):
+    payload = build_ai_coach_payload(db, analysis_scope=admin_debug_all_metric_snapshots_scope())
+
+    assert payload["coach_insight_cards"] == []
+    assert payload["coach_mission_payloads"] == []
+
+
 def test_ai_coach_payload_defaults_to_owner_player_metric_snapshot_scope(db):
     owner = User(email="owner@example.test", display_name="Owner", password_hash="hash")
     db.add(owner)
@@ -275,6 +283,32 @@ def test_ai_coach_payload_defaults_to_owner_player_metric_snapshot_scope(db):
     assert [card["evidence"][0]["metric_id"] for card in payload["coach_insight_cards"]] == ["utility_damage"]
     assert validate_insight_cards(payload["coach_insight_cards"]) == ()
     assert payload["coach_insight_cards"][0]["mission_readiness"]["can_become_mission"] is True
+    assert len(payload["coach_mission_payloads"]) == 1
+    mission_payload = payload["coach_mission_payloads"][0]
+    assert validate_mission_payload(mission_payload) == ()
+    assert (
+        mission_payload["title"]
+        == "Utility damage is the only supported utility value signal in this match snapshot"
+    )
+    assert mission_payload["success_metric"] == {
+        "metric_name": "utility_damage",
+        "direction": "higher_is_better",
+        "baseline_value": 94,
+        "target_value": 103.4,
+        "min_sample_matches": None,
+        "min_sample_rounds": None,
+        "confidence_required": 0.6,
+    }
+    assert mission_payload["failure_condition"] == {
+        "metric_name": "utility_damage",
+        "direction": "stay_above",
+        "threshold_value": 94,
+        "reason": "Mission fails if this condition regresses or cannot be evaluated with supported metrics.",
+    }
+    assert mission_payload["linked_insight"] == {
+        "source_insight_card_id": None,
+        "source": "insight_card",
+    }
 
 
 def test_api_personal_payload_and_saved_report_exclude_non_owner_metric_snapshots(db):

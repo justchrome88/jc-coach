@@ -50,6 +50,8 @@ from app.services.mission_domain import (
     create_coach_hypothesis,
     evaluate_mission_progress,
     list_active_coach_missions,
+    mission_payload_from_insight_card,
+    serialize_mission_payload,
     serialize_mission_progress_evaluation,
 )
 from app.services.mistake_detection import category_scorecard, detect_structured_mistakes
@@ -574,6 +576,7 @@ def build_ai_coach_payload(
     scope = analysis_scope or default_owner_player_metric_snapshot_scope(db)
     metric_snapshot_payloads = _metric_snapshot_payloads_for_scope(db, scope)
     coach_insight_cards = coach_insights_with_mission_readiness_from_snapshots(metric_snapshot_payloads)
+    coach_mission_payloads = _coach_mission_payloads_from_insight_cards(coach_insight_cards)
     confidence_metadata = {
         "date_window": exact_date_window_metadata(matches, required_sample=15, context=context),
         "metrics": metric_confidence_map(
@@ -620,6 +623,7 @@ def build_ai_coach_payload(
             resolved_metric_snapshot_ids=[payload["id"] for payload in metric_snapshot_payloads]
         ),
         "coach_insight_cards": coach_insight_cards,
+        "coach_mission_payloads": coach_mission_payloads,
         "metric_truth": {
             "metric_registry_version": METRIC_REGISTRY_VERSION,
             "definitions": metric_truth_payload(
@@ -656,6 +660,7 @@ def build_ai_coach_payload(
             "do_not_claim_v1_0": True,
             "do_not_claim_public_or_friends_readiness": True,
             "primary_goal": "give one main training focus and measurable next-match actions",
+            "use_mission_payloads_for_measurable_assignments": True,
         },
     }
 
@@ -676,6 +681,8 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
             "- В insight_cards указывай problem, evidence[], confidence, caveats[], recommended_focus.",
             "- Если coach_insight_cards есть в payload, используй их как детерминированные evidence-backed "
             "cards и не усиливай confidence сверх указанного.",
+            "- Если coach_mission_payloads есть в payload, используй их как единственный источник измеримых "
+            "coach assignments: title, goal, rules, duration, success_metric, failure_condition.",
             "- Insight card без evidence допустим только как low confidence no-data card с caveats.",
             "- В diagnoses указывай category, severity, claim, evidence_metric_ids[], confidence, caveats[].",
             "- В recommendations указывай category, action, rationale, target_metric_ids[], confidence, caveats[].",
@@ -756,6 +763,16 @@ def _require_owner_backed_insight_card(
     ):
         raise PermissionError("Insight card is not backed by owner-scoped metric snapshots.")
     return True
+
+
+def _coach_mission_payloads_from_insight_cards(cards: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    payloads: list[dict[str, Any]] = []
+    for card in cards:
+        mission_payload = mission_payload_from_insight_card(card)
+        serialized = serialize_mission_payload(mission_payload) if mission_payload is not None else {}
+        if serialized:
+            payloads.append(serialized)
+    return payloads
 
 
 def _evidence_matches_owner_snapshot(
