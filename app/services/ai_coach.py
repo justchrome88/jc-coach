@@ -46,6 +46,7 @@ from app.services.metric_truth import (
     suppressed_metrics_for_usage,
 )
 from app.services.mission_domain import (
+    active_mission_context_for_owner,
     create_analysis_run,
     create_coach_hypothesis,
     evaluate_mission_progress,
@@ -53,6 +54,8 @@ from app.services.mission_domain import (
     list_coach_missions,
     list_mission_criteria,
     mission_payload_from_insight_card,
+    mission_suppression_decision_for_payload,
+    mission_suppression_key_from_payload,
     serialize_mission_payload,
     serialize_mission_progress_evaluation,
 )
@@ -785,8 +788,13 @@ def build_ai_coach_payload(
     recent_matches = exact_recent_matches(matches, 10, context=context)
     scope = analysis_scope or default_owner_player_metric_snapshot_scope(db)
     metric_snapshot_payloads = _metric_snapshot_payloads_for_scope(db, scope)
+    active_mission_context = _active_mission_context_for_scope(db, scope)
     coach_insight_cards = coach_insights_with_mission_readiness_from_snapshots(metric_snapshot_payloads)
-    coach_mission_payloads = _coach_mission_payloads_from_insight_cards(coach_insight_cards)
+    coach_mission_payloads, suppressed_mission_recommendations = _coach_mission_payloads_from_insight_cards(
+        coach_insight_cards,
+        scope=scope,
+        active_mission_context=active_mission_context,
+    )
     confidence_metadata = {
         "date_window": exact_date_window_metadata(matches, required_sample=15, context=context),
         "metrics": metric_confidence_map(
@@ -834,6 +842,18 @@ def build_ai_coach_payload(
         ),
         "coach_insight_cards": coach_insight_cards,
         "coach_mission_payloads": coach_mission_payloads,
+        "active_mission_context": active_mission_context,
+        "mission_recommendation_suppression": {
+            "suppressed_recommendations": suppressed_mission_recommendations,
+            "suppressed_count": len(suppressed_mission_recommendations),
+            "reason_codes": sorted(
+                {
+                    reason
+                    for item in suppressed_mission_recommendations
+                    for reason in item.get("reason_codes", [])
+                }
+            ),
+        },
         "metric_truth": {
             "metric_registry_version": METRIC_REGISTRY_VERSION,
             "definitions": metric_truth_payload(
@@ -893,6 +913,10 @@ def build_ai_coach_prompt(payload: dict[str, Any]) -> str:
             "cards и не усиливай confidence сверх указанного.",
             "- Если coach_mission_payloads есть в payload, используй их как единственный источник измеримых "
             "coach assignments: title, goal, rules, duration, success_metric, failure_condition.",
+            "- Если active_mission_context содержит active_missions, сначала объясни progress_status активной "
+            "миссии и не добавляй mission card из mission_recommendation_suppression.suppressed_recommendations.",
+            "- Для active mission: improving/unchanged означает continue focus; regressing/not_following объясняй "
+            "без слепой замены; insufficient_data/no_evaluation_yet не превращай в hard progress/failure claim.",
             "- Insight card без evidence допустим только как low confidence no-data card с caveats.",
             "- В diagnoses указывай category, severity, claim, evidence_metric_ids[], confidence, caveats[].",
             "- В recommendations указывай category, action, rationale, target_metric_ids[], confidence, caveats[].",
@@ -975,14 +999,84 @@ def _require_owner_backed_insight_card(
     return True
 
 
-def _coach_mission_payloads_from_insight_cards(cards: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+def _active_mission_context_for_scope(
+    db: Session,
+    scope: MetricSnapshotAnalysisScope,
+) -> dict[str, Any]:
+    if scope.mode != "personal" or scope.owner_user_id is None or not scope.owner_steam_id:
+        return {
+            "scope": "not_owner_personal",
+            "user_id": scope.owner_user_id,
+            "owner_steam_id": scope.owner_steam_id,
+            "active_mission_count": 0,
+            "active_missions": [],
+            "suppression_keys": [],
+        }
+    return active_mission_context_for_owner(
+        db,
+        user_id=scope.owner_user_id,
+        owner_steam_id=scope.owner_steam_id,
+    )
+
+
+def _coach_mission_payloads_from_insight_cards(
+    cards: Sequence[Mapping[str, Any]],
+    *,
+    scope: MetricSnapshotAnalysisScope,
+    active_mission_context: Mapping[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     payloads: list[dict[str, Any]] = []
+    suppressed: list[dict[str, Any]] = []
+    active_missions = [
+        item
+        for item in active_mission_context.get("active_missions", [])
+        if isinstance(item, Mapping)
+    ]
     for card in cards:
         mission_payload = mission_payload_from_insight_card(card)
         serialized = serialize_mission_payload(mission_payload) if mission_payload is not None else {}
         if serialized:
+            decision = _mission_recommendation_suppression_decision(
+                scope=scope,
+                mission_payload=serialized,
+                active_missions=active_missions,
+            )
+            if decision["suppressed"] is True:
+                suppressed.append(
+                    {
+                        **decision,
+                        "mission_payload": serialized,
+                        "source_insight_problem": card.get("problem"),
+                    }
+                )
+                continue
             payloads.append(serialized)
-    return payloads
+    return payloads, suppressed
+
+
+def _mission_recommendation_suppression_decision(
+    *,
+    scope: MetricSnapshotAnalysisScope,
+    mission_payload: Mapping[str, Any],
+    active_missions: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    if scope.mode != "personal" or scope.owner_user_id is None:
+        return {
+            "suppressed": False,
+            "reason": None,
+            "reason_codes": [],
+            "active_mission_id": None,
+            "key": {},
+        }
+    key = mission_suppression_key_from_payload(
+        owner_user_id=scope.owner_user_id,
+        owner_steam_id=scope.owner_steam_id,
+        mission_payload=mission_payload,
+    )
+    return mission_suppression_decision_for_payload(
+        candidate_key=key,
+        active_mission_summaries=active_missions,
+    ).to_dict()
 
 
 def _evidence_matches_owner_snapshot(

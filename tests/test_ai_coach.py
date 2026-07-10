@@ -34,9 +34,13 @@ from app.services.metric_snapshots import (
 )
 from app.services.metric_truth import METRIC_REGISTRY_VERSION
 from app.services.mission_domain import (
+    activate_coach_mission,
     activate_draft_coach_mission,
+    create_analysis_run,
+    create_coach_hypothesis,
     create_draft_coach_mission,
     list_mission_progress_evaluations,
+    record_mission_progress_evaluation,
     validate_mission_payload,
 )
 
@@ -309,6 +313,159 @@ def test_ai_coach_payload_defaults_to_owner_player_metric_snapshot_scope(db):
         "source_insight_card_id": None,
         "source": "insight_card",
     }
+
+
+def test_ai_coach_payload_reports_active_mission_and_suppresses_duplicate_candidate(db):
+    owner = User(email="active-mission@example.test", display_name="Owner", password_hash="hash")
+    db.add(owner)
+    db.commit()
+    db.refresh(owner)
+    db.add(SteamAccount(user_id=owner.id, steam_id="active-owner-steam", persona_name="JC"))
+    active_card = {
+        "problem": "Opening deaths are too frequent.",
+        "evidence": [{"metric_id": "opening_death_rate", "value": 0.31, "metric_confidence": "medium"}],
+        "confidence": "medium",
+        "caveats": [],
+        "recommended_focus": "Delay first contact.",
+        "mission_readiness": {
+            "can_become_mission": True,
+            "target_metric_candidate": "opening_death_rate",
+            "baseline_value": 0.31,
+            "confidence_eligibility": {
+                "level": "medium",
+                "usable_for_missions": True,
+                "hard_recommendation_eligible": True,
+            },
+            "missing_requirements": [],
+            "blocking_reason_codes": [],
+        },
+    }
+    run = create_analysis_run(db, user_id=owner.id, owner_steam_id="active-owner-steam")
+    hypothesis = create_coach_hypothesis(db, user_id=owner.id, analysis_run_id=run.id, insight_card=active_card)
+    mission = activate_coach_mission(
+        db,
+        user_id=owner.id,
+        hypothesis_id=hypothesis.id,
+        title="Survive openings",
+    )
+    record_mission_progress_evaluation(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        status="improving",
+        result={
+            "components": [
+                {
+                    "metric_name": "opening_death_rate",
+                    "role": "primary",
+                    "direction": "lower_is_better",
+                    "baseline_value": 0.31,
+                    "observed_value": 0.24,
+                    "delta": -0.07,
+                    "target_value": 0.26,
+                    "outcome": "improving",
+                    "target_reached": True,
+                    "reason_codes": [],
+                    "sample_matches": 3,
+                    "sample_rounds": 72,
+                    "confidence": 0.6,
+                }
+            ],
+            "snapshot_comparison": {
+                "metric_name": "opening_death_rate",
+                "before": {"metric_snapshot_ids": [11], "value": 0.31},
+                "after": {"metric_snapshot_ids": [22], "value": 0.24},
+                "delta": -0.07,
+            },
+            "source_metric_snapshot_ids": [22],
+            "target_met": True,
+            "progress_explanation": "Improving on the assigned focus: opening_death_rate moved from 0.31 to 0.24.",
+        },
+        confidence=0.6,
+        caveats=["medium confidence caveat"],
+    )
+    match = Match(source="demo", external_match_id="active-mission-payload")
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:active-owner-steam",
+        player_name="JC",
+        player_steamid="active-owner-steam",
+        source="core_combat_metrics",
+        source_event_set_id="fixture:active-owner:core",
+        metrics={
+            "rounds": 12,
+            "opening_deaths": 4,
+            "opening_death_rate": 0.333,
+            "survived_rounds": 7,
+            "survival_rate": 0.583,
+        },
+        confidence_baseline={
+            "source": "core-combat-metrics-v1",
+            "metrics": {
+                "opening_death_rate": {
+                    "level": "medium",
+                    "usable_for_insights": True,
+                    "usable_for_missions": True,
+                    "hard_recommendation_eligible": True,
+                },
+                "survival_rate": {"level": "high"},
+            },
+        },
+        metadata={"schema_version": "core-combat-metrics-v1"},
+    )
+    create_metric_snapshot(
+        db,
+        match_id=match.id,
+        player_key="steam:active-owner-steam",
+        player_name="JC",
+        player_steamid="active-owner-steam",
+        source="utility_metrics",
+        source_event_set_id="fixture:active-owner:utility",
+        metrics={"utility_damage": 104, "he_damage": 104},
+        confidence_baseline={
+            "source": "utility-metrics-v1",
+            "metrics": {
+                "utility_damage": {
+                    "level": "medium",
+                    "usable_for_insights": True,
+                    "usable_for_missions": True,
+                    "hard_recommendation_eligible": True,
+                }
+            },
+        },
+        metadata={"schema_version": "utility-metrics-v1"},
+    )
+
+    payload = build_ai_coach_payload(db)
+
+    active_summary = payload["active_mission_context"]["active_missions"][0]
+    assert active_summary["mission_id"] == mission.id
+    assert active_summary["title"] == "Survive openings"
+    assert active_summary["progress_status"] == "improving"
+    assert active_summary["metric"] == "opening_death_rate"
+    assert active_summary["baseline_value"] == 0.31
+    assert active_summary["current_value"] == 0.24
+    assert active_summary["delta"] == -0.07
+    assert active_summary["confidence"] == 0.6
+    assert active_summary["caveats"] == ["medium confidence caveat"]
+    assert active_summary["counted"] is True
+    assert "continue the active mission focus" in active_summary["coach_feedback"]
+
+    mission_metrics = [item["success_metric"]["metric_name"] for item in payload["coach_mission_payloads"]]
+    assert "opening_death_rate" not in mission_metrics
+    assert "utility_damage" in mission_metrics
+    suppression = payload["mission_recommendation_suppression"]
+    assert suppression["reason_codes"] == ["active_mission_same_domain"]
+    assert suppression["suppressed_recommendations"][0]["reason"] == "active_mission_same_domain"
+    assert suppression["suppressed_recommendations"][0]["active_mission_id"] == mission.id
+
+    debug_payload = build_ai_coach_payload(db, analysis_scope=admin_debug_all_metric_snapshots_scope())
+    assert debug_payload["active_mission_context"]["scope"] == "not_owner_personal"
+    assert debug_payload["active_mission_context"]["active_missions"] == []
 
 
 def test_api_personal_payload_and_saved_report_exclude_non_owner_metric_snapshots(db):

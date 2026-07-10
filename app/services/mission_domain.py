@@ -151,6 +151,8 @@ class RollingMissionCandidate:
     insight_card: dict[str, Any]
     mission_payload: dict[str, Any]
     window_evidence: dict[str, Any]
+    suppression_key: dict[str, Any]
+    suppression_reason_codes: tuple[str, ...]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -167,6 +169,32 @@ class RollingMissionCandidate:
             "insight_card": dict(self.insight_card),
             "mission_payload": dict(self.mission_payload),
             "window_evidence": dict(self.window_evidence),
+            "suppression_key": dict(self.suppression_key),
+            "suppression_reason_codes": list(self.suppression_reason_codes),
+        }
+
+
+@dataclass(frozen=True)
+class MissionSuppressionDecision:
+    suppressed: bool
+    reason: str | None
+    reason_codes: tuple[str, ...]
+    active_mission_id: int | None
+    active_mission_title: str | None
+    active_mission_status: str | None
+    active_mission_progress_status: str | None
+    key: dict[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "suppressed": self.suppressed,
+            "reason": self.reason,
+            "reason_codes": list(self.reason_codes),
+            "active_mission_id": self.active_mission_id,
+            "active_mission_title": self.active_mission_title,
+            "active_mission_status": self.active_mission_status,
+            "active_mission_progress_status": self.active_mission_progress_status,
+            "key": dict(self.key),
         }
 
 
@@ -794,15 +822,14 @@ def generate_rolling_mission_candidates(
         window_type=window_type,
         match_ids=match_ids,
     )
-    active_metrics = _active_mission_primary_metrics(db, user_id=user_id, owner_steam_id=owner_steam_id)
-    active_domains = _active_mission_domain_keys(db, user_id=user_id, owner_steam_id=owner_steam_id)
+    active_context = active_mission_context_for_owner(db, user_id=user_id, owner_steam_id=owner_steam_id)
     candidates = _rolling_candidates_from_window(
         window,
-        active_primary_metrics=active_metrics,
-        active_domain_keys=active_domains,
+        active_mission_summaries=active_context["active_missions"],
     )
     return {
         "window": window.to_dict(),
+        "active_mission_context": active_context,
         "candidates": [candidate.to_dict() for candidate in candidates],
     }
 
@@ -861,6 +888,103 @@ def persist_rolling_mission_candidates(
     }
 
 
+def active_mission_context_for_owner(
+    db: Session,
+    *,
+    user_id: int,
+    owner_steam_id: str,
+) -> dict[str, Any]:
+    missions = list_active_coach_missions(db, user_id=user_id, owner_steam_id=owner_steam_id)
+    summaries = []
+    for mission in missions:
+        evaluations = list_mission_progress_evaluations(db, user_id=user_id, mission_id=mission.id)
+        summaries.append(
+            serialize_active_mission_summary(
+                mission,
+                latest_evaluation=evaluations[0] if evaluations else None,
+            )
+        )
+    return {
+        "scope": "owner_active_missions",
+        "user_id": user_id,
+        "owner_steam_id": owner_steam_id,
+        "active_mission_count": len(summaries),
+        "active_missions": summaries,
+        "suppression_keys": [summary["suppression_key"] for summary in summaries],
+    }
+
+
+def mission_suppression_key_from_payload(
+    *,
+    owner_user_id: int,
+    owner_steam_id: str | None,
+    mission_payload: Mapping[str, Any] | None,
+    domain_key: str | None = None,
+    problem_key: str | None = None,
+) -> dict[str, Any]:
+    payload = _mapping(mission_payload)
+    success_metric = _mapping(payload.get("success_metric"))
+    target_metric = _optional_str(success_metric.get("metric_name"))
+    resolved_domain_key = domain_key or (_domain_key_for_metric(target_metric) if target_metric else None)
+    return {
+        "owner_user_id": owner_user_id,
+        "owner_steam_id": owner_steam_id,
+        "domain_key": resolved_domain_key,
+        "problem_key": problem_key or resolved_domain_key,
+        "target_metric": target_metric,
+        "mission_payload_type": _mission_payload_type(payload, domain_key=resolved_domain_key),
+    }
+
+
+def mission_suppression_decision_for_payload(
+    *,
+    candidate_key: Mapping[str, Any],
+    active_mission_summaries: Sequence[Mapping[str, Any]],
+) -> MissionSuppressionDecision:
+    key = dict(candidate_key)
+    candidate_owner = key.get("owner_user_id")
+    candidate_steam = key.get("owner_steam_id")
+    candidate_domain = _optional_str(key.get("domain_key"))
+    candidate_problem = _optional_str(key.get("problem_key"))
+    candidate_metric = _optional_str(key.get("target_metric"))
+    candidate_payload_type = _optional_str(key.get("mission_payload_type"))
+    for summary in active_mission_summaries:
+        active_key = _mapping(summary.get("suppression_key"))
+        if active_key.get("owner_user_id") != candidate_owner:
+            continue
+        if active_key.get("owner_steam_id") != candidate_steam:
+            continue
+        same_domain = candidate_domain and candidate_domain == active_key.get("domain_key")
+        same_problem = candidate_problem and candidate_problem == active_key.get("problem_key")
+        same_payload_target = (
+            candidate_metric
+            and candidate_metric == active_key.get("target_metric")
+            and candidate_payload_type
+            and candidate_payload_type == active_key.get("mission_payload_type")
+        )
+        if same_domain or same_problem or same_payload_target:
+            return MissionSuppressionDecision(
+                suppressed=True,
+                reason="active_mission_same_domain",
+                reason_codes=("active_mission_same_domain",),
+                active_mission_id=_optional_int(summary.get("mission_id")),
+                active_mission_title=_optional_str(summary.get("title")),
+                active_mission_status=_optional_str(summary.get("mission_status")),
+                active_mission_progress_status=_optional_str(summary.get("progress_status")),
+                key=key,
+            )
+    return MissionSuppressionDecision(
+        suppressed=False,
+        reason=None,
+        reason_codes=(),
+        active_mission_id=None,
+        active_mission_title=None,
+        active_mission_status=None,
+        active_mission_progress_status=None,
+        key=key,
+    )
+
+
 def serialize_mission_progress_evaluation(evaluation: MissionProgressEvaluation) -> dict[str, Any]:
     result = _json_load_mapping(evaluation.result_json)
     components = [
@@ -894,6 +1018,64 @@ def serialize_mission_progress_evaluation(evaluation: MissionProgressEvaluation)
             evaluation.status,
             result.get("snapshot_comparison") or {},
             _json_load_sequence(evaluation.caveats_json),
+        ),
+    }
+
+
+def serialize_active_mission_summary(
+    mission: CoachMission,
+    *,
+    latest_evaluation: MissionProgressEvaluation | None = None,
+) -> dict[str, Any]:
+    mission_payload = _mapping(_json_load_mapping(mission.source_payload_json).get("mission_payload"))
+    success_metric = _mapping(mission_payload.get("success_metric"))
+    target_metric = _optional_str(success_metric.get("metric_name"))
+    domain_key = mission_domain_key(mission)
+    progress = (
+        serialize_mission_progress_evaluation(latest_evaluation)
+        if latest_evaluation is not None
+        else _no_evaluation_progress_summary(mission, target_metric=target_metric)
+    )
+    comparison = _mapping(progress.get("snapshot_comparison"))
+    before = _mapping(comparison.get("before"))
+    after = _mapping(comparison.get("after"))
+    primary = _mapping(progress.get("primary_metric_result"))
+    metric_name = (
+        _optional_str(comparison.get("metric_name"))
+        or _optional_str(primary.get("metric_name"))
+        or target_metric
+    )
+    return {
+        "mission_id": mission.id,
+        "title": mission.title,
+        "mission_status": mission.status,
+        "owner_steam_id": mission.owner_steam_id,
+        "domain_key": domain_key,
+        "problem_key": mission_problem_key(mission),
+        "target_metric": target_metric,
+        "mission_payload_type": _mission_payload_type(mission_payload, domain_key=domain_key),
+        "metric": metric_name,
+        "baseline_value": before.get("value") if before else primary.get("baseline_value"),
+        "current_value": after.get("value") if after else primary.get("evaluation_value"),
+        "delta": comparison.get("delta") if comparison else primary.get("delta"),
+        "confidence": progress.get("confidence"),
+        "caveats": list(progress.get("caveats") or []),
+        "counted": progress.get("counted") is True,
+        "progress_status": progress.get("status"),
+        "progress_explanation": progress.get("progress_explanation"),
+        "coach_feedback": _active_mission_feedback(
+            mission_title=mission.title,
+            progress_status=str(progress.get("status") or "no_evaluation_yet"),
+            metric_name=metric_name,
+            progress_explanation=_optional_str(progress.get("progress_explanation")),
+        ),
+        "latest_progress_evaluation": progress,
+        "suppression_key": mission_suppression_key_from_payload(
+            owner_user_id=mission.user_id,
+            owner_steam_id=mission.owner_steam_id,
+            mission_payload=mission_payload,
+            domain_key=domain_key,
+            problem_key=mission_problem_key(mission),
         ),
     }
 
@@ -1179,8 +1361,7 @@ def _rolling_window_from_snapshots(
 def _rolling_candidates_from_window(
     window: RollingMissionWindow,
     *,
-    active_primary_metrics: set[str],
-    active_domain_keys: set[str],
+    active_mission_summaries: Sequence[Mapping[str, Any]],
 ) -> list[RollingMissionCandidate]:
     candidates: list[RollingMissionCandidate] = []
     for family, metric_order in (
@@ -1191,8 +1372,7 @@ def _rolling_candidates_from_window(
             window,
             family=family,
             metric_order=metric_order,
-            active_primary_metrics=active_primary_metrics,
-            active_domain_keys=active_domain_keys,
+            active_mission_summaries=active_mission_summaries,
         )
         if candidate is not None:
             candidates.append(candidate)
@@ -1221,6 +1401,8 @@ def _rolling_candidates_from_window(
             insight_card=candidate.insight_card,
             mission_payload=candidate.mission_payload,
             window_evidence=candidate.window_evidence,
+            suppression_key=candidate.suppression_key,
+            suppression_reason_codes=candidate.suppression_reason_codes,
         )
         for index, candidate in enumerate(candidates, start=1)
     ]
@@ -1231,8 +1413,7 @@ def _rolling_candidate_for_family(
     *,
     family: str,
     metric_order: Sequence[str],
-    active_primary_metrics: set[str],
-    active_domain_keys: set[str],
+    active_mission_summaries: Sequence[Mapping[str, Any]],
 ) -> RollingMissionCandidate | None:
     primary_metric = next(
         (
@@ -1255,9 +1436,6 @@ def _rolling_candidate_for_family(
     confidence_score = INSIGHT_CONFIDENCE_SCORES.get(confidence_level, 0.25)
     sample_size = _optional_int(primary.get("sample_count") or primary.get("rounds")) or window.sample_rounds
     domain_key = _domain_key_for_metric(primary_metric, family=family)
-    suppressed_by_metric = primary_metric in active_primary_metrics
-    suppressed_by_domain = domain_key in active_domain_keys
-    suppressed = suppressed_by_metric or suppressed_by_domain
     insight_card = _rolling_insight_card(
         window,
         family=family,
@@ -1268,6 +1446,17 @@ def _rolling_candidate_for_family(
     mission_payload = mission_payload_from_insight_card(insight_card)
     if mission_payload is None:
         return None
+    suppression_key = mission_suppression_key_from_payload(
+        owner_user_id=window.user_id,
+        owner_steam_id=window.owner_steam_id,
+        mission_payload=mission_payload,
+        domain_key=domain_key,
+        problem_key=domain_key,
+    )
+    suppression = mission_suppression_decision_for_payload(
+        candidate_key=suppression_key,
+        active_mission_summaries=active_mission_summaries,
+    )
     window_evidence = {
         "source": "metric_snapshots",
         "window_type": window.window_type,
@@ -1287,15 +1476,14 @@ def _rolling_candidate_for_family(
         severity=severity,
         confidence_score=confidence_score,
         sample_size=sample_size,
-        suppressed_by_active_mission=suppressed,
-        suppression_reason=_rolling_suppression_reason(
-            suppressed_by_metric=suppressed_by_metric,
-            suppressed_by_domain=suppressed_by_domain,
-        ),
+        suppressed_by_active_mission=suppression.suppressed,
+        suppression_reason=suppression.reason,
         explanation=explanation,
         insight_card=insight_card,
         mission_payload=mission_payload,
         window_evidence=window_evidence,
+        suppression_key=suppression_key,
+        suppression_reason_codes=suppression.reason_codes,
     )
 
 
@@ -2040,6 +2228,70 @@ def _mission_success_metric(mission: CoachMission, primary_component: Mapping[st
         else _optional_number(primary_component.get("target_value")),
         "source": "mission_payload.success_metric" if success_metric else "mission_primary_criteria",
     }
+
+
+def _no_evaluation_progress_summary(mission: CoachMission, *, target_metric: str | None) -> dict[str, Any]:
+    return {
+        "evaluation_id": None,
+        "mission_id": mission.id,
+        "owner_steam_id": mission.owner_steam_id,
+        "evaluated_window": {},
+        "source_metric_snapshot_ids": [],
+        "status": "no_evaluation_yet",
+        "confidence": None,
+        "caveats": ["no_evaluation_yet"],
+        "primary_metric_result": {
+            "metric_name": target_metric,
+            "role": "primary",
+            "reason_codes": ["no_evaluation_yet"],
+        },
+        "secondary_metric_results": [],
+        "guardrail_results": [],
+        "snapshot_comparison": {
+            "metric_name": target_metric,
+            "before": {"metric_snapshot_ids": [], "value": None},
+            "after": {"metric_snapshot_ids": [], "value": None},
+            "delta": None,
+        },
+        "target_met": False,
+        "counted": False,
+        "why_counted_or_not": "Mission has no persisted progress evaluation yet.",
+        "progress_explanation": "No persisted mission progress evaluation is available yet.",
+    }
+
+
+def _active_mission_feedback(
+    *,
+    mission_title: str,
+    progress_status: str,
+    metric_name: str | None,
+    progress_explanation: str | None,
+) -> str:
+    metric = metric_name or "mission metric"
+    if progress_status == "improving":
+        return f"{mission_title}: improving on {metric}; continue the active mission focus."
+    if progress_status == "unchanged":
+        return f"{mission_title}: {metric} is unchanged; continue the active mission focus."
+    if progress_status == "regressing":
+        return f"{mission_title}: regressing on {metric}; explain the failed metric before changing missions."
+    if progress_status == "not_following":
+        return f"{mission_title}: not_following; explain what rule was not followed before replacing the mission."
+    if progress_status == "insufficient_data":
+        return f"{mission_title}: insufficient_data for {metric}; do not make a hard progress or failure claim."
+    if progress_status == "no_evaluation_yet":
+        return f"{mission_title}: no_evaluation_yet; wait for persisted owner-scoped progress data."
+    return progress_explanation or f"{mission_title}: continue the active mission focus."
+
+
+def _mission_payload_type(payload: Mapping[str, Any], *, domain_key: str | None = None) -> str | None:
+    success_metric = _mapping(payload.get("success_metric"))
+    metric_name = _optional_str(success_metric.get("metric_name"))
+    if domain_key:
+        return f"{domain_key}_mission"
+    if metric_name:
+        return f"{_domain_key_for_metric(metric_name)}_mission"
+    schema = _optional_str(payload.get("schema_version"))
+    return schema
 
 
 def _progress_explanation(

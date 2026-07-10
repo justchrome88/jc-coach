@@ -18,6 +18,7 @@ from app.services.mission_domain import (
     MISSION_PAYLOAD_SCHEMA_VERSION,
     activate_coach_mission,
     activate_draft_coach_mission,
+    active_mission_context_for_owner,
     add_mission_criteria,
     cancel_coach_mission,
     complete_coach_mission,
@@ -43,6 +44,7 @@ from app.services.mission_domain import (
     persist_rolling_mission_candidates,
     record_mission_progress_evaluation,
     resume_coach_mission,
+    serialize_active_mission_summary,
     serialize_coach_mission,
     serialize_mission_payload,
     serialize_mission_progress_evaluation,
@@ -762,6 +764,108 @@ def test_evaluate_opening_mission_progress_outcomes(db, future_value, expected_s
     assert evaluation.owner_steam_id == mission.owner_steam_id
 
 
+@pytest.mark.parametrize(
+    ("status", "current_value", "delta", "counted", "feedback_phrase"),
+    [
+        ("improving", 0.24, -0.07, True, "continue the active mission focus"),
+        ("unchanged", 0.31, 0.0, False, "continue the active mission focus"),
+        ("regressing", 0.39, 0.08, False, "explain the failed metric"),
+        ("insufficient_data", None, None, False, "do not make a hard progress or failure claim"),
+        ("not_following", 0.32, 0.01, False, "what rule was not followed"),
+    ],
+)
+def test_active_mission_summary_serializes_progress_states_with_caveats(
+    db,
+    status,
+    current_value,
+    delta,
+    counted,
+    feedback_phrase,
+):
+    owner = _user(db, f"owner-{status}")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Survive openings",
+    )
+    reason_codes = [] if status in {"improving", "unchanged", "regressing"} else [status]
+    evaluation = record_mission_progress_evaluation(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        status=status,
+        result={
+            "components": [
+                {
+                    "metric_name": "opening_death_rate",
+                    "role": "primary",
+                    "direction": "lower_is_better",
+                    "baseline_value": 0.31,
+                    "observed_value": current_value,
+                    "delta": delta,
+                    "target_value": 0.26,
+                    "outcome": status,
+                    "target_reached": counted,
+                    "reason_codes": reason_codes,
+                    "sample_matches": 3,
+                    "sample_rounds": 72,
+                    "confidence": 0.6,
+                }
+            ],
+            "snapshot_comparison": {
+                "metric_name": "opening_death_rate",
+                "before": {"metric_snapshot_ids": [101], "value": 0.31},
+                "after": {"metric_snapshot_ids": [202], "value": current_value},
+                "delta": delta,
+            },
+            "source_metric_snapshot_ids": [202],
+            "target_met": counted,
+            "progress_explanation": f"{status}: opening_death_rate from 0.31 to {current_value}.",
+        },
+        confidence=0.6 if status != "insufficient_data" else 0.25,
+        caveats=["low_sample_caveat"] if status == "insufficient_data" else [],
+    )
+
+    summary = serialize_active_mission_summary(mission, latest_evaluation=evaluation)
+
+    assert summary["title"] == "Survive openings"
+    assert summary["progress_status"] == status
+    assert summary["metric"] == "opening_death_rate"
+    assert summary["baseline_value"] == 0.31
+    assert summary["current_value"] == current_value
+    assert summary["delta"] == delta
+    assert summary["counted"] is counted
+    assert summary["confidence"] == (0.25 if status == "insufficient_data" else 0.6)
+    assert feedback_phrase in summary["coach_feedback"]
+    if status == "insufficient_data":
+        assert summary["caveats"] == ["low_sample_caveat"]
+
+
+def test_active_mission_context_reports_no_evaluation_yet(db):
+    owner = _user(db, "owner-no-eval")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Survive openings",
+    )
+
+    context = active_mission_context_for_owner(
+        db,
+        user_id=owner.id,
+        owner_steam_id=mission.owner_steam_id,
+    )
+
+    summary = context["active_missions"][0]
+    assert context["active_mission_count"] == 1
+    assert summary["progress_status"] == "no_evaluation_yet"
+    assert summary["counted"] is False
+    assert summary["confidence"] is None
+    assert summary["caveats"] == ["no_evaluation_yet"]
+    assert "wait for persisted owner-scoped progress data" in summary["coach_feedback"]
+
+
 def test_evaluate_mission_progress_links_before_after_snapshots_and_explains_focus(db):
     owner = _user(db, "owner")
     mission = _active_mission_from_card(
@@ -1328,7 +1432,9 @@ def test_rolling_candidates_suppress_active_duplicate_and_persist_hypotheses(db)
         candidate for candidate in result["candidates"] if candidate["primary_metric"] == "opening_death_rate"
     )
     assert opening["suppressed_by_active_mission"] is True
-    assert opening["suppression_reason"] == "active_mission_same_primary_metric"
+    assert opening["suppression_reason"] == "active_mission_same_domain"
+    assert opening["suppression_reason_codes"] == ["active_mission_same_domain"]
+    assert opening["suppression_key"]["domain_key"] == "survival_opening"
     assert len(result["coach_hypothesis_ids"]) == 1
     persisted = get_analysis_run(db, user_id=owner.id, analysis_run_id=result["analysis_run_id"])
     assert persisted is not None
