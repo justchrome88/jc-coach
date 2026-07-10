@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section-head">
+  <div>
+    <h1>Owner Sync Technical Console</h1>
+    <p>Runs the accepted owner sync contract in bounded server-side steps. This is not a live dashboard.</p>
+  </div>
+</section>
+
+{% if message %}<div class="notice">{{ message }}</div>{% endif %}
+
+<section class="panel">
+  <form action="/coach/technical-sync" method="post" class="upload-form stacked">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="mode">Mode</label>
+    <select id="mode" name="mode">
+      <option value="single">One fresh match</option>
+      <option value="successful_target">Successful target</option>
+    </select>
+    <label for="target_successful_new_matches">Successful target (1–{{ max_successful_target }}, including 31)</label>
+    <input id="target_successful_new_matches" name="target_successful_new_matches" type="number" min="1" max="{{ max_successful_target }}" value="1">
+    <button class="button" type="submit">Sync matches and update coach</button>
+  </form>
+</section>
+
+{% if batch %}
+<section class="panel" id="batch-status" data-batch-id="{{ batch.batch.batch_id }}" data-csrf-token="{{ csrf_token }}">
+  <div class="panel-head"><h2>Batch status</h2><span>{{ batch.batch.status }}</span></div>
+  <div class="detail-list">
+    <div><span>Mode</span><strong>{{ batch.batch.mode }}</strong></div>
+    <div><span>Successful new matches</span><strong>{{ batch.batch.successful_new_matches }}{% if batch.batch.requested_successful_new_matches is not none %} / {{ batch.batch.requested_successful_new_matches }}{% endif %}</strong></div>
+    <div><span>G01 calls</span><strong>{{ batch.batch.g01_invocation_count }}</strong></div>
+    <div><span>Stop reason</span><strong>{{ batch.batch.stop_reason or "running" }}</strong></div>
+    <div><span>Unavailable / retryable failures</span><strong>{{ batch.aggregate_totals.unavailable }} / {{ batch.aggregate_totals.retryable_failures }}</strong></div>
+  </div>
+  {% if batch.runtime %}<p class="warning-text">Internal runtime state is intentionally not rendered.</p>{% endif %}
+  <h3>Latest invocation</h3>
+  <pre>{{ (batch.invocations[-1] if batch.invocations else {}) | tojson(indent=2) }}</pre>
+  <h3>Aggregate result</h3>
+  <pre>{{ batch | tojson(indent=2) }}</pre>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Active mission</h2><span>accepted G01 data</span></div>
+  {% for mission in batch.coach.active_missions %}
+  <div class="detail-list">
+    <div><span>Mission</span><strong>{{ mission.id or mission.mission_id }} · {{ mission.title }}</strong></div>
+    <div><span>Status / metric</span><strong>{{ mission.status }} · {{ mission.target_metric or mission.metric_id }}</strong></div>
+    <div><span>Baseline / current / target</span><strong>{{ mission.baseline }} / {{ mission.current }} / {{ mission.target }}</strong></div>
+    <div><span>Progress / confidence</span><strong>{{ mission.progress_status }} · {{ mission.confidence }}</strong></div>
+    <div><span>Caveats</span><strong>{{ mission.caveats or "n/a" }}</strong></div>
+  </div>
+  {% else %}
+  <p>No active mission is currently justified by supported evidence.</p>
+  {% endfor %}
+  {% if batch.coach.latest_progress %}<pre>{{ batch.coach.latest_progress | tojson(indent=2) }}</pre>{% endif %}
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if batch and batch.batch.status in ["queued", "running", "already_running"] %}
+<script>
+(() => {
+  const node = document.getElementById("batch-status");
+  if (!node) return;
+  const advance = async () => {
+    const body = new URLSearchParams({batch_id: node.dataset.batchId, csrf_token: node.dataset.csrfToken});
+    const response = await fetch("/coach/technical-sync/continue", {method: "POST", headers: {"Content-Type": "application/x-www-form-urlencoded"}, body});
+    if (response.ok) window.location.reload();
+  };
+  window.setTimeout(advance, 350);
+})();
+</script>
+{% endif %}
+{% endblock %}

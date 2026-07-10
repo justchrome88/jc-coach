@@ -12,12 +12,24 @@ Last updated: 2026-07-10.
 - HEADLESS_OWNER_COACH_SYNC_CONTRACT_ACCEPTED: true.
 - OWNER_SYNC_IDEMPOTENT: true.
 - OWNER_SYNC_CONCURRENCY_GUARDED: true.
-- NEXT_TASK: G02_THIN_MANUAL_WEB_ADAPTER_AND_RAW_RESULT_VIEW.
+- G02_STATUS: PASS_WITH_WARNINGS.
+- OWNER_SYNC_BATCH_COORDINATOR_ACCEPTED: true.
+- SUCCESSFUL_TARGET_31_SUPPORTED: true.
+- EXACT_STOP_AT_TARGET_PROVEN: true.
+- BATCH_RESTART_RECOVERY_PROVEN: true.
+- THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
+- WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
+- DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
+- NEXT_TASK: H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
 - ACTIVE_OUTBOX_TASK: none.
 - G01 accepted one owner-scoped headless import-to-coach application service
   and a thin CLI adapter. The service preserves the one-new-demo cap, fails
   closed on owner scope, reuses durable parser/metric/coach state, returns a
   versioned structured result and uses an owner-keyed recoverable DB lease.
+- G02 accepted the owner-scoped durable batch coordinator and minimal technical
+  web adapter. Each bounded continuation calls only G01; target `31` counts
+  only newly completed accepted cycles, stops before a 32nd success, recovers
+  stale batch leases and prevents duplicate same-owner starts.
 - F10D accepted corrected unique-match samples, personal-negative utility trend
   semantics, owner isolation, mission lifecycle/progress, idempotent real match
   processing, coach payload progress and domain-aware suppression on real owner
@@ -180,10 +192,10 @@ Last updated: 2026-07-10.
 
 ## Do Not Do Now
 
-- Current routing is G02 thin manual web adapter and raw result view, not the
-  historical WP-018/MVP routes below. G01 accepted only the headless service
-  and CLI; no web route/template, scheduler, public/friends access or v1.0
-  claim is authorized by G01.
+- Current routing is H01A fresh-match user-assisted vertical-cycle acceptance,
+  not the historical WP-018/MVP routes below. G02 accepted only the thin
+  technical adapter and durable coordinator; no scheduler, public/friends
+  access or v1.0 claim is authorized.
 
 - Do not run live Steam/Valve import, parser jobs, evaluator jobs or manual evaluator unless the current WP explicitly authorizes them.
 - Do not mutate production DB, schema, production files or generated app reports unless the current WP explicitly authorizes them with backup/SHA evidence.

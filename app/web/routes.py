@@ -8,7 +8,7 @@ from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -66,6 +66,13 @@ from app.services.mistake_detection import (
     detect_structured_mistakes,
     match_coach_sections,
     mistakes_by_match_id,
+)
+from app.services.owner_coach_sync_batch import (
+    MAX_SUCCESSFUL_TARGET,
+    get_owner_coach_sync_batch,
+    latest_owner_coach_sync_batch,
+    run_owner_coach_sync_batch_step,
+    start_owner_coach_sync_batch,
 )
 from app.services.recommendation_tracking import (
     extend_recommendation_target,
@@ -304,11 +311,7 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
     recommendation_progress = get_active_recommendation_progress(db)
     all_recommendation_progress = get_all_recommendation_progress(db)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
-    evaluated_matches = [
-        match
-        for match in reversed(exact_matches)
-        if match.id in evaluations_by_match_id
-    ][:10]
+    evaluated_matches = [match for match in reversed(exact_matches) if match.id in evaluations_by_match_id][:10]
     report = latest_report(db)
     ai_handoff = latest_ai_handoff()
     ai_report = latest_ai_coach_report(db)
@@ -348,6 +351,82 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
             "parse_overview": parse_overview,
             "coach_ui": coach_ui,
         },
+    )
+
+
+@router.get("/coach/technical-sync")
+def technical_sync_page(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    batch_id: str | None = None,
+    message: str | None = None,
+):
+    owner = current_user_from_session(request, db)
+    if owner is None:
+        return RedirectResponse("/login", status_code=303)
+    batch = (
+        get_owner_coach_sync_batch(db, owner_user_id=owner.id, batch_id=batch_id)
+        if batch_id
+        else latest_owner_coach_sync_batch(db, owner_user_id=owner.id)
+    )
+    return templates.TemplateResponse(
+        request=request,
+        name="technical_sync.html",
+        context={
+            "request": request,
+            "batch": batch,
+            "message": message,
+            "max_successful_target": MAX_SUCCESSFUL_TARGET,
+        },
+    )
+
+
+@router.post("/coach/technical-sync")
+def technical_sync_start(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    mode: Annotated[str, Form()] = "single",
+    target_successful_new_matches: Annotated[str | None, Form()] = None,
+):
+    owner = current_user_from_session(request, db)
+    if owner is None:
+        return RedirectResponse("/login", status_code=303)
+    try:
+        target = int(target_successful_new_matches) if target_successful_new_matches else None
+        batch = start_owner_coach_sync_batch(
+            db,
+            owner_user_id=owner.id,
+            mode=mode,
+            target_successful_new_matches=target,
+        )
+    except (TypeError, ValueError) as exc:
+        return RedirectResponse(f"/coach/technical-sync?message={quote(str(exc))}", status_code=303)
+    return RedirectResponse(f"/coach/technical-sync?batch_id={quote(batch['batch']['batch_id'])}", status_code=303)
+
+
+@router.get("/coach/technical-sync/status")
+def technical_sync_status(request: Request, db: Annotated[Session, Depends(get_db)], batch_id: str):
+    owner = current_user_from_session(request, db)
+    if owner is None:
+        return JSONResponse({"detail": "not_authenticated"}, status_code=401)
+    batch = get_owner_coach_sync_batch(db, owner_user_id=owner.id, batch_id=batch_id)
+    return JSONResponse(
+        batch if batch is not None else {"detail": "batch_not_found"}, status_code=200 if batch else 404
+    )
+
+
+@router.post("/coach/technical-sync/continue")
+def technical_sync_continue(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    batch_id: Annotated[str, Form()],
+):
+    owner = current_user_from_session(request, db)
+    if owner is None:
+        return JSONResponse({"detail": "not_authenticated"}, status_code=401)
+    batch = run_owner_coach_sync_batch_step(db, owner_user_id=owner.id, batch_id=batch_id)
+    return JSONResponse(
+        batch if batch is not None else {"detail": "batch_not_found"}, status_code=200 if batch else 404
     )
 
 
@@ -651,10 +730,18 @@ def matches_page(
     paged_matches = matches[offset : offset + per_page]
     date_truth_by_match_id = {match.id: match_date_truth(match) for match in paged_matches}
     maps = db.scalars(
-        playable_match_select().with_only_columns(Match.map_name).where(Match.map_name.is_not(None)).distinct().order_by(Match.map_name)
+        playable_match_select()
+        .with_only_columns(Match.map_name)
+        .where(Match.map_name.is_not(None))
+        .distinct()
+        .order_by(Match.map_name)
     ).all()
     sources = db.scalars(
-        playable_match_select().with_only_columns(Match.source).where(Match.source.is_not(None)).distinct().order_by(Match.source)
+        playable_match_select()
+        .with_only_columns(Match.source)
+        .where(Match.source.is_not(None))
+        .distinct()
+        .order_by(Match.source)
     ).all()
     return templates.TemplateResponse(
         request=request,

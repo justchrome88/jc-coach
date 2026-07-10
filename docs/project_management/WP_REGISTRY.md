@@ -49,11 +49,11 @@ Allowed statuses: `planned`, `active`, `in_progress`, `done`, `blocked`,
 | F10C_F09_EVIDENCE_AND_CONTROL_PLANE_RECONCILIATION | completed | Documentation/control-plane only | Reconciled current routing; no runtime change. |
 | F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN | accepted_with_warnings | PM report and sanitized JSON artifact | Real owner-data acceptance passed; known Starlette warning only. |
 | G01_OWNER_SYNC_AND_COACH_HEADLESS_VERTICAL_CYCLE | accepted_with_warnings | Product service/CLI/tests and PM G01 report | Canonical owner sync is idempotent, owner-key locked and accepted; known Starlette warning only. |
-| G02_THIN_MANUAL_WEB_ADAPTER_AND_RAW_RESULT_VIEW | next | Future scoped task card | Add only the thin manual owner web adapter over the accepted G01 service. |
+| G02_THIN_MANUAL_WEB_ADAPTER_AND_RAW_RESULT_VIEW | accepted_with_warnings | Product batch coordinator/web tests and PM G02 report | Durable owner batch lease; G01-only bounded continuations; exact target-31 fixture and restart recovery passed; known Starlette warning only. |
 
 Current lane: MISSION_API_AND_UI. Mission backend status:
 ACCEPTED_FOR_UI_API. Current next task:
-G02_THIN_MANUAL_WEB_ADAPTER_AND_RAW_RESULT_VIEW.
+H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
 Owner-only personal scope, fail-closed weak evidence, no public/friends
 readiness and no v1.0 claim remain mandatory.
 

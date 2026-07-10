@@ -16,11 +16,20 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - HEADLESS_OWNER_COACH_SYNC_CONTRACT_ACCEPTED: true.
 - OWNER_SYNC_IDEMPOTENT: true.
 - OWNER_SYNC_CONCURRENCY_GUARDED: true.
-- NEXT_TASK: G02_THIN_MANUAL_WEB_ADAPTER_AND_RAW_RESULT_VIEW.
+- G02_STATUS: PASS_WITH_WARNINGS.
+- OWNER_SYNC_BATCH_COORDINATOR_ACCEPTED: true.
+- SUCCESSFUL_TARGET_31_SUPPORTED: true.
+- EXACT_STOP_AT_TARGET_PROVEN: true.
+- BATCH_RESTART_RECOVERY_PROVEN: true.
+- THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
+- WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
+- DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
+- NEXT_TASK: H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
 - ACTIVE_OUTBOX_TASK: none.
 - G01 accepted `run_owner_coach_sync(...)` as the canonical owner-scoped
   headless application operation and `scripts/run_owner_coach_sync.py` as its
-  thin CLI adapter. G02 owns the first web adapter; no scheduler/login sync or
+  thin CLI adapter. G02 accepted a durable owner batch coordinator and thin
+  technical adapter that invokes only G01. No scheduler/login sync or
   multi-owner batch is accepted.
 - F10D accepted the repaired mission backend on real owner data. F09 remains
   historical lifecycle evidence only; F10A/F10B semantics are current truth.
@@ -147,9 +156,9 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Current Next Safe Step
 
-Run G02_THIN_MANUAL_WEB_ADAPTER_AND_RAW_RESULT_VIEW as a thin adapter over the
-accepted G01 service. Do not duplicate sync business logic in the web layer;
-G01/G02 do not authorize public/friends scope or v1.0 claims.
+Run H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE. G02's thin
+adapter does not authorize scheduler/login sync, public/friends scope or v1.0
+claims.
 
 ## Historical Pre-F10 Next Safe Step
 
