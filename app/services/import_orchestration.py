@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Any
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db.models import DemoParseArtifact, ImportJob, Match
 from app.services.artifact_integrity import ARTIFACT_STATE_AVAILABLE, artifact_file_integrity
 from app.services.demo_retention import (
@@ -403,7 +405,30 @@ def store_artifact_metadata(
         "actionable_reason": None,
     }
     _persist_match_storage(db, match=match, storage=storage, import_job_id=job.id)
+    _cleanup_download_temporary_source(payload=payload, stored=stored)
     return storage
+
+
+def _cleanup_download_temporary_source(*, payload: dict[str, Any], stored: dict[str, Any]) -> None:
+    if _fixture_source_path(payload) is not None:
+        return
+    temporary = stored.get("temporary_source")
+    if not isinstance(temporary, dict) or temporary.get("cleanup_owner") != "caller":
+        return
+    path_value = temporary.get("path")
+    if not path_value:
+        return
+    source = Path(str(path_value)).resolve()
+    temp_root = Path(get_settings().temp_dir).resolve()
+    parent = source.parent
+    if (
+        not source.is_relative_to(temp_root)
+        or parent.parent != temp_root
+        or not parent.name.startswith("jc-steam-demo-")
+    ):
+        return
+    shutil.rmtree(parent)
+    temporary["cleanup_status"] = "cleaned"
 
 
 def serialize_result(

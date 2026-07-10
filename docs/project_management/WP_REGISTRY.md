@@ -39,7 +39,7 @@ registry.
 Allowed statuses: `planned`, `not_started`, `active`, `in_progress`, `done`,
 `blocked`, `deferred`, `failed`, `superseded`, `out-of-band evidence`.
 
-## Current Mission Backend And H01A Repair Sequence
+## Current Mission Backend And H01 User Acceptance Sequence
 
 | Task ID | Status | Evidence / commit | Current routing |
 |---|---|---|---|
@@ -50,27 +50,28 @@ Allowed statuses: `planned`, `not_started`, `active`, `in_progress`, `done`,
 | F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN | accepted_with_warnings | PM report and sanitized JSON artifact | Real owner-data acceptance passed; known Starlette warning only. |
 | G01_OWNER_SYNC_AND_COACH_HEADLESS_VERTICAL_CYCLE | accepted_with_warnings | Product service/CLI/tests and PM G01 report | Canonical owner sync is idempotent, owner-key locked and accepted; known Starlette warning only. |
 | G02_THIN_MANUAL_WEB_ADAPTER_AND_RAW_RESULT_VIEW | accepted_with_warnings | Product batch coordinator/web tests and PM G02 report | Durable owner batch lease; G01-only bounded continuations; exact target-31 fixture and restart recovery passed; known Starlette warning only. |
-| H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE | blocked | PM H01A report and JSON artifact | Baseline classified nine legacy `steam_history` rows as actionable `new`; fresh-match exposure did not start and acceptance is false. |
+| H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE | accepted_with_warnings | Product temp-cleanup fix/tests; PM H01A report and JSON artifact | Fresh owner match completed acquisition through honest mission progress; repeat/headless/double-submit were idempotent; known Starlette warning only. |
 | H01A-R00_CANONICAL_HOT_ROUTE_RECONCILIATION | completed | Documentation/control-plane reconciliation | Canonical product and PM routing now points to H01A-R01; no runtime or DB change. |
 | H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR | accepted_with_warnings | Product classification/batch services and focused tests; PM H01A-R01 report | Restored 54+9 production baseline no-op; fresh/deeper discovery and target-31 behavior preserved; known Starlette warning only. |
 | H01A-R02_AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILIATION | blocked | PM blocked report/artifact | Identity equivalence and migration were proven, then restored because remote preview and persisted dry-run were incorrectly treated as contradictory. |
 | H01A-R02A_FRESH_MATCH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILIATION | accepted_with_warnings | Product discovery/reconciliation services and tests; PM H01A-R02A report/artifact | Contract A accepted; owner 17 reconciled; fresh remote identity remains unconsumed; known Starlette warning only. |
 
-CURRENT_LANE: H01A_REPAIR. CURRENT_TASK: none. Mission backend status:
-ACCEPTED_FOR_UI_API. H01A_STATUS: BLOCKED.
+CURRENT_LANE: H01_USER_ACCEPTANCE. CURRENT_TASK: none. Mission backend status:
+ACCEPTED_FOR_UI_API. H01A_STATUS: PASS_WITH_WARNINGS.
 H01A_R02_STATUS: BLOCKED. H01A_R02A_STATUS: PASS_WITH_WARNINGS.
 FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
 AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILED: true.
-OWNER_SCOPE_CONSISTENT: true. FRESH_MATCH_PRESERVED_FOR_H01A: true.
-FRESH_MATCH_READY_AND_UNCONSUMED: true.
-FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: false.
+OWNER_SCOPE_CONSISTENT: true. FRESH_MATCH_PRESERVED_FOR_H01A: false.
+FRESH_MATCH_READY_AND_UNCONSUMED: false.
+FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: true.
+SINGLE_MATCH_REPEAT_IDEMPOTENT: true.
 H01A_R01_STATUS: PASS_WITH_WARNINGS.
 LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: true.
 ORDINARY_BASELINE_NO_OP_RESTORED: true.
 FRESH_MATCH_DISCOVERY_PRESERVED: true.
 DEEPER_HISTORY_TRAVERSAL_PRESERVED: true.
 BATCH_31_COMPATIBILITY_PRESERVED: true. NEXT_TASK:
-H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
+H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE.
 Owner-only personal scope, fail-closed weak evidence, no public/friends
 readiness and no v1.0 claim remain mandatory.
 

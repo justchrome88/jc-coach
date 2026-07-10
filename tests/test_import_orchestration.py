@@ -349,6 +349,55 @@ def test_import_orchestration_downloads_reference_for_storage(db, monkeypatch, t
     assert match.demo_file == result["parser_handoff"]["path"]
 
 
+def test_import_orchestration_cleans_caller_owned_download_temp_after_retention(db, monkeypatch, tmp_path):
+    monkeypatch.setenv("STEAM_BOT_REFRESH_TOKEN", "test-refresh-token")
+    upload_dir = tmp_path / "uploads"
+    temp_dir = tmp_path / "temp"
+    download_dir = temp_dir / "jc-steam-demo-test"
+    download_dir.mkdir(parents=True)
+    source = download_dir / "downloaded.dem"
+    source.write_bytes(b"HL2DEMO downloaded temp cleanup")
+    monkeypatch.setenv("UPLOAD_DIR", str(upload_dir))
+    monkeypatch.setenv("TEMP_DIR", str(temp_dir))
+    db.add(
+        Match(
+            source="steam_history",
+            external_match_id=SHARE_CODE,
+            raw_json=json.dumps({"share_code": SHARE_CODE, "status": "demo_download_pending"}),
+        )
+    )
+    db.commit()
+
+    def fake_fetcher(_codes):
+        return {
+            "ok": True,
+            "results": [
+                {
+                    "ok": True,
+                    "share_code": SHARE_CODE,
+                    "match_id": "3822708819734036647",
+                    "match_time": 1783022400,
+                    "demo_url": "https://replay.example.test/demo.dem",
+                }
+            ],
+        }
+
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    monkeypatch.setattr("app.services.steam_demo_acquisition._fetch_demo_urls", fake_fetcher)
+    monkeypatch.setattr("app.services.steam_demo_acquisition._download_demo_file", lambda *_args: source)
+    try:
+        job = run_demo_import_orchestration(db, payload={"share_code": SHARE_CODE})
+    finally:
+        get_settings.cache_clear()
+
+    result = json.loads(job.result_json)
+    assert job.status == IMPORT_JOB_COMPLETED
+    assert Path(result["parser_handoff"]["path"]).is_file()
+    assert not download_dir.exists()
+
+
 def test_import_orchestration_duplicate_storage_reuses_retained_path(db, monkeypatch, tmp_path):
     upload_dir = tmp_path / "uploads"
     source = tmp_path / "fixture.dem"

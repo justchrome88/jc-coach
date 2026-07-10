@@ -6,19 +6,20 @@ Last updated: 2026-07-11.
 
 This file is the compact new-session bootstrap for JC Coach. It is not the full project history and must not duplicate `AGENTS.md`.
 
-## Current H01A Repair Handoff
+## Current H01 User Acceptance Handoff
 
-- CURRENT_LANE: H01A_REPAIR.
+- CURRENT_LANE: H01_USER_ACCEPTANCE.
 - CURRENT_TASK: none.
-- H01A_STATUS: BLOCKED.
+- H01A_STATUS: PASS_WITH_WARNINGS.
 - H01A_R02_STATUS: BLOCKED.
 - H01A_R02A_STATUS: PASS_WITH_WARNINGS.
 - FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
 - AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILED: true.
 - OWNER_SCOPE_CONSISTENT: true.
-- FRESH_MATCH_READY_AND_UNCONSUMED: true.
-- FRESH_MATCH_PRESERVED_FOR_H01A: true.
-- FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: false.
+- FRESH_MATCH_READY_AND_UNCONSUMED: false.
+- FRESH_MATCH_PRESERVED_FOR_H01A: false.
+- FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: true.
+- SINGLE_MATCH_REPEAT_IDEMPOTENT: true.
 - H01A_R01_STATUS: PASS_WITH_WARNINGS.
 - LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: true.
 - ORDINARY_BASELINE_NO_OP_RESTORED: true.
@@ -40,8 +41,14 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
+- NEXT_TASK: H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A accepted the real owner fresh-match vertical cycle. G02 discovered and
+  processed one fresh match through retained demo, owner import, real parser,
+  combat/utility snapshots, coach hypotheses and honest one-match
+  `insufficient_data` progress. Web/headless repeats and rapid double-submit
+  preserved one durable domain lineage. A narrow temp-cleanup fix was rerun
+  from the verified backup; only the accepted Starlette warning remains.
 - H01A-R02A accepted separate remote-preview and persisted-dry-run evidence.
   Real G01 performs the remote refresh; dry-run does not. Canonical user `17`
   owns Steam account `1` and the complete historical lineage, while one fresh
@@ -49,8 +56,7 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - H01A-R01 now derives the nine historical pending rows as diagnostic
   `legacy_stale_pending`, restores the production baseline to
   `success_no_changes`, preserves fresh/deeper accepted-sync identities and
-  keeps G02 target-31 accounting compatible. H01A remains blocked only until
-  its fresh-match acceptance rerun.
+  keeps G02 target-31 accounting compatible. H01A is now accepted.
 - G01 accepted `run_owner_coach_sync(...)` as the canonical owner-scoped
   headless application operation and `scripts/run_owner_coach_sync.py` as its
   thin CLI adapter. G02 accepted a durable owner batch coordinator and thin
@@ -181,10 +187,10 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Current Next Safe Step
 
-Run H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE from a new verified
-backup and its full preflight. Fresh-match vertical-cycle acceptance remains
-false until that task passes. G02's thin adapter does not authorize
-scheduler/login sync, public/friends scope or v1.0 claims.
+Run H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE under its explicit task
+card. H01A accepted the single fresh-match vertical cycle and idempotent
+repeat; G02's thin adapter still does not authorize scheduler/login sync,
+public/friends scope or v1.0 claims.
 
 ## Historical Pre-F10 Next Safe Step
 

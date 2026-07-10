@@ -2,19 +2,20 @@
 
 Last updated: 2026-07-11.
 
-## Current H01A Repair State
+## Current H01 User Acceptance State
 
-- CURRENT_LANE: H01A_REPAIR.
+- CURRENT_LANE: H01_USER_ACCEPTANCE.
 - CURRENT_TASK: none.
-- H01A_STATUS: BLOCKED.
+- H01A_STATUS: PASS_WITH_WARNINGS.
 - H01A_R02_STATUS: BLOCKED.
 - H01A_R02A_STATUS: PASS_WITH_WARNINGS.
 - FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
 - AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILED: true.
 - OWNER_SCOPE_CONSISTENT: true.
-- FRESH_MATCH_READY_AND_UNCONSUMED: true.
-- FRESH_MATCH_PRESERVED_FOR_H01A: true.
-- FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: false.
+- FRESH_MATCH_READY_AND_UNCONSUMED: false.
+- FRESH_MATCH_PRESERVED_FOR_H01A: false.
+- FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: true.
+- SINGLE_MATCH_REPEAT_IDEMPOTENT: true.
 - H01A_R01_STATUS: PASS_WITH_WARNINGS.
 - LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: true.
 - ORDINARY_BASELINE_NO_OP_RESTORED: true.
@@ -36,8 +37,16 @@ Last updated: 2026-07-11.
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
+- NEXT_TASK: H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A accepted one genuinely fresh owner match through authenticated G02:
+  remote discovery, retained demo, owner-linked import, real parser artifact,
+  combat/utility snapshots, coach hypotheses and honest
+  `insufficient_data` mission progress all completed. Web repeat, headless
+  repeat and rapid double-submit created no duplicate domain lineage. A narrow
+  acceptance fix now cleans caller-owned download temp files after verified
+  retained storage; the full rerun passed with only the accepted Starlette
+  TestClient deprecation warning.
 - H01A-R02A selected Contract A: remote preview is owner-scoped and
   non-persisting, persisted G01 dry-run remains network-isolated, and real G01
   refreshes canonical Steam history before persisted candidate processing.
@@ -47,7 +56,7 @@ Last updated: 2026-07-11.
   production-data rewrite. The nine historical pending rows are diagnostic
   `legacy_stale_pending`, the production dry baseline is `success_no_changes`,
   and accepted sync lineage keeps genuinely fresh and deeper matches actionable.
-  H01A itself remains blocked pending its fresh-match acceptance rerun.
+  H01A is now accepted after the fresh-match rerun.
 - G01 accepted one owner-scoped headless import-to-coach application service
   and a thin CLI adapter. The service preserves the one-new-demo cap, fails
   closed on owner scope, reuses durable parser/metric/coach state, returns a
@@ -219,8 +228,8 @@ Last updated: 2026-07-11.
 ## Do Not Do Now
 
 - Current routing is
-  H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE after the accepted
-  H01A-R01 repair, not the historical WP-018/MVP routes below. G02
+  H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE after accepted H01A, not
+  the historical WP-018/MVP routes below. G02
   accepted only the thin technical adapter and durable coordinator; no
   scheduler, public/friends access or v1.0 claim is authorized.
 
