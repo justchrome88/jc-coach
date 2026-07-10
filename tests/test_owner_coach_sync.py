@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -7,6 +8,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.db.models import (
     AnalysisRun,
     AppSetting,
@@ -21,7 +23,7 @@ from app.db.models import (
     SteamAccount,
     User,
 )
-from app.services import owner_coach_sync
+from app.services import owner_coach_sync, steam_integration
 from app.services.match_processing import process_owner_match_after_parser_artifact
 from app.services.mission_domain import activate_coach_mission, create_analysis_run, create_coach_hypothesis
 from app.services.owner_coach_sync import OWNER_COACH_SYNC_RESULT_SCHEMA_VERSION, run_owner_coach_sync
@@ -190,6 +192,81 @@ def test_new_match_runs_accepted_phases_and_repeated_input_is_idempotent(db, mon
     assert _durable_counts(db) == after_first
 
 
+def test_real_sync_rediscovers_preview_identity_and_processes_exactly_one_without_duplicate_lineage(
+    db, monkeypatch, tmp_path
+):
+    owner, account = _owner(db)
+    account.match_auth_code = "test-auth-code"
+    account.last_share_code = SHARE_CODE
+    db.commit()
+    fresh = f"{SHARE_CODE}-remote-fresh"
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "test-key")
+    get_settings.cache_clear()
+    responses = [[fresh], []]
+    monkeypatch.setattr(steam_integration, "_collect_match_share_codes", lambda **_kwargs: responses.pop(0))
+    retained = tmp_path / "remote-fresh.dem"
+    retained.write_bytes(b"remote fresh deterministic proof")
+
+    def acquire(*_args, **kwargs):
+        source = db.scalar(select(Match).where(Match.external_match_id == fresh))
+        job = ImportJob(
+            provider="steam",
+            job_type="demo_import_orchestration",
+            status="completed",
+            user_id=owner.id,
+            steam_account_id=account.id,
+            logical_target_key=kwargs["logical_target_key"],
+            result_json=json.dumps({"overall_outcome": "completed"}),
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        source.demo_file = str(retained)
+        source.import_job_id = job.id
+        db.commit()
+        return job
+
+    monkeypatch.setattr(owner_coach_sync, "run_demo_import_orchestration", acquire)
+    monkeypatch.setattr(owner_coach_sync, "import_demo_file", _fake_parser(db, owner, account, retained))
+
+    first = run_owner_coach_sync(db, owner_user_id=owner.id)
+    counts = _durable_counts(db)
+    second = run_owner_coach_sync(db, owner_user_id=owner.id)
+    identity_hash = hashlib.sha256(fresh.encode()).hexdigest()
+
+    assert first["run"]["status"] == "success"
+    assert first["discovery"]["discovery_mode"] == "real_sync"
+    assert first["discovery"]["remote_discovery"]["inserted"] == 1
+    selected = [item for item in first["matches"] if item["selected"]]
+    assert len(selected) == 1
+    assert hashlib.sha256(selected[0]["identity"]["sharecode"].encode()).hexdigest() == identity_hash
+    assert second["run"]["status"] == "success_no_changes"
+    assert db.query(Match).filter(Match.source == "steam_history", Match.external_match_id == fresh).count() == 1
+    assert db.query(DemoParseArtifact).count() == counts["demo_parse_artifacts"]
+    get_settings.cache_clear()
+
+
+def test_real_sync_provider_failure_is_explicit_and_does_not_claim_clean_exhaustion(db, monkeypatch):
+    owner, account = _owner(db)
+    account.match_auth_code = "test-auth-code"
+    account.last_share_code = SHARE_CODE
+    db.commit()
+    monkeypatch.setenv("STEAM_WEB_API_KEY", "test-key")
+    get_settings.cache_clear()
+
+    def fail(**_kwargs):
+        raise TimeoutError("temporary provider failure")
+
+    monkeypatch.setattr(steam_integration, "_collect_match_share_codes", fail)
+    result = run_owner_coach_sync(db, owner_user_id=owner.id)
+
+    assert result["run"]["status"] == "blocked"
+    assert result["errors"][0]["reason_code"] == "remote_provider_failure"
+    assert result["remote_discovery"]["status"] == "provider_error"
+    assert db.query(Match).filter(Match.external_match_id != SHARE_CODE).count() == 0
+    get_settings.cache_clear()
+
+
 def test_existing_retained_import_resumes_at_parser_without_reacquisition(db, monkeypatch, tmp_path):
     owner, account = _owner(db)
     retained = tmp_path / "incomplete.dem"
@@ -339,8 +416,8 @@ def test_real_baseline_shape_classifies_54_complete_and_9_legacy_pending_as_noop
     db.commit()
     before = _durable_counts(db)
 
-    first = run_owner_coach_sync(db, owner_user_id=owner.id)
-    second = run_owner_coach_sync(db, owner_user_id=owner.id)
+    first = run_owner_coach_sync(db, owner_user_id=owner.id, dry_run=True)
+    second = run_owner_coach_sync(db, owner_user_id=owner.id, dry_run=True)
 
     assert first["run"]["status"] == "success_no_changes"
     assert first["discovery"]["candidate_count"] == 63
@@ -348,6 +425,11 @@ def test_real_baseline_shape_classifies_54_complete_and_9_legacy_pending_as_noop
     assert first["discovery"]["internal_classifications"]["already_complete"] == 54
     assert first["discovery"]["legacy_stale_pending_count"] == 9
     assert first["discovery"]["reason_codes"]["legacy_pending_before_sync_boundary"] == 9
+    assert first["discovery"]["remote_discovery_performed"] is False
+    assert (
+        first["discovery"]["remote_discovery_reason_code"]
+        == "remote_discovery_not_performed_in_persisted_dry_run"
+    )
     assert all(bucket["count"] == 0 for bucket in first["mutations"]["created"].values())
     assert second["run"]["status"] == "success_no_changes"
     assert _durable_counts(db) == before

@@ -33,11 +33,13 @@ from app.services.ai_coach import (
     build_ai_coach_payload,
 )
 from app.services.demo_parser import import_demo_file
+from app.services.fresh_match_discovery import PERSISTED_DRY_RUN_REASON
 from app.services.import_jobs import IMPORT_JOB_ACTIVE_STATUSES, IMPORT_JOB_COMPLETED
 from app.services.import_orchestration import run_demo_import_orchestration
 from app.services.match_processing import ACCEPTED_PARSER_ARTIFACT_STATUSES, process_owner_match_after_parser_artifact
 from app.services.metric_snapshots import owner_player_metric_snapshot_scope
 from app.services.mission_domain import active_mission_context_for_owner, list_mission_criteria
+from app.services.steam_integration import queue_match_history_sync, sync_match_history_job
 
 OWNER_COACH_SYNC_RESULT_SCHEMA_VERSION = "owner-coach-sync-result-v1"
 OWNER_COACH_SYNC_OPERATION = "owner_coach_sync"
@@ -190,7 +192,7 @@ def run_owner_coach_sync(
             result["run"]["lock"] = _public_lock(active_lock, status="already_running")
             return _finish_result(result, started_clock=started_clock)
         result["run"]["lock"] = {"status": "not_acquired", "reason": "dry_run"}
-        return _run_discovery_and_cycle(
+        completed = _run_discovery_and_cycle(
             db,
             owner=owner,
             result=result,
@@ -202,6 +204,14 @@ def run_owner_coach_sync(
             lock=None,
             started_clock=started_clock,
         )
+        completed["discovery"].update(
+            {
+                "discovery_mode": "persisted_dry_run",
+                "remote_discovery_performed": False,
+                "remote_discovery_reason_code": PERSISTED_DRY_RUN_REASON,
+            }
+        )
+        return completed
 
     lock = _acquire_owner_sync_lock(db, owner_user_id=owner.user.id)
     if lock is None:
@@ -217,7 +227,16 @@ def run_owner_coach_sync(
     result["run"]["lock"] = _public_lock(lock, status="acquired")
     _log_phase("lock_acquired", owner_user_id=owner.user.id, recovered_stale=lock.recovered_stale)
     try:
-        return _run_discovery_and_cycle(
+        if not _refresh_remote_discovery(
+            db,
+            owner=owner,
+            result=result,
+            specific_sharecode=normalized_sharecode,
+            specific_match_id=specific_match_id,
+        ):
+            result["run"]["status"] = "blocked"
+            return _finish_result(result, started_clock=started_clock)
+        completed = _run_discovery_and_cycle(
             db,
             owner=owner,
             result=result,
@@ -229,6 +248,9 @@ def run_owner_coach_sync(
             lock=lock,
             started_clock=started_clock,
         )
+        completed["discovery"]["discovery_mode"] = "real_sync"
+        completed["discovery"]["remote_discovery"] = completed.pop("remote_discovery")
+        return completed
     except Exception as exc:  # pragma: no cover - defensive service boundary
         db.rollback()
         result["errors"].append(
@@ -257,6 +279,85 @@ def run_owner_coach_sync(
         released = _release_owner_sync_lock(db, lock)
         result["run"]["lock"]["released"] = released
         _log_phase("lock_released", owner_user_id=owner.user.id, released=released)
+
+
+def _refresh_remote_discovery(
+    db: Session,
+    *,
+    owner: _OwnerContext,
+    result: dict[str, Any],
+    specific_sharecode: str | None,
+    specific_match_id: int | None,
+) -> bool:
+    if specific_sharecode or specific_match_id is not None:
+        result["remote_discovery"] = {
+            "performed": False,
+            "reason_code": "specific_persisted_identity_requested",
+        }
+        return True
+    if not owner.steam_account.match_auth_code:
+        result["remote_discovery"] = {
+            "performed": False,
+            "reason_code": "remote_discovery_not_configured_for_owner",
+        }
+        return True
+
+    before_match_ids = _table_ids(db, Match)
+    try:
+        job = queue_match_history_sync(db, owner.steam_account.id)
+        sync_result = sync_match_history_job(db, job.id)
+    except Exception as exc:
+        db.rollback()
+        result["remote_discovery"] = {
+            "performed": True,
+            "status": "provider_error",
+            "reason_code": "remote_provider_failure",
+        }
+        result["errors"].append(
+            _failure(
+                phase="remote_discovery",
+                reason_code="remote_provider_failure",
+                safe_message="Remote Steam discovery failed.",
+                retryable=True,
+                exception_class=type(exc).__name__,
+            )
+        )
+        return False
+
+    _mutation_add(result, "created", "import_jobs", job.id)
+    after_match_ids = _table_ids(db, Match)
+    _account_table_delta(result, "matches", before_match_ids, after_match_ids)
+    payload = sync_result.get("result") if isinstance(sync_result, dict) else None
+    payload = payload if isinstance(payload, dict) else {}
+    if sync_result.get("status") not in {"completed", "succeeded"}:
+        result["remote_discovery"] = {
+            "performed": True,
+            "status": "provider_error",
+            "reason_code": "remote_provider_failure",
+            "import_job_id": job.id,
+        }
+        result["errors"].append(
+            _failure(
+                phase="remote_discovery",
+                reason_code="remote_provider_failure",
+                safe_message="Remote Steam discovery did not complete successfully.",
+                retryable=True,
+            )
+        )
+        _mutation_add(result, "failed", "import_jobs", job.id)
+        return False
+    result["remote_discovery"] = {
+        "performed": True,
+        "status": "success",
+        "reason_code": "remote_discovery_completed_before_persisted_classification",
+        "import_job_id": job.id,
+        "collected": int(payload.get("collected", 0)),
+        "inserted": int(payload.get("inserted", 0)),
+        "duplicates": int(payload.get("duplicates", 0)),
+        "cursor_advanced": bool(payload.get("cursor_advanced")),
+        "sync_outcome": payload.get("sync_outcome"),
+    }
+    return True
 
 
 def _run_discovery_and_cycle(

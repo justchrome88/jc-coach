@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -426,6 +427,38 @@ def sync_match_history_job(db: Session, job_id: int) -> dict[str, Any]:
         return _job_result(job)
     except Exception as exc:
         return _fail_job(db, job, str(exc), sync_outcome=STEAM_SYNC_STEAM_TEMPORARY_ERROR)
+
+
+def preview_match_history_codes(
+    db: Session,
+    steam_account_id: int,
+    *,
+    collector: Callable[..., list[str]] | None = None,
+) -> dict[str, Any]:
+    """Read the provider cursor without persisting codes, jobs, or cursor state."""
+    account = db.get(SteamAccount, steam_account_id)
+    if account is None:
+        raise ValueError("steam_account_not_found")
+    if not account.match_auth_code:
+        raise ValueError("match_auth_code_missing")
+    steam_web_api_key = get_settings().steam_web_api_key or get_app_setting(db, "steam_web_api_key")
+    if not steam_web_api_key:
+        raise ValueError("steam_web_api_key_missing")
+    cursor = steam_cursor_source(account)
+    max_codes = max(1, min(int(get_settings().steam_sync_max_codes), 100))
+    collect = collector or _collect_match_share_codes
+    codes = collect(
+        steam_web_api_key=steam_web_api_key,
+        steam_id=account.steam_id,
+        steam_id_key=account.match_auth_code,
+        known_code=cursor["known_code"],
+        max_codes=max_codes,
+    )
+    return {
+        "codes": [code.strip() for code in codes if code and code.strip()],
+        "cursor": cursor,
+        "max_codes": max_codes,
+    }
 
 def process_queued_steam_jobs(db: Session, limit: int = 5) -> list[dict[str, Any]]:
     jobs = db.scalars(
@@ -1134,6 +1167,8 @@ def _get_next_match_sharing_code(
 
 def _store_steam_share_code_match(db: Session, account: SteamAccount, share_code: str) -> bool:
     match = Match(
+        user_id=account.user_id,
+        steam_account_id=account.id,
         source="steam_history",
         external_match_id=share_code,
         mode="Valve Matchmaking",

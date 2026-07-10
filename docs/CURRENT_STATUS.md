@@ -1,12 +1,19 @@
 # Current Status
 
-Last updated: 2026-07-10.
+Last updated: 2026-07-11.
 
 ## Current H01A Repair State
 
 - CURRENT_LANE: H01A_REPAIR.
 - CURRENT_TASK: none.
 - H01A_STATUS: BLOCKED.
+- H01A_R02_STATUS: BLOCKED.
+- H01A_R02A_STATUS: PASS_WITH_WARNINGS.
+- FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
+- AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILED: true.
+- OWNER_SCOPE_CONSISTENT: true.
+- FRESH_MATCH_READY_AND_UNCONSUMED: true.
+- FRESH_MATCH_PRESERVED_FOR_H01A: true.
 - FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: false.
 - H01A_R01_STATUS: PASS_WITH_WARNINGS.
 - LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: true.
@@ -31,6 +38,11 @@ Last updated: 2026-07-10.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
 - NEXT_TASK: H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A-R02A selected Contract A: remote preview is owner-scoped and
+  non-persisting, persisted G01 dry-run remains network-isolated, and real G01
+  refreshes canonical Steam history before persisted candidate processing.
+  Owner `17` now owns Steam account `1` and all legacy match/mission lineage;
+  the production preview still exposes one fresh unconsumed identity.
 - H01A-R01 repaired derived owner-sync classification without a schema or
   production-data rewrite. The nine historical pending rows are diagnostic
   `legacy_stale_pending`, the production dry baseline is `success_no_changes`,

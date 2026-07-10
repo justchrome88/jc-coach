@@ -1,6 +1,6 @@
 # WP Registry
 
-Last updated: 2026-07-10.
+Last updated: 2026-07-11.
 
 This is the canonical work-package registry for JC Coach. It preserves WP
 history and prevents silent WP ID reuse, skipped prerequisites or promotion
@@ -53,9 +53,16 @@ Allowed statuses: `planned`, `not_started`, `active`, `in_progress`, `done`,
 | H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE | blocked | PM H01A report and JSON artifact | Baseline classified nine legacy `steam_history` rows as actionable `new`; fresh-match exposure did not start and acceptance is false. |
 | H01A-R00_CANONICAL_HOT_ROUTE_RECONCILIATION | completed | Documentation/control-plane reconciliation | Canonical product and PM routing now points to H01A-R01; no runtime or DB change. |
 | H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR | accepted_with_warnings | Product classification/batch services and focused tests; PM H01A-R01 report | Restored 54+9 production baseline no-op; fresh/deeper discovery and target-31 behavior preserved; known Starlette warning only. |
+| H01A-R02_AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILIATION | blocked | PM blocked report/artifact | Identity equivalence and migration were proven, then restored because remote preview and persisted dry-run were incorrectly treated as contradictory. |
+| H01A-R02A_FRESH_MATCH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILIATION | accepted_with_warnings | Product discovery/reconciliation services and tests; PM H01A-R02A report/artifact | Contract A accepted; owner 17 reconciled; fresh remote identity remains unconsumed; known Starlette warning only. |
 
 CURRENT_LANE: H01A_REPAIR. CURRENT_TASK: none. Mission backend status:
 ACCEPTED_FOR_UI_API. H01A_STATUS: BLOCKED.
+H01A_R02_STATUS: BLOCKED. H01A_R02A_STATUS: PASS_WITH_WARNINGS.
+FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
+AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILED: true.
+OWNER_SCOPE_CONSISTENT: true. FRESH_MATCH_PRESERVED_FOR_H01A: true.
+FRESH_MATCH_READY_AND_UNCONSUMED: true.
 FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: false.
 H01A_R01_STATUS: PASS_WITH_WARNINGS.
 LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: true.

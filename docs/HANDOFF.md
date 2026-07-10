@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-07-10.
+Last updated: 2026-07-11.
 
 ## Purpose
 
@@ -11,6 +11,13 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - CURRENT_LANE: H01A_REPAIR.
 - CURRENT_TASK: none.
 - H01A_STATUS: BLOCKED.
+- H01A_R02_STATUS: BLOCKED.
+- H01A_R02A_STATUS: PASS_WITH_WARNINGS.
+- FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
+- AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILED: true.
+- OWNER_SCOPE_CONSISTENT: true.
+- FRESH_MATCH_READY_AND_UNCONSUMED: true.
+- FRESH_MATCH_PRESERVED_FOR_H01A: true.
 - FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: false.
 - H01A_R01_STATUS: PASS_WITH_WARNINGS.
 - LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: true.
@@ -35,6 +42,10 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
 - NEXT_TASK: H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A-R02A accepted separate remote-preview and persisted-dry-run evidence.
+  Real G01 performs the remote refresh; dry-run does not. Canonical user `17`
+  owns Steam account `1` and the complete historical lineage, while one fresh
+  remote identity remains visible and unconsumed for H01A.
 - H01A-R01 now derives the nine historical pending rows as diagnostic
   `legacy_stale_pending`, restores the production baseline to
   `success_no_changes`, preserves fresh/deeper accepted-sync identities and

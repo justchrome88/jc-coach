@@ -95,6 +95,22 @@ def test_same_owner_double_start_reuses_one_batch_and_different_owners_are_indep
     assert db.get(AppSetting, "lock:owner_coach_sync_batch:202") is not None
 
 
+def test_single_batch_uses_real_g01_discovery_not_a_persisted_preview_identity(db, monkeypatch):
+    calls = []
+
+    def fake_g01(_db, **kwargs):
+        calls.append(kwargs)
+        return _result([])
+
+    monkeypatch.setattr(batch_service, "run_owner_coach_sync", fake_g01)
+    batch = batch_service.start_owner_coach_sync_batch(db, owner_user_id=203, mode="single")
+    batch_service.run_owner_coach_sync_batch_step(db, owner_user_id=203, batch_id=batch["batch"]["batch_id"])
+
+    assert len(calls) == 1
+    assert calls[0]["dry_run"] is False
+    assert calls[0]["specific_match_id"] is None
+
+
 def test_stale_batch_lock_recovers_the_same_durable_batch(db):
     first = batch_service.start_owner_coach_sync_batch(db, owner_user_id=250)
     lock = db.get(AppSetting, "lock:owner_coach_sync_batch:250")
