@@ -59,6 +59,7 @@ REQUIRED_MISSION_PAYLOAD_FIELDS = ("title", "goal", "rules", "duration", "succes
 SURVIVAL_OPENING_MISSION_METRICS = {"opening_death_rate", "survival_rate"}
 BAD_FIGHT_TRADE_MISSION_METRICS = {"untraded_death_rate"}
 UTILITY_VALUE_MISSION_METRICS = {"utility_damage", "he_damage", "flash_assists", "enemies_flashed"}
+UTILITY_DAMAGE_ROLLING_THRESHOLD = 40.0
 ROLLING_MISSION_WINDOW_TYPES = {"last_30", "last_60", "custom_match_set"}
 ROLLING_MISSION_METRICS = {
     "survival_rate",
@@ -66,6 +67,7 @@ ROLLING_MISSION_METRICS = {
     "opening_duel_win_rate",
     "untraded_death_rate",
     "traded_death_rate",
+    "utility_damage",
 }
 MIN_ROLLING_WINDOW_MATCHES = 3
 MIN_ROLLING_WINDOW_ROUNDS = 8
@@ -1367,6 +1369,7 @@ def _rolling_candidates_from_window(
     for family, metric_order in (
         ("survival_opening", ("opening_death_rate", "survival_rate")),
         ("bad_fight_trade", ("untraded_death_rate",)),
+        ("utility_value", ("utility_damage",)),
     ):
         candidate = _rolling_candidate_for_family(
             window,
@@ -1495,6 +1498,8 @@ def _rolling_evidence_for_family(
 ) -> list[dict[str, Any]]:
     if family == "bad_fight_trade":
         metrics = (primary_metric, "opening_death_rate", "traded_death_rate")
+    elif family == "utility_value":
+        metrics = (primary_metric,)
     else:
         metrics = (primary_metric, "survival_rate" if primary_metric == "opening_death_rate" else "opening_death_rate")
     evidence: list[dict[str, Any]] = []
@@ -1509,8 +1514,9 @@ def _rolling_evidence_for_family(
                 "metric_id": metric_name,
                 "metric_name": metric_name,
                 "value": window.metrics[metric_name],
+                "threshold": UTILITY_DAMAGE_ROLLING_THRESHOLD if metric_name == "utility_damage" else None,
                 "metric_confidence": sample.get("confidence"),
-                "sample_count": sample.get("sample_rounds") or None,
+                "sample_count": sample.get("sample_rounds") or sample.get("snapshot_count") or None,
                 "rounds": sample.get("sample_rounds") or None,
                 "sample_matches": sample.get("sample_matches"),
                 "source": "rolling_metric_window",
@@ -1535,6 +1541,7 @@ def _rolling_insight_card(
         "opening_death_rate": "Rolling owner window shows too many opening deaths.",
         "survival_rate": "Rolling owner window shows low round survival.",
         "untraded_death_rate": "Rolling owner window shows too many untraded deaths.",
+        "utility_damage": "Increase utility damage.",
     }.get(primary_metric, f"Rolling owner window supports a {primary_metric} mission.")
     return {
         "id": f"rolling:{window.window_type}:{family}:{primary_metric}",
@@ -1574,6 +1581,14 @@ def _rolling_metric_is_mission_ready(window: RollingMissionWindow, metric_name: 
         return False
     if window.sample_matches < MIN_ROLLING_WINDOW_MATCHES:
         return False
+    if metric_name == "utility_damage":
+        value = _optional_number(window.metrics.get(metric_name))
+        snapshot_count = _optional_int(sample.get("snapshot_count")) or 0
+        return (
+            value is not None
+            and value >= UTILITY_DAMAGE_ROLLING_THRESHOLD
+            and snapshot_count >= MIN_ROLLING_WINDOW_MATCHES
+        )
     sample_rounds = _optional_int(sample.get("sample_rounds")) or 0
     return sample_rounds >= MIN_ROLLING_WINDOW_ROUNDS
 
@@ -1587,6 +1602,8 @@ def _rolling_metric_severity(metric_name: str, value: float | None) -> float:
         return round(max(0.0, value - 0.2), 3)
     if metric_name == "survival_rate":
         return round(max(0.0, 0.6 - value), 3)
+    if metric_name == "utility_damage":
+        return round(max(0.0, value - UTILITY_DAMAGE_ROLLING_THRESHOLD), 3)
     return 0.0
 
 
@@ -1646,6 +1663,8 @@ def _rolling_recommended_focus(primary_metric: str) -> str:
         return "Delay first contact and take opening fights only with trade support."
     if primary_metric == "survival_rate":
         return "Prioritize staying alive through early fights before taking isolated space."
+    if primary_metric == "utility_damage":
+        return "Review damage-producing grenade rounds before making broader utility changes."
     return f"Improve {primary_metric.replace('_', ' ')} with supported owner metrics."
 
 

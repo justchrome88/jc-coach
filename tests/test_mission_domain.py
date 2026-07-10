@@ -1337,6 +1337,56 @@ def test_rolling_custom_match_set_uses_only_requested_owner_matches(db):
     assert result["candidates"][0]["primary_metric"] == "opening_death_rate"
 
 
+def test_rolling_window_generates_and_suppresses_utility_value_candidate(db):
+    owner = _user(db, "owner")
+    owner_steam_id = "76561198000000001"
+    for index, utility_damage in enumerate((55, 52, 61), start=1):
+        match = _match(db, owner=owner, external_match_id=f"utility-{index}", day=index)
+        _rolling_metric_snapshot(
+            db,
+            match=match,
+            owner_steam_id=owner_steam_id,
+            metrics={"utility_damage": utility_damage},
+            confidence_level="medium",
+        )
+
+    result = generate_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id=owner_steam_id,
+        window_type="last_30",
+    )
+
+    candidates = result["candidates"]
+    assert [candidate["primary_metric"] for candidate in candidates] == ["utility_damage"]
+    assert candidates[0]["family"] == "utility_value"
+    assert candidates[0]["mission_payload"]["title"] == "Increase utility damage"
+    assert candidates[0]["mission_payload"]["success_metric"]["direction"] == "higher_is_better"
+    assert validate_mission_payload(candidates[0]["mission_payload"]) == ()
+
+    active_mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_utility_card_with_follow_rule(),
+        title="Utility damage",
+    )
+    active_mission.owner_steam_id = owner_steam_id
+
+    suppressed = persist_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id=owner_steam_id,
+        window_type="last_30",
+    )
+
+    utility = suppressed["candidates"][0]
+    assert utility["primary_metric"] == "utility_damage"
+    assert utility["suppressed_by_active_mission"] is True
+    assert utility["suppression_reason_codes"] == ["active_mission_same_domain"]
+    assert utility["suppression_key"]["domain_key"] == "utility_value"
+    assert suppressed["coach_hypothesis_ids"] == []
+
+
 def test_rolling_window_weak_or_unavailable_evidence_generates_no_candidate(db):
     owner = _user(db, "owner")
     owner_steam_id = "76561198000000001"
@@ -1669,6 +1719,7 @@ def _rolling_metric_snapshot(
                 "opening_duel_win_rate",
                 "untraded_death_rate",
                 "traded_death_rate",
+                "utility_damage",
             )
         },
     }
