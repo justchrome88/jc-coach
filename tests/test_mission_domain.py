@@ -36,6 +36,7 @@ from app.services.mission_domain import (
     record_mission_progress_evaluation,
     serialize_coach_mission,
     serialize_mission_payload,
+    serialize_mission_progress_evaluation,
     update_coach_mission_status,
     validate_mission_payload,
 )
@@ -646,6 +647,60 @@ def test_evaluate_opening_mission_progress_outcomes(db, future_value, expected_s
     assert evaluation.owner_steam_id == mission.owner_steam_id
 
 
+def test_evaluate_mission_progress_links_before_after_snapshots_and_explains_focus(db):
+    owner = _user(db, "owner")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Survive openings",
+    )
+
+    evaluation = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        baseline_metric_snapshots=[
+            _snapshot(
+                owner,
+                owner_steam_id=mission.owner_steam_id,
+                metrics={"opening_death_rate": 0.31},
+                sample_matches=3,
+                sample_rounds=70,
+            )
+        ],
+        evaluation_metric_snapshots=[
+            _snapshot(
+                owner,
+                owner_steam_id=mission.owner_steam_id,
+                metrics={"opening_death_rate": 0.24},
+                sample_matches=3,
+                sample_rounds=72,
+            )
+        ],
+    )
+
+    result = json.loads(evaluation.result_json)
+    summary = serialize_mission_progress_evaluation(evaluation)
+    comparison = result["snapshot_comparison"]
+    assert evaluation.status == "improving"
+    assert comparison["success_metric"] == {
+        "metric_name": "opening_death_rate",
+        "direction": "lower_is_better",
+        "target_value": 0.26,
+        "source": "mission_payload.success_metric",
+    }
+    assert comparison["before"]["metric_snapshot_ids"] == [owner.id * 1000 + 70]
+    assert comparison["after"]["metric_snapshot_ids"] == [owner.id * 1000 + 72]
+    assert comparison["before"]["value"] == 0.31
+    assert comparison["after"]["value"] == 0.24
+    assert comparison["delta"] == pytest.approx(-0.07)
+    assert result["components"][0]["baseline_source"] == "metric_snapshots"
+    assert "Improving on the assigned focus" in result["progress_explanation"]
+    assert summary["snapshot_comparison"] == comparison
+    assert summary["progress_explanation"] == result["progress_explanation"]
+
+
 def test_evaluate_mission_progress_distinguishes_missing_data(db):
     owner = _user(db, "owner")
     mission = _active_mission_from_card(
@@ -675,6 +730,49 @@ def test_evaluate_mission_progress_distinguishes_missing_data(db):
     assert result["components"][0]["outcome"] == "insufficient_data"
     assert "missing_metric" in result["components"][0]["reason_codes"]
     assert json.loads(evaluation.caveats_json) == ["opening_death_rate:missing_metric"]
+
+
+def test_evaluate_mission_progress_requires_success_metric_in_before_snapshot(db):
+    owner = _user(db, "owner")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Survive openings",
+    )
+
+    evaluation = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        baseline_metric_snapshots=[
+            _snapshot(
+                owner,
+                owner_steam_id=mission.owner_steam_id,
+                metrics={"survival_rate": 0.55},
+                sample_matches=3,
+                sample_rounds=70,
+            )
+        ],
+        evaluation_metric_snapshots=[
+            _snapshot(
+                owner,
+                owner_steam_id=mission.owner_steam_id,
+                metrics={"opening_death_rate": 0.24},
+                sample_matches=3,
+                sample_rounds=72,
+            )
+        ],
+    )
+
+    result = json.loads(evaluation.result_json)
+    assert evaluation.status == "insufficient_data"
+    assert result["components"][0]["reason_codes"] == ["missing_baseline_metric"]
+    assert result["snapshot_comparison"]["before"]["metric_snapshot_ids"] == [owner.id * 1000 + 70]
+    assert result["snapshot_comparison"]["after"]["metric_snapshot_ids"] == [owner.id * 1000 + 72]
+    assert result["snapshot_comparison"]["before"]["value"] is None
+    assert json.loads(evaluation.caveats_json) == ["opening_death_rate:missing_baseline_metric"]
+    assert "Insufficient data to judge the assigned focus" in result["progress_explanation"]
 
 
 def test_evaluate_mission_progress_distinguishes_not_following(db):

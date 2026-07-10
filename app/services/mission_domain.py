@@ -402,6 +402,7 @@ def evaluate_mission_progress(
     *,
     user_id: int,
     mission_id: int,
+    baseline_metric_snapshots: Sequence[Any] | None = None,
     evaluation_metric_snapshots: Sequence[Any],
     evaluation_window_start: datetime | None = None,
     evaluation_window_end: datetime | None = None,
@@ -411,13 +412,24 @@ def evaluate_mission_progress(
     if mission.status != "active":
         raise ValueError(f"Cannot evaluate mission progress from status: {mission.status}")
     criteria_rows = list_mission_criteria(db, user_id=user_id, mission_id=mission.id)
+    baseline_window = (
+        _metric_snapshot_window(mission, baseline_metric_snapshots)
+        if baseline_metric_snapshots is not None
+        else None
+    )
     snapshot_window = _metric_snapshot_window(mission, evaluation_metric_snapshots)
     components = [
-        _evaluate_criteria(criteria, snapshot_window)
+        _evaluate_criteria(criteria, snapshot_window, baseline_window=baseline_window)
         for criteria in criteria_rows
     ]
     status = _composite_progress_status(components)
     caveats = _evaluation_caveats(snapshot_window, components)
+    snapshot_comparison = _snapshot_comparison(
+        mission=mission,
+        baseline_window=baseline_window,
+        evaluation_window=snapshot_window,
+        components=components,
+    )
     window_payload = {
         "start": evaluation_window_start.isoformat() if evaluation_window_start else None,
         "end": evaluation_window_end.isoformat() if evaluation_window_end else None,
@@ -438,8 +450,10 @@ def evaluate_mission_progress(
             component["metric_name"]: component
             for component in components
         },
+        "snapshot_comparison": snapshot_comparison,
         "source_metric_snapshot_ids": snapshot_window["snapshot_ids"],
         "target_met": _target_met(components),
+        "progress_explanation": _progress_explanation(status, snapshot_comparison, caveats),
     }
     return record_mission_progress_evaluation(
         db,
@@ -495,9 +509,16 @@ def serialize_mission_progress_evaluation(evaluation: MissionProgressEvaluation)
         "primary_metric_result": _component_summary(primary),
         "secondary_metric_results": [_component_summary(component) for component in secondaries],
         "guardrail_results": [_component_summary(component) for component in guardrails],
+        "snapshot_comparison": result.get("snapshot_comparison") or {},
         "target_met": target_met,
         "counted": target_met,
         "why_counted_or_not": counted_reason,
+        "progress_explanation": result.get("progress_explanation")
+        or _progress_explanation(
+            evaluation.status,
+            result.get("snapshot_comparison") or {},
+            _json_load_sequence(evaluation.caveats_json),
+        ),
     }
 
 
@@ -716,15 +737,31 @@ def _metric_snapshot_window(
     }
 
 
-def _evaluate_criteria(criteria: MissionCriteria, snapshot_window: Mapping[str, Any]) -> dict[str, Any]:
+def _evaluate_criteria(
+    criteria: MissionCriteria,
+    snapshot_window: Mapping[str, Any],
+    *,
+    baseline_window: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     metrics = _mapping(snapshot_window.get("metrics"))
+    baseline_metrics = _mapping(baseline_window.get("metrics")) if baseline_window is not None else {}
+    baseline_from_snapshot = (
+        _optional_number(baseline_metrics.get(criteria.metric_name))
+        if criteria.metric_name in baseline_metrics
+        else None
+    )
+    baseline = baseline_from_snapshot if baseline_window is not None else criteria.baseline_value
     rule = _json_load_mapping(criteria.rule_json)
     component = {
         "criteria_id": criteria.id,
         "metric_name": criteria.metric_name,
         "role": criteria.role,
         "direction": criteria.direction,
-        "baseline_value": criteria.baseline_value,
+        "baseline_value": baseline,
+        "baseline_source": "metric_snapshots" if baseline_window is not None else "mission_activation",
+        "baseline_metric_snapshot_ids": list(baseline_window.get("snapshot_ids") or [])
+        if baseline_window is not None
+        else [],
         "target_value": criteria.target_value,
         "observed_value": _optional_number(metrics.get(criteria.metric_name))
         if criteria.metric_name in metrics
@@ -742,6 +779,9 @@ def _evaluate_criteria(criteria: MissionCriteria, snapshot_window: Mapping[str, 
     if criteria.metric_name not in metrics:
         component["reason_codes"].append("missing_metric")
         return component
+    if baseline_window is not None and criteria.metric_name not in baseline_metrics:
+        component["reason_codes"].append("missing_baseline_metric")
+        return component
     if sample_reason:
         component["reason_codes"].append(sample_reason)
         return component
@@ -756,7 +796,6 @@ def _evaluate_criteria(criteria: MissionCriteria, snapshot_window: Mapping[str, 
         return component
 
     observed = _optional_number(metrics.get(criteria.metric_name))
-    baseline = criteria.baseline_value
     if observed is not None and baseline is not None:
         component["delta"] = observed - baseline
     component["outcome"] = _directional_outcome(
@@ -979,6 +1018,7 @@ def _evaluation_caveats(
         for reason in component.get("reason_codes") or []:
             if reason in {
                 "missing_metric",
+                "missing_baseline_metric",
                 "insufficient_sample_matches",
                 "insufficient_sample_rounds",
                 "missing_confidence",
@@ -998,6 +1038,8 @@ def _component_summary(component: Mapping[str, Any] | None) -> dict[str, Any] | 
         "role": component.get("role"),
         "direction": component.get("direction"),
         "baseline_value": component.get("baseline_value"),
+        "baseline_source": component.get("baseline_source"),
+        "baseline_metric_snapshot_ids": list(component.get("baseline_metric_snapshot_ids") or []),
         "evaluation_value": component.get("observed_value"),
         "delta": component.get("delta"),
         "target_value": component.get("target_value"),
@@ -1022,6 +1064,89 @@ def _mission_count_reason(status: str, components: Sequence[Mapping[str, Any]], 
     if blocking:
         return f"Mission did not count because {', '.join(blocking)}."
     return f"Mission did not count because evaluation status is {status}."
+
+
+def _snapshot_comparison(
+    *,
+    mission: CoachMission,
+    baseline_window: Mapping[str, Any] | None,
+    evaluation_window: Mapping[str, Any],
+    components: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    primary = next((component for component in components if component.get("role") == "primary"), None)
+    if primary is None:
+        return {}
+    success_metric = _mission_success_metric(mission, primary)
+    metric_name = str(success_metric.get("metric_name") or primary.get("metric_name") or "")
+    before_value = _optional_number(primary.get("baseline_value"))
+    after_value = _optional_number(primary.get("observed_value"))
+    delta = after_value - before_value if before_value is not None and after_value is not None else None
+    return {
+        "success_metric": success_metric,
+        "before": {
+            "metric_snapshot_ids": list(baseline_window.get("snapshot_ids") or [])
+            if baseline_window is not None
+            else [],
+            "value": before_value,
+            "sample_matches": baseline_window.get("sample_matches") if baseline_window is not None else None,
+            "sample_rounds": baseline_window.get("sample_rounds") if baseline_window is not None else None,
+        },
+        "after": {
+            "metric_snapshot_ids": list(evaluation_window.get("snapshot_ids") or []),
+            "value": after_value,
+            "sample_matches": evaluation_window.get("sample_matches"),
+            "sample_rounds": evaluation_window.get("sample_rounds"),
+        },
+        "metric_name": metric_name,
+        "direction": success_metric.get("direction") or primary.get("direction"),
+        "target_value": success_metric.get("target_value"),
+        "delta": delta,
+        "status": primary.get("outcome"),
+    }
+
+
+def _mission_success_metric(mission: CoachMission, primary_component: Mapping[str, Any]) -> dict[str, Any]:
+    source_payload = _json_load_mapping(mission.source_payload_json)
+    mission_payload = _mapping(source_payload.get("mission_payload"))
+    success_metric = _mapping(mission_payload.get("success_metric"))
+    metric_name = success_metric.get("metric_name") or primary_component.get("metric_name")
+    return {
+        "metric_name": str(metric_name or ""),
+        "direction": str(success_metric.get("direction") or primary_component.get("direction") or ""),
+        "target_value": _optional_number(success_metric.get("target_value"))
+        if "target_value" in success_metric
+        else _optional_number(primary_component.get("target_value")),
+        "source": "mission_payload.success_metric" if success_metric else "mission_primary_criteria",
+    }
+
+
+def _progress_explanation(
+    status: str,
+    snapshot_comparison: Mapping[str, Any],
+    caveats: Sequence[Any],
+) -> str:
+    metric_name = str(snapshot_comparison.get("metric_name") or "mission metric")
+    before = _mapping(snapshot_comparison.get("before")).get("value")
+    after = _mapping(snapshot_comparison.get("after")).get("value")
+    before_text = _format_metric_value(before)
+    after_text = _format_metric_value(after)
+    if status == "improving":
+        return f"Improving on the assigned focus: {metric_name} moved from {before_text} to {after_text}."
+    if status == "unchanged":
+        return f"Unchanged on the assigned focus: {metric_name} stayed near {before_text}."
+    if status == "regressing":
+        return f"Regressing on the assigned focus: {metric_name} moved from {before_text} to {after_text}."
+    if status == "not_following":
+        return f"Not enough evidence of following the assigned focus rules for {metric_name}."
+    reason = ", ".join(str(caveat) for caveat in caveats) or "missing comparable metric data"
+    return f"Insufficient data to judge the assigned focus for {metric_name}: {reason}."
+
+
+def _format_metric_value(value: Any) -> str:
+    number = _optional_number(value)
+    if number is None:
+        return "unknown"
+    return f"{number:.3f}".rstrip("0").rstrip(".")
 
 
 def _snapshot_to_mapping(snapshot: Any) -> dict[str, Any]:
