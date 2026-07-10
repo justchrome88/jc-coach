@@ -12,6 +12,12 @@ without moving or renaming files.
 > Current source of truth: `AGENTS.md`, `docs/CURRENT_STATUS.md`,
 > `docs/project_management/WP_REGISTRY.md`.
 
+## Current Routing
+
+F10_MISSION_BACKEND_REPAIR_SEQUENCE is current. The next task is
+F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN. F09 is completed with
+warnings, F10A/F10B are accepted, and UI/API remains blocked until F10D.
+
 ## Hot / Warm / Cold Context
 
 Per-task Hot context:
@@ -168,7 +174,7 @@ evidence/history and must not override Hot context.
 - `docs/metrics_roadmap_scoring_ru.xlsx` - supporting spreadsheet artifact.
 - `docs/archive/README.md` - archive index.
 
-## Current Active WP
+## Current Active Task
 
 See `docs/CURRENT_STATUS.md` and `docs/project_management/WP_REGISTRY.md`.
 Do not use this navigation index as current WP truth.

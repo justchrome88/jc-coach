@@ -1,12 +1,25 @@
 # Handoff
 
-Last updated: 2026-07-09.
+Last updated: 2026-07-10.
 
 ## Purpose
 
 This file is the compact new-session bootstrap for JC Coach. It is not the full project history and must not duplicate `AGENTS.md`.
 
-## Project Identity
+## Current F10 Handoff
+
+- Current lane: F10_MISSION_BACKEND_REPAIR_SEQUENCE.
+- F09 completed with warnings; the preserved JSON operation evidence identifies
+  parser artifact 90.
+- F10A and F10B are accepted repairs.
+- F10C completed documentation and PM routing synchronization.
+- Next task: F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN.
+- MISSION_BACKEND_ACCEPTED_FOR_UI_API: false. UI/API presentation remains
+  blocked until F10D accepts the final real rerun.
+- Owner-only personal scope, fail-closed weak evidence, no public/friends
+  readiness, and no v1.0 claim remain mandatory.
+
+## Historical Pre-F10 Handoff
 
 - Project: JC Coach, a personal AI coach for CS2.
 - Primary workspace convention: start future Codex sessions from
@@ -123,7 +136,13 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - Docs-only roadmap edits, H1 PASS evidence and H2 closure do not change the
   readiness flag; `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`.
 
-## Next Safe Step
+## Current Next Safe Step
+
+Run F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN manually against the
+accepted repaired semantics. Do not authorize mission UI/API work before it
+accepts.
+
+## Historical Pre-F10 Next Safe Step
 
 Proceed to the first MVP lane WP:
 `MVP-001_AUTH_STEAM_IDENTITY_FOUNDATION_AND_GUARDRAILS`.

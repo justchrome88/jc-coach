@@ -1,6 +1,6 @@
 # WP Registry
 
-Last updated: 2026-07-09.
+Last updated: 2026-07-10.
 
 This is the canonical work-package registry for JC Coach. It preserves WP
 history and prevents silent WP ID reuse, skipped prerequisites or promotion
@@ -38,6 +38,21 @@ registry.
 
 Allowed statuses: `planned`, `active`, `in_progress`, `done`, `blocked`,
 `deferred`, `failed`, `superseded`, `out-of-band evidence`.
+
+## Current F10 Mission Backend Repair Sequence
+
+| Task ID | Status | Evidence / commit | Current routing |
+|---|---|---|---|
+| F09 | completed_with_warnings | PM report/artifact; Markdown operation reference corrected to parser artifact 90 | Historical acceptance evidence; no UI/API authorization. |
+| F10A_MISSION_PROGRESS_SAMPLE_AND_OBSERVATION_SEMANTICS_REPAIR | accepted | Product 7ee53e3d5ee04a63a5c7dc43803025c0f7d68dc7; PM f4bf9596474f9a0950ac31221b419b8dc246f6c7 | Canonical unique-match sample semantics. |
+| F10B_UTILITY_MISSION_TREND_AND_DEFICIENCY_SEMANTICS_REPAIR | accepted | Product 6925c5b9409b3ab1154938e49e2f5e11dbcd868e; PM ffc2ba8c1043990a726be268462fa786904041f7 | Utility mission requires a personal negative trend. |
+| F10C_F09_EVIDENCE_AND_CONTROL_PLANE_RECONCILIATION | completed | Documentation/control-plane only | Reconciled current routing; no runtime change. |
+| F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN | next | PM task card | Final real acceptance rerun. UI/API remains blocked until accepted. |
+
+Current lane: F10_MISSION_BACKEND_REPAIR_SEQUENCE. Current next task:
+F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN. Owner-only personal scope,
+fail-closed weak evidence, no public/friends readiness and no v1.0 claim
+remain mandatory.
 
 ## WP-017 Canonical Order
 

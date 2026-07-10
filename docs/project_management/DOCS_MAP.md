@@ -9,6 +9,12 @@ hierarchy starts with `AGENTS.md`, `docs/CURRENT_STATUS.md` and
 
 For human navigation by category, start with `docs/README.md` and `docs/project_management/DOCS_INDEX.md`.
 
+## Current Routing
+
+F10_MISSION_BACKEND_REPAIR_SEQUENCE is current. The next task is
+F10D_FINAL_REAL_MISSION_BACKEND_ACCEPTANCE_RERUN; UI/API presentation remains
+blocked until that final real acceptance rerun.
+
 ## Context Policy
 
 Per-task Hot context:
