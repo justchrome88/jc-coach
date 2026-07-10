@@ -52,14 +52,18 @@ Allowed statuses: `planned`, `not_started`, `active`, `in_progress`, `done`,
 | G02_THIN_MANUAL_WEB_ADAPTER_AND_RAW_RESULT_VIEW | accepted_with_warnings | Product batch coordinator/web tests and PM G02 report | Durable owner batch lease; G01-only bounded continuations; exact target-31 fixture and restart recovery passed; known Starlette warning only. |
 | H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE | blocked | PM H01A report and JSON artifact | Baseline classified nine legacy `steam_history` rows as actionable `new`; fresh-match exposure did not start and acceptance is false. |
 | H01A-R00_CANONICAL_HOT_ROUTE_RECONCILIATION | completed | Documentation/control-plane reconciliation | Canonical product and PM routing now points to H01A-R01; no runtime or DB change. |
-| H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR | not_started | none | Canonical next task; the prior blocked-at-preflight attempt is not accepted work. |
+| H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR | accepted_with_warnings | Product classification/batch services and focused tests; PM H01A-R01 report | Restored 54+9 production baseline no-op; fresh/deeper discovery and target-31 behavior preserved; known Starlette warning only. |
 
 CURRENT_LANE: H01A_REPAIR. CURRENT_TASK: none. Mission backend status:
 ACCEPTED_FOR_UI_API. H01A_STATUS: BLOCKED.
 FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: false.
-LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: false.
-H01A_R01_STATUS: NOT_STARTED. NEXT_TASK:
-H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR.
+H01A_R01_STATUS: PASS_WITH_WARNINGS.
+LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: true.
+ORDINARY_BASELINE_NO_OP_RESTORED: true.
+FRESH_MATCH_DISCOVERY_PRESERVED: true.
+DEEPER_HISTORY_TRAVERSAL_PRESERVED: true.
+BATCH_31_COMPATIBILITY_PRESERVED: true. NEXT_TASK:
+H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
 Owner-only personal scope, fail-closed weak evidence, no public/friends
 readiness and no v1.0 claim remain mandatory.
 

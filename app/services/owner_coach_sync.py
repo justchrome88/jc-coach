@@ -33,7 +33,7 @@ from app.services.ai_coach import (
     build_ai_coach_payload,
 )
 from app.services.demo_parser import import_demo_file
-from app.services.import_jobs import IMPORT_JOB_COMPLETED
+from app.services.import_jobs import IMPORT_JOB_ACTIVE_STATUSES, IMPORT_JOB_COMPLETED
 from app.services.import_orchestration import run_demo_import_orchestration
 from app.services.match_processing import ACCEPTED_PARSER_ARTIFACT_STATUSES, process_owner_match_after_parser_artifact
 from app.services.metric_snapshots import owner_player_metric_snapshot_scope
@@ -45,7 +45,21 @@ OWNER_COACH_SYNC_LOCK_TTL = timedelta(minutes=30)
 DEFAULT_MAX_NEW_MATCHES = 1
 MAX_NEW_MATCHES = 50
 MAX_NEW_DEMO_ACQUISITIONS_PER_SYNC = 1
+MAX_RETRYABLE_ATTEMPTS = 2
+RETRY_COOLDOWN = timedelta(minutes=15)
 METRIC_SNAPSHOT_SOURCES = frozenset({"core_combat_metrics", "utility_metrics"})
+INTERNAL_CLASSIFICATIONS = (
+    "fresh_actionable",
+    "incomplete_resumable",
+    "already_complete",
+    "legacy_stale_pending",
+    "unavailable_retryable",
+    "unavailable_terminal",
+    "failed_retryable",
+    "failed_terminal",
+    "cross_owner_denied",
+    "invalid_identity",
+)
 
 _DURABLE_ENTITY_KEYS = (
     "import_jobs",
@@ -88,6 +102,20 @@ class _Candidate:
     reason_code: str
     artifact: DemoParseArtifact | None
     snapshots: list[MetricSnapshot]
+    internal_classification: str
+    actionable: bool
+    attempt_count: int = 0
+    last_attempt_at: datetime | None = None
+    next_eligible_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class _DiscoveryBoundary:
+    source: str
+    account_last_sync_at: datetime | None
+    cursor: str | None
+    accepted_positions: dict[str, int]
+    latest_completed_position: int | None
 
 
 class _MatchPhaseError(RuntimeError):
@@ -328,7 +356,7 @@ def _run_discovery_and_cycle(
             match_result = _process_candidate(db, owner=owner, candidate=candidate, result=result)
         except _MatchPhaseError as exc:
             db.rollback()
-            _persist_candidate_failure(db, candidate=candidate, failure=exc)
+            exc = _persist_candidate_failure(db, candidate=candidate, failure=exc)
             failure = _failure(
                 phase=exc.phase,
                 reason_code=exc.reason_code,
@@ -581,7 +609,8 @@ def _discover_candidates(
         if match is None:
             raise ValueError("specific_match_not_found")
         _require_match_owner(match, owner)
-        return [_classify_match(db, owner=owner, source_match=match)]
+        boundary = _build_discovery_boundary(db, owner=owner)
+        return [_classify_match(db, owner=owner, source_match=match, boundary=boundary)]
     if specific_sharecode:
         match = db.scalar(
             select(Match)
@@ -592,13 +621,25 @@ def _discover_candidates(
         if match is None:
             raise ValueError("specific_sharecode_not_found")
         _require_match_owner(match, owner)
-        return [_classify_match(db, owner=owner, source_match=match)]
+        boundary = _build_discovery_boundary(db, owner=owner)
+        return [
+            _classify_match(
+                db,
+                owner=owner,
+                source_match=match,
+                boundary=boundary,
+                specific_backfill=True,
+            )
+        ]
 
     history_rows = list(
         db.scalars(select(Match).where(Match.source == "steam_history").order_by(Match.id.desc())).all()
     )
     owner_history = [match for match in history_rows if _match_belongs_to_owner(match, owner)]
-    candidates = [_classify_match(db, owner=owner, source_match=match) for match in owner_history]
+    boundary = _build_discovery_boundary(db, owner=owner, owner_history=owner_history)
+    candidates = [
+        _classify_match(db, owner=owner, source_match=match, boundary=boundary) for match in owner_history
+    ]
     linked_demo_ids = {candidate.demo_match.id for candidate in candidates if candidate.demo_match is not None}
     standalone_demos = [
         match
@@ -607,12 +648,20 @@ def _discover_candidates(
     ]
     for match in standalone_demos:
         if match.id not in linked_demo_ids:
-            candidates.append(_classify_match(db, owner=owner, source_match=match))
+            candidates.append(_classify_match(db, owner=owner, source_match=match, boundary=boundary))
     return candidates
 
 
-def _classify_match(db: Session, *, owner: _OwnerContext, source_match: Match) -> _Candidate:
+def _classify_match(
+    db: Session,
+    *,
+    owner: _OwnerContext,
+    source_match: Match,
+    boundary: _DiscoveryBoundary | None = None,
+    specific_backfill: bool = False,
+) -> _Candidate:
     _require_match_owner(source_match, owner)
+    boundary = boundary or _build_discovery_boundary(db, owner=owner)
     raw = _json_mapping(source_match.raw_json)
     sharecode = _optional_text(raw.get("share_code")) or (
         _optional_text(source_match.external_match_id) if source_match.source == "steam_history" else None
@@ -623,47 +672,383 @@ def _classify_match(db: Session, *, owner: _OwnerContext, source_match: Match) -
     snapshots = [
         snapshot for snapshot in _match_snapshots(db, target.id) if _snapshot_belongs_to_owner(snapshot, owner)
     ]
-    snapshot_sources = {snapshot.source for snapshot in snapshots}
+    accepted_snapshots = {
+        snapshot.source
+        for snapshot in snapshots
+        if artifact is not None
+        and snapshot.source_parser_artifact_id == artifact.id
+        and bool(snapshot.source_event_set_id)
+    }
 
     if artifact is not None and artifact.status in ACCEPTED_PARSER_ARTIFACT_STATUSES:
-        if METRIC_SNAPSHOT_SOURCES.issubset(snapshot_sources):
-            return _Candidate(
-                source_match, demo_match, sharecode, "already_complete", "durable_cycle_complete", artifact, snapshots
+        if METRIC_SNAPSHOT_SOURCES.issubset(accepted_snapshots):
+            return _candidate(
+                source_match,
+                demo_match,
+                sharecode,
+                "already_complete",
+                "already_completed_by_durable_lineage",
+                artifact,
+                snapshots,
             )
-        return _Candidate(
-            source_match, demo_match, sharecode, "incomplete", "metric_or_coach_processing_missing", artifact, snapshots
+        return _candidate(
+            source_match,
+            demo_match,
+            sharecode,
+            "incomplete_resumable",
+            "accepted_parser_lineage_missing_downstream_snapshots",
+            artifact,
+            snapshots,
         )
     if artifact is not None:
-        return _Candidate(
-            source_match, demo_match, sharecode, "incomplete", "parser_artifact_not_accepted", artifact, snapshots
+        return _candidate(
+            source_match,
+            demo_match,
+            sharecode,
+            "incomplete_resumable",
+            "parser_artifact_not_accepted",
+            artifact,
+            snapshots,
         )
     parser_path = _parser_source_path(target) or _parser_source_path(source_match)
     if parser_path is not None:
-        return _Candidate(
-            source_match, demo_match, sharecode, "incomplete", "parser_artifact_missing", artifact, snapshots
+        return _candidate(
+            source_match,
+            demo_match,
+            sharecode,
+            "incomplete_resumable",
+            "retained_demo_without_parser_artifact",
+            artifact,
+            snapshots,
         )
     if source_match.source == "demo":
-        return _Candidate(
-            source_match, demo_match, sharecode, "failed_terminal", "retained_demo_unavailable", artifact, snapshots
+        return _candidate(
+            source_match,
+            demo_match,
+            sharecode,
+            "failed_terminal",
+            "retained_demo_unavailable",
+            artifact,
+            snapshots,
+        )
+
+    if not sharecode:
+        return _candidate(
+            source_match,
+            demo_match,
+            sharecode,
+            "invalid_identity",
+            "invalid_external_match_identity",
+            artifact,
+            snapshots,
+        )
+
+    import_job = _source_import_job(db, source_match)
+    if import_job is not None and import_job.status in IMPORT_JOB_ACTIVE_STATUSES:
+        return _candidate(
+            source_match,
+            demo_match,
+            sharecode,
+            "incomplete_resumable",
+            "active_import_job_resumable",
+            artifact,
+            snapshots,
         )
 
     raw_status = str(raw.get("status") or "").lower()
     raw_error = str(raw.get("error") or raw.get("error_message") or "").lower()
-    if raw_status in {"demo_download_skipped", "demo_unavailable"}:
-        return _Candidate(source_match, demo_match, sharecode, "unavailable", "demo_unavailable", artifact, snapshots)
+    owner_failure = raw.get("owner_coach_sync_failure") if isinstance(raw.get("owner_coach_sync_failure"), dict) else {}
+    attempt_count, last_attempt_at, next_eligible_at = _retry_details(raw, import_job=import_job)
+
+    if raw_status in {"ignored_old_history", "demo_download_skipped"}:
+        return _candidate(
+            source_match,
+            demo_match,
+            sharecode,
+            "legacy_stale_pending",
+            "superseded_by_accepted_match_time"
+            if raw.get("ignored_reason")
+            else "legacy_pending_without_resumable_lineage",
+            artifact,
+            snapshots,
+        )
+    if raw_status == "demo_unavailable":
+        return _candidate(
+            source_match,
+            demo_match,
+            sharecode,
+            "unavailable_terminal",
+            "terminal_demo_unavailable",
+            artifact,
+            snapshots,
+            attempt_count=attempt_count,
+            last_attempt_at=last_attempt_at,
+            next_eligible_at=next_eligible_at,
+        )
     if raw_status == "demo_download_error":
+        phase = str(owner_failure.get("phase") or "acquisition").lower()
+        retryable = bool(owner_failure.get("retryable", True))
+        if attempt_count >= MAX_RETRYABLE_ATTEMPTS:
+            internal = "unavailable_terminal" if phase == "acquisition" else "failed_terminal"
+            return _candidate(
+                source_match,
+                demo_match,
+                sharecode,
+                internal,
+                "retry_attempts_exhausted",
+                artifact,
+                snapshots,
+                attempt_count=attempt_count,
+                last_attempt_at=last_attempt_at,
+                next_eligible_at=next_eligible_at,
+            )
         if any(token in raw_error for token in ("expired", "not found", "404", "410")):
-            return _Candidate(
-                source_match, demo_match, sharecode, "unavailable", "demo_replay_unavailable", artifact, snapshots
+            return _candidate(
+                source_match,
+                demo_match,
+                sharecode,
+                "unavailable_terminal",
+                "terminal_demo_unavailable",
+                artifact,
+                snapshots,
             )
         if any(token in raw_error for token in ("invalid share", "corrupt", "unsupported")):
-            return _Candidate(
-                source_match, demo_match, sharecode, "failed_terminal", "terminal_demo_error", artifact, snapshots
+            return _candidate(
+                source_match,
+                demo_match,
+                sharecode,
+                "failed_terminal",
+                "terminal_demo_error",
+                artifact,
+                snapshots,
             )
-        return _Candidate(
-            source_match, demo_match, sharecode, "failed_retryable", "retryable_demo_error", artifact, snapshots
+        if not retryable:
+            internal = "unavailable_terminal" if phase == "acquisition" else "failed_terminal"
+            return _candidate(
+                source_match,
+                demo_match,
+                sharecode,
+                internal,
+                str(owner_failure.get("reason_code") or "terminal_processing_failure"),
+                artifact,
+                snapshots,
+            )
+        eligible = next_eligible_at is None or _utcnow() >= next_eligible_at
+        temporary_unavailable = phase == "acquisition" and _temporary_unavailable_reason(
+            str(owner_failure.get("reason_code") or raw_error)
         )
-    return _Candidate(source_match, demo_match, sharecode, "new", "demo_acquisition_required", artifact, snapshots)
+        internal = "unavailable_retryable" if temporary_unavailable else "failed_retryable"
+        return _candidate(
+            source_match,
+            demo_match,
+            sharecode,
+            internal,
+            "retryable_failure_eligible" if eligible else "retry_not_yet_eligible",
+            artifact,
+            snapshots,
+            actionable=eligible,
+            attempt_count=attempt_count,
+            last_attempt_at=last_attempt_at,
+            next_eligible_at=next_eligible_at,
+        )
+
+    if specific_backfill:
+        return _candidate(
+            source_match,
+            demo_match,
+            sharecode,
+            "fresh_actionable",
+            "specific_backfill_requested",
+            artifact,
+            snapshots,
+        )
+    fresh_reason = _fresh_reason(source_match, sharecode=sharecode, boundary=boundary)
+    if fresh_reason is not None:
+        return _candidate(
+            source_match,
+            demo_match,
+            sharecode,
+            "fresh_actionable",
+            fresh_reason,
+            artifact,
+            snapshots,
+        )
+    return _candidate(
+        source_match,
+        demo_match,
+        sharecode,
+        "legacy_stale_pending",
+        "legacy_pending_before_sync_boundary",
+        artifact,
+        snapshots,
+    )
+
+
+def _candidate(
+    source_match: Match,
+    demo_match: Match | None,
+    sharecode: str | None,
+    internal_classification: str,
+    reason_code: str,
+    artifact: DemoParseArtifact | None,
+    snapshots: list[MetricSnapshot],
+    *,
+    actionable: bool | None = None,
+    attempt_count: int = 0,
+    last_attempt_at: datetime | None = None,
+    next_eligible_at: datetime | None = None,
+) -> _Candidate:
+    if internal_classification not in INTERNAL_CLASSIFICATIONS:
+        raise ValueError(f"unsupported_internal_classification:{internal_classification}")
+    if actionable is None:
+        actionable = internal_classification in {
+            "fresh_actionable",
+            "incomplete_resumable",
+            "failed_retryable",
+            "unavailable_retryable",
+        }
+    public_classification = {
+        "fresh_actionable": "new",
+        "incomplete_resumable": "incomplete",
+        "already_complete": "already_complete",
+        "legacy_stale_pending": "unavailable",
+        "unavailable_retryable": "failed_retryable" if actionable else "unavailable",
+        "unavailable_terminal": "unavailable",
+        "failed_retryable": "failed_retryable",
+        "failed_terminal": "failed_terminal",
+        "cross_owner_denied": "failed_terminal",
+        "invalid_identity": "failed_terminal",
+    }[internal_classification]
+    return _Candidate(
+        source_match=source_match,
+        demo_match=demo_match,
+        sharecode=sharecode,
+        classification=public_classification,
+        reason_code=reason_code,
+        artifact=artifact,
+        snapshots=snapshots,
+        internal_classification=internal_classification,
+        actionable=actionable,
+        attempt_count=attempt_count,
+        last_attempt_at=last_attempt_at,
+        next_eligible_at=next_eligible_at,
+    )
+
+
+def _build_discovery_boundary(
+    db: Session,
+    *,
+    owner: _OwnerContext,
+    owner_history: list[Match] | None = None,
+) -> _DiscoveryBoundary:
+    accepted_positions: dict[str, int] = {}
+    jobs = db.scalars(
+        select(ImportJob)
+        .where(ImportJob.provider == "steam")
+        .where(ImportJob.job_type == "match_history_sync")
+        .where(ImportJob.steam_account_id == owner.steam_account.id)
+        .where(ImportJob.status.in_(("completed", "succeeded")))
+        .order_by(ImportJob.finished_at.asc(), ImportJob.created_at.asc(), ImportJob.id.asc())
+    ).all()
+    position = 0
+    for job in jobs:
+        payload = _json_mapping(job.result_json)
+        inserted = _optional_int(payload.get("inserted")) or 0
+        outcome = str(payload.get("sync_outcome") or "").upper()
+        identities = payload.get("collected_share_codes")
+        if inserted <= 0 or "NEW_MATCH" not in outcome or not isinstance(identities, list):
+            continue
+        for identity in identities:
+            normalized = _optional_text(identity)
+            if normalized is None:
+                continue
+            position += 1
+            accepted_positions[normalized] = position
+
+    if owner_history is None:
+        history_rows = db.scalars(
+            select(Match).where(Match.source == "steam_history").order_by(Match.id.desc())
+        ).all()
+        owner_history = [match for match in history_rows if _match_belongs_to_owner(match, owner)]
+    latest_completed_position: int | None = None
+    for match in owner_history:
+        raw = _json_mapping(match.raw_json)
+        identity = _optional_text(match.external_match_id) or _optional_text(raw.get("share_code"))
+        identity_position = accepted_positions.get(identity or "")
+        if identity_position is None or not _has_accepted_processing_lineage(db, owner=owner, source_match=match):
+            continue
+        latest_completed_position = max(latest_completed_position or 0, identity_position)
+
+    source = "accepted_cursor_and_sync_lineage"
+    if not accepted_positions and not owner.steam_account.last_share_code:
+        source = "accepted_account_sync_metadata" if owner.steam_account.last_sync_at else "no_prior_accepted_boundary"
+    return _DiscoveryBoundary(
+        source=source,
+        account_last_sync_at=owner.steam_account.last_sync_at,
+        cursor=_optional_text(owner.steam_account.last_share_code),
+        accepted_positions=accepted_positions,
+        latest_completed_position=latest_completed_position,
+    )
+
+
+def _has_accepted_processing_lineage(db: Session, *, owner: _OwnerContext, source_match: Match) -> bool:
+    demo_match = _linked_demo_match(db, owner, source_match)
+    target = demo_match or source_match
+    artifact = _latest_artifact(db, target.id)
+    if artifact is None or artifact.status not in ACCEPTED_PARSER_ARTIFACT_STATUSES:
+        return False
+    accepted_sources = {
+        snapshot.source
+        for snapshot in _match_snapshots(db, target.id)
+        if _snapshot_belongs_to_owner(snapshot, owner)
+        and snapshot.source_parser_artifact_id == artifact.id
+        and bool(snapshot.source_event_set_id)
+    }
+    return METRIC_SNAPSHOT_SOURCES.issubset(accepted_sources)
+
+
+def _fresh_reason(source_match: Match, *, sharecode: str, boundary: _DiscoveryBoundary) -> str | None:
+    position = boundary.accepted_positions.get(sharecode)
+    if position is not None:
+        return "fresh_after_sync_boundary"
+    if boundary.cursor == sharecode:
+        return "fresh_at_accepted_cursor"
+    if boundary.account_last_sync_at is None:
+        return "fresh_without_prior_sync_boundary"
+    if source_match.created_at and source_match.created_at > boundary.account_last_sync_at:
+        return "fresh_after_sync_boundary"
+    return None
+
+
+def _source_import_job(db: Session, source_match: Match) -> ImportJob | None:
+    return db.get(ImportJob, source_match.import_job_id) if source_match.import_job_id is not None else None
+
+
+def _retry_details(
+    raw: dict[str, Any],
+    *,
+    import_job: ImportJob | None,
+) -> tuple[int, datetime | None, datetime | None]:
+    failure = raw.get("owner_coach_sync_failure") if isinstance(raw.get("owner_coach_sync_failure"), dict) else {}
+    raw_status = str(raw.get("status") or "").lower()
+    attempt_count = _optional_int(failure.get("attempt_count")) or (
+        1 if failure or raw_status == "demo_download_error" else 0
+    )
+    last_attempt_at = _parse_datetime(failure.get("failed_at") or raw.get("failed_at"))
+    if last_attempt_at is None and import_job is not None:
+        last_attempt_at = import_job.finished_at or import_job.updated_at or import_job.started_at
+    next_eligible_at = _parse_datetime(failure.get("next_eligible_at"))
+    if next_eligible_at is None and last_attempt_at is not None and attempt_count:
+        next_eligible_at = last_attempt_at + RETRY_COOLDOWN
+    return attempt_count, last_attempt_at, next_eligible_at
+
+
+def _temporary_unavailable_reason(value: str) -> bool:
+    normalized = value.lower()
+    return any(
+        token in normalized
+        for token in ("temporary", "timeout", "rate_limit", "steam_unavailable", "502", "503", "504")
+    )
 
 
 def _linked_demo_match(db: Session, owner: _OwnerContext, source_match: Match) -> Match | None:
@@ -753,7 +1138,7 @@ def _selected_candidate_ids(
 
 
 def _is_actionable(candidate: _Candidate) -> bool:
-    return candidate.classification in {"new", "incomplete", "failed_retryable"}
+    return candidate.actionable
 
 
 def _requires_acquisition(candidate: _Candidate) -> bool:
@@ -772,11 +1157,20 @@ def _populate_discovery(
     }
     for candidate in candidates:
         classifications[candidate.classification] += 1
+    internal_classifications = {key: 0 for key in INTERNAL_CLASSIFICATIONS}
+    reason_codes: dict[str, int] = {}
+    for candidate in candidates:
+        internal_classifications[candidate.internal_classification] += 1
+        reason_codes[candidate.reason_code] = reason_codes.get(candidate.reason_code, 0) + 1
     result["discovery"] = {
         "candidate_count": len(candidates),
         "selected_count": len(selected_ids),
         "selected_source_match_ids": sorted(selected_ids),
         "classifications": classifications,
+        "internal_classifications": internal_classifications,
+        "reason_codes": dict(sorted(reason_codes.items())),
+        "legacy_stale_pending_count": internal_classifications["legacy_stale_pending"],
+        "actionable_count": sum(candidate.actionable for candidate in candidates),
         "bounded": len([candidate for candidate in candidates if _is_actionable(candidate)]) > len(selected_ids),
         "new_demo_acquisition_cap": MAX_NEW_DEMO_ACQUISITIONS_PER_SYNC,
     }
@@ -822,9 +1216,19 @@ def _candidate_result(
             "source": candidate.source_match.source,
         },
         "discovery_classification": candidate.classification,
+        "internal_classification": candidate.internal_classification,
         "selected": planned,
         "status": status,
         "reason_codes": reason_codes,
+        "retry": {
+            "attempt_count": candidate.attempt_count,
+            "last_attempt_at": _iso(candidate.last_attempt_at) if candidate.last_attempt_at else None,
+            "next_eligible_at": _iso(candidate.next_eligible_at) if candidate.next_eligible_at else None,
+            "eligible": candidate.actionable
+            if candidate.internal_classification in {"unavailable_retryable", "failed_retryable"}
+            else None,
+            "max_attempts": MAX_RETRYABLE_ATTEMPTS,
+        },
         "planned_actions": _planned_actions(candidate) if dry_run and planned else [],
         "lineage": lineage,
         "failure": None,
@@ -1197,11 +1601,25 @@ def _import_job_phase_error(job: ImportJob) -> _MatchPhaseError:
     acquisition = payload.get("acquisition") if isinstance(payload.get("acquisition"), dict) else {}
     outcome = str(acquisition.get("outcome") or payload.get("overall_outcome") or "").lower()
     if any(token in outcome for token in ("not_found", "unavailable", "expired")):
+        if any(token in outcome for token in ("steam_unavailable", "temporarily_unavailable")):
+            return _MatchPhaseError(
+                phase="acquisition",
+                reason_code="temporary_demo_unavailable",
+                safe_message="Steam replay services are temporarily unavailable.",
+                retryable=True,
+            )
         return _MatchPhaseError(
             phase="acquisition",
             reason_code="demo_unavailable",
             safe_message="The requested replay is not available from Steam.",
             retryable=False,
+        )
+    if any(token in outcome for token in ("rate_limited", "timeout")):
+        return _MatchPhaseError(
+            phase="acquisition",
+            reason_code="temporary_demo_timeout_or_rate_limit",
+            safe_message="Steam replay acquisition is temporarily rate-limited or timed out.",
+            retryable=True,
         )
     if "auth_missing" in outcome:
         return _MatchPhaseError(
@@ -1223,20 +1641,38 @@ def _persist_candidate_failure(
     *,
     candidate: _Candidate,
     failure: _MatchPhaseError,
-) -> None:
+) -> _MatchPhaseError:
     source_match = db.get(Match, candidate.source_match.id)
     if source_match is None:
-        return
+        return failure
     raw = _json_mapping(source_match.raw_json)
+    previous = raw.get("owner_coach_sync_failure")
+    previous = previous if isinstance(previous, dict) else {}
+    previous_attempts = _optional_int(previous.get("attempt_count")) or 0
+    attempt_count = previous_attempts + 1
+    effective_failure = failure
+    if failure.retryable and attempt_count >= MAX_RETRYABLE_ATTEMPTS:
+        effective_failure = _MatchPhaseError(
+            phase=failure.phase,
+            reason_code="retry_attempts_exhausted",
+            safe_message="The bounded retry policy is exhausted for this owner match.",
+            retryable=False,
+            exception_class=failure.exception_class,
+        )
+    failed_at = _utcnow()
+    next_eligible_at = failed_at + RETRY_COOLDOWN if effective_failure.retryable else None
+    terminal_unavailable = effective_failure.phase == "acquisition" and not effective_failure.retryable
     raw.update(
         {
-            "status": "demo_download_error" if failure.retryable else "demo_unavailable",
-            "error": failure.reason_code,
+            "status": "demo_unavailable" if terminal_unavailable else "demo_download_error",
+            "error": effective_failure.reason_code,
             "owner_coach_sync_failure": {
-                "phase": failure.phase,
-                "reason_code": failure.reason_code,
-                "retryable": failure.retryable,
-                "failed_at": _iso(_utcnow()),
+                "phase": effective_failure.phase,
+                "reason_code": effective_failure.reason_code,
+                "retryable": effective_failure.retryable,
+                "attempt_count": attempt_count,
+                "failed_at": _iso(failed_at),
+                "next_eligible_at": _iso(next_eligible_at) if next_eligible_at else None,
                 "import_job_id": source_match.import_job_id,
             },
         }
@@ -1244,6 +1680,7 @@ def _persist_candidate_failure(
     source_match.raw_json = json.dumps(raw, ensure_ascii=False, sort_keys=True, default=str)
     db.commit()
     db.refresh(source_match)
+    return effective_failure
 
 
 def _acquire_owner_sync_lock(db: Session, *, owner_user_id: int) -> _OwnerSyncLock | None:

@@ -8,7 +8,12 @@ Last updated: 2026-07-10.
 - CURRENT_TASK: none.
 - H01A_STATUS: BLOCKED.
 - FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: false.
-- LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: false.
+- H01A_R01_STATUS: PASS_WITH_WARNINGS.
+- LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: true.
+- ORDINARY_BASELINE_NO_OP_RESTORED: true.
+- FRESH_MATCH_DISCOVERY_PRESERVED: true.
+- DEEPER_HISTORY_TRAVERSAL_PRESERVED: true.
+- BATCH_31_COMPATIBILITY_PRESERVED: true.
 - MISSION_BACKEND_STATUS: ACCEPTED_FOR_UI_API.
 - MISSION_BACKEND_ACCEPTED_FOR_UI_API: true.
 - F10D_STATUS: PASS_WITH_WARNINGS.
@@ -24,11 +29,13 @@ Last updated: 2026-07-10.
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR.
+- NEXT_TASK: H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
 - ACTIVE_OUTBOX_TASK: none.
-- H01A stopped before fresh-match exposure because the baseline classified nine
-  legacy `steam_history` rows as actionable `new`; the accepted next route is
-  the not-started H01A-R01 repair. H01A-R01 is not complete.
+- H01A-R01 repaired derived owner-sync classification without a schema or
+  production-data rewrite. The nine historical pending rows are diagnostic
+  `legacy_stale_pending`, the production dry baseline is `success_no_changes`,
+  and accepted sync lineage keeps genuinely fresh and deeper matches actionable.
+  H01A itself remains blocked pending its fresh-match acceptance rerun.
 - G01 accepted one owner-scoped headless import-to-coach application service
   and a thin CLI adapter. The service preserves the one-new-demo cap, fails
   closed on owner scope, reuses durable parser/metric/coach state, returns a
@@ -199,9 +206,9 @@ Last updated: 2026-07-10.
 
 ## Do Not Do Now
 
-- Current routing is the not-started
-  H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR, not the
-  blocked H01A acceptance rerun or the historical WP-018/MVP routes below. G02
+- Current routing is
+  H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE after the accepted
+  H01A-R01 repair, not the historical WP-018/MVP routes below. G02
   accepted only the thin technical adapter and durable coordinator; no
   scheduler, public/friends access or v1.0 claim is authorized.
 

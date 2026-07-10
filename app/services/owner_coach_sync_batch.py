@@ -208,6 +208,7 @@ def _empty_totals() -> dict[str, int]:
         "unavailable": 0,
         "retryable_failures": 0,
         "terminal_failures": 0,
+        "legacy_stale_pending": 0,
     }
 
 
@@ -338,6 +339,9 @@ def _refresh_aggregate_totals(batch: dict[str, Any]) -> None:
         "unavailable": classifications.count("unavailable"),
         "retryable_failures": statuses.count("failed_retryable"),
         "terminal_failures": statuses.count("failed_terminal"),
+        "legacy_stale_pending": sum(
+            item.get("internal_classification") == "legacy_stale_pending" for item in matches
+        ),
     }
 
 
@@ -355,6 +359,11 @@ def _merge_mutations(batch: dict[str, Any], mutations: dict[str, Any]) -> None:
 
 def _has_retryable_remaining(batch: dict[str, Any]) -> bool:
     if any(item.get("status") == "failed_retryable" for item in batch["matches"]):
+        return True
+    if any(
+        item.get("internal_classification") in {"unavailable_retryable", "failed_retryable"}
+        for item in batch["matches"]
+    ):
         return True
     return any(isinstance(error, dict) and error.get("retryable") for error in batch["errors"])
 
@@ -394,7 +403,17 @@ def _sanitize_invocation(result: dict[str, Any], invocation_number: int) -> dict
         "finished_at": run.get("finished_at"),
         "duration_ms": run.get("duration_ms"),
         "discovery": {
-            key: discovery.get(key) for key in ("candidate_count", "selected_count", "classifications", "bounded")
+            key: discovery.get(key)
+            for key in (
+                "candidate_count",
+                "selected_count",
+                "classifications",
+                "internal_classifications",
+                "reason_codes",
+                "legacy_stale_pending_count",
+                "actionable_count",
+                "bounded",
+            )
         },
         "totals": copy.deepcopy(result.get("totals") or {}),
         "matches": [_sanitize_match(item) for item in result.get("matches", [])],
@@ -411,9 +430,11 @@ def _sanitize_match(item: dict[str, Any]) -> dict[str, Any]:
     return {
         "identity": copy.deepcopy(item.get("identity") or {}),
         "discovery_classification": item.get("discovery_classification"),
+        "internal_classification": item.get("internal_classification"),
         "selected": bool(item.get("selected")),
         "status": item.get("status"),
         "reason_codes": list(item.get("reason_codes") or []),
+        "retry": copy.deepcopy(item.get("retry") or {}),
         "lineage": lineage,
         "failure": _sanitize_messages([item.get("failure")])[0] if item.get("failure") else None,
     }

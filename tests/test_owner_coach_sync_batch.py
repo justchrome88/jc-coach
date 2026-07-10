@@ -9,7 +9,7 @@ from app.services import owner_coach_sync_batch as batch_service
 def test_successful_target_stops_exactly_at_31_and_skips_32nd_success(db, monkeypatch):
     owner_id = 101
     successes = [1, *range(5, 38)]  # 34 eventual successes; target must stop after source id 34.
-    outcomes = {1: "success", 2: "unavailable", 3: "retryable", 4: "complete"}
+    outcomes = {-2: "stale", -1: "stale", 1: "success", 2: "unavailable", 3: "retryable", 4: "complete"}
     outcomes.update({source_id: "success" for source_id in successes if source_id != 1})
     calls: list[int | None] = []
 
@@ -34,9 +34,11 @@ def test_successful_target_stops_exactly_at_31_and_skips_32nd_success(db, monkey
     assert batch["batch"]["stop_reason"] == "successful_target_reached"
     assert batch["batch"]["successful_new_matches"] == 31
     assert 35 not in calls  # source 35 would have been the 32nd successful completion
-    assert batch["aggregate_totals"]["unavailable"] == 1
+    assert batch["aggregate_totals"]["unavailable"] == 3
     assert batch["aggregate_totals"]["retryable_failures"] == 1
     assert batch["aggregate_totals"]["reused"] == 1
+    assert batch["aggregate_totals"]["legacy_stale_pending"] == 2
+    assert -2 not in calls and -1 not in calls
     retry = next(item["retry"] for item in batch["matches"] if item["identity"]["source_match_id"] == 3)
     assert retry["attempt_count"] == 2
     assert retry["decision"] == "terminal_skip"
@@ -47,7 +49,7 @@ def test_successful_target_stops_exactly_at_31_and_skips_32nd_success(db, monkey
 
 def test_restart_resume_preserves_12_completed_matches_without_recounting(db, monkeypatch):
     owner_id = 102
-    outcomes = {source_id: "success" for source_id in range(1, 40)}
+    outcomes = {-1: "stale", **{source_id: "success" for source_id in range(1, 40)}}
 
     def fake_g01(_db, *, specific_match_id=None, **_kwargs):
         if specific_match_id is None:
@@ -78,6 +80,7 @@ def test_restart_resume_preserves_12_completed_matches_without_recounting(db, mo
     assert batch["batch"]["successful_new_matches"] == 31
     assert batch["batch"]["status"] == "target_reached"
     assert len({item["identity"]["source_match_id"] for item in batch["matches"]}) == len(batch["matches"])
+    assert batch["aggregate_totals"]["legacy_stale_pending"] == 1
 
 
 def test_same_owner_double_start_reuses_one_batch_and_different_owners_are_independent(db):
@@ -179,9 +182,12 @@ def _item(source_id: int, outcome: str, *, selected: bool):
         "unavailable": "unavailable",
         "retryable": "failed_retryable",
         "complete": "already_complete",
+        "stale": "unavailable",
     }.get(outcome, "new")
     if not selected:
-        status = {"unavailable": "unavailable", "complete": "reused"}.get(outcome, "skipped")
+        status = {"unavailable": "unavailable", "complete": "reused", "stale": "unavailable"}.get(
+            outcome, "skipped"
+        )
     else:
         status = {
             "success": "created",
@@ -199,6 +205,7 @@ def _item(source_id: int, outcome: str, *, selected: bool):
     return {
         "identity": {"source_match_id": source_id, "sharecode": f"share-{source_id}"},
         "discovery_classification": classification,
+        "internal_classification": "legacy_stale_pending" if outcome == "stale" else None,
         "selected": selected,
         "status": status,
         "reason_codes": ["owner_match_cycle_completed"] if outcome == "success" and selected else [outcome],

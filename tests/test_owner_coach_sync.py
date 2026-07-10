@@ -260,6 +260,8 @@ def test_existing_artifact_and_snapshot_are_reused_while_missing_work_resumes(db
 def test_retryable_failure_is_sanitized_releases_lock_and_can_retry(db, monkeypatch, tmp_path):
     owner, account = _owner(db)
     history = _history_match(db, owner=owner, account=account, sharecode=SHARE_CODE)
+    clock = {"now": datetime(2026, 7, 10, 12, 0)}
+    monkeypatch.setattr(owner_coach_sync, "_utcnow", lambda: clock["now"])
 
     def fail_acquisition(*args, **kwargs):
         raise RuntimeError("https://steam.invalid/replay?token=super-secret")
@@ -296,11 +298,279 @@ def test_retryable_failure_is_sanitized_releases_lock_and_can_retry(db, monkeypa
 
     monkeypatch.setattr(owner_coach_sync, "run_demo_import_orchestration", acquire)
     monkeypatch.setattr(owner_coach_sync, "import_demo_file", _fake_parser(db, owner, account, retained))
+    clock["now"] += owner_coach_sync.RETRY_COOLDOWN + timedelta(seconds=1)
 
     retried = run_owner_coach_sync(db, owner_user_id=owner.id)
 
     assert retried["run"]["status"] == "success"
     assert retried["matches"][0]["status"] == "created"
+
+
+def test_real_baseline_shape_classifies_54_complete_and_9_legacy_pending_as_noop(db, tmp_path):
+    owner, account = _owner(db)
+    boundary_time = datetime(2026, 7, 10, 12, 0)
+    complete_sources = []
+    for index in range(54):
+        history = _history_match(
+            db,
+            owner=owner,
+            account=account,
+            sharecode=f"{SHARE_CODE}-complete-{index}",
+        )
+        demo = _demo_match(db, owner=owner, account=account, demo_file=tmp_path / f"complete-{index}.dem")
+        artifact = _artifact(db, demo)
+        _complete_snapshots(db, match=demo, steam_id=account.steam_id, artifact=artifact)
+        raw = json.loads(history.raw_json)
+        raw.update({"status": "demo_imported", "imported_demo_match_id": demo.id})
+        history.raw_json = json.dumps(raw)
+        history.created_at = boundary_time - timedelta(days=2)
+        complete_sources.append(history)
+    for index in range(9):
+        legacy = _history_match(
+            db,
+            owner=owner,
+            account=account,
+            sharecode=f"{SHARE_CODE}-legacy-{index}",
+            raw_extra={"status": "demo_download_pending"},
+        )
+        legacy.created_at = boundary_time - timedelta(days=3)
+    account.last_share_code = complete_sources[-1].external_match_id
+    account.last_sync_at = boundary_time
+    db.commit()
+    before = _durable_counts(db)
+
+    first = run_owner_coach_sync(db, owner_user_id=owner.id)
+    second = run_owner_coach_sync(db, owner_user_id=owner.id)
+
+    assert first["run"]["status"] == "success_no_changes"
+    assert first["discovery"]["candidate_count"] == 63
+    assert first["discovery"]["selected_count"] == 0
+    assert first["discovery"]["internal_classifications"]["already_complete"] == 54
+    assert first["discovery"]["legacy_stale_pending_count"] == 9
+    assert first["discovery"]["reason_codes"]["legacy_pending_before_sync_boundary"] == 9
+    assert all(bucket["count"] == 0 for bucket in first["mutations"]["created"].values())
+    assert second["run"]["status"] == "success_no_changes"
+    assert _durable_counts(db) == before
+
+
+def test_deeper_fresh_identity_is_selected_past_stale_terminal_and_cooling_retry(db, monkeypatch, tmp_path):
+    owner, account = _owner(db)
+    fresh = _history_match(db, owner=owner, account=account, sharecode=f"{SHARE_CODE}-fresh")
+    retry_time = datetime(2026, 7, 10, 12, 0)
+    retryable = _history_match(
+        db,
+        owner=owner,
+        account=account,
+        sharecode=f"{SHARE_CODE}-retry",
+        raw_extra={
+            "status": "demo_download_error",
+            "error": "temporary_demo_unavailable",
+            "owner_coach_sync_failure": {
+                "phase": "acquisition",
+                "reason_code": "temporary_demo_unavailable",
+                "retryable": True,
+                "attempt_count": 1,
+                "failed_at": retry_time.isoformat(),
+                "next_eligible_at": (retry_time + timedelta(days=1)).isoformat(),
+            },
+        },
+    )
+    terminal = _history_match(
+        db,
+        owner=owner,
+        account=account,
+        sharecode=f"{SHARE_CODE}-terminal",
+        raw_extra={"status": "demo_unavailable", "error": "not found"},
+    )
+    legacy = _history_match(
+        db,
+        owner=owner,
+        account=account,
+        sharecode=f"{SHARE_CODE}-legacy",
+        raw_extra={"status": "demo_download_pending"},
+    )
+    sync_job = ImportJob(
+        provider="steam",
+        job_type="match_history_sync",
+        status="completed",
+        user_id=owner.id,
+        steam_account_id=account.id,
+        result_json=json.dumps(
+            {
+                "sync_outcome": "SUCCESS_NEW_MATCH_IMPORTED",
+                "collected_share_codes": [fresh.external_match_id],
+                "inserted": 1,
+            }
+        ),
+        finished_at=retry_time,
+    )
+    db.add(sync_job)
+    fresh.created_at = retry_time - timedelta(minutes=1)
+    retryable.created_at = retry_time - timedelta(minutes=1)
+    terminal.created_at = retry_time - timedelta(minutes=1)
+    legacy.created_at = retry_time - timedelta(minutes=1)
+    account.last_share_code = fresh.external_match_id
+    account.last_sync_at = retry_time
+    db.commit()
+    retained = tmp_path / "fresh-after-boundary.dem"
+    retained.write_bytes(b"fresh accepted discovery fixture")
+
+    def acquire(*args, **kwargs):
+        job = ImportJob(
+            provider="steam",
+            job_type="demo_import_orchestration",
+            status="completed",
+            user_id=owner.id,
+            steam_account_id=account.id,
+            logical_target_key=kwargs["logical_target_key"],
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        fresh.demo_file = str(retained)
+        fresh.import_job_id = job.id
+        db.commit()
+        return job
+
+    monkeypatch.setattr(owner_coach_sync, "run_demo_import_orchestration", acquire)
+    monkeypatch.setattr(owner_coach_sync, "import_demo_file", _fake_parser(db, owner, account, retained))
+
+    result = run_owner_coach_sync(db, owner_user_id=owner.id)
+
+    assert result["run"]["status"] == "success"
+    selected = [item for item in result["matches"] if item["selected"]]
+    assert [item["identity"]["source_match_id"] for item in selected] == [fresh.id]
+    assert selected[0]["internal_classification"] == "fresh_actionable"
+    assert selected[0]["status"] == "created"
+    assert selected[0]["reason_codes"] == ["owner_match_cycle_completed"]
+    assert selected[0]["lineage"]["parser_artifact"]["id"]
+    assert selected[0]["lineage"]["metric_snapshot_ids"]["created"]
+    assert selected[0]["lineage"]["analysis_run"]["id"]
+    assert result["discovery"]["internal_classifications"]["legacy_stale_pending"] == 1
+    assert result["discovery"]["internal_classifications"]["unavailable_terminal"] == 1
+    assert result["discovery"]["internal_classifications"]["unavailable_retryable"] == 1
+
+
+def test_specific_sharecode_can_backfill_legacy_without_changing_ordinary_sync(db):
+    owner, account = _owner(db)
+    legacy = _history_match(
+        db,
+        owner=owner,
+        account=account,
+        sharecode=SHARE_CODE,
+        raw_extra={"status": "demo_download_pending"},
+    )
+    account.last_sync_at = datetime(2026, 7, 10, 12, 0)
+    legacy.created_at = account.last_sync_at - timedelta(days=1)
+    db.commit()
+
+    ordinary = run_owner_coach_sync(db, owner_user_id=owner.id, dry_run=True)
+    backfill = run_owner_coach_sync(
+        db,
+        owner_user_id=owner.id,
+        specific_sharecode=SHARE_CODE,
+        dry_run=True,
+    )
+
+    assert ordinary["run"]["status"] == "success_no_changes"
+    assert ordinary["matches"][0]["internal_classification"] == "legacy_stale_pending"
+    assert backfill["run"]["status"] == "success"
+    assert backfill["matches"][0]["internal_classification"] == "fresh_actionable"
+    assert backfill["matches"][0]["selected"] is True
+    assert backfill["discovery"]["reason_codes"] == {"specific_backfill_requested": 1}
+
+
+def test_accepted_sync_lineage_keeps_31_outstanding_candidates_fresh_after_newest_completion(db, tmp_path):
+    owner, account = _owner(db)
+    history = [
+        _history_match(
+            db,
+            owner=owner,
+            account=account,
+            sharecode=f"{SHARE_CODE}-batch-{index}",
+        )
+        for index in range(32)
+    ]
+    newest = history[-1]
+    demo = _demo_match(db, owner=owner, account=account, demo_file=tmp_path / "newest-complete.dem")
+    artifact = _artifact(db, demo)
+    _complete_snapshots(db, match=demo, steam_id=account.steam_id, artifact=artifact)
+    newest_raw = json.loads(newest.raw_json)
+    newest_raw.update({"status": "demo_imported", "imported_demo_match_id": demo.id})
+    newest.raw_json = json.dumps(newest_raw)
+    sync_time = datetime(2026, 7, 10, 12, 0)
+    db.add(
+        ImportJob(
+            provider="steam",
+            job_type="match_history_sync",
+            status="completed",
+            user_id=owner.id,
+            steam_account_id=account.id,
+            result_json=json.dumps(
+                {
+                    "sync_outcome": "SUCCESS_NEW_MATCH_IMPORTED",
+                    "collected_share_codes": [item.external_match_id for item in history],
+                    "inserted": 32,
+                }
+            ),
+            finished_at=sync_time,
+        )
+    )
+    account.last_share_code = newest.external_match_id
+    account.last_sync_at = sync_time
+    db.commit()
+
+    result = run_owner_coach_sync(db, owner_user_id=owner.id, dry_run=True)
+
+    assert result["discovery"]["internal_classifications"]["already_complete"] == 1
+    assert result["discovery"]["internal_classifications"]["fresh_actionable"] == 31
+    assert result["discovery"]["legacy_stale_pending_count"] == 0
+    assert result["discovery"]["selected_count"] == 1
+    assert result["discovery"]["bounded"] is True
+
+
+def test_temporary_unavailable_is_cooled_down_and_becomes_terminal_after_bounded_retry(db, monkeypatch):
+    owner, account = _owner(db)
+    _history_match(db, owner=owner, account=account, sharecode=SHARE_CODE)
+    clock = {"now": datetime(2026, 7, 10, 12, 0)}
+    calls = 0
+    monkeypatch.setattr(owner_coach_sync, "_utcnow", lambda: clock["now"])
+
+    def unavailable(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        job = ImportJob(
+            provider="steam",
+            job_type="demo_import_orchestration",
+            status="failed",
+            user_id=owner.id,
+            steam_account_id=account.id,
+            logical_target_key=kwargs["logical_target_key"],
+            result_json=json.dumps({"acquisition": {"outcome": "steam_unavailable"}}),
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        return job
+
+    monkeypatch.setattr(owner_coach_sync, "run_demo_import_orchestration", unavailable)
+
+    first = run_owner_coach_sync(db, owner_user_id=owner.id)
+    cooling = run_owner_coach_sync(db, owner_user_id=owner.id)
+    clock["now"] += owner_coach_sync.RETRY_COOLDOWN + timedelta(seconds=1)
+    exhausted = run_owner_coach_sync(db, owner_user_id=owner.id)
+    repeated = run_owner_coach_sync(db, owner_user_id=owner.id)
+
+    assert first["matches"][0]["status"] == "failed_retryable"
+    assert cooling["run"]["status"] == "success_no_changes"
+    assert cooling["matches"][0]["internal_classification"] == "unavailable_retryable"
+    assert cooling["matches"][0]["reason_codes"] == ["retry_not_yet_eligible"]
+    assert cooling["matches"][0]["retry"]["attempt_count"] == 1
+    assert exhausted["matches"][0]["status"] == "failed_terminal"
+    assert exhausted["errors"][0]["reason_code"] == "retry_attempts_exhausted"
+    assert repeated["run"]["status"] == "success_no_changes"
+    assert repeated["matches"][0]["internal_classification"] == "unavailable_terminal"
+    assert calls == 2
 
 
 @pytest.mark.parametrize(

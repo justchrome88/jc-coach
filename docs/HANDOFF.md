@@ -12,7 +12,12 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - CURRENT_TASK: none.
 - H01A_STATUS: BLOCKED.
 - FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: false.
-- LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: false.
+- H01A_R01_STATUS: PASS_WITH_WARNINGS.
+- LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: true.
+- ORDINARY_BASELINE_NO_OP_RESTORED: true.
+- FRESH_MATCH_DISCOVERY_PRESERVED: true.
+- DEEPER_HISTORY_TRAVERSAL_PRESERVED: true.
+- BATCH_31_COMPATIBILITY_PRESERVED: true.
 - MISSION_BACKEND_STATUS: ACCEPTED_FOR_UI_API.
 - MISSION_BACKEND_ACCEPTED_FOR_UI_API: true.
 - F10D_STATUS: PASS_WITH_WARNINGS.
@@ -28,12 +33,13 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR.
+- NEXT_TASK: H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
 - ACTIVE_OUTBOX_TASK: none.
-- H01A stopped before fresh-match exposure because its baseline classified nine
-  legacy `steam_history` rows as actionable `new`. H01A-R01 is the next task
-  and is not started; do not represent the blocked preflight attempt as
-  accepted work.
+- H01A-R01 now derives the nine historical pending rows as diagnostic
+  `legacy_stale_pending`, restores the production baseline to
+  `success_no_changes`, preserves fresh/deeper accepted-sync identities and
+  keeps G02 target-31 accounting compatible. H01A remains blocked only until
+  its fresh-match acceptance rerun.
 - G01 accepted `run_owner_coach_sync(...)` as the canonical owner-scoped
   headless application operation and `scripts/run_owner_coach_sync.py` as its
   thin CLI adapter. G02 accepted a durable owner batch coordinator and thin
@@ -164,10 +170,10 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Current Next Safe Step
 
-Run H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR from
-its full preflight. H01A remains blocked and fresh-match vertical-cycle
-acceptance remains false. G02's thin adapter does not authorize scheduler/login
-sync, public/friends scope or v1.0 claims.
+Run H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE from a new verified
+backup and its full preflight. Fresh-match vertical-cycle acceptance remains
+false until that task passes. G02's thin adapter does not authorize
+scheduler/login sync, public/friends scope or v1.0 claims.
 
 ## Historical Pre-F10 Next Safe Step
 
