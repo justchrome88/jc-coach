@@ -7,6 +7,8 @@ from app.db.models import (
     AnalysisRun,
     CoachHypothesis,
     CoachMission,
+    Match,
+    MetricSnapshot,
     MissionCriteria,
     MissionProgressEvaluation,
     User,
@@ -22,6 +24,7 @@ from app.services.mission_domain import (
     create_coach_hypothesis,
     create_draft_coach_mission,
     evaluate_mission_progress,
+    generate_rolling_mission_candidates,
     get_analysis_run,
     get_coach_hypothesis,
     get_coach_mission,
@@ -33,6 +36,7 @@ from app.services.mission_domain import (
     list_mission_progress_evaluations,
     mission_payload_from_insight_card,
     pause_coach_mission,
+    persist_rolling_mission_candidates,
     record_mission_progress_evaluation,
     serialize_coach_mission,
     serialize_mission_payload,
@@ -1114,6 +1118,214 @@ def test_no_data_insight_card_does_not_produce_mission_payload_or_active_mission
     assert list_coach_missions(db, user_id=owner.id) == []
 
 
+def test_rolling_last_30_window_generates_ranked_owner_mission_candidates(db):
+    owner = _user(db, "owner")
+    other = _user(db, "other")
+    owner_steam_id = "76561198000000001"
+    other_steam_id = "76561198000000999"
+    for index, metrics in enumerate(
+        (
+            {
+                "rounds": 10,
+                "survival_rate": 0.5,
+                "opening_death_rate": 0.3,
+                "untraded_death_rate": 0.8,
+                "traded_death_rate": 0.2,
+                "trade_status_known_deaths": 5,
+            },
+            {
+                "rounds": 12,
+                "survival_rate": 0.55,
+                "opening_death_rate": 0.35,
+                "untraded_death_rate": 0.7,
+                "traded_death_rate": 0.3,
+                "trade_status_known_deaths": 5,
+            },
+            {
+                "rounds": 14,
+                "survival_rate": 0.45,
+                "opening_death_rate": 0.34,
+                "untraded_death_rate": 0.75,
+                "traded_death_rate": 0.25,
+                "trade_status_known_deaths": 6,
+            },
+        ),
+        start=1,
+    ):
+        match = _match(db, owner=owner, external_match_id=f"owner-{index}", day=index)
+        _rolling_metric_snapshot(db, match=match, owner_steam_id=owner_steam_id, metrics=metrics)
+    other_match = _match(db, owner=other, external_match_id="other-1", day=4)
+    _rolling_metric_snapshot(
+        db,
+        match=other_match,
+        owner_steam_id=other_steam_id,
+        metrics={
+            "rounds": 16,
+            "survival_rate": 0.1,
+            "opening_death_rate": 0.8,
+            "untraded_death_rate": 1.0,
+            "trade_status_known_deaths": 8,
+        },
+    )
+
+    result = generate_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id=owner_steam_id,
+        window_type="last_30",
+    )
+
+    assert result["window"]["sample_matches"] == 3
+    assert set(result["window"]["match_ids"]) != {other_match.id}
+    candidates = result["candidates"]
+    assert [candidate["primary_metric"] for candidate in candidates] == [
+        "untraded_death_rate",
+        "opening_death_rate",
+    ]
+    assert [candidate["rank"] for candidate in candidates] == [1, 2]
+    assert candidates[0]["explanation"].startswith("Generated from last_30 owner metric snapshots")
+    assert validate_mission_payload(candidates[0]["mission_payload"]) == ()
+    assert candidates[0]["mission_payload"]["success_metric"]["metric_name"] == "untraded_death_rate"
+    assert candidates[1]["mission_payload"]["success_metric"]["metric_name"] == "opening_death_rate"
+
+
+def test_rolling_custom_match_set_uses_only_requested_owner_matches(db):
+    owner = _user(db, "owner")
+    owner_steam_id = "76561198000000001"
+    selected_matches = []
+    for index in range(1, 5):
+        match = _match(db, owner=owner, external_match_id=f"custom-{index}", day=index)
+        _rolling_metric_snapshot(
+            db,
+            match=match,
+            owner_steam_id=owner_steam_id,
+            metrics={
+                "rounds": 10,
+                "survival_rate": 0.48,
+                "opening_death_rate": 0.33,
+            },
+        )
+        if index <= 3:
+            selected_matches.append(match)
+
+    result = generate_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id=owner_steam_id,
+        window_type="custom_match_set",
+        match_ids=[match.id for match in selected_matches],
+    )
+
+    assert result["window"]["window_type"] == "custom_match_set"
+    assert set(result["window"]["match_ids"]) == {match.id for match in selected_matches}
+    assert result["candidates"][0]["primary_metric"] == "opening_death_rate"
+
+
+def test_rolling_window_weak_or_unavailable_evidence_generates_no_candidate(db):
+    owner = _user(db, "owner")
+    owner_steam_id = "76561198000000001"
+    for index in range(1, 4):
+        match = _match(db, owner=owner, external_match_id=f"weak-{index}", day=index)
+        _rolling_metric_snapshot(
+            db,
+            match=match,
+            owner_steam_id=owner_steam_id,
+            metrics={
+                "rounds": 10,
+                "survival_rate": 0.58,
+                "opening_death_rate": 0.22,
+                "ambiguous_traded_deaths": 2,
+            },
+            confidence_level="low",
+            usable_for_missions=False,
+        )
+
+    result = generate_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id=owner_steam_id,
+        window_type="last_30",
+    )
+
+    assert result["window"]["confidence"] == "low"
+    assert result["candidates"] == []
+
+
+def test_rolling_window_non_owner_snapshots_do_not_generate_candidate(db):
+    owner = _user(db, "owner")
+    other = _user(db, "other")
+    owner_steam_id = "76561198000000001"
+    for index in range(1, 4):
+        match = _match(db, owner=other, external_match_id=f"non-owner-{index}", day=index)
+        _rolling_metric_snapshot(
+            db,
+            match=match,
+            owner_steam_id="76561198000000999",
+            metrics={
+                "rounds": 12,
+                "opening_death_rate": 0.7,
+                "survival_rate": 0.2,
+            },
+        )
+
+    result = generate_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id=owner_steam_id,
+        window_type="last_30",
+    )
+
+    assert result["window"]["match_ids"] == []
+    assert result["window"]["metric_snapshot_ids"] == []
+    assert result["candidates"] == []
+
+
+def test_rolling_candidates_suppress_active_duplicate_and_persist_hypotheses(db):
+    owner = _user(db, "owner")
+    owner_steam_id = "76561198000000001"
+    active_mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Opening deaths",
+    )
+    active_mission.owner_steam_id = owner_steam_id
+    for index in range(1, 4):
+        match = _match(db, owner=owner, external_match_id=f"suppression-{index}", day=index)
+        _rolling_metric_snapshot(
+            db,
+            match=match,
+            owner_steam_id=owner_steam_id,
+            metrics={
+                "rounds": 10,
+                "survival_rate": 0.5,
+                "opening_death_rate": 0.34,
+                "untraded_death_rate": 0.75,
+                "trade_status_known_deaths": 5,
+            },
+        )
+
+    result = persist_rolling_mission_candidates(
+        db,
+        user_id=owner.id,
+        owner_steam_id=owner_steam_id,
+        window_type="last_30",
+    )
+
+    opening = next(
+        candidate for candidate in result["candidates"] if candidate["primary_metric"] == "opening_death_rate"
+    )
+    assert opening["suppressed_by_active_mission"] is True
+    assert opening["suppression_reason"] == "active_mission_same_primary_metric"
+    assert len(result["coach_hypothesis_ids"]) == 1
+    persisted = get_analysis_run(db, user_id=owner.id, analysis_run_id=result["analysis_run_id"])
+    assert persisted is not None
+    assert json.loads(persisted.analysis_scope_json)["window_type"] == "last_30"
+    hypothesis = get_coach_hypothesis(db, user_id=owner.id, hypothesis_id=result["coach_hypothesis_ids"][0])
+    assert hypothesis is not None
+    assert json.loads(hypothesis.source_card_json)["mission_readiness"]["source"] == "rolling_metric_window"
+
+
 def test_pause_and_cancel_mission_status_helpers(db):
     owner = _user(db, "owner")
     run = create_analysis_run(db, user_id=owner.id)
@@ -1136,6 +1348,61 @@ def _user(db, display_name: str) -> User:
     db.add(user)
     db.flush()
     return user
+
+
+def _match(db, *, owner: User, external_match_id: str, day: int) -> Match:
+    match = Match(
+        user_id=owner.id,
+        source="steam",
+        external_match_id=external_match_id,
+        played_at=datetime(2026, 7, day),
+        map_name="Mirage",
+    )
+    db.add(match)
+    db.flush()
+    return match
+
+
+def _rolling_metric_snapshot(
+    db,
+    *,
+    match: Match,
+    owner_steam_id: str,
+    metrics: dict,
+    confidence_level: str = "high",
+    usable_for_missions: bool = True,
+) -> MetricSnapshot:
+    confidence = {
+        "source": "rolling-test",
+        "metrics": {
+            metric_name: {
+                "level": confidence_level,
+                "usable_for_insights": usable_for_missions,
+                "usable_for_missions": usable_for_missions,
+                "hard_recommendation_eligible": usable_for_missions,
+            }
+            for metric_name in (
+                "survival_rate",
+                "opening_death_rate",
+                "opening_duel_win_rate",
+                "untraded_death_rate",
+                "traded_death_rate",
+            )
+        },
+    }
+    snapshot = MetricSnapshot(
+        match_id=match.id,
+        player_key=f"steam:{owner_steam_id}",
+        player_steamid=owner_steam_id,
+        source="core_combat_metrics",
+        metrics_json=json.dumps(metrics),
+        confidence_baseline_json=json.dumps(confidence),
+        caveats_json=json.dumps([]),
+        metadata_json=json.dumps({"schema_version": "rolling-test"}),
+    )
+    db.add(snapshot)
+    db.flush()
+    return snapshot
 
 
 def _ready_opening_death_card() -> dict:

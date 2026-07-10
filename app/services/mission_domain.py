@@ -9,7 +9,15 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AnalysisRun, CoachHypothesis, CoachMission, MissionCriteria, MissionProgressEvaluation
+from app.db.models import (
+    AnalysisRun,
+    CoachHypothesis,
+    CoachMission,
+    Match,
+    MetricSnapshot,
+    MissionCriteria,
+    MissionProgressEvaluation,
+)
 
 MISSION_PROGRESS_STATUSES = {
     "improving",
@@ -38,6 +46,16 @@ MISSION_PAYLOAD_SCHEMA_VERSION = "coach-mission-payload-v1"
 REQUIRED_MISSION_PAYLOAD_FIELDS = ("title", "goal", "rules", "duration", "success_metric", "failure_condition")
 SURVIVAL_OPENING_MISSION_METRICS = {"opening_death_rate", "survival_rate"}
 BAD_FIGHT_TRADE_MISSION_METRICS = {"untraded_death_rate"}
+ROLLING_MISSION_WINDOW_TYPES = {"last_30", "last_60", "custom_match_set"}
+ROLLING_MISSION_METRICS = {
+    "survival_rate",
+    "opening_death_rate",
+    "opening_duel_win_rate",
+    "untraded_death_rate",
+    "traded_death_rate",
+}
+MIN_ROLLING_WINDOW_MATCHES = 3
+MIN_ROLLING_WINDOW_ROUNDS = 8
 
 
 @dataclass(frozen=True)
@@ -69,6 +87,74 @@ class MissionPayloadValidationIssue:
     code: str
     message: str
     path: str
+
+
+@dataclass(frozen=True)
+class RollingMissionWindow:
+    user_id: int
+    owner_steam_id: str
+    window_type: str
+    source: str
+    match_ids: tuple[int, ...]
+    metric_snapshot_ids: tuple[int, ...]
+    metrics: dict[str, float]
+    metric_samples: dict[str, dict[str, Any]]
+    sample_matches: int
+    sample_rounds: int
+    confidence: str
+    confidence_score: float
+    caveats: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "user_id": self.user_id,
+            "owner_steam_id": self.owner_steam_id,
+            "window_type": self.window_type,
+            "source": self.source,
+            "match_ids": list(self.match_ids),
+            "metric_snapshot_ids": list(self.metric_snapshot_ids),
+            "metrics": dict(self.metrics),
+            "metric_samples": {key: dict(value) for key, value in self.metric_samples.items()},
+            "sample_matches": self.sample_matches,
+            "sample_rounds": self.sample_rounds,
+            "confidence": self.confidence,
+            "confidence_score": self.confidence_score,
+            "caveats": list(self.caveats),
+        }
+
+
+@dataclass(frozen=True)
+class RollingMissionCandidate:
+    rank: int
+    candidate_id: str
+    family: str
+    primary_metric: str
+    severity: float
+    confidence_score: float
+    sample_size: int
+    suppressed_by_active_mission: bool
+    suppression_reason: str | None
+    explanation: str
+    insight_card: dict[str, Any]
+    mission_payload: dict[str, Any]
+    window_evidence: dict[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "rank": self.rank,
+            "candidate_id": self.candidate_id,
+            "family": self.family,
+            "primary_metric": self.primary_metric,
+            "severity": self.severity,
+            "confidence_score": self.confidence_score,
+            "sample_size": self.sample_size,
+            "suppressed_by_active_mission": self.suppressed_by_active_mission,
+            "suppression_reason": self.suppression_reason,
+            "explanation": self.explanation,
+            "insight_card": dict(self.insight_card),
+            "mission_payload": dict(self.mission_payload),
+            "window_evidence": dict(self.window_evidence),
+        }
 
 
 def create_analysis_run(
@@ -485,6 +571,112 @@ def list_mission_progress_evaluations(
     )
 
 
+def build_rolling_mission_window(
+    db: Session,
+    *,
+    user_id: int,
+    owner_steam_id: str,
+    window_type: str = "last_30",
+    match_ids: Sequence[int] | None = None,
+) -> RollingMissionWindow:
+    if window_type not in ROLLING_MISSION_WINDOW_TYPES:
+        raise ValueError(f"Unsupported rolling mission window_type: {window_type}")
+    if window_type == "custom_match_set" and not match_ids:
+        raise ValueError("custom_match_set requires match_ids")
+    match_limit = {"last_30": 30, "last_60": 60}.get(window_type)
+    snapshots = _select_owner_metric_snapshots_for_window(
+        db,
+        user_id=user_id,
+        owner_steam_id=owner_steam_id,
+        window_type=window_type,
+        match_ids=match_ids,
+        match_limit=match_limit,
+    )
+    return _rolling_window_from_snapshots(
+        user_id=user_id,
+        owner_steam_id=owner_steam_id,
+        window_type=window_type,
+        snapshots=snapshots,
+    )
+
+
+def generate_rolling_mission_candidates(
+    db: Session,
+    *,
+    user_id: int,
+    owner_steam_id: str,
+    window_type: str = "last_30",
+    match_ids: Sequence[int] | None = None,
+) -> dict[str, Any]:
+    window = build_rolling_mission_window(
+        db,
+        user_id=user_id,
+        owner_steam_id=owner_steam_id,
+        window_type=window_type,
+        match_ids=match_ids,
+    )
+    active_metrics = _active_mission_primary_metrics(db, user_id=user_id, owner_steam_id=owner_steam_id)
+    candidates = _rolling_candidates_from_window(window, active_primary_metrics=active_metrics)
+    return {
+        "window": window.to_dict(),
+        "candidates": [candidate.to_dict() for candidate in candidates],
+    }
+
+
+def persist_rolling_mission_candidates(
+    db: Session,
+    *,
+    user_id: int,
+    owner_steam_id: str,
+    window_type: str = "last_30",
+    match_ids: Sequence[int] | None = None,
+) -> dict[str, Any]:
+    result = generate_rolling_mission_candidates(
+        db,
+        user_id=user_id,
+        owner_steam_id=owner_steam_id,
+        window_type=window_type,
+        match_ids=match_ids,
+    )
+    window = _mapping(result.get("window"))
+    analysis_run = create_analysis_run(
+        db,
+        user_id=user_id,
+        owner_steam_id=owner_steam_id,
+        mode="personal",
+        status="candidate_generated",
+        source="rolling_mission_window",
+        selected_metric_snapshot_ids=_int_list(window.get("metric_snapshot_ids")),
+        analysis_scope={
+            "mode": "personal",
+            "owner_user_id": user_id,
+            "owner_steam_id": owner_steam_id,
+            "window_type": window_type,
+            "match_ids": list(match_ids or []),
+            "source": "metric_snapshots",
+        },
+        source_payload={"rolling_window": window},
+    )
+    hypotheses: list[CoachHypothesis] = []
+    for candidate in result["candidates"]:
+        candidate_payload = _mapping(candidate)
+        if candidate_payload.get("suppressed_by_active_mission") is True:
+            continue
+        hypothesis = create_coach_hypothesis(
+            db,
+            user_id=user_id,
+            analysis_run_id=analysis_run.id,
+            insight_card=_mapping(candidate_payload.get("insight_card")),
+        )
+        hypotheses.append(hypothesis)
+    db.flush()
+    return {
+        **result,
+        "analysis_run_id": analysis_run.id,
+        "coach_hypothesis_ids": [hypothesis.id for hypothesis in hypotheses],
+    }
+
+
 def serialize_mission_progress_evaluation(evaluation: MissionProgressEvaluation) -> dict[str, Any]:
     result = _json_load_mapping(evaluation.result_json)
     components = [
@@ -654,6 +846,416 @@ def serialize_coach_mission(mission: CoachMission) -> dict[str, Any]:
         "activated_at": mission.activated_at.isoformat() if mission.activated_at else None,
         "ended_at": mission.ended_at.isoformat() if mission.ended_at else None,
     }
+
+
+def _select_owner_metric_snapshots_for_window(
+    db: Session,
+    *,
+    user_id: int,
+    owner_steam_id: str,
+    window_type: str,
+    match_ids: Sequence[int] | None,
+    match_limit: int | None,
+) -> list[MetricSnapshot]:
+    owner = owner_steam_id.strip()
+    if not owner:
+        return []
+    identity_filter = (
+        (MetricSnapshot.player_steamid == owner)
+        | (MetricSnapshot.player_key == f"steam:{owner}")
+    )
+    stmt = (
+        select(MetricSnapshot)
+        .join(Match, Match.id == MetricSnapshot.match_id)
+        .where(Match.user_id == user_id)
+        .where(identity_filter)
+        .order_by(Match.played_at.desc().nullslast(), Match.id.desc(), MetricSnapshot.id.desc())
+    )
+    if window_type == "custom_match_set":
+        stmt = stmt.where(MetricSnapshot.match_id.in_([int(match_id) for match_id in (match_ids or [])]))
+    rows = list(db.scalars(stmt).all())
+    if match_limit is None:
+        return rows
+    selected: list[MetricSnapshot] = []
+    seen_match_ids: set[int] = set()
+    for snapshot in rows:
+        if snapshot.match_id not in seen_match_ids and len(seen_match_ids) >= match_limit:
+            continue
+        selected.append(snapshot)
+        seen_match_ids.add(snapshot.match_id)
+    return selected
+
+
+def _rolling_window_from_snapshots(
+    *,
+    user_id: int,
+    owner_steam_id: str,
+    window_type: str,
+    snapshots: Sequence[MetricSnapshot],
+) -> RollingMissionWindow:
+    values_by_metric: dict[str, list[float]] = {}
+    confidence_by_metric: dict[str, list[str]] = {}
+    usable_by_metric: dict[str, list[bool]] = {}
+    sample_rounds_by_metric: dict[str, int] = {}
+    source_values = {snapshot.source for snapshot in snapshots}
+    caveats: list[str] = []
+    match_ids: list[int] = []
+    snapshot_ids: list[int] = []
+    for snapshot in snapshots:
+        if snapshot.match_id not in match_ids:
+            match_ids.append(snapshot.match_id)
+        snapshot_ids.append(snapshot.id)
+        snapshot_payload = _snapshot_to_mapping(snapshot)
+        metrics = _snapshot_payload_mapping(snapshot_payload, "metrics", "metrics_json")
+        confidence_payload = _snapshot_payload_mapping(
+            snapshot_payload,
+            "confidence_baseline",
+            "confidence_baseline_json",
+        )
+        for metric_name in ROLLING_MISSION_METRICS:
+            if metric_name not in metrics:
+                continue
+            value = _metric_numeric_value(metrics[metric_name])
+            if value is None:
+                continue
+            values_by_metric.setdefault(metric_name, []).append(value)
+            confidence = _metric_confidence_metadata(confidence_payload, metric_name)
+            confidence_by_metric.setdefault(metric_name, []).append(confidence["level"])
+            usable_by_metric.setdefault(metric_name, []).append(confidence["usable_for_missions"])
+            rounds = _sample_rounds_for_metric(metric_name, metrics, snapshot_payload)
+            if rounds:
+                sample_rounds_by_metric[metric_name] = sample_rounds_by_metric.get(metric_name, 0) + rounds
+        caveats.extend(_snapshot_caveats(snapshot_payload))
+
+    metrics = {
+        metric_name: round(sum(values) / len(values), 3)
+        for metric_name, values in values_by_metric.items()
+        if values
+    }
+    metric_samples = {
+        metric_name: {
+            "snapshot_count": len(values_by_metric.get(metric_name, [])),
+            "sample_matches": len(match_ids),
+            "sample_rounds": sample_rounds_by_metric.get(metric_name, 0),
+            "confidence": _lowest_confidence_level(confidence_by_metric.get(metric_name, [])),
+            "usable_for_missions": bool(usable_by_metric.get(metric_name))
+            and all(usable_by_metric.get(metric_name, [])),
+        }
+        for metric_name in sorted(values_by_metric)
+    }
+    eligible_confidences = [
+        str(sample["confidence"])
+        for sample in metric_samples.values()
+        if sample.get("usable_for_missions") is True
+    ]
+    window_confidence = _lowest_confidence_level(eligible_confidences)
+    window_caveats = sorted(set(caveats))
+    if not snapshots:
+        window_caveats.append("No owner-scoped metric snapshots were available for the rolling window.")
+    return RollingMissionWindow(
+        user_id=user_id,
+        owner_steam_id=owner_steam_id,
+        window_type=window_type,
+        source="+".join(sorted(source_values)) if source_values else "metric_snapshots",
+        match_ids=tuple(match_ids),
+        metric_snapshot_ids=tuple(snapshot_ids),
+        metrics=metrics,
+        metric_samples=metric_samples,
+        sample_matches=len(match_ids),
+        sample_rounds=max(sample_rounds_by_metric.values(), default=0),
+        confidence=window_confidence,
+        confidence_score=INSIGHT_CONFIDENCE_SCORES.get(window_confidence, 0.25),
+        caveats=tuple(window_caveats),
+    )
+
+
+def _rolling_candidates_from_window(
+    window: RollingMissionWindow,
+    *,
+    active_primary_metrics: set[str],
+) -> list[RollingMissionCandidate]:
+    candidates: list[RollingMissionCandidate] = []
+    for family, metric_order in (
+        ("survival_opening", ("opening_death_rate", "survival_rate")),
+        ("bad_fight_trade", ("untraded_death_rate",)),
+    ):
+        candidate = _rolling_candidate_for_family(
+            window,
+            family=family,
+            metric_order=metric_order,
+            active_primary_metrics=active_primary_metrics,
+        )
+        if candidate is not None:
+            candidates.append(candidate)
+    candidates.sort(
+        key=lambda item: (
+            item.suppressed_by_active_mission,
+            -item.severity,
+            -item.confidence_score,
+            -item.sample_size,
+            item.primary_metric,
+            item.family,
+        )
+    )
+    return [
+        RollingMissionCandidate(
+            rank=index,
+            candidate_id=candidate.candidate_id,
+            family=candidate.family,
+            primary_metric=candidate.primary_metric,
+            severity=candidate.severity,
+            confidence_score=candidate.confidence_score,
+            sample_size=candidate.sample_size,
+            suppressed_by_active_mission=candidate.suppressed_by_active_mission,
+            suppression_reason=candidate.suppression_reason,
+            explanation=candidate.explanation,
+            insight_card=candidate.insight_card,
+            mission_payload=candidate.mission_payload,
+            window_evidence=candidate.window_evidence,
+        )
+        for index, candidate in enumerate(candidates, start=1)
+    ]
+
+
+def _rolling_candidate_for_family(
+    window: RollingMissionWindow,
+    *,
+    family: str,
+    metric_order: Sequence[str],
+    active_primary_metrics: set[str],
+) -> RollingMissionCandidate | None:
+    primary_metric = next(
+        (
+            metric_name
+            for metric_name in metric_order
+            if _rolling_metric_is_mission_ready(window, metric_name)
+        ),
+        None,
+    )
+    if primary_metric is None:
+        return None
+    evidence = _rolling_evidence_for_family(window, family=family, primary_metric=primary_metric)
+    if not evidence:
+        return None
+    primary = evidence[0]
+    severity = _rolling_metric_severity(primary_metric, _optional_number(primary.get("value")))
+    if severity <= 0:
+        return None
+    confidence_level = str(primary.get("metric_confidence") or "low")
+    confidence_score = INSIGHT_CONFIDENCE_SCORES.get(confidence_level, 0.25)
+    sample_size = _optional_int(primary.get("sample_count") or primary.get("rounds")) or window.sample_rounds
+    suppressed = primary_metric in active_primary_metrics
+    insight_card = _rolling_insight_card(
+        window,
+        family=family,
+        primary_metric=primary_metric,
+        evidence=evidence,
+        confidence_level=confidence_level,
+    )
+    mission_payload = mission_payload_from_insight_card(insight_card)
+    if mission_payload is None:
+        return None
+    window_evidence = {
+        "source": "metric_snapshots",
+        "window_type": window.window_type,
+        "match_ids": list(window.match_ids),
+        "metric_snapshot_ids": list(window.metric_snapshot_ids),
+        "sample_matches": window.sample_matches,
+        "sample_rounds": window.sample_rounds,
+        "confidence": confidence_level,
+        "caveats": list(window.caveats),
+    }
+    explanation = _rolling_candidate_explanation(primary_metric, primary, window)
+    return RollingMissionCandidate(
+        rank=0,
+        candidate_id=f"{window.window_type}:{family}:{primary_metric}",
+        family=family,
+        primary_metric=primary_metric,
+        severity=severity,
+        confidence_score=confidence_score,
+        sample_size=sample_size,
+        suppressed_by_active_mission=suppressed,
+        suppression_reason="active_mission_same_primary_metric" if suppressed else None,
+        explanation=explanation,
+        insight_card=insight_card,
+        mission_payload=mission_payload,
+        window_evidence=window_evidence,
+    )
+
+
+def _rolling_evidence_for_family(
+    window: RollingMissionWindow,
+    *,
+    family: str,
+    primary_metric: str,
+) -> list[dict[str, Any]]:
+    if family == "bad_fight_trade":
+        metrics = (primary_metric, "opening_death_rate", "traded_death_rate")
+    else:
+        metrics = (primary_metric, "survival_rate" if primary_metric == "opening_death_rate" else "opening_death_rate")
+    evidence: list[dict[str, Any]] = []
+    for metric_name in metrics:
+        sample = window.metric_samples.get(metric_name)
+        if sample is None or metric_name not in window.metrics:
+            continue
+        if metric_name == primary_metric and not _rolling_metric_is_mission_ready(window, metric_name):
+            return []
+        evidence.append(
+            {
+                "metric_id": metric_name,
+                "metric_name": metric_name,
+                "value": window.metrics[metric_name],
+                "metric_confidence": sample.get("confidence"),
+                "sample_count": sample.get("sample_rounds") or None,
+                "rounds": sample.get("sample_rounds") or None,
+                "sample_matches": sample.get("sample_matches"),
+                "source": "rolling_metric_window",
+                "window_type": window.window_type,
+                "metric_snapshot_ids": list(window.metric_snapshot_ids),
+                "match_ids": list(window.match_ids),
+            }
+        )
+    return evidence
+
+
+def _rolling_insight_card(
+    window: RollingMissionWindow,
+    *,
+    family: str,
+    primary_metric: str,
+    evidence: Sequence[Mapping[str, Any]],
+    confidence_level: str,
+) -> dict[str, Any]:
+    primary_value = _optional_number(evidence[0].get("value")) if evidence else None
+    problem = {
+        "opening_death_rate": "Rolling owner window shows too many opening deaths.",
+        "survival_rate": "Rolling owner window shows low round survival.",
+        "untraded_death_rate": "Rolling owner window shows too many untraded deaths.",
+    }.get(primary_metric, f"Rolling owner window supports a {primary_metric} mission.")
+    return {
+        "id": f"rolling:{window.window_type}:{family}:{primary_metric}",
+        "problem": problem,
+        "evidence": [dict(item) for item in evidence],
+        "confidence": confidence_level,
+        "caveats": list(window.caveats),
+        "recommended_focus": _rolling_recommended_focus(primary_metric),
+        "target_metric_candidates": [primary_metric],
+        "mission_readiness": {
+            "can_become_mission": True,
+            "target_metric_candidate": primary_metric,
+            "baseline_value": primary_value,
+            "confidence_eligibility": {
+                "level": confidence_level,
+                "usable_for_missions": True,
+                "hard_recommendation_eligible": True,
+            },
+            "missing_requirements": [],
+            "blocking_reason_codes": [],
+            "source": "rolling_metric_window",
+            "window": window.to_dict(),
+        },
+    }
+
+
+def _rolling_metric_is_mission_ready(window: RollingMissionWindow, metric_name: str) -> bool:
+    sample = window.metric_samples.get(metric_name)
+    if sample is None:
+        return False
+    if sample.get("usable_for_missions") is not True:
+        return False
+    if sample.get("confidence") not in MISSION_ELIGIBLE_CONFIDENCE_LEVELS:
+        return False
+    if metric_name not in window.metrics:
+        return False
+    if window.sample_matches < MIN_ROLLING_WINDOW_MATCHES:
+        return False
+    sample_rounds = _optional_int(sample.get("sample_rounds")) or 0
+    return sample_rounds >= MIN_ROLLING_WINDOW_ROUNDS
+
+
+def _rolling_metric_severity(metric_name: str, value: float | None) -> float:
+    if value is None:
+        return 0.0
+    if metric_name == "untraded_death_rate":
+        return round(max(0.0, value - 0.5), 3)
+    if metric_name == "opening_death_rate":
+        return round(max(0.0, value - 0.2), 3)
+    if metric_name == "survival_rate":
+        return round(max(0.0, 0.6 - value), 3)
+    return 0.0
+
+
+def _metric_confidence_metadata(confidence_payload: Mapping[str, Any], metric_name: str) -> dict[str, Any]:
+    metric_confidences = confidence_payload.get("metrics")
+    raw_value = metric_confidences.get(metric_name) if isinstance(metric_confidences, Mapping) else None
+    if isinstance(raw_value, Mapping):
+        level = _optional_lower_str(raw_value.get("level") or raw_value.get("metric_confidence")) or "low"
+        usable = raw_value.get("usable_for_missions") is True
+        hard_eligible = raw_value.get("hard_recommendation_eligible") is True
+    else:
+        level = _optional_lower_str(raw_value) or "low"
+        usable = level in MISSION_ELIGIBLE_CONFIDENCE_LEVELS
+        hard_eligible = usable
+    return {
+        "level": level,
+        "usable_for_missions": usable and hard_eligible,
+    }
+
+
+def _sample_rounds_for_metric(metric_name: str, metrics: Mapping[str, Any], snapshot: Mapping[str, Any]) -> int:
+    if metric_name in {"untraded_death_rate", "traded_death_rate"}:
+        known_deaths = _optional_int(metrics.get("trade_status_known_deaths"))
+        if known_deaths is not None:
+            return known_deaths
+    rounds = _optional_int(metrics.get("rounds"))
+    if rounds is not None:
+        return rounds
+    return _sample_count(snapshot, "rounds")
+
+
+def _lowest_confidence_level(levels: Sequence[str]) -> str:
+    ordered = {"low": 0, "medium": 1, "high": 2}
+    known = [level for level in levels if level in ordered]
+    if not known:
+        return "low"
+    return min(known, key=lambda item: ordered[item])
+
+
+def _rolling_candidate_explanation(
+    primary_metric: str,
+    primary: Mapping[str, Any],
+    window: RollingMissionWindow,
+) -> str:
+    value = _optional_number(primary.get("value"))
+    value_text = _format_metric_value(value)
+    return (
+        f"Generated from {window.window_type} owner metric snapshots because {primary_metric} was {value_text} "
+        f"with {primary.get('metric_confidence')} confidence across {window.sample_matches} matches."
+    )
+
+
+def _rolling_recommended_focus(primary_metric: str) -> str:
+    if primary_metric == "untraded_death_rate":
+        return "Avoid isolated fights unless a teammate can trade the death."
+    if primary_metric == "opening_death_rate":
+        return "Delay first contact and take opening fights only with trade support."
+    if primary_metric == "survival_rate":
+        return "Prioritize staying alive through early fights before taking isolated space."
+    return f"Improve {primary_metric.replace('_', ' ')} with supported owner metrics."
+
+
+def _active_mission_primary_metrics(db: Session, *, user_id: int, owner_steam_id: str) -> set[str]:
+    metrics: set[str] = set()
+    for mission in list_active_coach_missions(db, user_id=user_id):
+        if mission.owner_steam_id and mission.owner_steam_id != owner_steam_id:
+            continue
+        source_payload = _json_load_mapping(mission.source_payload_json)
+        mission_payload = _mapping(source_payload.get("mission_payload"))
+        success_metric = _mapping(mission_payload.get("success_metric"))
+        metric_name = success_metric.get("metric_name")
+        if metric_name:
+            metrics.add(str(metric_name))
+    return metrics
 
 
 def _require_owned_analysis_run(db: Session, *, user_id: int, analysis_run_id: int) -> AnalysisRun:
