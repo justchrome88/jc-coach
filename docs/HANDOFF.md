@@ -63,7 +63,7 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 10. For future ChatGPT-generated Codex prompts, use `docs/project_management/PROMPT_PLAYBOOK.md` as the prompt-template guide after Hot docs.
 11. Prompt language policy: use `docs/project_management/PROMPT_PLAYBOOK.md`; Codex prompts/reports may be English, while direct ChatGPT user discussion remains Russian.
 
-## Current State Summary
+## Historical Pre-F10 State Summary
 
 - `v0.8` Recommendation Loop Acceptance is promoted for controlled personal use.
 - `v0.9` is promoted with warnings by WP-017K.
@@ -114,7 +114,7 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - Match mode labels accepted for `v0.9`: `mode_unknown`, `provenance_demo`, `provenance_valve_matchmaking`, `exact_date_source=steam_gc_match_time`.
 - Playlist-specific labels and recommendations are not accepted for `v0.9`.
 
-## Current Pause / Resume State
+## Historical Pre-F10 Pause / Resume State
 
 - Project status: `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
 - `READY_FOR_MAJOR_CS2_FEATURE_WORK`: `NO`.

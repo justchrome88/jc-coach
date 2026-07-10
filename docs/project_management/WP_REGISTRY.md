@@ -83,7 +83,7 @@ remain mandatory.
 | `WP-017Z1` | Agent Invocation Modes and File-Backed Output Contract | `v0.9` | `done` | `docs/audit/WP_017Z1_AGENT_INVOCATION_OUTPUT_MODES_REPORT.md` | `WP-017Z`, `WP-017K` | Governance/documentation pass that adds invocation modes and output modes to the repo-native agent workflow; no product behavior, DB, service, import/parser/evaluator or WP-018 product implementation changes. |
 | `WP-017Z2` | Control Plane Protection Policy | `v0.9` | `done` | `docs/audit/WP_017Z2_CONTROL_PLANE_PROTECTION_POLICY_REPORT.md` | `WP-017Z1` | Governance/documentation pass that protects control-plane docs from ordinary product/code/DB/import/runtime/UI/recommendation task edits; no product behavior, DB, service, import/parser/evaluator or WP-018 product implementation changes. |
 
-## Current Promotion Gate
+## Historical Promotion Gate
 
 `v0.9` promotion completed in WP-017K with `PASS_WITH_WARNINGS`.
 
@@ -161,7 +161,7 @@ overlay, not as a replacement for a planned product WP.
   tests/evals, gates, confidence/caveats or foundation readiness and does not
   add unsupported CS2/domain claims.
 
-## MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE
+## Historical / Superseded MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE
 
 Lane authorization: user decision after GATE-001, recorded by
 `GATE-002_MVP_LANE_AUTHORIZATION_AND_GUARDRAIL_UPDATE`.
@@ -210,7 +210,7 @@ Planned/active sequence:
 | `MVP-008` | Missions and Coach UI Integration | `planned` | TBD | `MVP-007` | Personal MVP UI only. No public/friends readiness or `v1.0` claim. |
 | `MVP-009` | Personal MVP Lane Acceptance Review | `planned` | TBD | `MVP-001` through `MVP-008` or documented deferrals | May only accept scoped personal MVP readiness with carried limitations. Public/friends readiness remains blocked. |
 
-## WP-018 Current Scope
+## Historical / Superseded WP-018 Scope
 
 WP-018 preparation/prelude is completed. This does not mark `WP-018` complete
 and does not promote `v0.10`.

@@ -58,7 +58,7 @@ Last updated: 2026-07-10.
   file-backed report.
 - Latest known production DB SHA: `2f7a712a4505b43c25a7e6b32b90f69102789362026d650f7a8b18f6650d1e33` from read-only project-gate evidence. Re-check before any WP that depends on current DB state.
 
-## Foundation Hardening Status
+## Historical Foundation Hardening Status
 
 - 2026-07-06 read-only agentic-readiness audit result: `66%` readiness
   (`3.30/5` across 106 audit rows).
@@ -94,7 +94,7 @@ Last updated: 2026-07-10.
 - Production DB: `data/cs2_coach.db`.
 - Shell service calls that touch Steam/import temp storage must use `TMPDIR=/opt/jc-coach/data/tmp`, `TEMP=/opt/jc-coach/data/tmp` and `TMP=/opt/jc-coach/data/tmp` when explicitly authorized.
 
-## Accepted State
+## Historical Accepted State
 
 - `v0.8` is accepted for controlled personal Recommendation Loop Acceptance.
 - Active accepted recommendation for hard progress is survival recommendation `#5`.
