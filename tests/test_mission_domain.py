@@ -12,6 +12,7 @@ from app.db.models import (
     User,
 )
 from app.services.mission_domain import (
+    MISSION_PAYLOAD_SCHEMA_VERSION,
     activate_coach_mission,
     activate_draft_coach_mission,
     add_mission_criteria,
@@ -29,9 +30,13 @@ from app.services.mission_domain import (
     list_coach_missions,
     list_mission_criteria,
     list_mission_progress_evaluations,
+    mission_payload_from_insight_card,
     pause_coach_mission,
     record_mission_progress_evaluation,
+    serialize_coach_mission,
+    serialize_mission_payload,
     update_coach_mission_status,
+    validate_mission_payload,
 )
 
 
@@ -41,6 +46,58 @@ def test_mission_domain_tables_are_registered():
     assert CoachMission.__tablename__ == "coach_missions"
     assert MissionCriteria.__tablename__ == "mission_criteria"
     assert MissionProgressEvaluation.__tablename__ == "mission_progress_evaluations"
+
+
+def test_mission_payload_schema_accepts_required_measurable_fields():
+    payload = {
+        "title": "Reduce opening deaths",
+        "goal": "Move opening_death_rate from 0.310 toward 0.260 using supported owner metric snapshots.",
+        "rules": [
+            "Delay first contact.",
+            "Count progress only when opening_death_rate is present in owner-scoped metric snapshots.",
+        ],
+        "duration": {"unit": "matches", "min_matches": 3, "max_matches": 5},
+        "success_metric": {
+            "metric_name": "opening_death_rate",
+            "direction": "lower_is_better",
+            "baseline_value": 0.31,
+            "target_value": 0.26,
+        },
+        "failure_condition": {
+            "metric_name": "opening_death_rate",
+            "direction": "stay_below",
+            "threshold_value": 0.31,
+            "reason": "Do not regress from the activation baseline.",
+        },
+        "linked_insight": {"source_insight_card_id": "card-opening-1"},
+    }
+
+    assert validate_mission_payload(payload) == ()
+
+    serialized = serialize_mission_payload(payload)
+    assert serialized["schema_version"] == MISSION_PAYLOAD_SCHEMA_VERSION
+    assert serialized["success_metric"]["target_value"] == 0.26
+    assert serialized["linked_insight"]["source_insight_card_id"] == "card-opening-1"
+
+
+def test_mission_payload_schema_rejects_vague_unmeasurable_payload():
+    payload = {
+        "title": "Play better",
+        "goal": "Improve generally.",
+        "rules": [],
+        "duration": {"unit": "matches"},
+        "success_metric": {"metric_name": "opening_death_rate", "direction": "lower_is_better"},
+        "failure_condition": {"metric_name": "opening_death_rate", "direction": "stay_below"},
+    }
+
+    issues = validate_mission_payload(payload)
+    codes = {issue.code for issue in issues}
+
+    assert "missing_mission_rules" in codes
+    assert "invalid_mission_duration_window" in codes
+    assert "missing_mission_success_target" in codes
+    assert "missing_mission_failure_threshold" in codes
+    assert serialize_mission_payload(payload) == {}
 
 
 def test_create_read_list_update_mission_domain_flow(db):
@@ -117,7 +174,29 @@ def test_create_read_list_update_mission_domain_flow(db):
     assert list_coach_missions(db, user_id=owner.id, status="active") == [mission]
     assert list_active_coach_missions(db, user_id=owner.id) == [mission]
     assert mission.focus == "Delay first contact and trade from second position."
-    assert json.loads(mission.source_payload_json)["baseline_source"] == "coach_hypothesis_mission_readiness"
+    mission_source_payload = json.loads(mission.source_payload_json)
+    mission_payload = mission_source_payload["mission_payload"]
+    assert mission_source_payload["baseline_source"] == "coach_hypothesis_mission_readiness"
+    assert validate_mission_payload(mission_payload) == ()
+    assert mission_payload["title"] == "Reduce opening deaths"
+    assert mission_payload["success_metric"] == {
+        "metric_name": "opening_death_rate",
+        "direction": "lower_is_better",
+        "baseline_value": 0.31,
+        "target_value": 0.26,
+        "min_sample_matches": None,
+        "min_sample_rounds": None,
+        "confidence_required": 0.6,
+    }
+    assert mission_payload["failure_condition"]["threshold_value"] == 0.31
+    assert mission_payload["linked_insight"] == {
+        "source_hypothesis_id": hypothesis.id,
+        "source_insight_card_id": "card-survival-1",
+        "analysis_run_id": run.id,
+        "source": "coach_hypothesis",
+    }
+    serialized_mission = serialize_coach_mission(mission)
+    assert serialized_mission["mission_payload"] == mission_payload
 
     criteria_rows = list_mission_criteria(db, user_id=owner.id, mission_id=mission.id)
     assert [(row.metric_name, row.role, row.direction) for row in criteria_rows] == [
@@ -516,6 +595,42 @@ def test_activation_blocks_low_or_mission_ineligible_metrics(db):
         activate_draft_coach_mission(db, user_id=owner.id, mission_id=draft.id)
     with pytest.raises(ValueError, match="low_or_unavailable_confidence"):
         activate_coach_mission(db, user_id=owner.id, hypothesis_id=hypothesis.id, title="Denied active")
+
+
+def test_no_data_insight_card_does_not_produce_mission_payload_or_active_mission(db):
+    owner = _user(db, "owner")
+    run = create_analysis_run(db, user_id=owner.id, owner_steam_id="76561198000000004")
+    no_data_card = {
+        "problem": "No validated coach insight is available yet.",
+        "evidence": [],
+        "confidence": "low",
+        "caveats": ["No supported evidence was available for this card."],
+        "recommended_focus": "Use the current accepted recommendation until more evidence exists.",
+        "mission_readiness": {
+            "can_become_mission": False,
+            "target_metric_candidate": None,
+            "baseline_value": None,
+            "confidence_eligibility": {
+                "level": "low",
+                "usable_for_missions": False,
+                "hard_recommendation_eligible": False,
+            },
+            "missing_requirements": ["target_metric", "baseline_value", "mission_eligible_confidence"],
+            "blocking_reason_codes": ["missing_target_metric", "missing_baseline_value"],
+        },
+    }
+    hypothesis = create_coach_hypothesis(
+        db,
+        user_id=owner.id,
+        analysis_run_id=run.id,
+        insight_card=no_data_card,
+    )
+
+    assert mission_payload_from_insight_card(no_data_card) is None
+
+    with pytest.raises(ValueError, match="missing_target_metric,missing_baseline_value"):
+        activate_coach_mission(db, user_id=owner.id, hypothesis_id=hypothesis.id, title="No-data mission")
+    assert list_coach_missions(db, user_id=owner.id) == []
 
 
 def test_pause_and_cancel_mission_status_helpers(db):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -33,6 +34,39 @@ CRITERIA_DIRECTIONS = {
     "improve_or_same",
 }
 MISSION_ELIGIBLE_CONFIDENCE_LEVELS = {"medium", "high"}
+MISSION_PAYLOAD_SCHEMA_VERSION = "coach-mission-payload-v1"
+REQUIRED_MISSION_PAYLOAD_FIELDS = ("title", "goal", "rules", "duration", "success_metric", "failure_condition")
+
+
+@dataclass(frozen=True)
+class MissionPayload:
+    title: str
+    goal: str
+    rules: tuple[str, ...]
+    duration: dict[str, Any]
+    success_metric: dict[str, Any]
+    failure_condition: dict[str, Any]
+    linked_insight: dict[str, Any]
+    schema_version: str = MISSION_PAYLOAD_SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "title": self.title,
+            "goal": self.goal,
+            "rules": list(self.rules),
+            "duration": dict(self.duration),
+            "success_metric": dict(self.success_metric),
+            "failure_condition": dict(self.failure_condition),
+            "linked_insight": dict(self.linked_insight),
+        }
+
+
+@dataclass(frozen=True)
+class MissionPayloadValidationIssue:
+    code: str
+    message: str
+    path: str
 
 
 def create_analysis_run(
@@ -144,6 +178,9 @@ def activate_coach_mission(
     criteria_specs = _criteria_specs_from_hypothesis(hypothesis)
     if status == "active":
         _validate_hypothesis_can_activate(hypothesis, criteria_specs)
+    mission_payload = mission_payload_from_hypothesis(hypothesis, title=title)
+    if status == "active" and mission_payload is None:
+        raise ValueError("Coach hypothesis cannot become an active mission: missing_mission_payload")
     mission = CoachMission(
         hypothesis_id=hypothesis.id,
         user_id=user_id,
@@ -151,7 +188,7 @@ def activate_coach_mission(
         status=status,
         title=title,
         focus=focus if focus is not None else hypothesis.recommended_focus,
-        source_payload_json=_json_object(_mission_source_payload(hypothesis, source_payload)),
+        source_payload_json=_json_object(_mission_source_payload(hypothesis, source_payload, mission_payload)),
     )
     db.add(mission)
     db.flush()
@@ -199,11 +236,17 @@ def activate_draft_coach_mission(
     hypothesis = _require_mission_hypothesis(db, mission)
     criteria_specs = _criteria_specs_from_hypothesis(hypothesis)
     _validate_hypothesis_can_activate(hypothesis, criteria_specs)
+    mission_payload = mission_payload_from_hypothesis(hypothesis, title=mission.title)
+    if mission_payload is None:
+        raise ValueError("Coach hypothesis cannot become an active mission: missing_mission_payload")
     if not list_mission_criteria(db, user_id=user_id, mission_id=mission.id):
         for criteria_spec in criteria_specs:
             _add_mission_criteria_from_spec(db, user_id=user_id, mission=mission, criteria_spec=criteria_spec)
     mission.status = "active"
     mission.ended_at = None
+    source_payload = _json_load_mapping(mission.source_payload_json)
+    source_payload["mission_payload"] = mission_payload
+    mission.source_payload_json = _json_object(source_payload)
     hypothesis.status = "mission_active"
     db.flush()
     return mission
@@ -453,6 +496,140 @@ def serialize_mission_progress_evaluation(evaluation: MissionProgressEvaluation)
         "target_met": target_met,
         "counted": target_met,
         "why_counted_or_not": counted_reason,
+    }
+
+
+def mission_payload_from_insight_card(
+    insight_card: Mapping[str, Any],
+    *,
+    title: str | None = None,
+    duration: Mapping[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    readiness = _mapping(_mission_readiness(insight_card))
+    if readiness.get("can_become_mission") is not True:
+        return None
+    criteria_specs = _criteria_specs_from_insight_card(insight_card)
+    if not criteria_specs:
+        return None
+    return _mission_payload_from_parts(
+        title=title or _mission_title(
+            problem=str(insight_card.get("problem") or ""),
+            primary_metric=str(criteria_specs[0]["metric_name"]),
+        ),
+        problem=str(insight_card.get("problem") or ""),
+        recommended_focus=str(insight_card.get("recommended_focus") or ""),
+        caveats=_string_sequence(insight_card.get("caveats")),
+        readiness=readiness,
+        criteria_specs=criteria_specs,
+        duration=duration,
+        linked_insight={
+            "source_insight_card_id": _optional_str(insight_card.get("id") or insight_card.get("card_id")),
+            "source": "insight_card",
+        },
+    )
+
+
+def mission_payload_from_hypothesis(
+    hypothesis: CoachHypothesis,
+    *,
+    title: str | None = None,
+    duration: Mapping[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    readiness = _json_load_mapping(hypothesis.mission_readiness_json)
+    if readiness.get("can_become_mission") is not True:
+        return None
+    criteria_specs = _criteria_specs_from_hypothesis(hypothesis)
+    if not criteria_specs:
+        return None
+    return _mission_payload_from_parts(
+        title=title or _mission_title(problem=hypothesis.problem, primary_metric=str(criteria_specs[0]["metric_name"])),
+        problem=hypothesis.problem,
+        recommended_focus=hypothesis.recommended_focus,
+        caveats=_json_load_sequence(hypothesis.caveats_json),
+        readiness=readiness,
+        criteria_specs=criteria_specs,
+        duration=duration,
+        linked_insight={
+            "source_hypothesis_id": hypothesis.id,
+            "source_insight_card_id": hypothesis.source_insight_card_id,
+            "analysis_run_id": hypothesis.analysis_run_id,
+            "source": "coach_hypothesis",
+        },
+    )
+
+
+def validate_mission_payload(
+    raw_payload: Any,
+    *,
+    path: str = "$.mission_payload",
+) -> tuple[MissionPayloadValidationIssue, ...]:
+    if not isinstance(raw_payload, Mapping):
+        return (
+            MissionPayloadValidationIssue(
+                "invalid_mission_payload",
+                "Mission payload must be an object.",
+                path,
+            ),
+        )
+    payload = dict(raw_payload)
+    issues: list[MissionPayloadValidationIssue] = []
+    for field in REQUIRED_MISSION_PAYLOAD_FIELDS:
+        if field not in payload:
+            issues.append(
+                MissionPayloadValidationIssue(
+                    "missing_mission_payload_field",
+                    f"Missing required mission payload field: {field}.",
+                    f"{path}.{field}",
+                )
+            )
+    _validate_payload_non_empty_string(payload, "title", path, issues)
+    _validate_payload_non_empty_string(payload, "goal", path, issues)
+    _validate_mission_rules(payload.get("rules"), path, issues)
+    _validate_mission_duration(payload.get("duration"), path, issues)
+    _validate_mission_success_metric(payload.get("success_metric"), path, issues)
+    _validate_mission_failure_condition(payload.get("failure_condition"), path, issues)
+    linked_insight = payload.get("linked_insight")
+    if linked_insight is not None and not isinstance(linked_insight, Mapping):
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_linked_insight",
+                "Mission linked_insight must be an object when present.",
+                f"{path}.linked_insight",
+            )
+        )
+    return tuple(issues)
+
+
+def serialize_mission_payload(raw_payload: Any) -> dict[str, Any]:
+    if validate_mission_payload(raw_payload):
+        return {}
+    payload = dict(raw_payload)
+    return MissionPayload(
+        title=str(payload["title"]).strip(),
+        goal=str(payload["goal"]).strip(),
+        rules=tuple(str(rule).strip() for rule in payload["rules"]),
+        duration=dict(payload["duration"]),
+        success_metric=dict(payload["success_metric"]),
+        failure_condition=dict(payload["failure_condition"]),
+        linked_insight=dict(payload.get("linked_insight") or {}),
+        schema_version=str(payload.get("schema_version") or MISSION_PAYLOAD_SCHEMA_VERSION),
+    ).to_dict()
+
+
+def serialize_coach_mission(mission: CoachMission) -> dict[str, Any]:
+    source_payload = _json_load_mapping(mission.source_payload_json)
+    return {
+        "mission_id": mission.id,
+        "hypothesis_id": mission.hypothesis_id,
+        "user_id": mission.user_id,
+        "owner_steam_id": mission.owner_steam_id,
+        "status": mission.status,
+        "title": mission.title,
+        "focus": mission.focus,
+        "mission_payload": serialize_mission_payload(source_payload.get("mission_payload")),
+        "source_payload": source_payload,
+        "activated_at": mission.activated_at.isoformat() if mission.activated_at else None,
+        "ended_at": mission.ended_at.isoformat() if mission.ended_at else None,
     }
 
 
@@ -972,6 +1149,7 @@ def _validate_hypothesis_can_activate(
 def _mission_source_payload(
     hypothesis: CoachHypothesis,
     source_payload: Mapping[str, Any] | None,
+    mission_payload: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     payload = dict(source_payload or {})
     payload.update(
@@ -982,17 +1160,44 @@ def _mission_source_payload(
             "mission_readiness": _json_load_mapping(hypothesis.mission_readiness_json),
         }
     )
+    if mission_payload is not None:
+        payload["mission_payload"] = dict(mission_payload)
     return payload
 
 
 def _criteria_specs_from_hypothesis(hypothesis: CoachHypothesis) -> list[dict[str, Any]]:
     readiness = _json_load_mapping(hypothesis.mission_readiness_json)
+    evidence = _json_load_sequence(hypothesis.evidence_json)
+    return _criteria_specs_from_parts(
+        readiness=readiness,
+        evidence=evidence,
+        target_metric_candidates=_json_load_sequence(hypothesis.target_metric_candidates_json),
+    )
+
+
+def _criteria_specs_from_insight_card(insight_card: Mapping[str, Any]) -> list[dict[str, Any]]:
+    readiness = _mapping(_mission_readiness(insight_card))
+    evidence = insight_card.get("evidence") if isinstance(insight_card.get("evidence"), list) else []
+    return _criteria_specs_from_parts(
+        readiness=readiness,
+        evidence=evidence,
+        target_metric_candidates=_target_metric_candidates(insight_card),
+    )
+
+
+def _criteria_specs_from_parts(
+    *,
+    readiness: Mapping[str, Any],
+    evidence: Sequence[Any],
+    target_metric_candidates: Sequence[Any],
+) -> list[dict[str, Any]]:
     explicit = readiness.get("criteria") or readiness.get("mission_criteria")
     if isinstance(explicit, Sequence) and not isinstance(explicit, str):
         return [_normalize_criteria_spec(item) for item in explicit if isinstance(item, Mapping)]
-    evidence = _json_load_sequence(hypothesis.evidence_json)
     first_evidence = evidence[0] if evidence and isinstance(evidence[0], Mapping) else {}
-    primary_metric = _readiness_target_metric(readiness, hypothesis) or _evidence_metric_name(first_evidence)
+    primary_metric = _readiness_target_metric(readiness, target_metric_candidates) or _evidence_metric_name(
+        first_evidence
+    )
     baseline = _optional_number(readiness.get("baseline_value"))
     if baseline is None and evidence:
         baseline = _optional_number(evidence[0].get("value")) if isinstance(evidence[0], Mapping) else None
@@ -1058,6 +1263,283 @@ def _criteria_specs_from_hypothesis(hypothesis: CoachHypothesis) -> list[dict[st
     return specs
 
 
+def _mission_payload_from_parts(
+    *,
+    title: str,
+    problem: str,
+    recommended_focus: str,
+    caveats: Sequence[Any],
+    readiness: Mapping[str, Any],
+    criteria_specs: Sequence[Mapping[str, Any]],
+    duration: Mapping[str, Any] | None,
+    linked_insight: Mapping[str, Any],
+) -> dict[str, Any]:
+    primary = _primary_criteria_spec(criteria_specs)
+    if primary is None:
+        raise ValueError("Mission payload requires primary mission criteria.")
+    failure_condition = _failure_condition(criteria_specs)
+    payload = MissionPayload(
+        title=title.strip(),
+        goal=_mission_goal(problem=problem, primary=primary),
+        rules=tuple(_mission_rules(recommended_focus, caveats, primary, failure_condition)),
+        duration=dict(duration or _mission_duration(primary)),
+        success_metric=_success_metric(primary),
+        failure_condition=failure_condition,
+        linked_insight=dict(linked_insight),
+    ).to_dict()
+    issues = validate_mission_payload(payload)
+    if issues:
+        codes = ",".join(issue.code for issue in issues)
+        raise ValueError(f"Invalid mission payload: {codes}")
+    return payload
+
+
+def _primary_criteria_spec(criteria_specs: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
+    for criteria_spec in criteria_specs:
+        if criteria_spec.get("role") == "primary":
+            return dict(criteria_spec)
+    return dict(criteria_specs[0]) if criteria_specs else None
+
+
+def _mission_title(*, problem: str, primary_metric: str) -> str:
+    cleaned_problem = problem.strip().rstrip(".")
+    if cleaned_problem:
+        return cleaned_problem[:120]
+    return f"Improve {primary_metric.replace('_', ' ')}"
+
+
+def _mission_goal(*, problem: str, primary: Mapping[str, Any]) -> str:
+    metric_name = str(primary["metric_name"])
+    baseline = primary.get("baseline_value")
+    target = primary.get("target_value")
+    if baseline is not None and target is not None:
+        return (
+            f"Move {metric_name} from {float(baseline):.3f} toward {float(target):.3f} "
+            "using only supported owner metric snapshots."
+        )
+    return f"Improve {metric_name} using only supported owner metric snapshots."
+
+
+def _mission_rules(
+    recommended_focus: str,
+    caveats: Sequence[Any],
+    primary: Mapping[str, Any],
+    failure_condition: Mapping[str, Any],
+) -> list[str]:
+    rules = [
+        recommended_focus.strip() or f"Work on {str(primary['metric_name']).replace('_', ' ')} in the next matches.",
+        f"Count progress only when {primary['metric_name']} is present in owner-scoped metric snapshots.",
+        f"Do not count the mission if {failure_condition['metric_name']} triggers the failure condition.",
+    ]
+    for caveat in _string_sequence(caveats)[:2]:
+        rules.append(f"Caveat: {caveat}")
+    return rules
+
+
+def _mission_duration(primary: Mapping[str, Any]) -> dict[str, Any]:
+    min_matches = _optional_int(primary.get("min_sample_matches")) or 3
+    max_matches = max(min_matches, 5)
+    return {
+        "unit": "matches",
+        "min_matches": min_matches,
+        "max_matches": max_matches,
+        "description": f"Evaluate after {min_matches}-{max_matches} owner matches with supported metrics.",
+    }
+
+
+def _success_metric(primary: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "metric_name": primary["metric_name"],
+        "direction": primary["direction"],
+        "baseline_value": primary.get("baseline_value"),
+        "target_value": primary.get("target_value"),
+        "min_sample_matches": primary.get("min_sample_matches"),
+        "min_sample_rounds": primary.get("min_sample_rounds"),
+        "confidence_required": primary.get("confidence_required"),
+    }
+
+
+def _failure_condition(criteria_specs: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    guardrail = next((dict(item) for item in criteria_specs if item.get("role") == "guardrail"), None)
+    primary = _primary_criteria_spec(criteria_specs)
+    source = guardrail or primary
+    if source is None:
+        raise ValueError("Mission payload requires failure criteria.")
+    threshold = source.get("target_value")
+    if threshold is None:
+        threshold = source.get("baseline_value")
+    return {
+        "metric_name": source["metric_name"],
+        "direction": source["direction"],
+        "threshold_value": threshold,
+        "reason": "Mission fails if this condition regresses or cannot be evaluated with supported metrics.",
+    }
+
+
+def _validate_payload_non_empty_string(
+    payload: Mapping[str, Any],
+    field: str,
+    path: str,
+    issues: list[MissionPayloadValidationIssue],
+) -> None:
+    if not isinstance(payload.get(field), str) or not payload.get(field, "").strip():
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_payload_field",
+                f"Mission payload field must be a non-empty string: {field}.",
+                f"{path}.{field}",
+            )
+        )
+
+
+def _validate_mission_rules(
+    rules: Any,
+    path: str,
+    issues: list[MissionPayloadValidationIssue],
+) -> None:
+    if not isinstance(rules, list):
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_rules",
+                "Mission rules must be a list.",
+                f"{path}.rules",
+            )
+        )
+        return
+    if not rules:
+        issues.append(
+            MissionPayloadValidationIssue(
+                "missing_mission_rules",
+                "Mission rules must include at least one rule.",
+                f"{path}.rules",
+            )
+        )
+    if any(not isinstance(rule, str) or not rule.strip() for rule in rules):
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_rule",
+                "Mission rules must be non-empty strings.",
+                f"{path}.rules",
+            )
+        )
+
+
+def _validate_mission_duration(
+    duration: Any,
+    path: str,
+    issues: list[MissionPayloadValidationIssue],
+) -> None:
+    if not isinstance(duration, Mapping):
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_duration",
+                "Mission duration must be an object.",
+                f"{path}.duration",
+            )
+        )
+        return
+    if not isinstance(duration.get("unit"), str) or not duration.get("unit", "").strip():
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_duration_unit",
+                "Mission duration requires a non-empty unit.",
+                f"{path}.duration.unit",
+            )
+        )
+    min_matches = _optional_positive_int(duration.get("min_matches"))
+    max_matches = _optional_positive_int(duration.get("max_matches"))
+    if min_matches is None and max_matches is None:
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_duration_window",
+                "Mission duration requires min_matches or max_matches.",
+                f"{path}.duration",
+            )
+        )
+    if min_matches is not None and max_matches is not None and max_matches < min_matches:
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_duration_window",
+                "Mission duration max_matches must be greater than or equal to min_matches.",
+                f"{path}.duration.max_matches",
+            )
+        )
+
+
+def _validate_mission_success_metric(
+    success_metric: Any,
+    path: str,
+    issues: list[MissionPayloadValidationIssue],
+) -> None:
+    if not isinstance(success_metric, Mapping):
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_success_metric",
+                "Mission success_metric must be an object.",
+                f"{path}.success_metric",
+            )
+        )
+        return
+    _validate_metric_payload(success_metric, path, "success_metric", issues)
+    if _optional_number_or_none(success_metric.get("target_value")) is None:
+        issues.append(
+            MissionPayloadValidationIssue(
+                "missing_mission_success_target",
+                "Mission success_metric requires a numeric target_value.",
+                f"{path}.success_metric.target_value",
+            )
+        )
+
+
+def _validate_mission_failure_condition(
+    failure_condition: Any,
+    path: str,
+    issues: list[MissionPayloadValidationIssue],
+) -> None:
+    if not isinstance(failure_condition, Mapping):
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_failure_condition",
+                "Mission failure_condition must be an object.",
+                f"{path}.failure_condition",
+            )
+        )
+        return
+    _validate_metric_payload(failure_condition, path, "failure_condition", issues)
+    if _optional_number_or_none(failure_condition.get("threshold_value")) is None:
+        issues.append(
+            MissionPayloadValidationIssue(
+                "missing_mission_failure_threshold",
+                "Mission failure_condition requires a numeric threshold_value.",
+                f"{path}.failure_condition.threshold_value",
+            )
+        )
+
+
+def _validate_metric_payload(
+    metric_payload: Mapping[str, Any],
+    path: str,
+    field: str,
+    issues: list[MissionPayloadValidationIssue],
+) -> None:
+    if not isinstance(metric_payload.get("metric_name"), str) or not metric_payload.get("metric_name", "").strip():
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_metric_name",
+                "Mission metric payload requires a non-empty metric_name.",
+                f"{path}.{field}.metric_name",
+            )
+        )
+    if metric_payload.get("direction") not in CRITERIA_DIRECTIONS:
+        issues.append(
+            MissionPayloadValidationIssue(
+                "invalid_mission_metric_direction",
+                "Mission metric direction is unsupported.",
+                f"{path}.{field}.direction",
+            )
+        )
+
+
 def _add_mission_criteria_from_spec(
     db: Session,
     *,
@@ -1104,13 +1586,13 @@ def _normalize_criteria_spec(value: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _readiness_target_metric(readiness: Mapping[str, Any], hypothesis: CoachHypothesis) -> str | None:
+def _readiness_target_metric(readiness: Mapping[str, Any], target_metric_candidates: Sequence[Any]) -> str | None:
     target = readiness.get("target_metric_candidate")
     if target:
         return str(target)
     candidates = readiness.get("target_metric_candidates")
     if not isinstance(candidates, Sequence) or isinstance(candidates, str):
-        candidates = _json_load_sequence(hypothesis.target_metric_candidates_json)
+        candidates = target_metric_candidates
     for item in candidates:
         if item:
             return str(item)
@@ -1195,10 +1677,27 @@ def _optional_number(value: Any) -> float | None:
     return float(value)
 
 
+def _optional_number_or_none(value: Any) -> float | None:
+    try:
+        return _optional_number(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _optional_int(value: Any) -> int | None:
     if value is None:
         return None
     return int(value)
+
+
+def _optional_positive_int(value: Any) -> int | None:
+    try:
+        parsed = _optional_int(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed is None or parsed <= 0:
+        return None
+    return parsed
 
 
 def _int_list(value: Any) -> list[int]:
