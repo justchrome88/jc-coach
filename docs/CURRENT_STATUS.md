@@ -8,8 +8,16 @@ Last updated: 2026-07-10.
 - MISSION_BACKEND_STATUS: ACCEPTED_FOR_UI_API.
 - MISSION_BACKEND_ACCEPTED_FOR_UI_API: true.
 - F10D_STATUS: PASS_WITH_WARNINGS.
-- NEXT_TASK: G01_OWNER_SCOPED_MISSION_API_CONTRACT.
+- G01_STATUS: PASS_WITH_WARNINGS.
+- HEADLESS_OWNER_COACH_SYNC_CONTRACT_ACCEPTED: true.
+- OWNER_SYNC_IDEMPOTENT: true.
+- OWNER_SYNC_CONCURRENCY_GUARDED: true.
+- NEXT_TASK: G02_THIN_MANUAL_WEB_ADAPTER_AND_RAW_RESULT_VIEW.
 - ACTIVE_OUTBOX_TASK: none.
+- G01 accepted one owner-scoped headless import-to-coach application service
+  and a thin CLI adapter. The service preserves the one-new-demo cap, fails
+  closed on owner scope, reuses durable parser/metric/coach state, returns a
+  versioned structured result and uses an owner-keyed recoverable DB lease.
 - F10D accepted corrected unique-match samples, personal-negative utility trend
   semantics, owner isolation, mission lifecycle/progress, idempotent real match
   processing, coach payload progress and domain-aware suppression on real owner
@@ -172,9 +180,10 @@ Last updated: 2026-07-10.
 
 ## Do Not Do Now
 
-- Current routing is G01 owner-scoped mission API contract, not the historical
-  WP-018/MVP routes below. F10D authorizes only the next scoped mission API/UI
-  lane; it does not authorize public/friends access or a v1.0 claim.
+- Current routing is G02 thin manual web adapter and raw result view, not the
+  historical WP-018/MVP routes below. G01 accepted only the headless service
+  and CLI; no web route/template, scheduler, public/friends access or v1.0
+  claim is authorized by G01.
 
 - Do not run live Steam/Valve import, parser jobs, evaluator jobs or manual evaluator unless the current WP explicitly authorizes them.
 - Do not mutate production DB, schema, production files or generated app reports unless the current WP explicitly authorizes them with backup/SHA evidence.

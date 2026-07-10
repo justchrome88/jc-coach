@@ -12,8 +12,16 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - MISSION_BACKEND_STATUS: ACCEPTED_FOR_UI_API.
 - MISSION_BACKEND_ACCEPTED_FOR_UI_API: true.
 - F10D_STATUS: PASS_WITH_WARNINGS.
-- NEXT_TASK: G01_OWNER_SCOPED_MISSION_API_CONTRACT.
+- G01_STATUS: PASS_WITH_WARNINGS.
+- HEADLESS_OWNER_COACH_SYNC_CONTRACT_ACCEPTED: true.
+- OWNER_SYNC_IDEMPOTENT: true.
+- OWNER_SYNC_CONCURRENCY_GUARDED: true.
+- NEXT_TASK: G02_THIN_MANUAL_WEB_ADAPTER_AND_RAW_RESULT_VIEW.
 - ACTIVE_OUTBOX_TASK: none.
+- G01 accepted `run_owner_coach_sync(...)` as the canonical owner-scoped
+  headless application operation and `scripts/run_owner_coach_sync.py` as its
+  thin CLI adapter. G02 owns the first web adapter; no scheduler/login sync or
+  multi-owner batch is accepted.
 - F10D accepted the repaired mission backend on real owner data. F09 remains
   historical lifecycle evidence only; F10A/F10B semantics are current truth.
 - The accepted warning is the known Starlette/TestClient deprecation warning.
@@ -139,8 +147,9 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Current Next Safe Step
 
-Run G01_OWNER_SCOPED_MISSION_API_CONTRACT as a narrowly scoped API-contract
-task. F10D acceptance does not authorize public/friends scope or v1.0 claims.
+Run G02_THIN_MANUAL_WEB_ADAPTER_AND_RAW_RESULT_VIEW as a thin adapter over the
+accepted G01 service. Do not duplicate sync business logic in the web layer;
+G01/G02 do not authorize public/friends scope or v1.0 claims.
 
 ## Historical Pre-F10 Next Safe Step
 
