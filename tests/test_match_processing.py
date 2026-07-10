@@ -6,6 +6,7 @@ from app.db.models import (
     DemoParseArtifact,
     Match,
     MetricSnapshot,
+    MissionProgressEvaluation,
     SteamAccount,
     User,
 )
@@ -38,6 +39,25 @@ def test_process_owner_match_after_parser_artifact_persists_metrics_and_runs_own
     assert result["coach_hypothesis_ids"]["all"]
     assert result["active_mission_ids"] == []
     assert result["mission_progress_evaluation_ids"] == []
+    assert result["mission_evaluation_summary"] == [
+        {
+            "mission_id": None,
+            "evaluation_id": None,
+            "status": "skipped",
+            "action": "skipped",
+            "skip_reason": "no_active_missions",
+            "mission_status": None,
+            "owner_steam_id": OWNER_STEAM_ID,
+            "source_metric_snapshot_ids": [],
+            "evaluated_window": {},
+            "confidence": None,
+            "caveats": [],
+            "reason_codes": ["no_active_missions"],
+            "counted": False,
+            "reused": False,
+            "progress_explanation": "No active owner missions were available for this processed match.",
+        }
+    ]
 
     selected_snapshots = [
         db.get(MetricSnapshot, snapshot_id) for snapshot_id in result["owner_selected_metric_snapshot_ids"]
@@ -77,7 +97,12 @@ def test_process_owner_match_after_parser_artifact_evaluates_active_mission_with
     assert repeated["idempotency"]["post_metrics_coach_loop"]["reused_mission_progress_evaluation_ids"] == first[
         "mission_progress_evaluation_ids"
     ]
+    assert first["mission_evaluation_summary"][0]["action"] == "evaluated"
+    assert first["mission_evaluation_summary"][0]["skip_reason"] == "insufficient_confidence"
+    assert first["mission_evaluation_summary"][0]["counted"] is False
+    assert repeated["mission_evaluation_summary"][0]["reused"] is True
     assert db.query(MetricSnapshot).count() == len(first["metric_snapshot_ids"]["all"])
+    assert db.query(MissionProgressEvaluation).count() == 1
 
     summary = first["mission_status_summaries"][0]
     owner_utility_snapshot_id = _snapshot_id(
@@ -98,6 +123,80 @@ def test_process_owner_match_after_parser_artifact_evaluates_active_mission_with
     assert summary["primary_metric_result"]["evaluation_value"] == 20
     assert summary["status"] == "insufficient_data"
     assert summary["primary_metric_result"]["reason_codes"] == ["insufficient_confidence"]
+
+
+def test_process_owner_match_after_parser_artifact_evaluates_multiple_active_owner_missions(db):
+    owner = _owner(db)
+    utility_mission = _active_utility_mission(db, owner=owner, baseline=10)
+    survival_mission = _active_survival_mission(db, owner=owner, baseline=0.25)
+    match = _match(db, "m05-multiple-active-missions")
+    artifact = _artifact(db, match=match, owner_utility_damage=60, other_utility_damage=300)
+
+    result = process_owner_match_after_parser_artifact(
+        db,
+        user_id=owner.id,
+        match_id=match.id,
+        parser_artifact_id=artifact.id,
+    )
+
+    assert set(result["active_mission_ids"]) == {utility_mission.id, survival_mission.id}
+    assert set(result["considered_mission_ids"]) == {utility_mission.id, survival_mission.id}
+    assert len(result["mission_progress_evaluation_ids"]) == 2
+    assert {item["mission_id"] for item in result["mission_evaluation_summary"]} == {
+        utility_mission.id,
+        survival_mission.id,
+    }
+    assert {item["action"] for item in result["mission_evaluation_summary"]} == {"evaluated"}
+    assert db.query(MissionProgressEvaluation).count() == 2
+
+
+def test_process_owner_match_after_parser_artifact_skips_inactive_and_cross_owner_missions(db):
+    owner = _owner(db)
+    inactive_mission = _active_utility_mission(db, owner=owner, baseline=50, status="draft")
+    cross_owner_mission = _active_utility_mission(
+        db,
+        owner=owner,
+        baseline=50,
+        owner_steam_id=OTHER_STEAM_ID,
+    )
+    match = _match(db, "m05-skip-inactive-cross-owner")
+    artifact = _artifact(db, match=match, owner_utility_damage=20, other_utility_damage=300)
+
+    result = process_owner_match_after_parser_artifact(
+        db,
+        user_id=owner.id,
+        match_id=match.id,
+        parser_artifact_id=artifact.id,
+    )
+
+    assert result["active_mission_ids"] == []
+    assert result["mission_progress_evaluation_ids"] == []
+    assert db.query(MissionProgressEvaluation).count() == 0
+    summary_by_reason = {item["skip_reason"]: item for item in result["mission_evaluation_summary"]}
+    assert summary_by_reason["inactive_status"]["mission_id"] == inactive_mission.id
+    assert summary_by_reason["cross_owner_denied"]["mission_id"] == cross_owner_mission.id
+    assert summary_by_reason["no_active_missions"]["mission_id"] is None
+
+
+def test_process_owner_match_after_parser_artifact_skips_active_mission_without_match_metric(db):
+    owner = _owner(db)
+    mission = _active_custom_metric_mission(db, owner=owner, metric_name="unsupported_metric", baseline=1)
+    match = _match(db, "m05-insufficient-metric-data")
+    artifact = _artifact(db, match=match, owner_utility_damage=20, other_utility_damage=300)
+
+    result = process_owner_match_after_parser_artifact(
+        db,
+        user_id=owner.id,
+        match_id=match.id,
+        parser_artifact_id=artifact.id,
+    )
+
+    assert result["active_mission_ids"] == [mission.id]
+    assert result["mission_progress_evaluation_ids"] == []
+    assert result["mission_evaluation_summary"][0]["mission_id"] == mission.id
+    assert result["mission_evaluation_summary"][0]["skip_reason"] == "insufficient_metric_data"
+    assert result["mission_evaluation_summary"][0]["counted"] is False
+    assert db.query(MissionProgressEvaluation).count() == 0
 
 
 def test_process_owner_match_after_parser_artifact_blocks_missing_artifact(db):
@@ -243,22 +342,63 @@ def _artifact(
     return artifact
 
 
-def _active_utility_mission(db, *, owner: User, baseline: int):
-    run = create_analysis_run(db, user_id=owner.id, owner_steam_id=OWNER_STEAM_ID)
+def _active_utility_mission(
+    db,
+    *,
+    owner: User,
+    baseline: int,
+    status: str = "active",
+    owner_steam_id: str = OWNER_STEAM_ID,
+):
+    return _active_custom_metric_mission(
+        db,
+        owner=owner,
+        metric_name="utility_damage",
+        baseline=baseline,
+        status=status,
+        owner_steam_id=owner_steam_id,
+        title="Improve utility",
+        recommended_focus="Review damage-producing grenade rounds.",
+    )
+
+
+def _active_survival_mission(db, *, owner: User, baseline: float):
+    return _active_custom_metric_mission(
+        db,
+        owner=owner,
+        metric_name="survival_rate",
+        baseline=baseline,
+        title="Improve survival",
+        recommended_focus="Stay alive longer in rounds.",
+    )
+
+
+def _active_custom_metric_mission(
+    db,
+    *,
+    owner: User,
+    metric_name: str,
+    baseline: float,
+    status: str = "active",
+    owner_steam_id: str = OWNER_STEAM_ID,
+    title: str = "Improve metric",
+    recommended_focus: str = "Review the assigned metric.",
+):
+    run = create_analysis_run(db, user_id=owner.id, owner_steam_id=owner_steam_id)
     hypothesis = create_coach_hypothesis(
         db,
         user_id=owner.id,
         analysis_run_id=run.id,
         insight_card={
-            "id": "m05-utility-baseline",
-            "problem": "Utility damage can become a measurable mission.",
-            "evidence": [{"metric_id": "utility_damage", "value": baseline, "metric_confidence": "medium"}],
+            "id": f"m05-{metric_name}-baseline",
+            "problem": f"{metric_name} can become a measurable mission.",
+            "evidence": [{"metric_id": metric_name, "value": baseline, "metric_confidence": "medium"}],
             "confidence": "medium",
             "caveats": [],
-            "recommended_focus": "Review damage-producing grenade rounds.",
+            "recommended_focus": recommended_focus,
             "mission_readiness": {
                 "can_become_mission": True,
-                "target_metric_candidate": "utility_damage",
+                "target_metric_candidate": metric_name,
                 "baseline_value": baseline,
                 "confidence_eligibility": {
                     "level": "medium",
@@ -269,7 +409,13 @@ def _active_utility_mission(db, *, owner: User, baseline: int):
             },
         },
     )
-    mission = activate_coach_mission(db, user_id=owner.id, hypothesis_id=hypothesis.id, title="Improve utility")
+    mission = activate_coach_mission(
+        db,
+        user_id=owner.id,
+        hypothesis_id=hypothesis.id,
+        title=title,
+        status=status,
+    )
     db.commit()
     db.refresh(mission)
     return mission

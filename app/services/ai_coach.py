@@ -50,6 +50,8 @@ from app.services.mission_domain import (
     create_coach_hypothesis,
     evaluate_mission_progress,
     list_active_coach_missions,
+    list_coach_missions,
+    list_mission_criteria,
     mission_payload_from_insight_card,
     serialize_mission_payload,
     serialize_mission_progress_evaluation,
@@ -283,7 +285,96 @@ def process_owner_match_metric_snapshots_for_coach_loop(
 
     evaluations = []
     reused_evaluation_ids = []
-    for mission in list_active_coach_missions(db, user_id=user_id):
+    mission_evaluation_summary: list[dict[str, Any]] = []
+    active_owner_missions = list_active_coach_missions(
+        db,
+        user_id=user_id,
+        owner_steam_id=owner_scope.owner_steam_id,
+    )
+    all_user_missions = list_coach_missions(db, user_id=user_id)
+    active_owner_mission_ids = {mission.id for mission in active_owner_missions}
+    skipped_mission_ids: set[int] = set()
+    for mission in all_user_missions:
+        if mission.id in active_owner_mission_ids:
+            continue
+        if mission.status != "active":
+            skipped_mission_ids.add(mission.id)
+            mission_evaluation_summary.append(
+                _mission_evaluation_skip_summary(
+                    mission_id=mission.id,
+                    status="skipped",
+                    skip_reason="inactive_status",
+                    mission_status=mission.status,
+                    owner_steam_id=mission.owner_steam_id,
+                    counted=False,
+                    explanation=f"Mission status is {mission.status}; only active missions are evaluated.",
+                )
+            )
+            continue
+        if mission.owner_steam_id != owner_scope.owner_steam_id:
+            skipped_mission_ids.add(mission.id)
+            mission_evaluation_summary.append(
+                _mission_evaluation_skip_summary(
+                    mission_id=mission.id,
+                    status="skipped",
+                    skip_reason="cross_owner_denied",
+                    mission_status=mission.status,
+                    owner_steam_id=mission.owner_steam_id,
+                    counted=False,
+                    explanation="Mission belongs to a different owner identity and was not evaluated.",
+                )
+            )
+    if not active_owner_missions:
+        mission_evaluation_summary.append(
+            _mission_evaluation_skip_summary(
+                mission_id=None,
+                status="skipped",
+                skip_reason="no_active_missions",
+                mission_status=None,
+                owner_steam_id=owner_scope.owner_steam_id,
+                counted=False,
+                explanation="No active owner missions were available for this processed match.",
+            )
+        )
+    for mission in active_owner_missions:
+        criteria = list_mission_criteria(db, user_id=user_id, mission_id=mission.id)
+        available_metric_names = _metric_names_from_snapshot_payloads(owner_snapshot_payloads)
+        if not criteria:
+            skipped_mission_ids.add(mission.id)
+            mission_evaluation_summary.append(
+                _mission_evaluation_skip_summary(
+                    mission_id=mission.id,
+                    status="skipped",
+                    skip_reason="mission_not_relevant",
+                    mission_status=mission.status,
+                    owner_steam_id=mission.owner_steam_id,
+                    counted=False,
+                    explanation="Mission has no metric criteria that can be evaluated for match progress.",
+                )
+            )
+            continue
+        missing_metrics = sorted(
+            {
+                criteria_row.metric_name
+                for criteria_row in criteria
+                if criteria_row.metric_name not in available_metric_names
+            }
+        )
+        if missing_metrics:
+            skipped_mission_ids.add(mission.id)
+            mission_evaluation_summary.append(
+                _mission_evaluation_skip_summary(
+                    mission_id=mission.id,
+                    status="skipped",
+                    skip_reason="insufficient_metric_data",
+                    mission_status=mission.status,
+                    owner_steam_id=mission.owner_steam_id,
+                    counted=False,
+                    explanation=f"Owner snapshots did not include mission metric(s): {', '.join(missing_metrics)}.",
+                    source_metric_snapshot_ids=selected_snapshot_ids,
+                )
+            )
+            continue
         existing_evaluation = _find_existing_post_metrics_mission_evaluation(
             db,
             user_id=user_id,
@@ -296,21 +387,42 @@ def process_owner_match_metric_snapshots_for_coach_loop(
         if existing_evaluation is not None:
             evaluations.append(existing_evaluation)
             reused_evaluation_ids.append(existing_evaluation.id)
-            continue
-        evaluations.append(
-            evaluate_mission_progress(
-                db,
-                user_id=user_id,
-                mission_id=mission.id,
-                evaluation_metric_snapshots=owner_snapshot_payloads,
-                evaluation_window_start=evaluation_window_start,
-                evaluation_window_end=evaluation_window_end,
-                evaluation_window={
-                    "match_ids": [match_id],
-                    "source": POST_METRICS_COACH_LOOP_SOURCE,
-                },
+            mission_evaluation_summary.append(
+                _mission_evaluation_result_summary(existing_evaluation, reused=True)
             )
+            continue
+        evaluation = evaluate_mission_progress(
+            db,
+            user_id=user_id,
+            mission_id=mission.id,
+            evaluation_metric_snapshots=owner_snapshot_payloads,
+            evaluation_window_start=evaluation_window_start,
+            evaluation_window_end=evaluation_window_end,
+            evaluation_window={
+                "match_ids": [match_id],
+                "source": POST_METRICS_COACH_LOOP_SOURCE,
+            },
         )
+        evaluations.append(evaluation)
+        mission_evaluation_summary.append(
+            _mission_evaluation_result_summary(evaluation, reused=False)
+        )
+    evaluated_mission_ids = {evaluation.mission_id for evaluation in evaluations}
+    considered_mission_ids = sorted(evaluated_mission_ids | skipped_mission_ids)
+    active_mission_ids = [mission.id for mission in active_owner_missions]
+    for mission in active_owner_missions:
+        if mission.id not in evaluated_mission_ids and mission.id not in skipped_mission_ids:
+            mission_evaluation_summary.append(
+                _mission_evaluation_skip_summary(
+                    mission_id=mission.id,
+                    status="skipped",
+                    skip_reason="mission_not_relevant",
+                    mission_status=mission.status,
+                    owner_steam_id=mission.owner_steam_id,
+                    counted=False,
+                    explanation="Mission was active but no progress decision was recorded.",
+                )
+            )
     db.commit()
     if analysis_run is not None:
         db.refresh(analysis_run)
@@ -325,6 +437,9 @@ def process_owner_match_metric_snapshots_for_coach_loop(
         "owner_steam_id": owner_scope.owner_steam_id,
         "match_id": match_id,
         "selected_metric_snapshot_ids": selected_snapshot_ids,
+        "active_mission_ids": active_mission_ids,
+        "considered_mission_ids": considered_mission_ids,
+        "skipped_mission_ids": sorted(skipped_mission_ids),
         "analysis_run_id": analysis_run.id if analysis_run is not None else None,
         "coach_hypothesis_ids": [hypothesis.id for hypothesis in hypotheses],
         "mission_progress_evaluation_ids": [evaluation.id for evaluation in evaluations],
@@ -332,11 +447,106 @@ def process_owner_match_metric_snapshots_for_coach_loop(
             "reused_analysis_run": reused_analysis_run,
             "reused_mission_progress_evaluation_ids": reused_evaluation_ids,
         },
+        "mission_evaluation_summary": mission_evaluation_summary,
         "mission_status_summaries": [
             serialize_mission_progress_evaluation(evaluation)
             for evaluation in evaluations
         ],
     }
+
+
+def _mission_evaluation_result_summary(
+    evaluation: MissionProgressEvaluation,
+    *,
+    reused: bool,
+) -> dict[str, Any]:
+    summary = serialize_mission_progress_evaluation(evaluation)
+    reason_codes = _progress_reason_codes(summary)
+    skip_reason = _skip_reason_from_evaluation_summary(summary, reason_codes)
+    return {
+        "mission_id": evaluation.mission_id,
+        "evaluation_id": evaluation.id,
+        "status": summary.get("status"),
+        "action": "evaluated",
+        "skip_reason": skip_reason,
+        "mission_status": "active",
+        "owner_steam_id": evaluation.owner_steam_id,
+        "source_metric_snapshot_ids": _int_list(summary.get("source_metric_snapshot_ids")),
+        "evaluated_window": summary.get("evaluated_window") or {},
+        "confidence": summary.get("confidence"),
+        "caveats": list(summary.get("caveats") or []),
+        "reason_codes": reason_codes,
+        "counted": summary.get("counted") is True,
+        "reused": reused,
+        "progress_explanation": summary.get("progress_explanation"),
+    }
+
+
+def _mission_evaluation_skip_summary(
+    *,
+    mission_id: int | None,
+    status: str,
+    skip_reason: str,
+    mission_status: str | None,
+    owner_steam_id: str | None,
+    counted: bool,
+    explanation: str,
+    source_metric_snapshot_ids: Sequence[int] | None = None,
+) -> dict[str, Any]:
+    return {
+        "mission_id": mission_id,
+        "evaluation_id": None,
+        "status": status,
+        "action": "skipped",
+        "skip_reason": skip_reason,
+        "mission_status": mission_status,
+        "owner_steam_id": owner_steam_id,
+        "source_metric_snapshot_ids": list(source_metric_snapshot_ids or []),
+        "evaluated_window": {},
+        "confidence": None,
+        "caveats": [],
+        "reason_codes": [skip_reason],
+        "counted": counted,
+        "reused": False,
+        "progress_explanation": explanation,
+    }
+
+
+def _skip_reason_from_evaluation_summary(
+    summary: Mapping[str, Any],
+    reason_codes: Sequence[str],
+) -> str | None:
+    if summary.get("status") != "insufficient_data":
+        return None
+    if "insufficient_confidence" in reason_codes or "missing_confidence" in reason_codes:
+        return "insufficient_confidence"
+    if any(reason in reason_codes for reason in ("missing_metric", "missing_baseline_metric")):
+        return "insufficient_metric_data"
+    if any(reason.startswith("insufficient_sample_") for reason in reason_codes):
+        return "insufficient_metric_data"
+    return "insufficient_metric_data"
+
+
+def _progress_reason_codes(summary: Mapping[str, Any]) -> list[str]:
+    codes: list[str] = []
+    for key in ("primary_metric_result",):
+        component = summary.get(key)
+        if isinstance(component, Mapping):
+            codes.extend(str(reason) for reason in component.get("reason_codes") or [])
+    for key in ("secondary_metric_results", "guardrail_results"):
+        for component in summary.get(key) or []:
+            if isinstance(component, Mapping):
+                codes.extend(str(reason) for reason in component.get("reason_codes") or [])
+    return list(dict.fromkeys(codes))
+
+
+def _metric_names_from_snapshot_payloads(payloads: Sequence[Mapping[str, Any]]) -> set[str]:
+    metric_names: set[str] = set()
+    for payload in payloads:
+        metrics = payload.get("metrics")
+        if isinstance(metrics, Mapping):
+            metric_names.update(str(metric_name) for metric_name in metrics)
+    return metric_names
 
 
 def _find_existing_post_metrics_analysis_run(

@@ -17,7 +17,6 @@ from app.services.metric_snapshots import (
     owner_player_metric_snapshot_scope,
     process_persisted_match_metric_snapshots_for_coach_loop,
 )
-from app.services.mission_domain import list_active_coach_missions
 from app.services.parser_artifact_reader import ParserArtifactReaderError, normalized_events_from_parser_artifact
 from app.services.utility_metrics import UTILITY_SNAPSHOT_SOURCE, calculate_and_store_utility_metrics
 
@@ -128,9 +127,6 @@ def process_owner_match_after_parser_artifact(
     persisted_snapshots = _ordered_unique_snapshots(
         snapshot for result in metric_results for snapshot in result["snapshots"]
     )
-    active_mission_ids = [
-        mission.id for mission in list_active_coach_missions(db, user_id=owner_scope.owner_user_id)
-    ]
     coach_result = process_persisted_match_metric_snapshots_for_coach_loop(
         db,
         user_id=owner_scope.owner_user_id,
@@ -147,8 +143,11 @@ def process_owner_match_after_parser_artifact(
             "mission_id": summary.get("mission_id"),
             "evaluation_id": summary.get("evaluation_id"),
             "status": summary.get("status"),
+            "action": summary.get("action"),
+            "skip_reason": summary.get("skip_reason"),
+            "counted": summary.get("counted"),
         }
-        for summary in coach_result.get("mission_status_summaries") or []
+        for summary in coach_result.get("mission_evaluation_summary") or []
         if isinstance(summary, Mapping)
     ]
 
@@ -193,9 +192,12 @@ def process_owner_match_after_parser_artifact(
             "created": [] if reused_analysis_run else hypothesis_ids,
             "reused": hypothesis_ids if reused_analysis_run else [],
         },
-        "active_mission_ids": active_mission_ids,
+        "active_mission_ids": _int_list(coach_result.get("active_mission_ids")),
+        "considered_mission_ids": _int_list(coach_result.get("considered_mission_ids")),
+        "skipped_mission_ids": _int_list(coach_result.get("skipped_mission_ids")),
         "mission_progress_evaluation_ids": _int_list(coach_result.get("mission_progress_evaluation_ids")),
         "mission_progress_statuses": mission_statuses,
+        "mission_evaluation_summary": coach_result.get("mission_evaluation_summary") or [],
         "mission_status_summaries": coach_result.get("mission_status_summaries") or [],
         "post_metrics_coach_loop": coach_result,
         "idempotency": {
