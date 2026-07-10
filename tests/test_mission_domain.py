@@ -11,6 +11,7 @@ from app.db.models import (
     MissionProgressEvaluation,
     User,
 )
+from app.services.coach_insights import coach_insights_with_mission_readiness_from_snapshots
 from app.services.mission_domain import (
     MISSION_PAYLOAD_SCHEMA_VERSION,
     activate_coach_mission,
@@ -98,6 +99,171 @@ def test_mission_payload_schema_rejects_vague_unmeasurable_payload():
     assert "missing_mission_success_target" in codes
     assert "missing_mission_failure_threshold" in codes
     assert serialize_mission_payload(payload) == {}
+
+
+def test_survival_opening_insight_generates_actionable_opening_mission(db):
+    owner = _user(db, "owner")
+    card = coach_insights_with_mission_readiness_from_snapshots(
+        [
+            _e02_survival_snapshot(
+                metrics={
+                    "rounds": 12,
+                    "opening_deaths": 4,
+                    "opening_death_rate": 0.333,
+                    "survived_rounds": 6,
+                    "survival_rate": 0.5,
+                },
+                confidence={
+                    "opening_death_rate": {
+                        "level": "medium",
+                        "usable_for_insights": True,
+                        "usable_for_missions": True,
+                        "hard_recommendation_eligible": True,
+                    },
+                    "survival_rate": {
+                        "level": "high",
+                        "usable_for_insights": True,
+                        "usable_for_missions": True,
+                        "hard_recommendation_eligible": True,
+                    },
+                },
+            )
+        ]
+    )[0]
+
+    payload = mission_payload_from_insight_card(card)
+
+    assert payload is not None
+    assert validate_mission_payload(payload) == ()
+    assert payload["title"] == "Reduce opening deaths"
+    assert payload["goal"] == (
+        "Reduce opening_death_rate from 0.333 to 0.283 over upcoming owner matches "
+        "using supported metric snapshots."
+    )
+    assert payload["duration"]["min_sample_rounds"] == 12
+    assert payload["success_metric"] == {
+        "metric_name": "opening_death_rate",
+        "direction": "lower_is_better",
+        "baseline_value": 0.333,
+        "target_value": 0.283,
+        "min_sample_matches": None,
+        "min_sample_rounds": 12,
+        "confidence_required": 0.6,
+    }
+    assert payload["failure_condition"] == {
+        "metric_name": "opening_death_rate",
+        "direction": "stay_below",
+        "threshold_value": 0.333,
+        "reason": (
+            "Mission fails if opening_death_rate rises above the activation baseline or cannot be evaluated "
+            "with supported metrics."
+        ),
+    }
+    assert payload["rules"][:3] == [
+        "For each upcoming match, avoid voluntary first contact in the opening phase unless trade support is set.",
+        "Success is measured only by lowering opening_death_rate in owner-scoped metric snapshots.",
+        (
+            "Failure is triggered if opening_death_rate is above the activation baseline or cannot be "
+            "evaluated with supported metrics."
+        ),
+    ]
+
+    run = create_analysis_run(db, user_id=owner.id, owner_steam_id="76561198000000001")
+    hypothesis = create_coach_hypothesis(db, user_id=owner.id, analysis_run_id=run.id, insight_card=card)
+    mission = activate_coach_mission(db, user_id=owner.id, hypothesis_id=hypothesis.id, title=payload["title"])
+    criteria = list_mission_criteria(db, user_id=owner.id, mission_id=mission.id)
+
+    assert [(row.metric_name, row.role, row.direction, row.min_sample_rounds) for row in criteria] == [
+        ("opening_death_rate", "primary", "lower_is_better", 12),
+        ("survival_rate", "secondary", "higher_is_better", 12),
+        ("opening_death_rate", "guardrail", "stay_below", None),
+    ]
+    assert json.loads(criteria[0].rule_json)["source"] == "survival_opening_mission_template"
+
+
+def test_survival_opening_insight_generates_survival_mission_payload():
+    card = coach_insights_with_mission_readiness_from_snapshots(
+        [
+            _e02_survival_snapshot(
+                metrics={
+                    "rounds": 10,
+                    "opening_deaths": 1,
+                    "opening_death_rate": 0.1,
+                    "survived_rounds": 5,
+                    "survival_rate": 0.5,
+                },
+                confidence={
+                    "survival_rate": {
+                        "level": "high",
+                        "usable_for_insights": True,
+                        "usable_for_missions": True,
+                        "hard_recommendation_eligible": True,
+                    },
+                },
+            )
+        ]
+    )[0]
+
+    payload = mission_payload_from_insight_card(card)
+
+    assert payload is not None
+    assert validate_mission_payload(payload) == ()
+    assert payload["title"] == "Improve round survival"
+    assert payload["goal"] == (
+        "Raise survival_rate from 0.500 to 0.550 over upcoming owner matches using supported metric snapshots."
+    )
+    assert payload["success_metric"]["metric_name"] == "survival_rate"
+    assert payload["success_metric"]["direction"] == "higher_is_better"
+    assert payload["success_metric"]["target_value"] == 0.55
+    assert payload["failure_condition"] == {
+        "metric_name": "survival_rate",
+        "direction": "stay_above",
+        "threshold_value": 0.5,
+        "reason": (
+            "Mission fails if survival_rate drops below the activation baseline or cannot be evaluated "
+            "with supported metrics."
+        ),
+    }
+    assert payload["rules"][:3] == [
+        "For each upcoming match, prioritize staying alive through early fights before taking isolated space.",
+        "Success is measured only by raising survival_rate in owner-scoped metric snapshots.",
+        (
+            "Failure is triggered if survival_rate drops below the activation baseline or cannot be "
+            "evaluated with supported metrics."
+        ),
+    ]
+
+
+def test_weak_survival_opening_insight_does_not_produce_active_mission(db):
+    owner = _user(db, "owner")
+    weak_card = {
+        "problem": "Opening deaths are present but weakly supported.",
+        "evidence": [{"metric_id": "opening_death_rate", "value": 0.31, "metric_confidence": "low"}],
+        "confidence": "low",
+        "caveats": ["Opening death evidence is too weak for a mission."],
+        "recommended_focus": "Collect stronger opening-death evidence first.",
+        "mission_readiness": {
+            "can_become_mission": False,
+            "target_metric_candidate": "opening_death_rate",
+            "baseline_value": 0.31,
+            "confidence_eligibility": {
+                "level": "low",
+                "usable_for_missions": False,
+                "hard_recommendation_eligible": False,
+            },
+            "missing_requirements": ["mission_eligible_confidence"],
+            "blocking_reason_codes": ["low_or_unavailable_confidence"],
+        },
+    }
+    run = create_analysis_run(db, user_id=owner.id, owner_steam_id="76561198000000001")
+    hypothesis = create_coach_hypothesis(db, user_id=owner.id, analysis_run_id=run.id, insight_card=weak_card)
+
+    assert mission_payload_from_insight_card(weak_card) is None
+
+    draft = create_draft_coach_mission(db, user_id=owner.id, hypothesis_id=hypothesis.id, title="Weak opening")
+    assert draft.status == "draft"
+    with pytest.raises(ValueError, match="low_or_unavailable_confidence"):
+        activate_draft_coach_mission(db, user_id=owner.id, mission_id=draft.id)
 
 
 def test_create_read_list_update_mission_domain_flow(db):
@@ -786,4 +952,23 @@ def _snapshot(
         "confidence": "medium",
         "sample_matches": sample_matches,
         "sample_rounds": sample_rounds,
+    }
+
+
+def _e02_survival_snapshot(
+    *,
+    metrics: dict,
+    confidence: dict,
+    match_id: int = 42,
+) -> dict:
+    return {
+        "id": 100 + match_id,
+        "match_id": match_id,
+        "player_key": "steam:76561198000000001",
+        "source": "core_combat_metrics",
+        "source_event_set_id": "fixture:e02",
+        "metrics": metrics,
+        "confidence_baseline": {"source": "core-combat-metrics-v1", "metrics": confidence},
+        "caveats": [],
+        "metadata": {"schema_version": "core-combat-metrics-v1"},
     }

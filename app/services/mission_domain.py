@@ -36,6 +36,7 @@ CRITERIA_DIRECTIONS = {
 MISSION_ELIGIBLE_CONFIDENCE_LEVELS = {"medium", "high"}
 MISSION_PAYLOAD_SCHEMA_VERSION = "coach-mission-payload-v1"
 REQUIRED_MISSION_PAYLOAD_FIELDS = ("title", "goal", "rules", "duration", "success_metric", "failure_condition")
+SURVIVAL_OPENING_MISSION_METRICS = {"opening_death_rate", "survival_rate"}
 
 
 @dataclass(frozen=True)
@@ -1211,9 +1212,10 @@ def _criteria_specs_from_parts(
         "direction": direction,
         "baseline_value": baseline,
         "target_value": _target_value(primary_metric, baseline, direction),
+        "min_sample_rounds": _mission_min_sample_rounds(primary_metric, first_evidence),
         "confidence_required": _confidence_required(readiness),
         "rule": {
-            "source": "mission_readiness",
+            "source": _criteria_rule_source(primary_metric),
             "target_source": "mission_readiness_or_default",
             "blocking_reason_codes": _string_sequence(readiness.get("blocking_reason_codes")),
         },
@@ -1236,8 +1238,9 @@ def _criteria_specs_from_parts(
                     "direction": secondary_direction,
                     "baseline_value": baseline_value,
                     "target_value": _target_value(metric_name, baseline_value, secondary_direction),
+                    "min_sample_rounds": _mission_min_sample_rounds(metric_name, item),
                     "confidence_required": _confidence_required(readiness),
-                    "rule": {"source": "supporting_evidence"},
+                    "rule": {"source": _criteria_rule_source(metric_name), "evidence_role": "supporting_evidence"},
                 }
             )
         )
@@ -1302,6 +1305,10 @@ def _primary_criteria_spec(criteria_specs: Sequence[Mapping[str, Any]]) -> dict[
 
 
 def _mission_title(*, problem: str, primary_metric: str) -> str:
+    if primary_metric == "opening_death_rate":
+        return "Reduce opening deaths"
+    if primary_metric == "survival_rate":
+        return "Improve round survival"
     cleaned_problem = problem.strip().rstrip(".")
     if cleaned_problem:
         return cleaned_problem[:120]
@@ -1313,6 +1320,16 @@ def _mission_goal(*, problem: str, primary: Mapping[str, Any]) -> str:
     baseline = primary.get("baseline_value")
     target = primary.get("target_value")
     if baseline is not None and target is not None:
+        if metric_name == "opening_death_rate":
+            return (
+                f"Reduce opening_death_rate from {float(baseline):.3f} to {float(target):.3f} "
+                "over upcoming owner matches using supported metric snapshots."
+            )
+        if metric_name == "survival_rate":
+            return (
+                f"Raise survival_rate from {float(baseline):.3f} to {float(target):.3f} "
+                "over upcoming owner matches using supported metric snapshots."
+            )
         return (
             f"Move {metric_name} from {float(baseline):.3f} toward {float(target):.3f} "
             "using only supported owner metric snapshots."
@@ -1326,11 +1343,35 @@ def _mission_rules(
     primary: Mapping[str, Any],
     failure_condition: Mapping[str, Any],
 ) -> list[str]:
-    rules = [
-        recommended_focus.strip() or f"Work on {str(primary['metric_name']).replace('_', ' ')} in the next matches.",
-        f"Count progress only when {primary['metric_name']} is present in owner-scoped metric snapshots.",
-        f"Do not count the mission if {failure_condition['metric_name']} triggers the failure condition.",
-    ]
+    metric_name = str(primary["metric_name"])
+    if metric_name == "opening_death_rate":
+        rules = [
+            "For each upcoming match, avoid voluntary first contact in the opening phase unless trade support is set.",
+            "Success is measured only by lowering opening_death_rate in owner-scoped metric snapshots.",
+            (
+                "Failure is triggered if opening_death_rate is above the activation baseline or cannot be "
+                "evaluated with supported metrics."
+            ),
+        ]
+    elif metric_name == "survival_rate":
+        rules = [
+            "For each upcoming match, prioritize staying alive through early fights before taking isolated space.",
+            "Success is measured only by raising survival_rate in owner-scoped metric snapshots.",
+            (
+                "Failure is triggered if survival_rate drops below the activation baseline or cannot be "
+                "evaluated with supported metrics."
+            ),
+        ]
+    else:
+        rules = []
+    if rules and recommended_focus.strip():
+        rules.append(f"Focus: {recommended_focus.strip()}")
+    if not rules:
+        rules = [
+            recommended_focus.strip() or f"Work on {metric_name.replace('_', ' ')} in the next matches.",
+            f"Count progress only when {primary['metric_name']} is present in owner-scoped metric snapshots.",
+            f"Do not count the mission if {failure_condition['metric_name']} triggers the failure condition.",
+        ]
     for caveat in _string_sequence(caveats)[:2]:
         rules.append(f"Caveat: {caveat}")
     return rules
@@ -1343,6 +1384,7 @@ def _mission_duration(primary: Mapping[str, Any]) -> dict[str, Any]:
         "unit": "matches",
         "min_matches": min_matches,
         "max_matches": max_matches,
+        "min_sample_rounds": primary.get("min_sample_rounds"),
         "description": f"Evaluate after {min_matches}-{max_matches} owner matches with supported metrics.",
     }
 
@@ -1372,7 +1414,7 @@ def _failure_condition(criteria_specs: Sequence[Mapping[str, Any]]) -> dict[str,
         "metric_name": source["metric_name"],
         "direction": source["direction"],
         "threshold_value": threshold,
-        "reason": "Mission fails if this condition regresses or cannot be evaluated with supported metrics.",
+        "reason": _failure_reason(source),
     }
 
 
@@ -1629,6 +1671,36 @@ def _target_value(metric_name: str, baseline: float | None, direction: str) -> f
             return round(min(1.0, baseline + 0.05), 3)
         return round(baseline * 1.1, 3)
     return baseline
+
+
+def _mission_min_sample_rounds(metric_name: str, evidence: Mapping[str, Any]) -> int | None:
+    if metric_name not in SURVIVAL_OPENING_MISSION_METRICS:
+        return None
+    sample_count = _optional_int(evidence.get("sample_count"))
+    if sample_count is None or sample_count <= 0:
+        return None
+    return sample_count
+
+
+def _criteria_rule_source(metric_name: str) -> str:
+    if metric_name in SURVIVAL_OPENING_MISSION_METRICS:
+        return "survival_opening_mission_template"
+    return "mission_readiness"
+
+
+def _failure_reason(source: Mapping[str, Any]) -> str:
+    metric_name = str(source.get("metric_name") or "")
+    if metric_name == "opening_death_rate":
+        return (
+            "Mission fails if opening_death_rate rises above the activation baseline or cannot be evaluated "
+            "with supported metrics."
+        )
+    if metric_name == "survival_rate":
+        return (
+            "Mission fails if survival_rate drops below the activation baseline or cannot be evaluated "
+            "with supported metrics."
+        )
+    return "Mission fails if this condition regresses or cannot be evaluated with supported metrics."
 
 
 def _confidence_required(readiness: Mapping[str, Any]) -> float:
