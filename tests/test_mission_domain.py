@@ -385,6 +385,38 @@ def test_weak_survival_opening_insight_does_not_produce_active_mission(db):
         activate_draft_coach_mission(db, user_id=owner.id, mission_id=draft.id)
 
 
+def test_inconsistent_weak_survival_readiness_does_not_generate_mission_payload(db):
+    owner = _user(db, "owner")
+    weak_card = {
+        "problem": "Opening deaths are present but not mission-ready.",
+        "evidence": [{"metric_id": "opening_death_rate", "value": 0.31, "metric_confidence": "low"}],
+        "confidence": "low",
+        "caveats": ["Opening death evidence is too weak for a mission."],
+        "recommended_focus": "Collect stronger opening-death evidence first.",
+        "mission_readiness": {
+            "can_become_mission": True,
+            "target_metric_candidate": "opening_death_rate",
+            "baseline_value": 0.31,
+            "confidence_eligibility": {
+                "level": "low",
+                "usable_for_missions": False,
+                "hard_recommendation_eligible": False,
+            },
+            "missing_requirements": ["mission_eligible_confidence"],
+            "blocking_reason_codes": ["low_or_unavailable_confidence"],
+        },
+    }
+    run = create_analysis_run(db, user_id=owner.id, owner_steam_id="76561198000000001")
+    hypothesis = create_coach_hypothesis(db, user_id=owner.id, analysis_run_id=run.id, insight_card=weak_card)
+
+    assert mission_payload_from_insight_card(weak_card) is None
+    assert serialize_coach_mission(
+        create_draft_coach_mission(db, user_id=owner.id, hypothesis_id=hypothesis.id, title="Weak opening")
+    )["mission_payload"] == {}
+    with pytest.raises(ValueError, match="low_or_unavailable_confidence"):
+        activate_coach_mission(db, user_id=owner.id, hypothesis_id=hypothesis.id, title="Weak opening")
+
+
 def test_create_read_list_update_mission_domain_flow(db):
     owner = _user(db, "owner")
     other_owner = _user(db, "other")

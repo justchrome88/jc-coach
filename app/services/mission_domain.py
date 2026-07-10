@@ -529,7 +529,7 @@ def mission_payload_from_insight_card(
     duration: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     readiness = _mapping(_mission_readiness(insight_card))
-    if readiness.get("can_become_mission") is not True:
+    if not _readiness_allows_mission_payload(readiness):
         return None
     criteria_specs = _criteria_specs_from_insight_card(insight_card)
     if not criteria_specs:
@@ -559,7 +559,7 @@ def mission_payload_from_hypothesis(
     duration: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     readiness = _json_load_mapping(hypothesis.mission_readiness_json)
-    if readiness.get("can_become_mission") is not True:
+    if not _readiness_allows_mission_payload(readiness):
         return None
     criteria_specs = _criteria_specs_from_hypothesis(hypothesis)
     if not criteria_specs:
@@ -1271,6 +1271,22 @@ def _validate_hypothesis_can_activate(
             )
     if not criteria_specs:
         raise ValueError("Coach hypothesis cannot become an active mission: missing_mission_criteria")
+
+
+def _readiness_allows_mission_payload(readiness: Mapping[str, Any]) -> bool:
+    if readiness.get("can_become_mission") is not True:
+        return False
+    if _string_sequence(readiness.get("blocking_reason_codes")):
+        return False
+    confidence_eligibility = readiness.get("confidence_eligibility")
+    if not isinstance(confidence_eligibility, Mapping):
+        return False
+    confidence_level = _optional_lower_str(confidence_eligibility.get("level"))
+    return (
+        confidence_level in MISSION_ELIGIBLE_CONFIDENCE_LEVELS
+        and confidence_eligibility.get("usable_for_missions") is True
+        and confidence_eligibility.get("hard_recommendation_eligible") is True
+    )
 
 
 def _mission_source_payload(
