@@ -20,10 +20,13 @@ from app.services.mission_domain import (
     activate_draft_coach_mission,
     add_mission_criteria,
     cancel_coach_mission,
+    complete_coach_mission,
     create_analysis_run,
     create_coach_hypothesis,
     create_draft_coach_mission,
     evaluate_mission_progress,
+    expire_coach_mission,
+    fail_coach_mission,
     generate_rolling_mission_candidates,
     get_analysis_run,
     get_coach_hypothesis,
@@ -34,10 +37,12 @@ from app.services.mission_domain import (
     list_coach_missions,
     list_mission_criteria,
     list_mission_progress_evaluations,
+    mission_domain_key,
     mission_payload_from_insight_card,
     pause_coach_mission,
     persist_rolling_mission_candidates,
     record_mission_progress_evaluation,
+    resume_coach_mission,
     serialize_coach_mission,
     serialize_mission_payload,
     serialize_mission_progress_evaluation,
@@ -565,6 +570,13 @@ def test_create_read_list_update_mission_domain_flow(db):
     mission_source_payload = json.loads(mission.source_payload_json)
     mission_payload = mission_source_payload["mission_payload"]
     assert mission_source_payload["baseline_source"] == "coach_hypothesis_mission_readiness"
+    assert mission_source_payload["mission_domain_key"] == "survival_opening"
+    assert mission_source_payload["problem_key"] == "survival_opening"
+    assert mission_domain_key(mission) == "survival_opening"
+    assert mission_source_payload["activation_metadata"]["primary_metric"] == "opening_death_rate"
+    assert mission_source_payload["activation_metadata"]["baseline_values"]["opening_death_rate"] == 0.31
+    assert mission_source_payload["activation_metadata"]["target_values"]["opening_death_rate"] == 0.26
+    assert mission_source_payload["activation_metadata"]["confidence_required"] == 0.6
     assert validate_mission_payload(mission_payload) == ()
     assert mission_payload["title"] == "Reduce opening deaths"
     assert mission_payload["success_metric"] == {
@@ -1341,6 +1353,170 @@ def test_pause_and_cancel_mission_status_helpers(db):
     cancelled = cancel_coach_mission(db, user_id=owner.id, mission_id=mission.id)
     assert cancelled.status == "cancelled"
     assert cancelled.ended_at is not None
+
+
+def test_mission_lifecycle_transitions_are_explicit_and_inactive_missions_do_not_evaluate(db):
+    owner = _user(db, "owner")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Opening deaths",
+    )
+
+    paused = pause_coach_mission(db, user_id=owner.id, mission_id=mission.id)
+    assert paused.status == "paused"
+    assert list_active_coach_missions(db, user_id=owner.id) == []
+    with pytest.raises(ValueError, match="Cannot evaluate mission progress from status: paused"):
+        evaluate_mission_progress(
+            db,
+            user_id=owner.id,
+            mission_id=mission.id,
+            evaluation_metric_snapshots=[
+                _snapshot(
+                    owner,
+                    owner_steam_id=mission.owner_steam_id,
+                    metrics={"opening_death_rate": 0.24},
+                    sample_matches=3,
+                    sample_rounds=72,
+                )
+            ],
+        )
+
+    resumed = resume_coach_mission(db, user_id=owner.id, mission_id=mission.id)
+    assert resumed.status == "active"
+    completed = complete_coach_mission(db, user_id=owner.id, mission_id=mission.id)
+    assert completed.status == "completed"
+    assert completed.ended_at is not None
+    assert list_active_coach_missions(db, user_id=owner.id) == []
+    with pytest.raises(ValueError, match="Cannot activate mission from status: completed"):
+        resume_coach_mission(db, user_id=owner.id, mission_id=mission.id)
+
+
+def test_fail_and_expire_helpers_are_terminal_and_duration_checked(db):
+    owner = _user(db, "owner")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Opening deaths",
+    )
+
+    with pytest.raises(ValueError, match="Cannot expire mission before configured duration/window is exceeded"):
+        expire_coach_mission(db, user_id=owner.id, mission_id=mission.id, observed_matches=4)
+
+    expired = expire_coach_mission(db, user_id=owner.id, mission_id=mission.id, observed_matches=5)
+    assert expired.status == "expired"
+    assert expired.ended_at is not None
+    with pytest.raises(ValueError, match="Cannot transition mission from expired to cancelled"):
+        cancel_coach_mission(db, user_id=owner.id, mission_id=mission.id)
+
+    failed_mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_utility_card_with_follow_rule(),
+        title="Utility discipline",
+    )
+    failed = fail_coach_mission(db, user_id=owner.id, mission_id=failed_mission.id)
+    assert failed.status == "failed"
+    assert failed.ended_at is not None
+
+
+def test_active_mission_listing_filters_by_owner_and_domain(db):
+    owner = _user(db, "owner")
+    other_owner = _user(db, "other")
+    opening = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Opening deaths",
+    )
+    utility = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_utility_card_with_follow_rule(),
+        title="Utility discipline",
+    )
+    other_opening = _active_mission_from_card(
+        db,
+        owner=other_owner,
+        card=_ready_opening_death_card(),
+        title="Other opening deaths",
+    )
+
+    assert list_active_coach_missions(
+        db,
+        user_id=owner.id,
+        owner_steam_id=opening.owner_steam_id,
+        domain_key="survival_opening",
+    ) == [opening]
+    assert list_active_coach_missions(
+        db,
+        user_id=owner.id,
+        owner_steam_id=utility.owner_steam_id,
+        domain_key="utility_value",
+    ) == [utility]
+    assert list_active_coach_missions(db, user_id=other_owner.id) == [other_opening]
+
+
+def test_duplicate_active_mission_same_owner_domain_is_rejected_or_replaced(db):
+    owner = _user(db, "owner")
+    first = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Opening deaths",
+    )
+    run = create_analysis_run(db, user_id=owner.id, owner_steam_id=first.owner_steam_id)
+    duplicate_hypothesis = create_coach_hypothesis(
+        db,
+        user_id=owner.id,
+        analysis_run_id=run.id,
+        insight_card=_ready_survival_with_adr_guardrail_card(),
+    )
+
+    with pytest.raises(ValueError, match="Duplicate active mission for owner/domain: survival_opening"):
+        activate_coach_mission(
+            db,
+            user_id=owner.id,
+            hypothesis_id=duplicate_hypothesis.id,
+            title="Same domain",
+        )
+
+    replacement = activate_coach_mission(
+        db,
+        user_id=owner.id,
+        hypothesis_id=duplicate_hypothesis.id,
+        title="Same domain",
+        duplicate_policy="replace",
+    )
+    assert replacement.status == "active"
+    assert first.status == "cancelled"
+    assert first.ended_at is not None
+    assert list_active_coach_missions(
+        db,
+        user_id=owner.id,
+        owner_steam_id=first.owner_steam_id,
+        domain_key="survival_opening",
+    ) == [replacement]
+
+
+def test_cross_owner_lifecycle_mutations_are_denied_for_new_helpers(db):
+    owner = _user(db, "owner")
+    other_owner = _user(db, "other")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Opening deaths",
+    )
+
+    with pytest.raises(PermissionError):
+        complete_coach_mission(db, user_id=other_owner.id, mission_id=mission.id)
+    with pytest.raises(PermissionError):
+        expire_coach_mission(db, user_id=other_owner.id, mission_id=mission.id, force=True)
+    with pytest.raises(PermissionError):
+        fail_coach_mission(db, user_id=other_owner.id, mission_id=mission.id)
 
 
 def _user(db, display_name: str) -> User:

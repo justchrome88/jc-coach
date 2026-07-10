@@ -31,7 +31,19 @@ INSIGHT_CONFIDENCE_SCORES = {
     "medium": 0.6,
     "high": 0.9,
 }
-MISSION_STATUSES = {"draft", "active", "completed", "failed", "paused", "cancelled"}
+MISSION_STATUSES = {"draft", "active", "completed", "failed", "paused", "cancelled", "expired"}
+ACTIVE_MISSION_STATUSES = {"active"}
+TERMINAL_MISSION_STATUSES = {"completed", "failed", "cancelled", "expired"}
+MISSION_TRANSITIONS = {
+    "draft": {"active", "cancelled"},
+    "active": {"paused", "completed", "failed", "cancelled", "expired"},
+    "paused": {"active", "cancelled", "expired"},
+    "completed": set(),
+    "failed": set(),
+    "cancelled": set(),
+    "expired": set(),
+}
+MISSION_DUPLICATE_POLICIES = {"reject", "replace", "allow"}
 CRITERIA_ROLES = {"primary", "secondary", "guardrail"}
 CRITERIA_DIRECTIONS = {
     "higher_is_better",
@@ -46,6 +58,7 @@ MISSION_PAYLOAD_SCHEMA_VERSION = "coach-mission-payload-v1"
 REQUIRED_MISSION_PAYLOAD_FIELDS = ("title", "goal", "rules", "duration", "success_metric", "failure_condition")
 SURVIVAL_OPENING_MISSION_METRICS = {"opening_death_rate", "survival_rate"}
 BAD_FIGHT_TRADE_MISSION_METRICS = {"untraded_death_rate"}
+UTILITY_VALUE_MISSION_METRICS = {"utility_damage", "he_damage", "flash_assists", "enemies_flashed"}
 ROLLING_MISSION_WINDOW_TYPES = {"last_30", "last_60", "custom_match_set"}
 ROLLING_MISSION_METRICS = {
     "survival_rate",
@@ -259,9 +272,12 @@ def activate_coach_mission(
     focus: str | None = None,
     status: str = "active",
     source_payload: Mapping[str, Any] | None = None,
+    duplicate_policy: str = "reject",
 ) -> CoachMission:
     if status not in MISSION_STATUSES:
         raise ValueError(f"Unsupported mission status: {status}")
+    if duplicate_policy not in MISSION_DUPLICATE_POLICIES:
+        raise ValueError(f"Unsupported mission duplicate policy: {duplicate_policy}")
     hypothesis = _require_owned_hypothesis(db, user_id=user_id, hypothesis_id=hypothesis_id)
     criteria_specs = _criteria_specs_from_hypothesis(hypothesis)
     if status == "active":
@@ -269,6 +285,20 @@ def activate_coach_mission(
     mission_payload = mission_payload_from_hypothesis(hypothesis, title=title)
     if status == "active" and mission_payload is None:
         raise ValueError("Coach hypothesis cannot become an active mission: missing_mission_payload")
+    domain_key = _mission_domain_key_from_parts(
+        hypothesis=hypothesis,
+        criteria_specs=criteria_specs,
+        mission_payload=mission_payload,
+    )
+    if status == "active":
+        _handle_duplicate_active_mission(
+            db,
+            user_id=user_id,
+            owner_steam_id=hypothesis.owner_steam_id,
+            domain_key=domain_key,
+            duplicate_policy=duplicate_policy,
+            replacement_reason="activate_duplicate_domain",
+        )
     mission = CoachMission(
         hypothesis_id=hypothesis.id,
         user_id=user_id,
@@ -276,7 +306,15 @@ def activate_coach_mission(
         status=status,
         title=title,
         focus=focus if focus is not None else hypothesis.recommended_focus,
-        source_payload_json=_json_object(_mission_source_payload(hypothesis, source_payload, mission_payload)),
+        source_payload_json=_json_object(
+            _mission_source_payload(
+                hypothesis,
+                source_payload,
+                mission_payload,
+                criteria_specs=criteria_specs,
+                domain_key=domain_key,
+            )
+        ),
     )
     db.add(mission)
     db.flush()
@@ -315,7 +353,10 @@ def activate_draft_coach_mission(
     *,
     user_id: int,
     mission_id: int,
+    duplicate_policy: str = "reject",
 ) -> CoachMission:
+    if duplicate_policy not in MISSION_DUPLICATE_POLICIES:
+        raise ValueError(f"Unsupported mission duplicate policy: {duplicate_policy}")
     mission = _require_owned_mission(db, user_id=user_id, mission_id=mission_id)
     if mission.status == "active":
         return mission
@@ -327,13 +368,35 @@ def activate_draft_coach_mission(
     mission_payload = mission_payload_from_hypothesis(hypothesis, title=mission.title)
     if mission_payload is None:
         raise ValueError("Coach hypothesis cannot become an active mission: missing_mission_payload")
+    domain_key = _mission_domain_key_from_parts(
+        hypothesis=hypothesis,
+        criteria_specs=criteria_specs,
+        mission_payload=mission_payload,
+    )
+    _handle_duplicate_active_mission(
+        db,
+        user_id=user_id,
+        owner_steam_id=mission.owner_steam_id,
+        domain_key=domain_key,
+        duplicate_policy=duplicate_policy,
+        replacement_reason="activate_draft_duplicate_domain",
+        exclude_mission_id=mission.id,
+    )
     if not list_mission_criteria(db, user_id=user_id, mission_id=mission.id):
         for criteria_spec in criteria_specs:
             _add_mission_criteria_from_spec(db, user_id=user_id, mission=mission, criteria_spec=criteria_spec)
     mission.status = "active"
     mission.ended_at = None
     source_payload = _json_load_mapping(mission.source_payload_json)
-    source_payload["mission_payload"] = mission_payload
+    source_payload.update(
+        _mission_source_payload(
+            hypothesis,
+            source_payload,
+            mission_payload,
+            criteria_specs=criteria_specs,
+            domain_key=domain_key,
+        )
+    )
     mission.source_payload_json = _json_object(source_payload)
     hypothesis.status = "mission_active"
     db.flush()
@@ -344,7 +407,14 @@ def get_coach_mission(db: Session, *, user_id: int, mission_id: int) -> CoachMis
     return db.scalar(select(CoachMission).where(CoachMission.id == mission_id).where(CoachMission.user_id == user_id))
 
 
-def list_coach_missions(db: Session, *, user_id: int, status: str | None = None) -> list[CoachMission]:
+def list_coach_missions(
+    db: Session,
+    *,
+    user_id: int,
+    status: str | None = None,
+    owner_steam_id: str | None = None,
+    domain_key: str | None = None,
+) -> list[CoachMission]:
     stmt = (
         select(CoachMission)
         .where(CoachMission.user_id == user_id)
@@ -352,11 +422,28 @@ def list_coach_missions(db: Session, *, user_id: int, status: str | None = None)
     )
     if status is not None:
         stmt = stmt.where(CoachMission.status == status)
-    return list(db.scalars(stmt).all())
+    if owner_steam_id is not None:
+        stmt = stmt.where(CoachMission.owner_steam_id == owner_steam_id)
+    missions = list(db.scalars(stmt).all())
+    if domain_key is not None:
+        missions = [mission for mission in missions if mission_domain_key(mission) == domain_key]
+    return missions
 
 
-def list_active_coach_missions(db: Session, *, user_id: int) -> list[CoachMission]:
-    return list_coach_missions(db, user_id=user_id, status="active")
+def list_active_coach_missions(
+    db: Session,
+    *,
+    user_id: int,
+    owner_steam_id: str | None = None,
+    domain_key: str | None = None,
+) -> list[CoachMission]:
+    return list_coach_missions(
+        db,
+        user_id=user_id,
+        status="active",
+        owner_steam_id=owner_steam_id,
+        domain_key=domain_key,
+    )
 
 
 def update_coach_mission_status(
@@ -370,8 +457,32 @@ def update_coach_mission_status(
     if status not in MISSION_STATUSES:
         raise ValueError(f"Unsupported mission status: {status}")
     mission = _require_owned_mission(db, user_id=user_id, mission_id=mission_id)
+    _validate_mission_transition(mission.status, status)
+    previous_status = mission.status
+    if status == "active" and previous_status != "active":
+        _handle_duplicate_active_mission(
+            db,
+            user_id=user_id,
+            owner_steam_id=mission.owner_steam_id,
+            domain_key=mission_domain_key(mission),
+            duplicate_policy="reject",
+            replacement_reason="status_update_duplicate_domain",
+            exclude_mission_id=mission.id,
+        )
     mission.status = status
-    mission.ended_at = ended_at
+    if status == "active":
+        mission.ended_at = None
+    elif status in TERMINAL_MISSION_STATUSES:
+        mission.ended_at = ended_at or datetime.now(UTC)
+    else:
+        mission.ended_at = ended_at
+    _record_lifecycle_transition(
+        mission,
+        previous_status=previous_status,
+        next_status=status,
+        reason="status_update",
+        occurred_at=mission.ended_at if status in TERMINAL_MISSION_STATUSES else None,
+    )
     db.flush()
     return mission
 
@@ -383,6 +494,21 @@ def pause_coach_mission(
     mission_id: int,
 ) -> CoachMission:
     return update_coach_mission_status(db, user_id=user_id, mission_id=mission_id, status="paused")
+
+
+def resume_coach_mission(
+    db: Session,
+    *,
+    user_id: int,
+    mission_id: int,
+    duplicate_policy: str = "reject",
+) -> CoachMission:
+    return activate_draft_coach_mission(
+        db,
+        user_id=user_id,
+        mission_id=mission_id,
+        duplicate_policy=duplicate_policy,
+    )
 
 
 def cancel_coach_mission(
@@ -397,6 +523,59 @@ def cancel_coach_mission(
         user_id=user_id,
         mission_id=mission_id,
         status="cancelled",
+        ended_at=ended_at or datetime.now(UTC),
+    )
+
+
+def complete_coach_mission(
+    db: Session,
+    *,
+    user_id: int,
+    mission_id: int,
+    ended_at: datetime | None = None,
+) -> CoachMission:
+    return update_coach_mission_status(
+        db,
+        user_id=user_id,
+        mission_id=mission_id,
+        status="completed",
+        ended_at=ended_at or datetime.now(UTC),
+    )
+
+
+def fail_coach_mission(
+    db: Session,
+    *,
+    user_id: int,
+    mission_id: int,
+    ended_at: datetime | None = None,
+) -> CoachMission:
+    return update_coach_mission_status(
+        db,
+        user_id=user_id,
+        mission_id=mission_id,
+        status="failed",
+        ended_at=ended_at or datetime.now(UTC),
+    )
+
+
+def expire_coach_mission(
+    db: Session,
+    *,
+    user_id: int,
+    mission_id: int,
+    observed_matches: int | None = None,
+    force: bool = False,
+    ended_at: datetime | None = None,
+) -> CoachMission:
+    mission = _require_owned_mission(db, user_id=user_id, mission_id=mission_id)
+    if not force and not _mission_duration_exceeded(mission, observed_matches=observed_matches):
+        raise ValueError("Cannot expire mission before configured duration/window is exceeded.")
+    return update_coach_mission_status(
+        db,
+        user_id=user_id,
+        mission_id=mission.id,
+        status="expired",
         ended_at=ended_at or datetime.now(UTC),
     )
 
@@ -616,7 +795,12 @@ def generate_rolling_mission_candidates(
         match_ids=match_ids,
     )
     active_metrics = _active_mission_primary_metrics(db, user_id=user_id, owner_steam_id=owner_steam_id)
-    candidates = _rolling_candidates_from_window(window, active_primary_metrics=active_metrics)
+    active_domains = _active_mission_domain_keys(db, user_id=user_id, owner_steam_id=owner_steam_id)
+    candidates = _rolling_candidates_from_window(
+        window,
+        active_primary_metrics=active_metrics,
+        active_domain_keys=active_domains,
+    )
     return {
         "window": window.to_dict(),
         "candidates": [candidate.to_dict() for candidate in candidates],
@@ -839,6 +1023,8 @@ def serialize_coach_mission(mission: CoachMission) -> dict[str, Any]:
         "user_id": mission.user_id,
         "owner_steam_id": mission.owner_steam_id,
         "status": mission.status,
+        "domain_key": mission_domain_key(mission),
+        "problem_key": mission_problem_key(mission),
         "title": mission.title,
         "focus": mission.focus,
         "mission_payload": serialize_mission_payload(source_payload.get("mission_payload")),
@@ -846,6 +1032,27 @@ def serialize_coach_mission(mission: CoachMission) -> dict[str, Any]:
         "activated_at": mission.activated_at.isoformat() if mission.activated_at else None,
         "ended_at": mission.ended_at.isoformat() if mission.ended_at else None,
     }
+
+
+def mission_domain_key(mission: CoachMission) -> str | None:
+    source_payload = _json_load_mapping(mission.source_payload_json)
+    domain_key = source_payload.get("mission_domain_key") or source_payload.get("domain_key")
+    if domain_key:
+        return str(domain_key)
+    mission_payload = _mapping(source_payload.get("mission_payload"))
+    success_metric = _mapping(mission_payload.get("success_metric"))
+    metric_name = success_metric.get("metric_name")
+    if metric_name:
+        return _domain_key_for_metric(str(metric_name))
+    return None
+
+
+def mission_problem_key(mission: CoachMission) -> str | None:
+    source_payload = _json_load_mapping(mission.source_payload_json)
+    problem_key = source_payload.get("problem_key")
+    if problem_key:
+        return str(problem_key)
+    return mission_domain_key(mission)
 
 
 def _select_owner_metric_snapshots_for_window(
@@ -973,6 +1180,7 @@ def _rolling_candidates_from_window(
     window: RollingMissionWindow,
     *,
     active_primary_metrics: set[str],
+    active_domain_keys: set[str],
 ) -> list[RollingMissionCandidate]:
     candidates: list[RollingMissionCandidate] = []
     for family, metric_order in (
@@ -984,6 +1192,7 @@ def _rolling_candidates_from_window(
             family=family,
             metric_order=metric_order,
             active_primary_metrics=active_primary_metrics,
+            active_domain_keys=active_domain_keys,
         )
         if candidate is not None:
             candidates.append(candidate)
@@ -1023,6 +1232,7 @@ def _rolling_candidate_for_family(
     family: str,
     metric_order: Sequence[str],
     active_primary_metrics: set[str],
+    active_domain_keys: set[str],
 ) -> RollingMissionCandidate | None:
     primary_metric = next(
         (
@@ -1044,7 +1254,10 @@ def _rolling_candidate_for_family(
     confidence_level = str(primary.get("metric_confidence") or "low")
     confidence_score = INSIGHT_CONFIDENCE_SCORES.get(confidence_level, 0.25)
     sample_size = _optional_int(primary.get("sample_count") or primary.get("rounds")) or window.sample_rounds
-    suppressed = primary_metric in active_primary_metrics
+    domain_key = _domain_key_for_metric(primary_metric, family=family)
+    suppressed_by_metric = primary_metric in active_primary_metrics
+    suppressed_by_domain = domain_key in active_domain_keys
+    suppressed = suppressed_by_metric or suppressed_by_domain
     insight_card = _rolling_insight_card(
         window,
         family=family,
@@ -1075,7 +1288,10 @@ def _rolling_candidate_for_family(
         confidence_score=confidence_score,
         sample_size=sample_size,
         suppressed_by_active_mission=suppressed,
-        suppression_reason="active_mission_same_primary_metric" if suppressed else None,
+        suppression_reason=_rolling_suppression_reason(
+            suppressed_by_metric=suppressed_by_metric,
+            suppressed_by_domain=suppressed_by_domain,
+        ),
         explanation=explanation,
         insight_card=insight_card,
         mission_payload=mission_payload,
@@ -1152,6 +1368,7 @@ def _rolling_insight_card(
             "missing_requirements": [],
             "blocking_reason_codes": [],
             "source": "rolling_metric_window",
+            "family": family,
             "window": window.to_dict(),
         },
     }
@@ -1244,11 +1461,17 @@ def _rolling_recommended_focus(primary_metric: str) -> str:
     return f"Improve {primary_metric.replace('_', ' ')} with supported owner metrics."
 
 
+def _rolling_suppression_reason(*, suppressed_by_metric: bool, suppressed_by_domain: bool) -> str | None:
+    if suppressed_by_metric:
+        return "active_mission_same_primary_metric"
+    if suppressed_by_domain:
+        return "active_mission_same_domain"
+    return None
+
+
 def _active_mission_primary_metrics(db: Session, *, user_id: int, owner_steam_id: str) -> set[str]:
     metrics: set[str] = set()
-    for mission in list_active_coach_missions(db, user_id=user_id):
-        if mission.owner_steam_id and mission.owner_steam_id != owner_steam_id:
-            continue
+    for mission in list_active_coach_missions(db, user_id=user_id, owner_steam_id=owner_steam_id):
         source_payload = _json_load_mapping(mission.source_payload_json)
         mission_payload = _mapping(source_payload.get("mission_payload"))
         success_metric = _mapping(mission_payload.get("success_metric"))
@@ -1256,6 +1479,103 @@ def _active_mission_primary_metrics(db: Session, *, user_id: int, owner_steam_id
         if metric_name:
             metrics.add(str(metric_name))
     return metrics
+
+
+def _active_mission_domain_keys(db: Session, *, user_id: int, owner_steam_id: str) -> set[str]:
+    keys: set[str] = set()
+    for mission in list_active_coach_missions(db, user_id=user_id, owner_steam_id=owner_steam_id):
+        domain_key = mission_domain_key(mission)
+        if domain_key:
+            keys.add(domain_key)
+    return keys
+
+
+def _handle_duplicate_active_mission(
+    db: Session,
+    *,
+    user_id: int,
+    owner_steam_id: str | None,
+    domain_key: str | None,
+    duplicate_policy: str,
+    replacement_reason: str,
+    exclude_mission_id: int | None = None,
+) -> None:
+    if not domain_key:
+        return
+    duplicates = [
+        mission
+        for mission in list_active_coach_missions(
+            db,
+            user_id=user_id,
+            owner_steam_id=owner_steam_id,
+            domain_key=domain_key,
+        )
+        if mission.id != exclude_mission_id and mission.owner_steam_id == owner_steam_id
+    ]
+    if not duplicates:
+        return
+    if duplicate_policy == "allow":
+        return
+    if duplicate_policy == "reject":
+        raise ValueError(f"Duplicate active mission for owner/domain: {domain_key}")
+    ended_at = datetime.now(UTC)
+    for duplicate in duplicates:
+        previous_status = duplicate.status
+        duplicate.status = "cancelled"
+        duplicate.ended_at = ended_at
+        _record_lifecycle_transition(
+            duplicate,
+            previous_status=previous_status,
+            next_status="cancelled",
+            reason=replacement_reason,
+            occurred_at=ended_at,
+        )
+
+
+def _validate_mission_transition(previous_status: str, next_status: str) -> None:
+    if previous_status == next_status:
+        return
+    allowed = MISSION_TRANSITIONS.get(previous_status)
+    if allowed is None:
+        raise ValueError(f"Unsupported mission status: {previous_status}")
+    if next_status not in allowed:
+        raise ValueError(f"Cannot transition mission from {previous_status} to {next_status}")
+
+
+def _record_lifecycle_transition(
+    mission: CoachMission,
+    *,
+    previous_status: str,
+    next_status: str,
+    reason: str,
+    occurred_at: datetime | None,
+) -> None:
+    source_payload = _json_load_mapping(mission.source_payload_json)
+    events = source_payload.get("lifecycle_events")
+    if not isinstance(events, list):
+        events = []
+    event_time = occurred_at or datetime.now(UTC)
+    events.append(
+        {
+            "from": previous_status,
+            "to": next_status,
+            "reason": reason,
+            "at": event_time.isoformat(),
+        }
+    )
+    source_payload["lifecycle_events"] = events
+    source_payload["lifecycle_status"] = next_status
+    mission.source_payload_json = _json_object(source_payload)
+
+
+def _mission_duration_exceeded(mission: CoachMission, *, observed_matches: int | None) -> bool:
+    if observed_matches is None:
+        return False
+    source_payload = _json_load_mapping(mission.source_payload_json)
+    mission_payload = _mapping(source_payload.get("mission_payload"))
+    duration = _mapping(mission_payload.get("duration"))
+    max_matches = _optional_positive_int(duration.get("max_matches"))
+    return max_matches is not None and observed_matches >= max_matches
 
 
 def _require_owned_analysis_run(db: Session, *, user_id: int, analysis_run_id: int) -> AnalysisRun:
@@ -1895,19 +2215,117 @@ def _mission_source_payload(
     hypothesis: CoachHypothesis,
     source_payload: Mapping[str, Any] | None,
     mission_payload: Mapping[str, Any] | None,
+    *,
+    criteria_specs: Sequence[Mapping[str, Any]],
+    domain_key: str | None,
 ) -> dict[str, Any]:
     payload = dict(source_payload or {})
+    readiness = _json_load_mapping(hypothesis.mission_readiness_json)
     payload.update(
         {
             "source_hypothesis_id": hypothesis.id,
             "analysis_run_id": hypothesis.analysis_run_id,
+            "source_insight_card_id": hypothesis.source_insight_card_id,
             "baseline_source": "coach_hypothesis_mission_readiness",
-            "mission_readiness": _json_load_mapping(hypothesis.mission_readiness_json),
+            "mission_readiness": readiness,
+            "mission_domain_key": domain_key,
+            "problem_key": domain_key,
+            "activation_metadata": _mission_activation_metadata(
+                hypothesis=hypothesis,
+                readiness=readiness,
+                criteria_specs=criteria_specs,
+                domain_key=domain_key,
+            ),
         }
     )
     if mission_payload is not None:
         payload["mission_payload"] = dict(mission_payload)
     return payload
+
+
+def _mission_activation_metadata(
+    *,
+    hypothesis: CoachHypothesis,
+    readiness: Mapping[str, Any],
+    criteria_specs: Sequence[Mapping[str, Any]],
+    domain_key: str | None,
+) -> dict[str, Any]:
+    primary = _primary_criteria_spec(criteria_specs)
+    return {
+        "source_hypothesis_id": hypothesis.id,
+        "analysis_run_id": hypothesis.analysis_run_id,
+        "source_insight_card_id": hypothesis.source_insight_card_id,
+        "owner_steam_id": hypothesis.owner_steam_id,
+        "domain_key": domain_key,
+        "problem_key": domain_key,
+        "primary_metric": primary.get("metric_name") if primary else None,
+        "criteria_count": len(criteria_specs),
+        "baseline_values": _criteria_values_by_metric(criteria_specs, "baseline_value"),
+        "target_values": _criteria_values_by_metric(criteria_specs, "target_value"),
+        "confidence_required": primary.get("confidence_required") if primary else None,
+        "confidence_eligibility": _mapping(readiness.get("confidence_eligibility")),
+        "window": _mapping(readiness.get("window")),
+    }
+
+
+def _mission_domain_key_from_parts(
+    *,
+    hypothesis: CoachHypothesis,
+    criteria_specs: Sequence[Mapping[str, Any]],
+    mission_payload: Mapping[str, Any] | None,
+) -> str | None:
+    readiness = _json_load_mapping(hypothesis.mission_readiness_json)
+    source = _optional_str(readiness.get("source"))
+    if source == "rolling_metric_window":
+        window = _mapping(readiness.get("window"))
+        candidate_source = _optional_str(window.get("candidate_family") or readiness.get("family"))
+        if candidate_source:
+            return _domain_key_for_family(candidate_source)
+    mission_payload_metric = _mapping(_mapping(mission_payload).get("success_metric")).get("metric_name")
+    if mission_payload_metric:
+        return _domain_key_for_metric(str(mission_payload_metric))
+    primary = _primary_criteria_spec(criteria_specs)
+    if primary is not None:
+        return _domain_key_for_metric(str(primary["metric_name"]))
+    readiness_metric = _readiness_target_metric(
+        readiness,
+        _json_load_sequence(hypothesis.target_metric_candidates_json),
+    )
+    if readiness_metric:
+        return _domain_key_for_metric(readiness_metric)
+    return None
+
+
+def _domain_key_for_metric(metric_name: str, *, family: str | None = None) -> str:
+    if family:
+        return _domain_key_for_family(family)
+    if metric_name in BAD_FIGHT_TRADE_MISSION_METRICS or metric_name == "traded_death_rate":
+        return "trade_discipline"
+    if metric_name in SURVIVAL_OPENING_MISSION_METRICS or metric_name == "opening_duel_win_rate":
+        return "survival_opening"
+    if metric_name in UTILITY_VALUE_MISSION_METRICS or metric_name.startswith(("utility_", "flash_", "he_")):
+        return "utility_value"
+    return metric_name.strip().lower().replace(" ", "_")
+
+
+def _domain_key_for_family(family: str) -> str:
+    if family == "bad_fight_trade":
+        return "trade_discipline"
+    if family == "survival_opening":
+        return "survival_opening"
+    return family.strip().lower().replace(" ", "_")
+
+
+def _criteria_values_by_metric(criteria_specs: Sequence[Mapping[str, Any]], field: str) -> dict[str, Any]:
+    values: dict[str, Any] = {}
+    for item in criteria_specs:
+        value = item.get(field)
+        if value is None:
+            continue
+        metric_name = str(item["metric_name"])
+        if item.get("role") == "primary" or metric_name not in values:
+            values[metric_name] = value
+    return values
 
 
 def _criteria_specs_from_hypothesis(hypothesis: CoachHypothesis) -> list[dict[str, Any]]:
