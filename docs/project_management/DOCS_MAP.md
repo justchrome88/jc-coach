@@ -11,9 +11,10 @@ For human navigation by category, start with `docs/README.md` and `docs/project_
 
 ## Current Routing
 
-MISSION_API_AND_UI is current. F10D accepted the mission backend for scoped
-UI/API work. The next task is G01_OWNER_SCOPED_MISSION_API_CONTRACT; public,
-friends and v1.0 claims remain blocked.
+H01A_REPAIR is current. H01A is blocked and fresh-match vertical-cycle
+acceptance is false. CURRENT_TASK is none; NEXT_TASK is
+H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR, which is
+not started. Public, friends and v1.0 claims remain blocked.
 
 ## Context Policy
 

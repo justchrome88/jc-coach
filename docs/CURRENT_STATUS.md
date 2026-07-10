@@ -2,9 +2,13 @@
 
 Last updated: 2026-07-10.
 
-## Current Mission Backend State
+## Current H01A Repair State
 
-- CURRENT_LANE: MISSION_API_AND_UI.
+- CURRENT_LANE: H01A_REPAIR.
+- CURRENT_TASK: none.
+- H01A_STATUS: BLOCKED.
+- FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: false.
+- LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: false.
 - MISSION_BACKEND_STATUS: ACCEPTED_FOR_UI_API.
 - MISSION_BACKEND_ACCEPTED_FOR_UI_API: true.
 - F10D_STATUS: PASS_WITH_WARNINGS.
@@ -20,8 +24,11 @@ Last updated: 2026-07-10.
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01A_FRESH_MATCH_USER_ASSISTED_VERTICAL_CYCLE_ACCEPTANCE.
+- NEXT_TASK: H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A stopped before fresh-match exposure because the baseline classified nine
+  legacy `steam_history` rows as actionable `new`; the accepted next route is
+  the not-started H01A-R01 repair. H01A-R01 is not complete.
 - G01 accepted one owner-scoped headless import-to-coach application service
   and a thin CLI adapter. The service preserves the one-new-demo cap, fails
   closed on owner scope, reuses durable parser/metric/coach state, returns a
@@ -192,10 +199,11 @@ Last updated: 2026-07-10.
 
 ## Do Not Do Now
 
-- Current routing is H01A fresh-match user-assisted vertical-cycle acceptance,
-  not the historical WP-018/MVP routes below. G02 accepted only the thin
-  technical adapter and durable coordinator; no scheduler, public/friends
-  access or v1.0 claim is authorized.
+- Current routing is the not-started
+  H01A-R01_LEGACY_PENDING_STEAM_HISTORY_BASELINE_CLASSIFICATION_REPAIR, not the
+  blocked H01A acceptance rerun or the historical WP-018/MVP routes below. G02
+  accepted only the thin technical adapter and durable coordinator; no
+  scheduler, public/friends access or v1.0 claim is authorized.
 
 - Do not run live Steam/Valve import, parser jobs, evaluator jobs or manual evaluator unless the current WP explicitly authorizes them.
 - Do not mutate production DB, schema, production files or generated app reports unless the current WP explicitly authorizes them with backup/SHA evidence.
