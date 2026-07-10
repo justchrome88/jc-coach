@@ -37,6 +37,7 @@ MISSION_ELIGIBLE_CONFIDENCE_LEVELS = {"medium", "high"}
 MISSION_PAYLOAD_SCHEMA_VERSION = "coach-mission-payload-v1"
 REQUIRED_MISSION_PAYLOAD_FIELDS = ("title", "goal", "rules", "duration", "success_metric", "failure_condition")
 SURVIVAL_OPENING_MISSION_METRICS = {"opening_death_rate", "survival_rate"}
+BAD_FIGHT_TRADE_MISSION_METRICS = {"untraded_death_rate"}
 
 
 @dataclass(frozen=True)
@@ -1305,6 +1306,8 @@ def _primary_criteria_spec(criteria_specs: Sequence[Mapping[str, Any]]) -> dict[
 
 
 def _mission_title(*, problem: str, primary_metric: str) -> str:
+    if primary_metric == "untraded_death_rate":
+        return "Reduce untraded deaths"
     if primary_metric == "opening_death_rate":
         return "Reduce opening deaths"
     if primary_metric == "survival_rate":
@@ -1320,6 +1323,11 @@ def _mission_goal(*, problem: str, primary: Mapping[str, Any]) -> str:
     baseline = primary.get("baseline_value")
     target = primary.get("target_value")
     if baseline is not None and target is not None:
+        if metric_name == "untraded_death_rate":
+            return (
+                f"Reduce untraded_death_rate from {float(baseline):.3f} to {float(target):.3f} "
+                "over upcoming owner matches using supported trade-status metric snapshots."
+            )
         if metric_name == "opening_death_rate":
             return (
                 f"Reduce opening_death_rate from {float(baseline):.3f} to {float(target):.3f} "
@@ -1344,7 +1352,16 @@ def _mission_rules(
     failure_condition: Mapping[str, Any],
 ) -> list[str]:
     metric_name = str(primary["metric_name"])
-    if metric_name == "opening_death_rate":
+    if metric_name == "untraded_death_rate":
+        rules = [
+            "For each upcoming match, avoid taking isolated fights unless a teammate can trade the death.",
+            "Success is measured only by lowering untraded_death_rate in owner-scoped metric snapshots.",
+            (
+                "Failure is triggered if untraded_death_rate is above the activation baseline or cannot be "
+                "evaluated with supported trade-status metrics."
+            ),
+        ]
+    elif metric_name == "opening_death_rate":
         rules = [
             "For each upcoming match, avoid voluntary first contact in the opening phase unless trade support is set.",
             "Success is measured only by lowering opening_death_rate in owner-scoped metric snapshots.",
@@ -1674,6 +1691,11 @@ def _target_value(metric_name: str, baseline: float | None, direction: str) -> f
 
 
 def _mission_min_sample_rounds(metric_name: str, evidence: Mapping[str, Any]) -> int | None:
+    if metric_name in BAD_FIGHT_TRADE_MISSION_METRICS:
+        rounds = _optional_int(evidence.get("rounds"))
+        if rounds is not None and rounds > 0:
+            return rounds
+        return None
     if metric_name not in SURVIVAL_OPENING_MISSION_METRICS:
         return None
     sample_count = _optional_int(evidence.get("sample_count"))
@@ -1683,6 +1705,8 @@ def _mission_min_sample_rounds(metric_name: str, evidence: Mapping[str, Any]) ->
 
 
 def _criteria_rule_source(metric_name: str) -> str:
+    if metric_name in BAD_FIGHT_TRADE_MISSION_METRICS:
+        return "bad_fight_trade_mission_template"
     if metric_name in SURVIVAL_OPENING_MISSION_METRICS:
         return "survival_opening_mission_template"
     return "mission_readiness"
@@ -1690,6 +1714,11 @@ def _criteria_rule_source(metric_name: str) -> str:
 
 def _failure_reason(source: Mapping[str, Any]) -> str:
     metric_name = str(source.get("metric_name") or "")
+    if metric_name == "untraded_death_rate":
+        return (
+            "Mission fails if untraded_death_rate rises above the activation baseline or cannot be evaluated "
+            "with supported trade-status metrics."
+        )
     if metric_name == "opening_death_rate":
         return (
             "Mission fails if opening_death_rate rises above the activation baseline or cannot be evaluated "

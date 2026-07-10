@@ -234,6 +234,124 @@ def test_survival_opening_insight_generates_survival_mission_payload():
     ]
 
 
+def test_bad_fight_trade_insight_generates_trade_discipline_mission(db):
+    owner = _user(db, "owner")
+    card = coach_insights_with_mission_readiness_from_snapshots(
+        [
+            _e02_survival_snapshot(
+                metrics={
+                    "rounds": 10,
+                    "opening_deaths": 3,
+                    "opening_death_rate": 0.3,
+                    "untraded_deaths": 3,
+                    "traded_deaths": 1,
+                    "trade_status_known_deaths": 4,
+                    "untraded_death_rate": 0.75,
+                    "traded_death_rate": 0.25,
+                },
+                confidence={
+                    "opening_death_rate": {
+                        "level": "high",
+                        "usable_for_insights": True,
+                        "usable_for_missions": True,
+                        "hard_recommendation_eligible": True,
+                    },
+                    "untraded_death_rate": {
+                        "level": "high",
+                        "usable_for_insights": True,
+                        "usable_for_missions": True,
+                        "hard_recommendation_eligible": True,
+                    },
+                },
+            )
+        ]
+    )[0]
+
+    payload = mission_payload_from_insight_card(card)
+
+    assert payload is not None
+    assert validate_mission_payload(payload) == ()
+    assert payload["title"] == "Reduce untraded deaths"
+    assert payload["goal"] == (
+        "Reduce untraded_death_rate from 0.750 to 0.700 over upcoming owner matches "
+        "using supported trade-status metric snapshots."
+    )
+    assert payload["duration"]["min_sample_rounds"] == 10
+    assert payload["success_metric"] == {
+        "metric_name": "untraded_death_rate",
+        "direction": "lower_is_better",
+        "baseline_value": 0.75,
+        "target_value": 0.7,
+        "min_sample_matches": None,
+        "min_sample_rounds": 10,
+        "confidence_required": 0.9,
+    }
+    assert payload["failure_condition"] == {
+        "metric_name": "untraded_death_rate",
+        "direction": "stay_below",
+        "threshold_value": 0.75,
+        "reason": (
+            "Mission fails if untraded_death_rate rises above the activation baseline or cannot be evaluated "
+            "with supported trade-status metrics."
+        ),
+    }
+    assert payload["rules"][:3] == [
+        "For each upcoming match, avoid taking isolated fights unless a teammate can trade the death.",
+        "Success is measured only by lowering untraded_death_rate in owner-scoped metric snapshots.",
+        (
+            "Failure is triggered if untraded_death_rate is above the activation baseline or cannot be "
+            "evaluated with supported trade-status metrics."
+        ),
+    ]
+
+    run = create_analysis_run(db, user_id=owner.id, owner_steam_id="76561198000000001")
+    hypothesis = create_coach_hypothesis(db, user_id=owner.id, analysis_run_id=run.id, insight_card=card)
+    mission = activate_coach_mission(db, user_id=owner.id, hypothesis_id=hypothesis.id, title=payload["title"])
+    criteria = list_mission_criteria(db, user_id=owner.id, mission_id=mission.id)
+
+    assert [(row.metric_name, row.role, row.direction, row.min_sample_rounds) for row in criteria] == [
+        ("untraded_death_rate", "primary", "lower_is_better", 10),
+        ("opening_death_rate", "secondary", "lower_is_better", 10),
+        ("untraded_death_rate", "guardrail", "stay_below", None),
+    ]
+    assert json.loads(criteria[0].rule_json)["source"] == "bad_fight_trade_mission_template"
+
+
+def test_ambiguous_trade_evidence_does_not_generate_mission_payload():
+    card = coach_insights_with_mission_readiness_from_snapshots(
+        [
+            _e02_survival_snapshot(
+                metrics={
+                    "rounds": 10,
+                    "ambiguous_traded_deaths": 2,
+                    "trade_status_known_deaths": 0,
+                },
+                confidence={
+                    "traded_death_rate": {
+                        "level": "low",
+                        "usable_for_insights": False,
+                        "usable_for_missions": False,
+                        "hard_recommendation_eligible": False,
+                    },
+                    "untraded_death_rate": {
+                        "level": "low",
+                        "usable_for_insights": False,
+                        "usable_for_missions": False,
+                        "hard_recommendation_eligible": False,
+                    },
+                },
+            )
+        ]
+    )[0]
+
+    assert card["problem"] == "Trade behavior cannot be judged confidently from this match snapshot."
+    assert card["confidence"] == "low"
+    assert card["evidence"][0]["metric_id"] == "ambiguous_traded_deaths"
+    assert card["mission_readiness"]["can_become_mission"] is False
+    assert "low_or_unavailable_confidence" in card["mission_readiness"]["blocking_reason_codes"]
+    assert mission_payload_from_insight_card(card) is None
+
+
 def test_weak_survival_opening_insight_does_not_produce_active_mission(db):
     owner = _user(db, "owner")
     weak_card = {
