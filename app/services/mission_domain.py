@@ -71,6 +71,20 @@ ROLLING_MISSION_METRICS = {
 }
 MIN_ROLLING_WINDOW_MATCHES = 3
 MIN_ROLLING_WINDOW_ROUNDS = 8
+CORE_COMBAT_SNAPSHOT_SOURCE = "core_combat_metrics"
+UTILITY_SNAPSHOT_SOURCE = "utility_metrics"
+UTILITY_SNAPSHOT_METRICS = {
+    "enemies_flashed",
+    "flash_assists",
+    "flash_detonations",
+    "grenade_rating",
+    "he_damage",
+    "he_detonations",
+    "molotov_damage",
+    "molotov_detonations",
+    "smoke_detonations",
+    "utility_damage",
+}
 
 
 @dataclass(frozen=True)
@@ -707,12 +721,17 @@ def evaluate_mission_progress(
     if mission.status != "active":
         raise ValueError(f"Cannot evaluate mission progress from status: {mission.status}")
     criteria_rows = list_mission_criteria(db, user_id=user_id, mission_id=mission.id)
+    criteria_metric_names = {criteria.metric_name for criteria in criteria_rows}
     baseline_window = (
-        _metric_snapshot_window(mission, baseline_metric_snapshots)
+        _metric_snapshot_window(mission, baseline_metric_snapshots, metric_names=criteria_metric_names)
         if baseline_metric_snapshots is not None
         else None
     )
-    snapshot_window = _metric_snapshot_window(mission, evaluation_metric_snapshots)
+    snapshot_window = _metric_snapshot_window(
+        mission,
+        evaluation_metric_snapshots,
+        metric_names=criteria_metric_names,
+    )
     components = [
         _evaluate_criteria(criteria, snapshot_window, baseline_window=baseline_window)
         for criteria in criteria_rows
@@ -725,16 +744,17 @@ def evaluate_mission_progress(
         evaluation_window=snapshot_window,
         components=components,
     )
-    window_payload = {
+    window_payload = dict(evaluation_window or {})
+    window_payload.update({
         "start": evaluation_window_start.isoformat() if evaluation_window_start else None,
         "end": evaluation_window_end.isoformat() if evaluation_window_end else None,
         "snapshot_ids": snapshot_window["snapshot_ids"],
         "snapshot_count": snapshot_window["snapshot_count"],
+        "match_ids": snapshot_window["match_ids"],
         "sample_matches": snapshot_window["sample_matches"],
         "sample_rounds": snapshot_window["sample_rounds"],
-    }
-    if evaluation_window:
-        window_payload.update(dict(evaluation_window))
+        "metric_samples": snapshot_window["metric_samples"],
+    })
     result = {
         "mission_id": mission.id,
         "owner_steam_id": mission.owner_steam_id,
@@ -1826,44 +1846,184 @@ def _require_mission_hypothesis(db: Session, mission: CoachMission) -> CoachHypo
 def _metric_snapshot_window(
     mission: CoachMission,
     evaluation_metric_snapshots: Sequence[Any],
+    *,
+    metric_names: set[str] | None = None,
 ) -> dict[str, Any]:
-    metrics: dict[str, list[float]] = {}
+    candidates_by_metric_match: dict[str, dict[int, list[dict[str, Any]]]] = {}
+    metric_reason_codes: dict[str, set[str]] = {}
+    metric_lineage_ids: dict[str, list[int]] = {}
     caveats: list[str] = []
-    confidence_values: list[float] = []
     snapshot_ids: list[int] = []
-    sample_matches = 0
-    sample_rounds = 0
-    for raw_snapshot in evaluation_metric_snapshots:
+    seen_snapshot_keys: set[tuple[str, Any]] = set()
+    for index, raw_snapshot in enumerate(evaluation_metric_snapshots):
         snapshot = _snapshot_to_mapping(raw_snapshot)
         _validate_snapshot_owner(mission, snapshot)
         snapshot_id = _optional_int(snapshot.get("id"))
+        snapshot_key = ("id", snapshot_id) if snapshot_id is not None else ("position", index)
+        if snapshot_key in seen_snapshot_keys:
+            continue
+        seen_snapshot_keys.add(snapshot_key)
         if snapshot_id is not None:
             snapshot_ids.append(snapshot_id)
+        source = _optional_str(snapshot.get("source")) or "unknown"
+        match_id = _optional_positive_int(snapshot.get("match_id"))
         metric_payload = _snapshot_payload_mapping(snapshot, "metrics", "metrics_json")
         for metric_name, raw_value in metric_payload.items():
+            metric_name = str(metric_name)
             value = _metric_numeric_value(raw_value)
-            if value is not None:
-                metrics.setdefault(str(metric_name), []).append(value)
-        confidence = _snapshot_confidence(snapshot)
-        if confidence is not None:
-            confidence_values.append(confidence)
+            if value is None:
+                continue
+            if snapshot_id is not None:
+                metric_lineage_ids.setdefault(metric_name, []).append(snapshot_id)
+            if match_id is None:
+                metric_reason_codes.setdefault(metric_name, set()).add("missing_match_identity")
+                continue
+            candidates_by_metric_match.setdefault(metric_name, {}).setdefault(match_id, []).append(
+                {
+                    "snapshot_id": snapshot_id,
+                    "source": source,
+                    "value": value,
+                    "confidence": _metric_snapshot_confidence(snapshot, metric_name),
+                    "sample_rounds": _metric_sample_rounds(snapshot, metric_payload),
+                    "source_parser_artifact_id": _optional_int(snapshot.get("source_parser_artifact_id")),
+                    "source_event_set_id": _optional_str(snapshot.get("source_event_set_id")),
+                }
+            )
         caveats.extend(_snapshot_caveats(snapshot))
-        sample_matches += _sample_count(snapshot, "matches")
-        sample_rounds += _sample_count(snapshot, "rounds")
-    if evaluation_metric_snapshots and sample_matches == 0:
-        sample_matches = len(evaluation_metric_snapshots)
+
+    metric_samples: dict[str, dict[str, Any]] = {}
+    for metric_name in sorted(set(candidates_by_metric_match) | set(metric_reason_codes)):
+        observations: list[dict[str, Any]] = []
+        reason_codes = set(metric_reason_codes.get(metric_name, set()))
+        deduplicated_snapshot_ids: list[int] = []
+        unresolved_conflict = False
+        for match_id, candidates in sorted(candidates_by_metric_match.get(metric_name, {}).items()):
+            observation = _resolve_metric_observation(metric_name, match_id, candidates)
+            reason_codes.update(observation["reason_codes"])
+            deduplicated_snapshot_ids.extend(observation["deduplicated_snapshot_ids"])
+            if observation["canonical"] is None:
+                unresolved_conflict = True
+                continue
+            observations.append(observation["canonical"])
+        missing_confidence = any(item["confidence"] is None for item in observations)
+        if missing_confidence:
+            reason_codes.add("missing_metric_specific_confidence")
+        canonical_snapshot_ids = _ordered_ints(item["snapshot_id"] for item in observations)
+        match_ids = [item["match_id"] for item in observations]
+        confidence_values = [item["confidence"] for item in observations if item["confidence"] is not None]
+        sources = sorted({item["source"] for item in observations})
+        source_lineage = [
+            {
+                "match_id": match_id,
+                "snapshot_id": candidate.get("snapshot_id"),
+                "source": candidate.get("source"),
+                "source_parser_artifact_id": candidate.get("source_parser_artifact_id"),
+                "source_event_set_id": candidate.get("source_event_set_id"),
+            }
+            for match_id, candidates in sorted(candidates_by_metric_match.get(metric_name, {}).items())
+            for candidate in candidates
+        ]
+        metric_samples[metric_name] = {
+            "canonical_source": sources[0] if len(sources) == 1 else "+".join(sources),
+            "snapshot_ids": canonical_snapshot_ids,
+            "deduplicated_snapshot_ids": _ordered_ints(deduplicated_snapshot_ids),
+            "source_snapshot_ids": _ordered_ints(metric_lineage_ids.get(metric_name, [])),
+            "match_ids": match_ids,
+            "sample_matches": len(match_ids),
+            "sample_rounds": sum(item["sample_rounds"] for item in observations),
+            "confidence": min(confidence_values) if confidence_values and not missing_confidence else None,
+            "observations": [
+                {
+                    "match_id": item["match_id"],
+                    "snapshot_id": item["snapshot_id"],
+                    "source": item["source"],
+                    "source_parser_artifact_id": item["source_parser_artifact_id"],
+                    "source_event_set_id": item["source_event_set_id"],
+                }
+                for item in observations
+            ],
+            "source_lineage": source_lineage,
+            "value": (
+                sum(item["value"] for item in observations) / len(observations)
+                if observations and not unresolved_conflict
+                else None
+            ),
+            "reason_codes": sorted(reason_codes),
+            "usable": bool(observations) and not unresolved_conflict,
+        }
+
+    relevant_names = metric_names if metric_names is not None else set(metric_samples)
+    relevant_samples = [metric_samples[name] for name in sorted(relevant_names) if name in metric_samples]
+    match_ids = sorted({match_id for sample in relevant_samples for match_id in sample["match_ids"]})
+    relevant_confidences = [sample["confidence"] for sample in relevant_samples if sample["confidence"] is not None]
+    relevant_confidence_missing = any(sample["confidence"] is None for sample in relevant_samples)
     return {
         "metrics": {
-            metric_name: sum(values) / len(values)
-            for metric_name, values in metrics.items()
+            metric_name: sample["value"]
+            for metric_name, sample in metric_samples.items()
+            if sample["usable"] and sample["value"] is not None
         },
-        "snapshot_ids": snapshot_ids,
-        "snapshot_count": len(evaluation_metric_snapshots),
-        "sample_matches": sample_matches,
-        "sample_rounds": sample_rounds,
-        "confidence": min(confidence_values) if confidence_values else None,
-        "caveats": caveats,
+        "metric_samples": metric_samples,
+        "snapshot_ids": _ordered_ints(snapshot_ids),
+        "snapshot_count": len(seen_snapshot_keys),
+        "match_ids": match_ids,
+        "sample_matches": len(match_ids),
+        "sample_rounds": max((sample["sample_rounds"] for sample in relevant_samples), default=0),
+        "confidence": (
+            min(relevant_confidences)
+            if relevant_confidences and not relevant_confidence_missing
+            else None
+        ),
+        "caveats": sorted(set(caveats)),
     }
+
+
+def _resolve_metric_observation(
+    metric_name: str,
+    match_id: int,
+    candidates: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    authoritative_source = _canonical_metric_source(metric_name)
+    authoritative = [item for item in candidates if item.get("source") == authoritative_source]
+    eligible = authoritative or list(candidates)
+    values = {float(item["value"]) for item in eligible}
+    all_values = {float(item["value"]) for item in candidates}
+    reason_codes: set[str] = set()
+    if len(candidates) > 1:
+        reason_codes.add("duplicate_metric_source_deduplicated")
+    if len(all_values) > 1:
+        reason_codes.add("conflicting_metric_sources")
+    if len(values) > 1 or (len(all_values) > 1 and not authoritative):
+        return {
+            "canonical": None,
+            "deduplicated_snapshot_ids": _ordered_ints(item.get("snapshot_id") for item in candidates),
+            "reason_codes": sorted(reason_codes),
+        }
+    selected = min(
+        eligible,
+        key=lambda item: (
+            str(item.get("source") or ""),
+            _optional_int(item.get("snapshot_id")) or 0,
+        ),
+    )
+    canonical = dict(selected)
+    canonical["match_id"] = match_id
+    deduplicated = [
+        item.get("snapshot_id")
+        for item in candidates
+        if item is not selected
+    ]
+    return {
+        "canonical": canonical,
+        "deduplicated_snapshot_ids": _ordered_ints(deduplicated),
+        "reason_codes": sorted(reason_codes),
+    }
+
+
+def _canonical_metric_source(metric_name: str) -> str:
+    if metric_name in UTILITY_SNAPSHOT_METRICS:
+        return UTILITY_SNAPSHOT_SOURCE
+    return CORE_COMBAT_SNAPSHOT_SOURCE
 
 
 def _evaluate_criteria(
@@ -1873,7 +2033,13 @@ def _evaluate_criteria(
     baseline_window: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     metrics = _mapping(snapshot_window.get("metrics"))
+    metric_sample = _mapping(_mapping(snapshot_window.get("metric_samples")).get(criteria.metric_name))
     baseline_metrics = _mapping(baseline_window.get("metrics")) if baseline_window is not None else {}
+    baseline_metric_sample = (
+        _mapping(_mapping(baseline_window.get("metric_samples")).get(criteria.metric_name))
+        if baseline_window is not None
+        else {}
+    )
     baseline_from_snapshot = (
         _optional_number(baseline_metrics.get(criteria.metric_name))
         if criteria.metric_name in baseline_metrics
@@ -1888,23 +2054,25 @@ def _evaluate_criteria(
         "direction": criteria.direction,
         "baseline_value": baseline,
         "baseline_source": "metric_snapshots" if baseline_window is not None else "mission_activation",
-        "baseline_metric_snapshot_ids": list(baseline_window.get("snapshot_ids") or [])
-        if baseline_window is not None
-        else [],
+        "baseline_metric_snapshot_ids": list(baseline_metric_sample.get("snapshot_ids") or []),
         "target_value": criteria.target_value,
         "observed_value": _optional_number(metrics.get(criteria.metric_name))
         if criteria.metric_name in metrics
         else None,
         "delta": None,
         "outcome": "insufficient_data",
-        "reason_codes": [],
-        "sample_matches": snapshot_window.get("sample_matches"),
-        "sample_rounds": snapshot_window.get("sample_rounds"),
-        "confidence": snapshot_window.get("confidence"),
+        "reason_codes": list(metric_sample.get("reason_codes") or []),
+        "canonical_source": metric_sample.get("canonical_source"),
+        "metric_snapshot_ids": list(metric_sample.get("snapshot_ids") or []),
+        "deduplicated_metric_snapshot_ids": list(metric_sample.get("deduplicated_snapshot_ids") or []),
+        "match_ids": list(metric_sample.get("match_ids") or []),
+        "sample_matches": metric_sample.get("sample_matches", 0),
+        "sample_rounds": metric_sample.get("sample_rounds", 0),
+        "confidence": metric_sample.get("confidence"),
         "rule": rule,
     }
-    sample_reason = _insufficient_sample_reason(criteria, snapshot_window)
-    confidence_reason = _insufficient_confidence_reason(criteria, snapshot_window)
+    sample_reason = _insufficient_sample_reason(criteria, metric_sample)
+    confidence_reason = _insufficient_confidence_reason(criteria, metric_sample)
     if criteria.metric_name not in metrics:
         component["reason_codes"].append("missing_metric")
         return component
@@ -1912,6 +2080,8 @@ def _evaluate_criteria(
         component["reason_codes"].append("missing_baseline_metric")
         return component
     if sample_reason:
+        if sample_reason == "insufficient_sample_rounds" and not component["sample_rounds"]:
+            component["reason_codes"].append("unavailable_round_sample")
         component["reason_codes"].append(sample_reason)
         return component
     if confidence_reason:
@@ -2130,9 +2300,11 @@ def _evaluation_confidence(
     snapshot_window: Mapping[str, Any],
     components: Sequence[Mapping[str, Any]],
 ) -> float | None:
-    confidence = _optional_number(snapshot_window.get("confidence"))
-    if confidence is None:
+    del snapshot_window
+    confidences = [_optional_number(component.get("confidence")) for component in components]
+    if not confidences or any(confidence is None for confidence in confidences):
         return None
+    confidence = min(value for value in confidences if value is not None)
     if any(component.get("outcome") == "insufficient_data" for component in components):
         return min(confidence, 0.25)
     return confidence
@@ -2151,7 +2323,12 @@ def _evaluation_caveats(
                 "insufficient_sample_matches",
                 "insufficient_sample_rounds",
                 "missing_confidence",
+                "missing_match_identity",
+                "missing_metric_specific_confidence",
                 "insufficient_confidence",
+                "conflicting_metric_sources",
+                "duplicate_metric_source_deduplicated",
+                "unavailable_round_sample",
                 "not_following",
             }:
                 caveats.append(f"{component.get('metric_name')}:{reason}")
@@ -2169,6 +2346,10 @@ def _component_summary(component: Mapping[str, Any] | None) -> dict[str, Any] | 
         "baseline_value": component.get("baseline_value"),
         "baseline_source": component.get("baseline_source"),
         "baseline_metric_snapshot_ids": list(component.get("baseline_metric_snapshot_ids") or []),
+        "metric_snapshot_ids": list(component.get("metric_snapshot_ids") or []),
+        "deduplicated_metric_snapshot_ids": list(component.get("deduplicated_metric_snapshot_ids") or []),
+        "match_ids": list(component.get("match_ids") or []),
+        "canonical_source": component.get("canonical_source"),
         "evaluation_value": component.get("observed_value"),
         "delta": component.get("delta"),
         "target_value": component.get("target_value"),
@@ -2210,21 +2391,39 @@ def _snapshot_comparison(
     before_value = _optional_number(primary.get("baseline_value"))
     after_value = _optional_number(primary.get("observed_value"))
     delta = after_value - before_value if before_value is not None and after_value is not None else None
+    baseline_metric_sample = (
+        _mapping(_mapping(baseline_window.get("metric_samples")).get(metric_name))
+        if baseline_window is not None
+        else {}
+    )
     return {
         "success_metric": success_metric,
         "before": {
-            "metric_snapshot_ids": list(baseline_window.get("snapshot_ids") or [])
-            if baseline_window is not None
-            else [],
+            "metric_snapshot_ids": list(primary.get("baseline_metric_snapshot_ids") or []),
+            "deduplicated_metric_snapshot_ids": list(
+                baseline_metric_sample.get("deduplicated_snapshot_ids") or []
+            ),
+            "source_metric_snapshot_ids": list(baseline_metric_sample.get("source_snapshot_ids") or []),
+            "canonical_source": baseline_metric_sample.get("canonical_source"),
             "value": before_value,
-            "sample_matches": baseline_window.get("sample_matches") if baseline_window is not None else None,
-            "sample_rounds": baseline_window.get("sample_rounds") if baseline_window is not None else None,
+            "match_ids": list(baseline_metric_sample.get("match_ids") or []),
+            "sample_matches": baseline_metric_sample.get("sample_matches") if baseline_window is not None else None,
+            "sample_rounds": baseline_metric_sample.get("sample_rounds") if baseline_window is not None else None,
         },
         "after": {
-            "metric_snapshot_ids": list(evaluation_window.get("snapshot_ids") or []),
+            "metric_snapshot_ids": list(primary.get("metric_snapshot_ids") or []),
+            "deduplicated_metric_snapshot_ids": list(primary.get("deduplicated_metric_snapshot_ids") or []),
+            "source_metric_snapshot_ids": list(
+                _mapping(_mapping(evaluation_window.get("metric_samples")).get(metric_name)).get(
+                    "source_snapshot_ids"
+                )
+                or []
+            ),
+            "canonical_source": primary.get("canonical_source"),
             "value": after_value,
-            "sample_matches": evaluation_window.get("sample_matches"),
-            "sample_rounds": evaluation_window.get("sample_rounds"),
+            "match_ids": list(primary.get("match_ids") or []),
+            "sample_matches": primary.get("sample_matches"),
+            "sample_rounds": primary.get("sample_rounds"),
         },
         "metric_name": metric_name,
         "direction": success_metric.get("direction") or primary.get("direction"),
@@ -2348,13 +2547,25 @@ def _snapshot_to_mapping(snapshot: Any) -> dict[str, Any]:
     value: dict[str, Any] = {}
     for name in (
         "id",
+        "match_id",
         "user_id",
         "owner_steam_id",
+        "player_key",
         "player_steamid",
+        "source",
+        "source_parser_artifact_id",
+        "source_event_set_id",
+        "metrics",
         "metrics_json",
+        "confidence",
+        "confidence_baseline",
         "confidence_baseline_json",
+        "caveats",
         "caveats_json",
+        "metadata",
         "metadata_json",
+        "sample_matches",
+        "sample_rounds",
     ):
         if hasattr(snapshot, name):
             value[name] = getattr(snapshot, name)
@@ -2391,15 +2602,48 @@ def _metric_numeric_value(raw_value: Any) -> float | None:
         return None
 
 
-def _snapshot_confidence(snapshot: Mapping[str, Any]) -> float | None:
-    direct_confidence = snapshot.get("confidence")
-    if direct_confidence is not None:
-        return _optional_float(direct_confidence)
+def _metric_snapshot_confidence(snapshot: Mapping[str, Any], metric_name: str) -> float | None:
     confidence_payload = _snapshot_payload_mapping(snapshot, "confidence_baseline", "confidence_baseline_json")
-    for key in ("confidence", "overall", "level", "metric_confidence"):
-        if key in confidence_payload:
-            return _optional_float(confidence_payload[key])
+    metric_confidences = confidence_payload.get("metrics")
+    metric_confidence = metric_confidences.get(metric_name) if isinstance(metric_confidences, Mapping) else None
+    if isinstance(metric_confidence, Mapping):
+        for key in ("confidence", "score", "level", "metric_confidence"):
+            if key in metric_confidence:
+                return _confidence_value(metric_confidence[key])
+    elif metric_confidence is not None:
+        return _confidence_value(metric_confidence)
+    direct_metric_confidences = snapshot.get("metric_confidence")
+    if isinstance(direct_metric_confidences, Mapping) and metric_name in direct_metric_confidences:
+        return _confidence_value(direct_metric_confidences[metric_name])
+    metric_payload = _snapshot_payload_mapping(snapshot, "metrics", "metrics_json")
+    if len(metric_payload) == 1 and snapshot.get("confidence") is not None:
+        return _confidence_value(snapshot.get("confidence"))
     return None
+
+
+def _confidence_value(value: Any) -> float | None:
+    try:
+        return _optional_float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _metric_sample_rounds(snapshot: Mapping[str, Any], metrics: Mapping[str, Any]) -> int:
+    rounds = _optional_int(metrics.get("rounds")) if metrics.get("rounds") is not None else None
+    if rounds is not None and rounds > 0:
+        return rounds
+    return _sample_count(snapshot, "rounds")
+
+
+def _ordered_ints(values: Sequence[Any] | Any) -> list[int]:
+    ordered: list[int] = []
+    seen: set[int] = set()
+    for value in values:
+        parsed = _optional_int(value)
+        if parsed is not None and parsed not in seen:
+            seen.add(parsed)
+            ordered.append(parsed)
+    return ordered
 
 
 def _snapshot_caveats(snapshot: Mapping[str, Any]) -> list[str]:

@@ -368,17 +368,23 @@ def test_trade_discipline_mission_progress_uses_trade_and_opening_metrics(db):
         user_id=owner.id,
         mission_id=mission.id,
         evaluation_metric_snapshots=[
-            {
-                "id": owner.id * 1000 + 10,
-                "user_id": owner.id,
-                "owner_steam_id": mission.owner_steam_id,
-                "metrics": {
-                    "untraded_death_rate": 0.65,
-                    "opening_death_rate": 0.22,
-                },
-                "confidence": "high",
-                "sample_matches": 3,
-                "sample_rounds": 30,
+                {
+                    "id": owner.id * 1000 + 10,
+                    "match_id": 10,
+                    "user_id": owner.id,
+                    "owner_steam_id": mission.owner_steam_id,
+                    "source": "core_combat_metrics",
+                    "metrics": {
+                        "untraded_death_rate": 0.65,
+                        "opening_death_rate": 0.22,
+                    },
+                    "confidence_baseline": {
+                        "metrics": {
+                            "untraded_death_rate": {"level": "high"},
+                            "opening_death_rate": {"level": "high"},
+                        }
+                    },
+                    "sample_rounds": 30,
             }
         ],
     )
@@ -758,7 +764,7 @@ def test_evaluate_opening_mission_progress_outcomes(db, future_value, expected_s
 
     result = json.loads(evaluation.result_json)
     assert evaluation.status == expected_status
-    assert result["evaluation_window_json"]["sample_matches"] == 3
+    assert result["evaluation_window_json"]["sample_matches"] == 1
     assert result["components"][0]["metric_name"] == "opening_death_rate"
     assert result["components"][0]["outcome"] == expected_status
     assert evaluation.owner_steam_id == mission.owner_steam_id
@@ -987,7 +993,7 @@ def test_evaluate_mission_progress_requires_success_metric_in_before_snapshot(db
     result = json.loads(evaluation.result_json)
     assert evaluation.status == "insufficient_data"
     assert result["components"][0]["reason_codes"] == ["missing_baseline_metric"]
-    assert result["snapshot_comparison"]["before"]["metric_snapshot_ids"] == [owner.id * 1000 + 70]
+    assert result["snapshot_comparison"]["before"]["metric_snapshot_ids"] == []
     assert result["snapshot_comparison"]["after"]["metric_snapshot_ids"] == [owner.id * 1000 + 72]
     assert result["snapshot_comparison"]["before"]["value"] is None
     assert json.loads(evaluation.caveats_json) == ["opening_death_rate:missing_baseline_metric"]
@@ -1015,9 +1021,11 @@ def test_evaluate_mission_progress_distinguishes_not_following(db):
                     "utility_damage": 98,
                     "utility_uses_per_match": 1,
                 },
-                sample_matches=4,
-                sample_rounds=96,
+                sample_matches=1,
+                sample_rounds=32,
+                match_id=match_id,
             )
+            for match_id in (301, 302, 303)
         ],
     )
 
@@ -1049,9 +1057,11 @@ def test_evaluate_mission_progress_guardrail_blocks_harmful_success(db):
                     "survival_rate": 0.58,
                     "adr": 58,
                 },
-                sample_matches=4,
-                sample_rounds=96,
+                sample_matches=1,
+                sample_rounds=32,
+                match_id=match_id,
             )
+            for match_id in (201, 202, 203)
         ],
     )
 
@@ -1087,6 +1097,435 @@ def test_evaluate_mission_progress_rejects_cross_owner_snapshot(db):
                 )
             ],
         )
+
+
+def test_mission_progress_counts_unique_metric_matches_and_preserves_snapshot_lineage(db):
+    owner = _user(db, "owner-sample-semantics")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Unique match sample",
+    )
+
+    single = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=501,
+                match_id=41,
+                source="core_combat_metrics",
+                metrics={"opening_death_rate": 0.24},
+            )
+        ],
+        evaluation_window={"sample_matches": 99},
+    )
+    single_window = json.loads(single.result_json)["evaluation_window_json"]
+    assert single_window["snapshot_count"] == 1
+    assert single_window["match_ids"] == [41]
+    assert single_window["sample_matches"] == 1
+
+    missing_identity_snapshot = _canonical_snapshot(
+        owner,
+        mission,
+        snapshot_id=502,
+        match_id=42,
+        source="core_combat_metrics",
+        metrics={"opening_death_rate": 0.24},
+    )
+    missing_identity_snapshot.pop("match_id")
+    missing_identity = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[missing_identity_snapshot],
+    )
+    missing_component = json.loads(missing_identity.result_json)["components"][0]
+    assert missing_component["sample_matches"] == 0
+    assert "missing_match_identity" in missing_component["reason_codes"]
+
+    f09_regression = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=1119,
+                match_id=122,
+                source="core_combat_metrics",
+                metrics={"opening_death_rate": 0.24, "rounds": 20},
+            ),
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=1130,
+                match_id=122,
+                source="utility_metrics",
+                metrics={"utility_damage": 61},
+            ),
+        ],
+    )
+    result = json.loads(f09_regression.result_json)
+    window = result["evaluation_window_json"]
+    assert window["snapshot_ids"] == [1119, 1130]
+    assert window["snapshot_count"] == 2
+    assert window["match_ids"] == [122]
+    assert window["sample_matches"] == len(window["match_ids"]) == 1
+    assert result["components"][0]["metric_snapshot_ids"] == [1119]
+    assert result["snapshot_comparison"]["after"]["source_metric_snapshot_ids"] == [1119]
+
+
+def test_duplicate_snapshot_sources_cannot_satisfy_match_requirement(db):
+    owner = _user(db, "owner-duplicate-sample")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_utility_card_with_follow_rule(),
+        title="Three real matches required",
+    )
+    same_match = [
+        _canonical_snapshot(
+            owner,
+            mission,
+            snapshot_id=600 + index,
+            match_id=51,
+            source=source,
+            metrics={"utility_damage": 98, "utility_uses_per_match": 3},
+        )
+        for index, source in enumerate(("utility_metrics", "core_combat_metrics", "legacy_owner_metrics"))
+    ]
+
+    insufficient = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=same_match,
+    )
+    insufficient_result = json.loads(insufficient.result_json)
+    assert insufficient.status == "insufficient_data"
+    assert insufficient_result["evaluation_window_json"]["snapshot_count"] == 3
+    assert insufficient_result["components"][0]["sample_matches"] == 1
+    assert "insufficient_sample_matches" in insufficient_result["components"][0]["reason_codes"]
+
+    distinct_matches = [
+        _canonical_snapshot(
+            owner,
+            mission,
+            snapshot_id=700 + match_id,
+            match_id=match_id,
+            source="utility_metrics",
+            metrics={"utility_damage": 98, "utility_uses_per_match": 3},
+        )
+        for match_id in (61, 62, 63)
+    ]
+    sufficient = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=distinct_matches,
+    )
+    sufficient_result = json.loads(sufficient.result_json)
+    assert sufficient.status == "improving"
+    assert sufficient_result["components"][0]["match_ids"] == [61, 62, 63]
+    assert sufficient_result["components"][0]["sample_matches"] == 3
+
+
+def test_metric_observation_resolution_deduplicates_and_surfaces_conflicts(db):
+    owner = _user(db, "owner-source-resolution")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Canonical metric source",
+    )
+
+    identical = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=801,
+                match_id=71,
+                source="core_combat_metrics",
+                metrics={"opening_death_rate": 0.24},
+            ),
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=802,
+                match_id=71,
+                source="legacy_owner_metrics",
+                metrics={"opening_death_rate": 0.24},
+            ),
+        ],
+    )
+    component = json.loads(identical.result_json)["components"][0]
+    identical_metric_sample = json.loads(identical.result_json)["evaluation_window_json"]["metric_samples"][
+        "opening_death_rate"
+    ]
+    assert component["observed_value"] == 0.24
+    assert component["metric_snapshot_ids"] == [801]
+    assert component["deduplicated_metric_snapshot_ids"] == [802]
+    assert component["sample_matches"] == 1
+    assert "duplicate_metric_source_deduplicated" in component["reason_codes"]
+    assert identical_metric_sample["observations"][0]["source_parser_artifact_id"] == 10801
+    assert {item["source_event_set_id"] for item in identical_metric_sample["source_lineage"]} == {
+        "fixture:71:core_combat_metrics",
+        "fixture:71:legacy_owner_metrics",
+    }
+
+    resolved_conflict = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=803,
+                match_id=72,
+                source="core_combat_metrics",
+                metrics={"opening_death_rate": 0.24},
+            ),
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=804,
+                match_id=72,
+                source="legacy_owner_metrics",
+                metrics={"opening_death_rate": 0.9},
+            ),
+        ],
+    )
+    resolved_component = json.loads(resolved_conflict.result_json)["components"][0]
+    assert resolved_component["observed_value"] == 0.24
+    assert "conflicting_metric_sources" in resolved_component["reason_codes"]
+
+    unresolved = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=805,
+                match_id=73,
+                source="core_combat_metrics",
+                metrics={"opening_death_rate": 0.24},
+            ),
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=806,
+                match_id=73,
+                source="core_combat_metrics",
+                metrics={"opening_death_rate": 0.9},
+            ),
+        ],
+    )
+    unresolved_component = json.loads(unresolved.result_json)["components"][0]
+    assert unresolved.status == "insufficient_data"
+    assert unresolved_component["observed_value"] is None
+    assert "conflicting_metric_sources" in unresolved_component["reason_codes"]
+
+    reused = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=807,
+                match_id=74,
+                source="core_combat_metrics",
+                metrics={"opening_death_rate": 0.24},
+            )
+        ]
+        * 3,
+    )
+    reused_window = json.loads(reused.result_json)["evaluation_window_json"]
+    assert reused_window["snapshot_count"] == 1
+    assert reused_window["sample_matches"] == 1
+
+
+def test_round_samples_are_metric_specific_and_missing_rounds_fail_closed(db):
+    owner = _user(db, "owner-round-semantics")
+    mission = _active_mission_from_card(
+        db,
+        owner=owner,
+        card=_ready_opening_death_card(),
+        title="Supported round sample",
+    )
+    criteria = list_mission_criteria(db, user_id=owner.id, mission_id=mission.id)[0]
+    criteria.min_sample_rounds = 10
+    db.flush()
+
+    evaluation = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=901,
+                match_id=81,
+                source="core_combat_metrics",
+                metrics={"opening_death_rate": 0.24, "rounds": 12},
+            ),
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=902,
+                match_id=81,
+                source="utility_metrics",
+                metrics={"opening_death_rate": 0.24, "rounds": 12},
+            ),
+        ],
+    )
+    result = json.loads(evaluation.result_json)
+    assert result["evaluation_window_json"]["sample_rounds"] == 12
+    assert result["components"][0]["sample_rounds"] == 12
+
+    missing_rounds = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            _canonical_snapshot(
+                owner,
+                mission,
+                snapshot_id=903,
+                match_id=82,
+                source="core_combat_metrics",
+                metrics={"opening_death_rate": 0.24},
+            )
+        ],
+    )
+    missing_component = json.loads(missing_rounds.result_json)["components"][0]
+    assert missing_rounds.status == "insufficient_data"
+    assert missing_component["sample_rounds"] == 0
+    assert "unavailable_round_sample" in missing_component["reason_codes"]
+    assert "insufficient_sample_rounds" in missing_component["reason_codes"]
+
+
+def test_criterion_confidence_uses_only_canonical_metric_observations(db):
+    utility_owner = _user(db, "owner-utility-confidence")
+    utility_mission = _active_mission_from_card(
+        db,
+        owner=utility_owner,
+        card=_ready_utility_card_with_follow_rule(),
+        title="Utility confidence",
+    )
+    utility_criteria = list_mission_criteria(
+        db,
+        user_id=utility_owner.id,
+        mission_id=utility_mission.id,
+    )[0]
+    utility_criteria.confidence_required = 0.6
+    db.flush()
+    utility_snapshots = []
+    for match_id in (91, 92, 93):
+        utility_snapshots.extend(
+            [
+                _canonical_snapshot(
+                    utility_owner,
+                    utility_mission,
+                    snapshot_id=1000 + match_id,
+                    match_id=match_id,
+                    source="utility_metrics",
+                    metrics={"utility_damage": 98, "utility_uses_per_match": 3},
+                    confidence={"utility_damage": "low", "utility_uses_per_match": "low"},
+                ),
+                _canonical_snapshot(
+                    utility_owner,
+                    utility_mission,
+                    snapshot_id=1100 + match_id,
+                    match_id=match_id,
+                    source="core_combat_metrics",
+                    metrics={"utility_damage": 98, "opening_death_rate": 0.2},
+                    confidence={"utility_damage": "high", "opening_death_rate": "high"},
+                ),
+            ]
+        )
+    utility_evaluation = evaluate_mission_progress(
+        db,
+        user_id=utility_owner.id,
+        mission_id=utility_mission.id,
+        evaluation_metric_snapshots=utility_snapshots,
+    )
+    utility_component = json.loads(utility_evaluation.result_json)["components"][0]
+    assert utility_component["canonical_source"] == "utility_metrics"
+    assert utility_component["confidence"] == 0.25
+    assert "insufficient_confidence" in utility_component["reason_codes"]
+
+    combat_owner = _user(db, "owner-combat-confidence")
+    combat_mission = _active_mission_from_card(
+        db,
+        owner=combat_owner,
+        card=_ready_opening_death_card(),
+        title="Combat confidence",
+    )
+    combat_evaluation = evaluate_mission_progress(
+        db,
+        user_id=combat_owner.id,
+        mission_id=combat_mission.id,
+        evaluation_metric_snapshots=[
+            _canonical_snapshot(
+                combat_owner,
+                combat_mission,
+                snapshot_id=1201,
+                match_id=94,
+                source="core_combat_metrics",
+                metrics={"opening_death_rate": 0.24},
+                confidence={"opening_death_rate": "high"},
+            ),
+            _canonical_snapshot(
+                combat_owner,
+                combat_mission,
+                snapshot_id=1202,
+                match_id=94,
+                source="utility_metrics",
+                metrics={"utility_damage": 10},
+                confidence={"utility_damage": "low"},
+            ),
+        ],
+    )
+    assert combat_evaluation.status == "improving"
+    assert combat_evaluation.confidence == 0.9
+
+    missing_confidence = evaluate_mission_progress(
+        db,
+        user_id=combat_owner.id,
+        mission_id=combat_mission.id,
+        evaluation_metric_snapshots=[
+            _canonical_snapshot(
+                combat_owner,
+                combat_mission,
+                snapshot_id=1203,
+                match_id=95,
+                source="core_combat_metrics",
+                metrics={"opening_death_rate": 0.24},
+                confidence={},
+            )
+        ],
+    )
+    missing_component = json.loads(missing_confidence.result_json)["components"][0]
+    assert missing_confidence.status == "insufficient_data"
+    assert missing_confidence.confidence is None
+    assert "missing_metric_specific_confidence" in missing_component["reason_codes"]
+    assert "missing_confidence" in missing_component["reason_codes"]
 
 
 def test_active_mission_requires_ready_metric_confidence_and_persists_explicit_criteria(db):
@@ -1858,16 +2297,56 @@ def _snapshot(
     metrics: dict,
     sample_matches: int,
     sample_rounds: int,
+    match_id: int | None = None,
 ) -> dict:
+    resolved_match_id = match_id or owner.id * 10000 + sample_rounds
     return {
-        "id": owner.id * 1000 + sample_rounds,
+        "id": match_id * 10 + owner.id if match_id is not None else owner.id * 1000 + sample_rounds,
+        "match_id": resolved_match_id,
         "user_id": owner.id,
         "owner_steam_id": owner_steam_id,
+        "source": "core_combat_metrics",
         "metrics": metrics,
-        "confidence": "medium",
+        "confidence_baseline": {
+            "metrics": {metric_name: {"level": "medium"} for metric_name in metrics}
+        },
         "sample_matches": sample_matches,
         "sample_rounds": sample_rounds,
     }
+
+
+def _canonical_snapshot(
+    owner: User,
+    mission: CoachMission,
+    *,
+    snapshot_id: int,
+    match_id: int,
+    source: str,
+    metrics: dict,
+    confidence: dict[str, str] | None = None,
+    sample_rounds: int | None = None,
+) -> dict:
+    confidence_by_metric = (
+        {metric_name: {"level": level} for metric_name, level in confidence.items()}
+        if confidence is not None
+        else {metric_name: {"level": "medium"} for metric_name in metrics}
+    )
+    snapshot = {
+        "id": snapshot_id,
+        "match_id": match_id,
+        "user_id": owner.id,
+        "owner_steam_id": mission.owner_steam_id,
+        "player_steamid": mission.owner_steam_id,
+        "source": source,
+        "source_parser_artifact_id": snapshot_id + 10000,
+        "source_event_set_id": f"fixture:{match_id}:{source}",
+        "metrics": metrics,
+        "confidence_baseline": {"metrics": confidence_by_metric},
+        "caveats": [],
+    }
+    if sample_rounds is not None:
+        snapshot["sample_rounds"] = sample_rounds
+    return snapshot
 
 
 def _e02_survival_snapshot(

@@ -98,7 +98,7 @@ def test_process_owner_match_after_parser_artifact_evaluates_active_mission_with
         "mission_progress_evaluation_ids"
     ]
     assert first["mission_evaluation_summary"][0]["action"] == "evaluated"
-    assert first["mission_evaluation_summary"][0]["skip_reason"] == "insufficient_confidence"
+    assert first["mission_evaluation_summary"][0]["skip_reason"] is None
     assert first["mission_evaluation_summary"][0]["counted"] is False
     assert repeated["mission_evaluation_summary"][0]["reused"] is True
     assert db.query(MetricSnapshot).count() == len(first["metric_snapshot_ids"]["all"])
@@ -121,8 +121,14 @@ def test_process_owner_match_after_parser_artifact_evaluates_active_mission_with
     assert other_utility_snapshot_id not in summary["source_metric_snapshot_ids"]
     assert summary["primary_metric_result"]["metric_name"] == "utility_damage"
     assert summary["primary_metric_result"]["evaluation_value"] == 20
-    assert summary["status"] == "insufficient_data"
-    assert summary["primary_metric_result"]["reason_codes"] == ["insufficient_confidence"]
+    assert summary["primary_metric_result"]["metric_snapshot_ids"] == [owner_utility_snapshot_id]
+    assert summary["primary_metric_result"]["sample_matches"] == 1
+    assert summary["evaluated_window"]["snapshot_count"] == 2
+    assert summary["evaluated_window"]["match_ids"] == [match.id]
+    assert summary["evaluated_window"]["sample_matches"] == 1
+    assert summary["status"] == "regressing"
+    assert summary["confidence"] == 0.6
+    assert summary["primary_metric_result"]["reason_codes"] == ["regressing"]
 
 
 def test_process_owner_match_after_parser_artifact_evaluates_multiple_active_owner_missions(db):
