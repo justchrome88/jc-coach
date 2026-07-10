@@ -318,6 +318,73 @@ def test_bad_fight_trade_insight_generates_trade_discipline_mission(db):
     assert json.loads(criteria[0].rule_json)["source"] == "bad_fight_trade_mission_template"
 
 
+def test_trade_discipline_mission_progress_uses_trade_and_opening_metrics(db):
+    owner = _user(db, "owner")
+    card = coach_insights_with_mission_readiness_from_snapshots(
+        [
+            _e02_survival_snapshot(
+                metrics={
+                    "rounds": 10,
+                    "opening_deaths": 3,
+                    "opening_death_rate": 0.3,
+                    "untraded_deaths": 3,
+                    "traded_deaths": 1,
+                    "trade_status_known_deaths": 4,
+                    "untraded_death_rate": 0.75,
+                    "traded_death_rate": 0.25,
+                },
+                confidence={
+                    "opening_death_rate": {
+                        "level": "high",
+                        "usable_for_insights": True,
+                        "usable_for_missions": True,
+                        "hard_recommendation_eligible": True,
+                    },
+                    "untraded_death_rate": {
+                        "level": "high",
+                        "usable_for_insights": True,
+                        "usable_for_missions": True,
+                        "hard_recommendation_eligible": True,
+                    },
+                },
+            )
+        ]
+    )[0]
+    mission = _active_mission_from_card(db, owner=owner, card=card, title="Reduce untraded deaths")
+
+    evaluation = evaluate_mission_progress(
+        db,
+        user_id=owner.id,
+        mission_id=mission.id,
+        evaluation_metric_snapshots=[
+            {
+                "id": owner.id * 1000 + 10,
+                "user_id": owner.id,
+                "owner_steam_id": mission.owner_steam_id,
+                "metrics": {
+                    "untraded_death_rate": 0.65,
+                    "opening_death_rate": 0.22,
+                },
+                "confidence": "high",
+                "sample_matches": 3,
+                "sample_rounds": 30,
+            }
+        ],
+    )
+
+    result = json.loads(evaluation.result_json)
+    assert evaluation.status == "improving"
+    assert result["target_met"] is True
+    assert result["component_metrics"]["untraded_death_rate"]["target_reached"] is True
+    assert result["component_metrics"]["opening_death_rate"]["target_reached"] is True
+    assert result["snapshot_comparison"]["success_metric"] == {
+        "metric_name": "untraded_death_rate",
+        "direction": "lower_is_better",
+        "target_value": 0.7,
+        "source": "mission_payload.success_metric",
+    }
+
+
 def test_ambiguous_trade_evidence_does_not_generate_mission_payload():
     card = coach_insights_with_mission_readiness_from_snapshots(
         [
