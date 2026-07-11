@@ -1,538 +1,136 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="section-head">
+<section class="section-head coach-workspace-head">
   <div>
-    <h1>Тренер</h1>
-    <p>Текущая отслеживаемая цель, действие на следующий матч, прогресс и ограничения данных.</p>
-  </div>
-  <div class="actions">
-    <form action="/coach/ai-handoff" method="post">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="button ghost" type="submit">Подготовить данные для AI</button>
-    </form>
-    <form action="/report/generate" method="post">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="button" type="submit">Сгенерировать отчёт</button>
-    </form>
-    <a class="button ghost" href="/report">Открыть полный отчёт</a>
+    <h1>Тренер: две независимые миссии</h1>
+    <p>Каждая карточка отвечает за отдельный диагноз. Общая метрика не делает выводы одинаковыми: сравнивайте паттерн и фокус.</p>
   </div>
 </section>
 
-{% if message %}
-<div class="notice">{{ message }}</div>
+{% if activation_notice %}
+<div class="notice" role="status">{{ activation_notice }}</div>
 {% endif %}
 
-<section class="panel recommendation coach-first-hero">
+{% include "_coach_domain_cards.html" %}
+
+<section class="panel latest-coach-feedback">
   <div class="panel-head">
-    <h2>Current tracked recommendation</h2>
-    <span>{{ coach_ui.current.status if coach_ui.current.available else "empty" }}</span>
+    <h2>Последний матч: обратная связь по двум доменам</h2>
+    {% if latest_owned_match %}<a class="button ghost compact" href="/matches/{{ latest_owned_match.id }}">Открыть матч</a>{% endif %}
   </div>
-  {% if coach_ui.current.available %}
-  <div class="coach-first-grid">
-    <div>
-      <span class="source-badge">{{ coach_ui.current.category }}</span>
-      {% if coach_ui.current.needs_refresh %}
-      <span class="status-badge confidence-low">needs_refresh</span>
-      {% endif %}
+  {% if latest_match_feedback %}
+    {% set coach_match_feedback = latest_match_feedback %}
+    {% include "_coach_match_feedback.html" %}
+  {% else %}
+  <p>Подходящих owner-visible матчей пока нет. Просмотр страницы не запускает импорт или анализ.</p>
+  {% endif %}
+</section>
+
+<details class="panel legacy-tools">
+  <summary><strong>Технические / исторические инструменты</strong> — вторичные, не текущая Product truth</summary>
+  <p class="warning-text">Legacy recommendation и ручные AI/report действия сохранены для аудита. Они не заменяют две канонические карточки выше.</p>
+
+  <section class="legacy-section">
+    <h2>Current tracked recommendation — legacy / historical</h2>
+    {% if coach_ui.current.available %}
       <h3>{{ coach_ui.current.title }}</h3>
       <p>{{ coach_ui.current.description }}</p>
-      <p class="muted">{{ coach_ui.current.not_planner_label }}</p>
+      <p>{{ coach_ui.current.not_planner_label }}</p>
       {% if coach_ui.current.needs_refresh %}
-      <p class="warning-text">
-        Legacy recommendation: refresh this category before treating progress as accepted coach evidence.
-      </p>
+      <span class="status-badge confidence-low">needs_refresh</span>
+      <p>Legacy recommendation: refresh this category before treating progress as accepted coach evidence.</p>
+      <p>Historical/unverified evaluations are shown for audit only.</p>
       {% endif %}
-      <div class="next-action">
-        <span>Следующий матч</span>
-        <strong>{{ coach_ui.current.next_action }}</strong>
-      </div>
-      <p class="progress-line">
-        {{ coach_ui.current.completed_matches }}/{{ coach_ui.current.target_matches }}
-        матчей · score {{ coach_ui.current.progress_score }}/100
+      <p><strong>Следующий матч:</strong> {{ coach_ui.current.next_action }}</p>
+      <p><strong>Last evaluation:</strong>
+        {% if coach_ui.current.last_evaluation %}{{ coach_ui.current.last_evaluation.status }} · {{ coach_ui.current.last_evaluation.score }}/100{% else %}нет{% endif %}
       </p>
-      {% if not coach_ui.current.accepted_for_hard_progress %}
-      <p class="muted">Historical/unverified evaluations are shown for audit only.</p>
-      {% endif %}
-      <p>{{ coach_ui.current.summary }}</p>
-    </div>
-    <div class="goal-counts">
-      <span class="goal-badge green">Green {{ coach_ui.current.counts.green }}</span>
-      <span class="goal-badge yellow">Yellow {{ coach_ui.current.counts.yellow }}</span>
-      <span class="goal-badge red">Red {{ coach_ui.current.counts.red }}</span>
-      <span class="goal-badge gray">Gray {{ coach_ui.current.counts.gray }}</span>
-    </div>
-    <div class="detail-list">
-      <div><span>Success rule</span><strong>{{ coach_ui.current.success_rule or "n/a" }}</strong></div>
-      <div><span>Failure rule</span><strong>{{ coach_ui.current.failure_rule or "n/a" }}</strong></div>
-      <div>
-        <span>Last evaluation</span>
-        {% if coach_ui.current.last_evaluation %}
-        <strong>{{ coach_ui.current.last_evaluation.status }} · {{ coach_ui.current.last_evaluation.score }}/100</strong>
-        {% else %}
-        <strong>Новых матчей после постановки цели ещё нет.</strong>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  {% else %}
-  <div class="empty-state">
-    <h3>Нет отслеживаемой рекомендации</h3>
-    <p>{{ coach_ui.current.next_action }}</p>
-    <a class="button" href="/upload">Импортировать матчи</a>
-  </div>
-  {% endif %}
-</section>
-
-<section class="layout-three coach-first-support">
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Evidence / confidence</h2>
-      <span>Metric Truth</span>
-    </div>
-    {% if coach_ui.current.available %}
-    <div class="evidence-list">
-      {% for item in coach_ui.current.evidence %}
-      <div>
-        <div class="evidence-title">
-          <strong>{{ item.name }}</strong>
-          <span class="status-badge confidence-{{ 'high' if item.reliability in ['trusted', 'medium'] else 'medium' if item.reliability == 'approximate' else 'low' }}">{{ item.reliability }}</span>
-        </div>
-        <p>{{ item.metric_id }} · {{ item.decision }}</p>
-        <div class="mini-list">
-          <div><span>Baseline</span><strong>{{ item.baseline if item.baseline is not none else "n/a" }}</strong></div>
-          <div><span>Current</span><strong>{{ item.current if item.current is not none else "n/a" }}</strong></div>
-          <div><span>Target</span><strong>{{ item.target if item.target is not none else "n/a" }}</strong></div>
-        </div>
-        {% if item.confidence %}
-        <p class="muted">Confidence: {{ item.confidence.level }} · coverage {{ item.confidence.coverage }}%</p>
-        {% endif %}
-        {% if item.warning %}
-        <p class="warning-text">{{ item.warning }}</p>
-        {% endif %}
-      </div>
-      {% endfor %}
-    </div>
     {% else %}
-    <p>Evidence появится после создания tracked recommendation.</p>
+      <h3>Нет отслеживаемой рекомендации</h3>
+      <p>{{ coach_ui.current.next_action }}</p>
     {% endif %}
-  </div>
+  </section>
 
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Последний матч</h2>
-      <span>coach summary</span>
-    </div>
-    {% if coach_ui.latest_match.available %}
-    <div class="detail-list">
-      <div><span>Матч</span><strong>{{ coach_ui.latest_match.date.strftime("%Y-%m-%d") if coach_ui.latest_match.date else "n/a" }} · {{ coach_ui.latest_match.map_name }}</strong></div>
-      <div><span>Результат</span><strong>{{ coach_ui.latest_match.result }} · {{ coach_ui.latest_match.score }}</strong></div>
-      <div><span>ADR / KAST</span><strong>{{ coach_ui.latest_match.adr if coach_ui.latest_match.adr is not none else "n/a" }} / {{ coach_ui.latest_match.kast if coach_ui.latest_match.kast is not none else "n/a" }}</strong></div>
-      <div><span>Entry deaths</span><strong>{{ coach_ui.latest_match.entry_deaths if coach_ui.latest_match.entry_deaths is not none else "n/a" }}</strong></div>
-      <div>
-        <span>Оценка цели</span>
-        {% if coach_ui.latest_match.evaluation %}
-        <strong>{{ coach_ui.latest_match.evaluation.status }} · {{ coach_ui.latest_match.evaluation.comment }}</strong>
-        {% else %}
-        <strong>Для этого матча ещё нет оценки текущей цели.</strong>
-        {% endif %}
-      </div>
-    </div>
-    {% else %}
-    <p>{{ coach_ui.latest_match.message }}</p>
-    {% endif %}
-  </div>
-
-  <div class="panel">
-    <div class="panel-head">
-      <h2>AI validation</h2>
-      <span><span class="goal-dot {{ coach_ui.ai_validation.status_class }}">{{ coach_ui.ai_validation.status_class }}</span></span>
-    </div>
+  <section class="legacy-section">
+    <h2>AI validation</h2>
     <h3>{{ coach_ui.ai_validation.label }}</h3>
     <p>{{ coach_ui.ai_validation.detail }}</p>
-    <p class="muted">AI не запускается при открытии страницы. Handoff/generate/save остаются явными действиями.</p>
-  </div>
-</section>
+    <p>AI не запускается при открытии страницы. Все действия ниже выполняются только явно.</p>
+  </section>
 
-<section class="panel">
-  <div class="panel-head">
+  <section class="legacy-section">
     <h2>Metric Truth warnings</h2>
-    <span>weak facts are not hard claims</span>
-  </div>
-  {% if coach_ui.current.available and coach_ui.current.baseline_confidence.date_window %}
-  <p class="muted">
-    Baseline date window: {{ coach_ui.current.baseline_confidence.date_window.confidence }},
-    exact {{ coach_ui.current.baseline_confidence.date_window.exact_date_matches }},
-    excluded {{ coach_ui.current.baseline_confidence.date_window.excluded_from_exact_windows }}.
-  </p>
-  {% endif %}
-  <div class="category-grid">
-    {% for item in coach_ui.weak_metric_notes %}
-    <div class="category-card {{ 'critical' if item.decision == 'suppressed' else 'watch' }}">
-      <span>{{ item.metric_id }}</span>
-      <strong>{{ item.reliability }}</strong>
-      <p>{{ item.warning }}</p>
+    <div class="category-grid compact-category-grid">
+      {% for item in coach_ui.weak_metric_notes %}
+      <div class="category-card {{ 'critical' if item.decision == 'suppressed' else 'watch' }}">
+        <strong>{{ item.metric_id }}</strong>
+        <span>{{ item.reliability }} · {{ item.decision }}</span>
+        <p>{{ item.warning }}</p>
+      </div>
+      {% endfor %}
     </div>
-    {% endfor %}
-  </div>
-</section>
+  </section>
 
-<section class="panel recommendation">
-  <div class="panel-head">
-    <h2>AI-тренер</h2>
-    <span>{{ ai_health.provider }} · {{ ai_health.status }}</span>
-  </div>
-  <div class="actions inline-actions">
-    <form action="/coach/ai-generate" method="post">
+  <section class="legacy-section">
+    <h2>Явные технические действия</h2>
+    <div class="actions">
+      <form action="/coach/ai-handoff" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="button ghost" type="submit">Подготовить AI handoff</button>
+      </form>
+      <form action="/coach/ai-generate" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="button ghost" type="submit">Явно запустить AI provider</button>
+      </form>
+      <form action="/report/generate" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="button ghost" type="submit">Сгенерировать legacy-отчёт</button>
+      </form>
+      <a class="button ghost" href="/report">Открыть отчёт</a>
+      <a class="button ghost" href="/coach/technical-sync">Открыть technical sync</a>
+    </div>
+    {% if ai_handoff %}
+    <form action="/coach/ai-result" method="post" class="upload-form stacked">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="button ghost" type="submit">Сгенерировать через провайдера</button>
+      <input type="hidden" name="source_ref" value="manual-web">
+      <label for="ai_result_markdown">Ручной результат AI</label>
+      <textarea id="ai_result_markdown" name="ai_result_markdown" rows="6"></textarea>
+      <button class="button" type="submit">Сохранить для validator</button>
     </form>
-  </div>
-  {% if ai_handoff %}
-  <div class="detail-list">
-    <div><span>Статус</span><strong>{{ ai_handoff.status }}</strong></div>
-    <div><span>Prompt</span><strong>{{ ai_handoff.prompt_path }}</strong></div>
-    <div><span>Payload</span><strong>{{ ai_handoff.payload_path }}</strong></div>
-    <div><span>Команда</span><strong>{{ ai_handoff.command }}</strong></div>
-  </div>
-  <p class="muted">Это безопасный пакет данных для AI. Позже сюда же подключим локального провайдера без смены coach-логики.</p>
-  <form action="/coach/ai-result" method="post" class="upload-form stacked">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <input type="hidden" name="source_ref" value="{{ ai_handoff.prompt_path }}">
-    <label for="ai_result_markdown">Вставить результат AI</label>
-    <textarea id="ai_result_markdown" name="ai_result_markdown" rows="8" placeholder="Вставьте сюда AI-отчёт тренера"></textarea>
-    <button class="button" type="submit">Сохранить AI-отчёт</button>
-  </form>
-  {% else %}
-  <p>Пакет данных для AI пока не создан. Нажмите кнопку выше, чтобы собрать prompt и JSON payload.</p>
-  {% endif %}
-</section>
-
-{% if ai_report %}
-<section class="panel report">
-  <div class="panel-head">
-    <h2>Последний AI-отчёт тренера</h2>
-    <span>{{ ai_report.created_at.strftime("%Y-%m-%d %H:%M") }}</span>
-  </div>
-  <p class="muted">Источник: {{ ai_report.source_ref or "manual" }}</p>
-  <article>{{ ai_report.report_markdown }}</article>
-</section>
-{% endif %}
-
-<section class="panel">
-  <div class="panel-head">
-    <h2>История AI-отчётов</h2>
-    <span>сохранённые снимки</span>
-  </div>
-  <table>
-    <thead><tr><th>ID</th><th>Provider</th><th>Матчи</th><th>Payload</th><th>Создан</th><th>Источник</th></tr></thead>
-    <tbody>
-    {% for item in ai_report_history %}
-      <tr>
-        <td>{{ item.id }}</td>
-        <td>{{ item.provider or "n/a" }}</td>
-        <td>{{ item.matches_count }}</td>
-        <td>{{ item.payload_hash or "n/a" }}</td>
-        <td>{{ item.created_at[:16].replace("T", " ") if item.created_at else "n/a" }}</td>
-        <td class="comment-cell">{{ item.source_ref or "manual" }}</td>
-      </tr>
-    {% else %}
-      <tr><td colspan="6">AI-отчёты пока не сохранены.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-</section>
-
-<section class="panel">
-  <div class="panel-head">
-    <h2>Категории тренера</h2>
-    <span>стрельба / карты / гранаты / выживание</span>
-  </div>
-  <div class="category-grid">
-    {% for item in coach_categories %}
-    <div class="category-card {{ item.status }}">
-      <span>{{ item.label }}</span>
-      <strong>{{ item.score if item.score is not none else "no data" }}</strong>
-      <p>{{ item.top_mistake.title if item.top_mistake else "Критичных проблем не найдено или данных пока нет." }}</p>
-    </div>
-    {% endfor %}
-  </div>
-</section>
-
-<section class="panel">
-  <div class="panel-head">
-    <h2>Стрельба и дуэли</h2>
-    <span>{{ aim_profile.confidence }}</span>
-  </div>
-  <p>{{ aim_profile.interpretation }}</p>
-  <div class="stat-grid">
-    <div><strong>{{ aim_profile.averages.adr or "n/a" }}</strong><span>ADR</span></div>
-    <div><strong>{{ aim_profile.averages.kd or "n/a" }}</strong><span>K/D</span></div>
-    <div><strong>{{ aim_profile.averages.headshot_percent or "n/a" }}%</strong><span>HS%</span></div>
-    <div><strong>{{ aim_profile.averages.opening_duel_success or "n/a" }}%</strong><span>Успех первых дуэлей</span></div>
-  </div>
-  <p class="muted">Пробелы данных: {{ aim_profile.data_gaps|join("; ") }}</p>
-</section>
-
-<section class="panel">
-  <div class="panel-head">
-    <h2>Готовность DEM-данных</h2>
-    <span>{{ parse_overview.coverage }}% матчей с глубоким парсингом</span>
-  </div>
-  <div class="stat-grid">
-    <div><strong>{{ parse_overview.matches_parsed }}/{{ parse_overview.matches_total }}</strong><span>Матчи</span></div>
-    <div><strong>{{ parse_overview.rounds }}</strong><span>Раунды</span></div>
-    <div><strong>{{ parse_overview.duels }}</strong><span>Дуэли</span></div>
-    <div><strong>{{ parse_overview.grenades }}</strong><span>Гранаты</span></div>
-  </div>
-  <div class="layout-two">
-    <div>
-      <h3>Последний parsed artifact</h3>
-      {% if parse_overview.latest %}
-      <div class="detail-list">
-        <div><span>Матч</span><strong>#{{ parse_overview.latest.match_id }}</strong></div>
-        <div><span>Парсер</span><strong>{{ parse_overview.latest.parser_name }} {{ parse_overview.latest.parser_version or "" }}</strong></div>
-        <div><span>Версия payload</span><strong>{{ parse_overview.latest.payload_version }}</strong></div>
-        <div><span>Обновлено</span><strong>{{ parse_overview.latest.parsed_at.strftime("%Y-%m-%d %H:%M") if parse_overview.latest.parsed_at else "n/a" }}</strong></div>
-      </div>
-      {% else %}
-      <p>Глубокий парсинг ещё не сохранён. Нужно переобработать DEM-файлы.</p>
-      {% endif %}
-    </div>
-    <div>
-      <h3>Топ оружия по parsed data</h3>
-      <table>
-        <thead><tr><th>Оружие</th><th>Kills</th><th>Урон</th><th>Точность</th></tr></thead>
-        <tbody>
-        {% for weapon in parse_overview.top_weapons %}
-          <tr>
-            <td>{{ weapon.weapon }}</td>
-            <td>{{ weapon.kills }}</td>
-            <td>{{ weapon.damage }}</td>
-            <td>{{ weapon.accuracy if weapon.accuracy is not none else "n/a" }}%</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="4">Оружейных данных пока нет.</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-<section class="layout-two">
-  <div class="panel focus">
-    <div class="panel-head">
-      <h2>Главный фокус</h2>
-      <span>{{ focus.category }}</span>
-    </div>
-    <h3>{{ focus.title }}</h3>
-    <p>{{ focus.evidence }}</p>
-    <ul>
-      {% for action in focus.actions %}
-      <li>{{ action }}</li>
-      {% endfor %}
-    </ul>
-  </div>
-
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Последний отчёт</h2>
-      <span>{{ report.created_at.strftime("%Y-%m-%d") if report else "нет" }}</span>
-    </div>
-    {% if report %}
-    <p>Отчёт #{{ report.id }} построен по {{ report.matches_count }} матчам.</p>
-    <a class="button ghost" href="/report">Читать отчёт</a>
-    {% else %}
-    <p>Отчёта пока нет. Сгенерируйте его после импорта матчей.</p>
     {% endif %}
-  </div>
-</section>
+  </section>
 
-<section class="panel">
-  <div class="panel-head">
-    <h2>Структурные ошибки</h2>
-    <span>evidence для AI coach</span>
-  </div>
-  <table>
-    <thead><tr><th>Категория</th><th>Ошибка</th><th>Severity</th><th>Confidence</th><th>Evidence</th><th>Рекомендация</th></tr></thead>
-    <tbody>
-      {% for mistake in structured_mistakes %}
-      <tr>
-        <td>{{ mistake.category }}</td>
-        <td>{{ mistake.title }}</td>
-        <td><span class="status-badge {{ mistake.severity }}">{{ mistake.severity }}</span></td>
-        <td>{{ mistake.confidence }}</td>
-        <td class="comment-cell">{{ mistake.evidence }}</td>
-        <td class="comment-cell">{{ mistake.recommendation }}</td>
-      </tr>
-      {% else %}
-      <tr><td colspan="6">Структурных ошибок пока не найдено. Нужно больше матчей или более полные DEM данные.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</section>
-
-<section class="panel">
-  <div class="panel-head">
-    <h2>Активные цели по направлениям</h2>
-    <span>отслеживание по категориям</span>
-  </div>
-  <div class="category-grid">
+  {% if all_recommendation_progress %}
+  <section class="legacy-section">
+    <h2>Legacy recommendation controls</h2>
     {% for item in all_recommendation_progress %}
-    <div class="category-card {{ 'critical' if item.progress_score < 40 else 'watch' if item.progress_score < 70 else 'ok' }}">
-      <span>{{ item.recommendation.category }}</span>
-      <strong>{{ item.progress_score }}/100</strong>
-      <p>{{ item.recommendation.title }}</p>
-      <div class="mini-list">
-        <div><span>Матчи</span><strong>{{ item.completed_matches }}/{{ item.target_matches }}</strong></div>
-        <div><span>Green</span><strong>{{ item.counts.green }}</strong></div>
-        <div><span>Yellow</span><strong>{{ item.counts.yellow }}</strong></div>
-        <div><span>Red</span><strong>{{ item.counts.red }}</strong></div>
-      </div>
+    <article class="legacy-recommendation-row">
+      <strong>{{ item.recommendation.title }}</strong>
+      <span>{{ item.recommendation.status }}</span>
       <div class="mini-actions">
         <form action="/coach/recommendations/{{ item.recommendation.id }}/extend" method="post">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="additional_matches" value="5">
-          <button class="button ghost" type="submit">Продлить</button>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="additional_matches" value="5">
+          <button class="button ghost compact" type="submit">Продлить</button>
         </form>
         <form action="/coach/recommendations/category/{{ item.recommendation.category }}/restart" method="post">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button class="button ghost" type="submit">Перезапустить</button>
+          <button class="button ghost compact" type="submit">Перезапустить</button>
         </form>
         <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="status" value="paused">
-          <button class="button ghost" type="submit">Пауза</button>
-        </form>
-        <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="status" value="completed">
-          <button class="button ghost" type="submit">Готово</button>
-        </form>
-        <form action="/coach/recommendations/{{ item.recommendation.id }}/status" method="post">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="status" value="archived">
-          <button class="button ghost" type="submit">Архив</button>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="status" value="paused">
+          <button class="button ghost compact" type="submit">Пауза</button>
         </form>
       </div>
-    </div>
-    {% else %}
-    <p>Активные цели появятся после импорта матчей.</p>
+    </article>
     {% endfor %}
-  </div>
-</section>
+  </section>
+  {% endif %}
 
-<section class="layout-two">
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Сводка целей</h2>
-      <span>жизненный цикл категорий</span>
-    </div>
-    <table>
-      <thead><tr><th>Категория</th><th>Статус</th><th>Score</th><th>Матчи</th><th>История</th></tr></thead>
-      <tbody>
-      {% for item in recommendation_categories %}
-        <tr>
-          <td>{{ item.category }}</td>
-          <td>{{ item.active_status or "none" }}</td>
-          <td>{{ item.progress_score if item.progress_score is not none else "n/a" }}</td>
-          <td>{{ item.completed_matches }}/{{ item.target_matches }}</td>
-          <td>{{ item.history_count }}</td>
-        </tr>
-      {% else %}
-        <tr><td colspan="5">Категории появятся после импорта матчей.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  <div class="panel">
-    <div class="panel-head">
-      <h2>История целей</h2>
-      <span>последние 20</span>
-    </div>
-    <table>
-      <thead><tr><th>ID</th><th>Категория</th><th>Статус</th><th>Target</th></tr></thead>
-      <tbody>
-      {% for item in recommendation_history %}
-        <tr>
-          <td>{{ item.id }}</td>
-          <td>{{ item.category }}</td>
-          <td><span class="source-badge">{{ item.status }}</span></td>
-          <td>{{ item.target_period_matches }}</td>
-        </tr>
-      {% else %}
-        <tr><td colspan="4">Истории целей пока нет.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-
-{% if recommendation_progress %}
-<section class="panel recommendation">
-  <div class="panel-head">
-    <h2>Активная тренировочная цель</h2>
-    <span>{{ recommendation_progress.recommendation.status }}</span>
-  </div>
-  <div class="recommendation-grid">
-    <div>
-      <h3>{{ recommendation_progress.recommendation.title }}</h3>
-      <p>{{ recommendation_progress.recommendation.description }}</p>
-      <p class="progress-line">
-        Прогресс:
-        {{ recommendation_progress.completed_matches }}/{{ recommendation_progress.target_matches }}
-        матчей · score {{ recommendation_progress.progress_score }}/100
-      </p>
-      <p>{{ recommendation_progress.summary }}</p>
-      <p class="muted">{{ recommendation_progress.last_comment }}</p>
-    </div>
-    <div class="goal-counts">
-      <span class="goal-badge green">Green {{ recommendation_progress.counts.green }}</span>
-      <span class="goal-badge yellow">Yellow {{ recommendation_progress.counts.yellow }}</span>
-      <span class="goal-badge red">Red {{ recommendation_progress.counts.red }}</span>
-      <span class="goal-badge gray">Gray {{ recommendation_progress.counts.gray }}</span>
-    </div>
-    <div class="goal-metrics">
-      <div><span>Entry deaths</span><strong>{{ recommendation_progress.baseline.entry_deaths_per_match or "n/a" }} → {{ recommendation_progress.current.entry_deaths_per_match or "n/a" }}</strong></div>
-      <div><span>Early deaths</span><strong>{{ recommendation_progress.baseline.early_deaths_per_match or "n/a" }} → {{ recommendation_progress.current.early_deaths_per_match or "n/a" }}</strong></div>
-      <div><span>KAST</span><strong>{{ recommendation_progress.baseline.kast or "n/a" }} → {{ recommendation_progress.current.kast or "n/a" }}</strong></div>
-      <div><span>ADR</span><strong>{{ recommendation_progress.baseline.adr or "n/a" }} → {{ recommendation_progress.current.adr or "n/a" }}</strong></div>
-    </div>
-  </div>
-</section>
-{% else %}
-<section class="panel empty-state">
-  <h2>Активной цели пока нет</h2>
-  <p>Импортируйте хотя бы несколько матчей. Система создаст первую цель автоматически.</p>
-  <a class="button" href="/upload">Импортировать матчи</a>
-</section>
-{% endif %}
-
-<section class="panel">
-  <div class="panel-head">
-    <h2>Оценка последних матчей по цели</h2>
-    <span>green / yellow / red</span>
-  </div>
-  <table>
-    <thead><tr><th>Дата</th><th>Карта</th><th>Результат</th><th>Entry</th><th>Early</th><th>KAST</th><th>ADR</th><th>Статус</th><th>Комментарий</th></tr></thead>
-    <tbody>
-      {% for match in evaluated_matches %}
-      {% set evaluation = evaluations_by_match_id.get(match.id) %}
-      <tr>
-        <td>{{ match.played_at.strftime("%Y-%m-%d") if match.played_at else "n/a" }}</td>
-        <td>{{ match.map_name or "n/a" }}</td>
-        <td><span class="pill {{ match.result }}">{{ match.result or "n/a" }}</span></td>
-        <td>{{ match.entry_deaths if match.entry_deaths is not none else "n/a" }}</td>
-        <td>{{ match.early_deaths if match.early_deaths is not none else "n/a" }}</td>
-        <td>{{ match.kast if match.kast is not none else "n/a" }}</td>
-        <td>{{ match.adr if match.adr is not none else "n/a" }}</td>
-        <td><span class="goal-dot {{ evaluation.status }}">{{ evaluation.status }}</span></td>
-        <td class="comment-cell">{{ evaluation.coach_comment }}</td>
-      </tr>
-      {% else %}
-      <tr><td colspan="9">Новых матчей после постановки цели пока нет.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</section>
+  <details class="technical-detail">
+    <summary>Контракт представления</summary>
+    <p>UI schema: {{ coach_workspace.schema_version }}</p>
+    <p>Backend schema: {{ coach_workspace.backend_schema_version or "unavailable" }}</p>
+    <p>Порядок: {{ coach_workspace.domain_order|join(" → ") }}</p>
+  </details>
+</details>
 {% endblock %}

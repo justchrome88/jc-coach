@@ -32,6 +32,7 @@ from app.services.coach.ai import (
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
+from app.services.coach.domain_analysis import activate_domain_proposal
 from app.services.coach.mistakes import (
     category_scorecard,
     detect_structured_mistakes,
@@ -45,6 +46,7 @@ from app.services.coach.provider import (
 )
 from app.services.coach.reports import generate_report, latest_report, markdown_to_html
 from app.services.coach.rules import build_coach_focus
+from app.services.coach_domain_model import require_canonical_domain
 from app.services.ingestion.demo_downloader import steam_demo_downloader_configured
 from app.services.ingestion.demo_import import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.ingestion.demo_storage import demo_storage_report, write_demo_storage_manifest
@@ -102,6 +104,12 @@ from app.services.metrics.recommendations import (
     update_recommendation_status,
 )
 from app.services.owner.auth import authenticate_user, current_user_from_session, login_user, logout_user, register_user
+from app.services.owner.coach_ui import (
+    compose_coach_workspace,
+    compose_match_feedback,
+    dashboard_coach_summary,
+)
+from app.services.owner.scope import get_owned_match
 from app.services.owner.sync_batch import (
     MAX_SUCCESSFUL_TARGET,
     get_owner_coach_sync_batch,
@@ -109,7 +117,7 @@ from app.services.owner.sync_batch import (
     run_owner_coach_sync_batch_step,
     start_owner_coach_sync_batch,
 )
-from app.services.shared.i18n import normalize_locale
+from app.services.shared.i18n import normalize_locale, translate
 from app.services.shared.match_queries import is_playable_match, playable_match_select
 from app.services.shared.metric_policy import metric_definition, metric_warning, usage_decision
 
@@ -213,6 +221,8 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     auth_redirect = _require_user_redirect(request, db)
     if auth_redirect:
         return auth_redirect
+    owner = current_user_from_session(request, db)
+    assert owner is not None
     matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     context = metric_context(matches)
     summary = get_summary(matches, date_windowed=True, context=context)
@@ -224,6 +234,11 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     all_recommendation_progress = get_all_recommendation_progress(db)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
     recent_matches = list(reversed(exact_recent_matches(matches, 10, context=context)))
+    coach_workspace = compose_coach_workspace(
+        db,
+        owner_user_id=owner.id,
+        locale=normalize_locale(request.cookies.get("locale")),
+    )
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -239,6 +254,7 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
             "evaluations_by_match_id": evaluations_by_match_id,
             "recent_matches": recent_matches,
             "chart_data": chart_series(matches, context=context),
+            "coach_summary": dashboard_coach_summary(coach_workspace),
         },
     )
 
@@ -305,7 +321,28 @@ def stats_page(
 
 
 @router.get("/coach")
-def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], message: str | None = None):
+def coach_page(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    message: str | None = None,
+    notice: str | None = None,
+):
+    owner = current_user_from_session(request, db)
+    if owner is None:
+        return RedirectResponse("/login", status_code=303)
+    locale = normalize_locale(request.cookies.get("locale"))
+    coach_workspace = compose_coach_workspace(db, owner_user_id=owner.id, locale=locale)
+    owned_matches = db.scalars(
+        playable_match_select()
+        .where(Match.user_id == owner.id)
+        .order_by(Match.played_at.asc().nulls_last(), Match.id.asc())
+    ).all()
+    latest_owned_match = owned_matches[-1] if owned_matches else None
+    latest_match_feedback = (
+        compose_match_feedback(coach_workspace, match_id=latest_owned_match.id)
+        if latest_owned_match is not None
+        else None
+    )
     matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     context = metric_context(matches)
     exact_matches = exact_date_matches(matches, context=context)
@@ -357,8 +394,41 @@ def coach_page(request: Request, db: Annotated[Session, Depends(get_db)], messag
             "recommendation_categories": recommendation_categories,
             "parse_overview": parse_overview,
             "coach_ui": coach_ui,
+            "coach_workspace": coach_workspace,
+            "latest_owned_match": latest_owned_match,
+            "latest_match_feedback": latest_match_feedback,
+            "activation_notice": _activation_notice(locale, notice),
         },
     )
+
+
+@router.post("/coach/domains/{domain}/activate")
+def activate_coach_domain_page(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    domain: str,
+    proposal_id: Annotated[int, Form()],
+):
+    owner = current_user_from_session(request, db)
+    if owner is None:
+        return RedirectResponse("/login", status_code=303)
+    try:
+        canonical_domain = require_canonical_domain(domain)
+        result = activate_domain_proposal(
+            db,
+            owner_user_id=owner.id,
+            proposal_id=proposal_id,
+            domain_key=canonical_domain,
+        )
+        db.commit()
+    except PermissionError:
+        db.rollback()
+        return RedirectResponse("/coach?notice=activation_denied", status_code=303)
+    except ValueError:
+        db.rollback()
+        return RedirectResponse("/coach?notice=activation_unavailable", status_code=303)
+    notice = "activation_reused" if result["reused"] else "activation_success"
+    return RedirectResponse(f"/coach?notice={notice}#{canonical_domain}", status_code=303)
 
 
 @router.get("/coach/technical-sync")
@@ -788,9 +858,14 @@ def matches_page(
 
 @router.get("/matches/{match_id}")
 def match_detail_page(request: Request, db: Annotated[Session, Depends(get_db)], match_id: int):
-    match = db.get(Match, match_id)
+    owner = current_user_from_session(request, db)
+    if owner is None:
+        return RedirectResponse("/login", status_code=303)
+    match = get_owned_match(db, user_id=owner.id, match_id=match_id)
     if match is None or not is_playable_match(match):
         return RedirectResponse("/matches", status_code=303)
+    locale = normalize_locale(request.cookies.get("locale"))
+    coach_workspace = compose_coach_workspace(db, owner_user_id=owner.id, locale=locale)
     evaluations_by_match_id = get_evaluations_by_match_id(db)
     all_matches = db.scalars(playable_match_select().order_by(Match.played_at.asc().nulls_last(), Match.id.asc())).all()
     match_mistakes = mistakes_by_match_id(all_matches).get(match.id, [])
@@ -806,6 +881,7 @@ def match_detail_page(request: Request, db: Annotated[Session, Depends(get_db)],
             "evaluation": evaluations_by_match_id.get(match.id),
             "match_mistakes": match_mistakes,
             "coach_sections": match_coach_sections(match, match_mistakes),
+            "coach_match_feedback": compose_match_feedback(coach_workspace, match_id=match.id),
         },
     )
 
@@ -1229,6 +1305,16 @@ def _parse_date(value: str) -> datetime:
 
 def _require_user_redirect(request: Request, db: Session) -> RedirectResponse | None:
     return None if current_user_from_session(request, db) else RedirectResponse("/login", status_code=303)
+
+
+def _activation_notice(locale: str, notice: str | None) -> str | None:
+    key = {
+        "activation_success": "coach.notice.activation_success",
+        "activation_reused": "coach.notice.activation_reused",
+        "activation_denied": "coach.notice.activation_denied",
+        "activation_unavailable": "coach.notice.activation_unavailable",
+    }.get(notice or "")
+    return translate(locale, key) if key else None
 
 
 def _select_stats_matches(

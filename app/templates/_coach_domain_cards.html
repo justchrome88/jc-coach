@@ -1,0 +1,134 @@
+<div class="coach-domain-grid" data-schema-version="{{ coach_workspace.schema_version }}">
+  {% for card in coach_workspace.cards %}
+  <article class="panel coach-domain-card state-{{ card.presentation_state }}" id="{{ card.domain_key }}" data-domain="{{ card.domain_key }}">
+    <header class="coach-card-head">
+      <div>
+        <p class="eyebrow">{{ card.focus_label }}</p>
+        <h2>{{ card.domain_label }}</h2>
+      </div>
+      <span class="status-badge state-label">{{ card.state_label }}</span>
+    </header>
+    <p class="state-explanation">{{ card.state_explanation }}</p>
+
+    {% if card.analysis.headline %}
+    <section aria-labelledby="{{ card.domain_key }}-diagnosis">
+      <h3 id="{{ card.domain_key }}-diagnosis">{{ card.analysis.headline }}</h3>
+      {% if card.analysis.hypothesis %}<p>{{ card.analysis.hypothesis }}</p>{% endif %}
+      <dl class="coach-facts">
+        {% if card.analysis.primary_pattern %}
+        <div><dt>Основной паттерн</dt><dd>{{ card.analysis.primary_pattern }}</dd></div>
+        {% endif %}
+        {% if card.analysis.recommended_focus %}
+        <div><dt>Фокус</dt><dd>{{ card.analysis.recommended_focus }}</dd></div>
+        {% endif %}
+      </dl>
+    </section>
+    {% endif %}
+
+    {% if card.confidence.level or card.confidence.rationale %}
+    <section class="coach-confidence" aria-label="Уверенность анализа">
+      <strong>Уверенность: {{ card.confidence.label }}</strong>
+      {% if card.confidence.rationale %}<p>{{ card.confidence.rationale }}</p>{% endif %}
+    </section>
+    {% endif %}
+
+    {% if card.evidence or card.counterevidence %}
+    <details class="card-details">
+      <summary>Доказательства и контрдоказательства</summary>
+      {% if card.evidence %}
+      <h3>Доказательства</h3>
+      <ul class="evidence-points">
+        {% for item in card.evidence %}
+        <li><strong>{{ item.metric_key }}</strong>: {{ item.value }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if card.counterevidence %}
+      <h3>Контрдоказательства</h3>
+      <ul class="evidence-points">
+        {% for item in card.counterevidence %}
+        <li><strong>{{ item.metric_key }}</strong>: {{ item.value }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if card.sample_matches %}
+      <p class="muted">Примеры матчей: {{ card.sample_matches|join(", ") }}</p>
+      {% endif %}
+    </details>
+    {% endif %}
+
+    <section aria-label="Метрика и прогресс">
+      <div class="coach-metric-grid">
+        <div><span>Метрика</span><strong>{{ card.metrics.name or "—" }}</strong></div>
+        <div><span>Базовая линия</span><strong>{{ card.metrics.baseline if card.metrics.baseline is not none else "—" }}</strong></div>
+        <div><span>Текущее значение</span><strong>{{ card.metrics.current if card.metrics.current is not none else "—" }}</strong></div>
+        <div><span>Цель</span><strong>{{ card.metrics.target if card.metrics.target is not none else "—" }}</strong></div>
+      </div>
+      {% if card.baseline.matches_count is not none %}
+      <p class="muted">Базовая линия: {{ card.baseline.matches_count }} матчей{% if card.baseline.analysis_cutoff %}, срез {{ card.baseline.analysis_cutoff[:10] }}{% endif %}.</p>
+      {% endif %}
+      {% if card.proposal.target_delta is not none %}
+      <p class="muted">Целевое изменение: {{ card.proposal.target_delta }}.</p>
+      {% endif %}
+    </section>
+
+    {% if card.mission.active %}
+    <section class="mission-status" aria-label="Активная миссия">
+      <strong>Активная миссия{% if card.mission.title %}: {{ card.mission.title }}{% endif %}</strong>
+      {% if card.mission.activated_at %}<p>Активирована: {{ card.mission.activated_at[:16].replace("T", " ") }}</p>{% endif %}
+      {% if card.mission.focus %}<p>{{ card.mission.focus }}</p>{% endif %}
+      <button class="button" type="button" disabled>Миссия активна</button>
+    </section>
+    {% elif card.activation.allowed %}
+    <form action="/coach/domains/{{ card.domain_key }}/activate" method="post" class="activation-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="proposal_id" value="{{ card.activation.proposal_id }}">
+      <button class="button" type="submit">Активировать миссию</button>
+      <p>Активация применяется только к этой карточке. Другой домен не изменится.</p>
+    </form>
+    {% else %}
+    <p class="activation-unavailable">{{ card.activation.reason }}</p>
+    {% endif %}
+
+    <section class="progress-summary" aria-labelledby="{{ card.domain_key }}-progress">
+      <h3 id="{{ card.domain_key }}-progress">Прогресс: {{ card.progress.status_label }}</h3>
+      {% if card.progress.minimum_matches %}
+      <p class="sample-count"><strong>{{ card.progress.sample_matches or 0 }} / {{ card.progress.minimum_matches }}</strong> — минимальное окно матчей.</p>
+      {% endif %}
+      {% if card.progress.explanation %}<p>{{ card.progress.explanation }}</p>{% endif %}
+      {% for reason in card.progress.reason_labels %}<p class="muted">{{ reason }}</p>{% endfor %}
+      {% if card.progress.history %}
+      <details class="card-details">
+        <summary>Недавняя история прогресса ({{ card.progress.history|length }})</summary>
+        <ol class="progress-history">
+          {% for item in card.progress.history %}
+          <li>
+            <strong>{{ item.status_label }}</strong>
+            <span>{{ item.sample_matches or 0 }} матчей · {{ item.current_value if item.current_value is not none else "—" }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+      </details>
+      {% endif %}
+    </section>
+
+    {% if card.caveats %}
+    <details class="card-details">
+      <summary>Ограничения данных ({{ card.caveats|length }})</summary>
+      <ul>{% for caveat in card.caveats %}<li>{{ caveat }}</li>{% endfor %}</ul>
+      <p>{{ card.provenance_warning }}</p>
+    </details>
+    {% endif %}
+
+    <details class="card-details technical-detail">
+      <summary>Технические сведения</summary>
+      <dl class="coach-facts">
+        <div><dt>Domain</dt><dd>{{ card.domain_key }}</dd></div>
+        <div><dt>Backend state</dt><dd>{{ card.backend_state }}</dd></div>
+        {% if card.technical.proposal_id %}<div><dt>Proposal</dt><dd>#{{ card.technical.proposal_id }}</dd></div>{% endif %}
+        {% if card.technical.mission_id %}<div><dt>Mission</dt><dd>#{{ card.technical.mission_id }}</dd></div>{% endif %}
+      </dl>
+    </details>
+  </article>
+  {% endfor %}
+</div>
