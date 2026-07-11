@@ -512,11 +512,39 @@ def _metadata_with_contract_provenance(
         "sample_matches": 1,
         "sample_rounds": len(accepted_phase.get("round_numbers", [])),
         "input_event_count": value.get("event_count"),
-        "numerators": {str(key): value for key, value in metrics.items()},
-        "denominators": {},
+        "numerators": _metric_numerators(metrics),
+        "denominators": _metric_denominators(metrics),
         "reason_codes": reason_codes,
     }
     return value
+
+
+def _metric_numerators(metrics: MetricPayload) -> dict[str, Any]:
+    numerators = {str(key): item for key, item in metrics.items()}
+    derived = {
+        "kd_ratio": metrics.get("kills"),
+        "headshot_kill_rate": metrics.get("headshot_kills"),
+        "survival_rate": metrics.get("survived_rounds"),
+        "opening_duel_win_rate": metrics.get("opening_duel_wins"),
+        "opening_death_rate": metrics.get("opening_deaths"),
+        "traded_death_rate": metrics.get("traded_deaths"),
+        "untraded_death_rate": metrics.get("untraded_deaths"),
+    }
+    numerators.update({key: item for key, item in derived.items() if key in metrics and item is not None})
+    return numerators
+
+
+def _metric_denominators(metrics: MetricPayload) -> dict[str, Any]:
+    candidates = {
+        "kd_ratio": metrics.get("deaths"),
+        "headshot_kill_rate": metrics.get("kills"),
+        "survival_rate": metrics.get("rounds"),
+        "opening_duel_win_rate": metrics.get("opening_duels"),
+        "opening_death_rate": metrics.get("rounds"),
+        "traded_death_rate": metrics.get("deaths"),
+        "untraded_death_rate": metrics.get("deaths"),
+    }
+    return {key: item for key, item in candidates.items() if key in metrics and item is not None}
 
 
 def _dumps_list(value: Sequence[str]) -> str:

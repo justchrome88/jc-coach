@@ -43,8 +43,8 @@ def upgrade(connection: sqlite3.Connection) -> None:
             confidence_baseline_json TEXT NOT NULL,
             caveats_json TEXT NOT NULL,
             metadata_json TEXT NOT NULL,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
             CONSTRAINT uq_metric_snapshot_semantic_identity UNIQUE (
                 owner_user_id, match_id, player_key, metric_domain,
                 semantic_version, source, source_event_set_id
@@ -98,8 +98,8 @@ def rollback(connection: sqlite3.Connection) -> None:
             confidence_baseline_json TEXT NOT NULL,
             caveats_json TEXT NOT NULL,
             metadata_json TEXT NOT NULL,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
             CONSTRAINT uq_metric_snapshot_match_player_source UNIQUE (match_id, player_key, source)
         );
         INSERT INTO metric_snapshots

@@ -9,11 +9,18 @@ Last updated: 2026-07-11.
 - H01A_STATUS: PASS_WITH_WARNINGS.
 - H01A_M01_STATUS: PASS_WITH_WARNINGS.
 - H01A_M02_STATUS: PASS_WITH_WARNINGS.
+- H01A_M03_STATUS: PASS_WITH_WARNINGS.
 - METRIC_CONTRACTS_VERSIONED: true.
 - METRIC_VALIDATION_GATE_IMPLEMENTED: true.
 - MATCH_124_GOLDEN_FIXTURE_PASS: true.
 - COACH_REJECTS_UNVALIDATED_METRICS: true.
-- PRODUCTION_BACKFILL_PERFORMED: false.
+- PRODUCTION_BACKFILL_PERFORMED: true.
+- METRIC_PRODUCTION_MIGRATION_COMPLETE: true.
+- METRIC_TRUSTED_SUBSET_ACCEPTED: true.
+- GLOBAL_METRIC_CORRECTNESS_ACCEPTED: false.
+- COACH_VALIDATED_INPUT_GATE_ACTIVE: true.
+- ACTIVE_MISSION_INPUTS_VALIDATED: false.
+- MATCH_124_GROUND_TRUTH_ACCEPTED: true.
 - METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
 - METRIC_DOCUMENTATION_CANONICALIZED: true.
 - MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
@@ -50,8 +57,12 @@ Last updated: 2026-07-11.
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01A-M03_METRIC_REPROCESSING_GROUND_TRUTH_ACCEPTANCE_AND_H01B_RELEASE.
+- NEXT_TASK: H01A-M04_ACTIVE_MISSION_VALIDATED_METRIC_REBIND.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A-M03 preserved 1,153 legacy snapshots, appended 110 owner-only v2
+  snapshots across 55 retained artifacts/event sets, accepted the trusted
+  match-124 subset, and reconciled historical evidence idempotently. Mission
+  3 still requires quarantined `utility_damage`, so H01B remains blocked.
 - H01A-M02 versioned critical contracts and append-only snapshot identity,
   repaired phase/core-combat/alias root causes, and enforced validated-only
   owner/coach selection. ADR, KAST, ambiguous damage and legacy utility

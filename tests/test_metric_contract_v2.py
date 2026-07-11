@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from app.db.models import Match, MetricSnapshot, SteamAccount, User
+from app.services.core_combat_metrics import calculate_core_combat_metrics
 from app.services.match_phase import accepted_events, accepted_match_phase, player_participation_rounds
 from app.services.metric_downstream_state import (
     MATCH_124_DISPOSITIONS,
@@ -19,6 +20,7 @@ from app.services.metric_snapshots import (
     process_persisted_match_metric_snapshots_for_coach_loop,
     select_metric_snapshots_for_analysis_scope,
 )
+from app.services.parser_artifact_reader import normalized_events_from_parser_artifact
 from app.services.weapon_names import canonical_weapon_name
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,6 +97,41 @@ def test_match_124_phase_excludes_post_match_and_keeps_quiet_rounds() -> None:
     assert set(phase_fixture["quiet_round_numbers"]).issubset(rounds)
 
 
+def test_retained_round_end_numbering_and_nested_flash_assist_are_preserved() -> None:
+    artifact = {
+        "parser_name": "demoparser2",
+        "parser_version": "0.41.3",
+        "payload": {
+            "deep": {
+                "rounds": [
+                    {"round_number": 0, "start_tick": 10, "freeze_end_tick": 20, "end_tick": None},
+                    {"round_number": 1, "start_tick": 110, "freeze_end_tick": 120, "end_tick": 100},
+                    {"round_number": 2, "start_tick": None, "freeze_end_tick": None, "end_tick": 200},
+                ],
+                "duels": [{
+                    "round_number": 1,
+                    "tick": 150,
+                    "attacker_name": "ally",
+                    "attacker_steamid": "ally",
+                    "victim_name": "enemy",
+                    "victim_steamid": "enemy",
+                    "assister_name": "owner",
+                    "assister_steamid": "owner",
+                    "headshot": False,
+                    "raw": {"assistedflash": True},
+                }],
+                "players": [],
+            }
+        },
+    }
+    events = normalized_events_from_parser_artifact(artifact)
+    assert accepted_match_phase(events).round_numbers == (0, 1)
+    owner = next(result for result in calculate_core_combat_metrics(events) if result.player_steamid == "owner")
+    assert owner.metrics["ordinary_assists"] == 0
+    assert owner.metrics["flash_assists"] == 1
+    assert owner.metrics["combined_assists"] == 1
+
+
 def test_weapon_aliases_are_canonical_and_do_not_split() -> None:
     assert canonical_weapon_name("ak47") == "ak47"
     assert canonical_weapon_name("weapon_ak47") == "ak47"
@@ -167,6 +204,34 @@ def test_versioned_snapshot_identity_and_trusted_payload_fail_closed(db, monkeyp
     assert called["metric_snapshot_ids"] == [accepted.id]
 
 
+def test_contract_provenance_records_rate_numerators_and_denominators(db) -> None:
+    owner = User(email="provenance-v2@example.test", password_hash="hash")
+    db.add(owner)
+    db.commit()
+    match = Match(user_id=owner.id, source="test", external_match_id="provenance-v2")
+    db.add(match)
+    db.commit()
+    snapshot = create_metric_snapshot(
+        db,
+        owner_user_id=owner.id,
+        match_id=match.id,
+        player_key="steam:provenance-v2",
+        source="core_combat_metrics",
+        metric_domain="core_combat",
+        semantic_version="2.0.0",
+        validation_status="validated",
+        source_event_set_id="events:provenance-v2",
+        metrics={"kills": 16, "deaths": 10, "kd_ratio": 1.6, "headshot_kills": 10,
+                 "headshot_kill_rate": 62.5},
+        confidence_baseline={},
+    )
+    provenance = json.loads(snapshot.metadata_json)["provenance"]
+    assert provenance["numerators"]["kd_ratio"] == 16
+    assert provenance["denominators"]["kd_ratio"] == 10
+    assert provenance["numerators"]["headshot_kill_rate"] == 10
+    assert provenance["denominators"]["headshot_kill_rate"] == 16
+
+
 def test_deterministic_provenance_hash() -> None:
     left = deterministic_input_hash({"b": 2, "a": 1})
     right = deterministic_input_hash({"a": 1, "b": 2})
@@ -209,9 +274,21 @@ def test_isolated_snapshot_schema_upgrade_and_rollback(tmp_path) -> None:
     row = connection.execute(
         "SELECT owner_user_id, semantic_version, validation_status FROM metric_snapshots"
     ).fetchone()
+    connection.execute(
+        """INSERT INTO metric_snapshots (
+        owner_user_id,match_id,player_key,source,metric_domain,semantic_version,scope,
+        validation_status,metrics_json,confidence_baseline_json,caveats_json,metadata_json
+        ) VALUES (17,124,'steam:owner','core','core_combat','2.0.0','player_match',
+        'validated','{}','{}','[]','{}')"""
+    )
+    inserted_timestamps = connection.execute(
+        "SELECT created_at,updated_at FROM metric_snapshots WHERE semantic_version='2.0.0'"
+    ).fetchone()
+    connection.rollback()
     connection.close()
     assert {"owner_user_id", "semantic_version", "validation_status"}.issubset(columns)
     assert row == (17, "1.0.0", "legacy_unverified")
+    assert inserted_timestamps[0] and inserted_timestamps[1]
     assert subprocess.run([*command, "--direction", "rollback"], check=False).returncode == 0
     connection = sqlite3.connect(database)
     columns = {row[1] for row in connection.execute("PRAGMA table_info(metric_snapshots)")}

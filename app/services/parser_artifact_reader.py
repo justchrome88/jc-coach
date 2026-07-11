@@ -268,15 +268,19 @@ def _round_events(
                 payload=row,
             )
         )
-        if any(row.get(field) is not None for field in ("start_tick", "freeze_end_tick", "end_tick")):
+        if row.get("end_tick") is not None:
+            # demoparser's total_rounds_played increments at round_end, while
+            # start/freeze rows use the current zero-based round. The merged
+            # retained row therefore carries the preceding round's end tick.
+            completed_round_number = max((round_number or 0) - 1, 0)
             events.append(
                 _event(
                     "round_timing",
                     "round_end",
                     source,
                     confidence,
-                    round_number=round_number,
-                    tick=_int_or_none(row.get("end_tick") or row.get("freeze_end_tick") or row.get("start_tick")),
+                    round_number=completed_round_number,
+                    tick=_int_or_none(row.get("end_tick")),
                     context={
                         "start_tick": _int_or_none(row.get("start_tick")),
                         "freeze_end_tick": _int_or_none(row.get("freeze_end_tick")),
@@ -317,6 +321,11 @@ def _duel_events(
             "weapon": row.get("weapon"),
             "headshot": bool(row.get("headshot")),
             "assister": _player(row, "assister"),
+            "assistedflash": _bool_or_none(
+                row.get("assistedflash")
+                if row.get("assistedflash") is not None
+                else (row.get("raw") or {}).get("assistedflash")
+            ),
             "distance": row.get("distance"),
         }
         for event_type in ("player_kill", "player_death"):

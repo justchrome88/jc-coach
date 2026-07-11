@@ -13,11 +13,18 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - H01A_STATUS: PASS_WITH_WARNINGS.
 - H01A_M01_STATUS: PASS_WITH_WARNINGS.
 - H01A_M02_STATUS: PASS_WITH_WARNINGS.
+- H01A_M03_STATUS: PASS_WITH_WARNINGS.
 - METRIC_CONTRACTS_VERSIONED: true.
 - METRIC_VALIDATION_GATE_IMPLEMENTED: true.
 - MATCH_124_GOLDEN_FIXTURE_PASS: true.
 - COACH_REJECTS_UNVALIDATED_METRICS: true.
-- PRODUCTION_BACKFILL_PERFORMED: false.
+- PRODUCTION_BACKFILL_PERFORMED: true.
+- METRIC_PRODUCTION_MIGRATION_COMPLETE: true.
+- METRIC_TRUSTED_SUBSET_ACCEPTED: true.
+- GLOBAL_METRIC_CORRECTNESS_ACCEPTED: false.
+- COACH_VALIDATED_INPUT_GATE_ACTIVE: true.
+- ACTIVE_MISSION_INPUTS_VALIDATED: false.
+- MATCH_124_GROUND_TRUTH_ACCEPTED: true.
 - METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
 - METRIC_DOCUMENTATION_CANONICALIZED: true.
 - MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
@@ -54,8 +61,12 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01A-M03_METRIC_REPROCESSING_GROUND_TRUTH_ACCEPTANCE_AND_H01B_RELEASE.
+- NEXT_TASK: H01A-M04_ACTIVE_MISSION_VALIDATED_METRIC_REBIND.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A-M03 migrated production to append-only metric contract v2, retained
+  1,153 legacy rows, appended 110 owner rows, accepted the trusted match-124
+  subset, and reconciled stale evidence without deletion. H01B stays blocked
+  because mission 3 depends on quarantined `utility_damage`.
 - H01A-M02 accepted the versioned registry, append-only snapshot/provenance
   contract, shared accepted phase, core-combat repairs, weapon aliases, and
   validated-only owner/coach gates. ADR/KAST and ambiguous damage/utility
