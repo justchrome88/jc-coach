@@ -21,7 +21,6 @@ from app.services.coach.insights import (
     serialize_insight_cards,
 )
 from app.services.coach.mistakes import category_scorecard, detect_structured_mistakes
-from app.services.coach.recommendations import get_active_recommendation_progress, get_all_recommendation_progress
 from app.services.coach.reports import _serialize_recommendation_progress
 from app.services.coach.rules import build_coach_focus
 from app.services.coach.validation import render_ai_output_markdown, validate_ai_coach_output
@@ -40,6 +39,7 @@ from app.services.metrics.confidence import (
     metric_confidence_map,
     metric_context,
 )
+from app.services.metrics.recommendations import get_active_recommendation_progress, get_all_recommendation_progress
 from app.services.metrics.snapshots import (
     MetricSnapshotAnalysisScope,
     default_owner_player_metric_snapshot_scope,

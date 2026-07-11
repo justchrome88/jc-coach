@@ -7,8 +7,8 @@ from app.db.models import CoachRecommendation, MatchRecommendationEvaluation
 from app.db.session import SessionLocal
 from app.main import app
 from app.services.coach.ai import save_ai_coach_result
-from app.services.coach.recommendations import ensure_default_recommendation, evaluate_new_matches
 from app.services.ingestion.structured_import import import_rows
+from app.services.metrics.recommendations import ensure_default_recommendation, evaluate_new_matches
 
 
 def _csrf_from(response) -> str:

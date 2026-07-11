@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.models import CoachReport, Match
-from app.services.coach.recommendations import get_active_recommendation_progress
 from app.services.coach.rules import build_coach_focus
 from app.services.metrics.analytics import compare_periods, detect_weaknesses, get_map_stats, get_summary
 from app.services.metrics.confidence import (
@@ -21,6 +20,7 @@ from app.services.metrics.confidence import (
     metric_confidence_map,
     metric_context,
 )
+from app.services.metrics.recommendations import get_active_recommendation_progress
 from app.services.shared.match_queries import playable_match_select
 
 

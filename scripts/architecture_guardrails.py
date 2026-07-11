@@ -63,7 +63,7 @@ TARGET_PACKAGE_BY_LEGACY_MODULE = {
     "ownership": "owner",
     "parser_artifact_reader": "parsing",
     "parser_evidence": "parsing",
-    "recommendation_tracking": "coach",
+    "recommendation_tracking": "metrics",
     "report_generator": "coach",
     "security": "owner",
     "steam_demo_acquisition": "ingestion",
@@ -117,7 +117,7 @@ CANONICAL_MODULE_BY_LEGACY_MODULE.update(
         "ownership": "app.services.owner.scope",
         "parser_artifact_reader": "app.services.parsing.artifact_reader",
         "parser_evidence": "app.services.parsing.evidence",
-        "recommendation_tracking": "app.services.coach.recommendations",
+        "recommendation_tracking": "app.services.metrics.recommendations",
         "report_generator": "app.services.coach.reports",
         "security": "app.services.owner.security",
         "steam_demo_acquisition": "app.services.ingestion.demo_acquisition",
@@ -236,6 +236,187 @@ def strongly_connected_components(graph: ImportGraph, *, prefix: str) -> list[li
     return sorted(components)
 
 
+def import_boundary_violations(graph: ImportGraph) -> list[str]:
+    violations: list[str] = []
+    forbidden = {
+        "metrics": {"coach", "missions"},
+        "ingestion": {"coach", "missions"},
+        "parsing": {"coach", "missions"},
+        "missions": {"provider"},
+    }
+    for source, targets in sorted(graph.edges.items()):
+        source_parts = source.split(".")
+        if source_parts[:2] != ["app", "services"] or len(source_parts) < 4:
+            continue
+        source_package = source_parts[2]
+        for target in sorted(targets):
+            target_parts = target.split(".")
+            if target_parts[:2] != ["app", "services"] or len(target_parts) < 4:
+                continue
+            target_package = target_parts[2]
+            if target_package in forbidden.get(source_package, set()):
+                violations.append(f"forbidden_dependency:{source}->{target}")
+            if source_package == "missions" and target == "app.services.coach.provider":
+                violations.append(f"missions_import_provider:{source}->{target}")
+    return violations
+
+
+def root_service_module_violations(service_root: Path = SERVICE_ROOT) -> list[str]:
+    allowed = {"__init__.py", "coach_domain_model.py"}
+    allowed.update(f"{module.rsplit('.', 1)[-1]}.py" for module in COMPATIBILITY_FACADES)
+    return [
+        f"non_allowlisted_root_service_module:{path.name}"
+        for path in sorted(service_root.glob("*.py"))
+        if path.name not in allowed
+    ]
+
+
+def facade_file_contains_logic(path: Path) -> bool:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    for index, node in enumerate(tree.body):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            continue
+        if (
+            index == 0
+            and isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Constant)
+            and isinstance(node.value.value, str)
+        ):
+            continue
+        if (
+            isinstance(node, (ast.Assign, ast.AnnAssign))
+            and any(
+                isinstance(target, ast.Name) and target.id == "__all__"
+                for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
+            )
+        ):
+            continue
+        return True
+    return False
+
+
+def compatibility_facade_violations(root: Path = ROOT) -> list[str]:
+    violations: list[str] = []
+    for module in sorted(COMPATIBILITY_FACADES):
+        path = root.joinpath(*module.split(".")).with_suffix(".py")
+        if facade_file_contains_logic(path):
+            violations.append(f"compatibility_facade_contains_logic:{module}")
+    return violations
+
+
+def _display_path(path: Path, root: Path) -> str:
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)
+
+
+def runtime_narrative_import_violations(paths: Iterable[Path], *, root: Path = ROOT) -> list[str]:
+    violations: list[str] = []
+    forbidden = ("_legacy_archive", "docs", "project_docs", "project_control")
+    for path in paths:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            modules: list[str] = []
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module]
+            for module in modules:
+                if module.startswith(forbidden):
+                    violations.append(f"runtime_narrative_import:{_display_path(path, root)}:{module}")
+    return violations
+
+
+def private_cross_package_import_violations(paths: Iterable[Path], *, root: Path = ROOT) -> list[str]:
+    violations: list[str] = []
+    for path in paths:
+        source = module_name(path, root=root)
+        source_parts = source.split(".")
+        if source_parts[:2] != ["app", "services"] or len(source_parts) < 4:
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ImportFrom) or not node.module:
+                continue
+            target_parts = node.module.split(".")
+            if target_parts[:2] != ["app", "services"] or len(target_parts) < 4:
+                continue
+            if source_parts[2] == target_parts[2]:
+                continue
+            for alias in node.names:
+                if alias.name.startswith("_"):
+                    violations.append(f"private_cross_package_import:{source}->{node.module}.{alias.name}")
+    return violations
+
+
+def api_domain_calculation_violations(paths: Iterable[Path], *, root: Path = ROOT) -> list[str]:
+    violations: list[str] = []
+    for path in paths:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in tree.body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            is_route = any(
+                isinstance(decorator, ast.Call)
+                and isinstance(decorator.func, ast.Attribute)
+                and decorator.func.attr in {"get", "post", "put", "patch", "delete"}
+                for decorator in node.decorator_list
+            )
+            if is_route and any(
+                isinstance(item, ast.BinOp) and not isinstance(item.op, ast.BitOr) for item in ast.walk(node)
+            ):
+                violations.append(f"api_route_domain_calculation:{_display_path(path, root)}:{node.name}")
+    return violations
+
+
+def contract_location_violations(root: Path = ROOT) -> list[str]:
+    app_root = root / "app"
+    contract_root = app_root / "contracts"
+    return [
+        f"runtime_contract_outside_app_contracts:{path.relative_to(root)}"
+        for path in sorted(app_root.rglob("*.json"))
+        if contract_root not in path.parents
+    ]
+
+
+def canonical_domain_violations(domains: Iterable[str]) -> list[str]:
+    return [] if tuple(domains) == ("impact_leak", "bad_fight_selection") else ["canonical_coach_domains_not_exact"]
+
+
+def mission_suppression_violations(source: str) -> list[str]:
+    required = ("domain_key", "_active_mission_domain_keys")
+    return [] if all(token in source for token in required) else ["global_cross_domain_mission_suppression"]
+
+
+def architecture_violations(root: Path = ROOT) -> list[str]:
+    service_paths = sorted((root / "app" / "services").rglob("*.py"))
+    app_paths = sorted((root / "app").rglob("*.py"))
+    graph = build_import_graph(service_paths, root=root)
+    violations = [
+        f"service_import_cycle:{','.join(cycle)}"
+        for cycle in strongly_connected_components(graph, prefix="app.services")
+    ]
+    violations.extend(import_boundary_violations(graph))
+    violations.extend(root_service_module_violations(root / "app" / "services"))
+    violations.extend(compatibility_facade_violations(root))
+    violations.extend(runtime_narrative_import_violations(app_paths, root=root))
+    violations.extend(private_cross_package_import_violations(service_paths, root=root))
+    violations.extend(
+        api_domain_calculation_violations(
+            sorted((root / "app" / "api" / "routes").glob("*.py")), root=root
+        )
+    )
+    violations.extend(contract_location_violations(root))
+
+    from app.services.coach_domain_model import CANONICAL_COACH_DOMAINS
+    from app.services.missions import presentation
+
+    violations.extend(canonical_domain_violations(CANONICAL_COACH_DOMAINS))
+    violations.extend(mission_suppression_violations(Path(presentation.__file__).read_text(encoding="utf-8")))
+    return sorted(set(violations))
+
+
 def route_inventory() -> list[dict[str, object]]:
     from app.api.routes import router as api_router
     from app.main import app
@@ -280,11 +461,12 @@ def main() -> int:
         "cycles": cycles,
         "route_count": len(route_inventory()),
         "route_fingerprint": route_fingerprint(),
+        "violations": architecture_violations(),
     }
     if args.inventory:
         result["imports"] = {key: sorted(value) for key, value in sorted(graph.edges.items())}
     print(json.dumps(result, indent=2, sort_keys=True))
-    return 0
+    return 1 if result["violations"] else 0
 
 
 if __name__ == "__main__":

@@ -5,7 +5,8 @@ from fastapi.testclient import TestClient
 from app.db.models import CoachRecommendation, MatchRecommendationEvaluation
 from app.db.session import SessionLocal
 from app.main import app, create_app
-from app.services.coach.recommendations import (
+from app.services.ingestion.structured_import import import_rows
+from app.services.metrics.recommendations import (
     ensure_default_recommendation,
     evaluate_new_matches,
     get_active_recommendation_progress,
@@ -15,7 +16,6 @@ from app.services.coach.recommendations import (
     list_recommendation_history,
     recommendation_category_summary,
 )
-from app.services.ingestion.structured_import import import_rows
 
 
 def _csrf_from(response) -> str:

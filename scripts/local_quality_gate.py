@@ -47,6 +47,10 @@ COMMANDS: tuple[CommandSpec, ...] = (
         command=(".venv/bin/python", "scripts/r02a2_repository_guardrails.py"),
     ),
     CommandSpec(
+        name="service architecture guardrails",
+        command=(".venv/bin/python", "scripts/architecture_guardrails.py"),
+    ),
+    CommandSpec(
         name="semantic AI eval fixtures",
         command=(
             ".venv/bin/pytest",

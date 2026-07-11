@@ -17,11 +17,11 @@ approve import/parser/evaluator/runtime work. Task and release routing live in
 - `app/main.py` builds the FastAPI application, mounts `/static`, configures
   Jinja templates, adds session/security middleware, registers `/health` and
   `/robots.txt`, and includes the API and web routers.
-- `app/api/routes.py` owns JSON API endpoints under `/api`.
+- `app/api/routes/` composes shallow JSON API route modules under `/api`.
 - `app/web/routes.py` owns server-rendered pages and form posts.
-- `app/services/` holds business logic for imports, Steam integration, demo
-  parsing/storage, analytics, metric confidence/truth, recommendations, report
-  generation, AI coach handoff/generation, auth, security and i18n.
+- `app/services/` is divided into `ingestion`, `parsing`, `metrics`, `coach`,
+  `missions`, `owner`, and `shared` bounded packages. Its concise public map is
+  `app/services/README.md`.
 - `app/db/session.py` owns SQLAlchemy engine/session setup, `get_db()`,
   startup `init_db()`, and the current SQLite compatibility helper.
 - `app/db/models.py` owns SQLAlchemy persistence models.
@@ -37,25 +37,25 @@ approve import/parser/evaluator/runtime work. Task and release routing live in
 ```text
 CSV/JSON uploads
   -> app.api/app.web import endpoints
-  -> app.services.importer
+  -> app.services.ingestion.structured_import
   -> app.db.models.Match rows
   -> analytics/metric confidence/recommendations/reports/coach views
 
 DEM uploads or inbox demos
   -> app.api/app.web demo import endpoints
-  -> app.services.demo_parser and app.services.demo_storage
+  -> app.services.parsing.demo_parser and app.services.ingestion.demo_storage
   -> Match plus demo artifact/detail tables
   -> analytics, match detail, coach and recommendation evidence
 
 Steam account/share-code paths
   -> app.web/app.api Steam routes
-  -> app.services.steam_integration
-  -> optional app.services.steam_demo_downloader and demo parser path
+  -> app.services.ingestion.steam
+  -> optional ingestion demo downloader and parsing demo path
   -> ImportJob, SteamAccount, Match and parser artifact rows
   -> import overview, settings, analytics and recommendation evidence
 
 Existing DB facts
-  -> app.services.match_queries/playable_match_select
+  -> app.services.shared.match_queries/playable_match_select
   -> analytics, aim stats, mistake detection, metric confidence/truth
   -> recommendations, reports and AI coach payloads
   -> JSON API responses or Jinja templates
@@ -83,7 +83,7 @@ metric reliability, sample thresholds and comparison-window rules all pass.
 ### Current Route Boundary Inventory
 
 This inventory describes the current route surface from `app/main.py`,
-`app/api/routes.py` and `app/web/routes.py`. It is descriptive only. Route
+`app/api/routes/` and `app/web/routes.py`. It is descriptive only. Route
 restructuring, authentication boundary changes, request/response contract
 changes or mutation semantic changes require explicit future task scope.
 
@@ -122,7 +122,7 @@ Validation responsibility classes used below:
 - `framework-owned`: FastAPI/Starlette request parsing and declared type
   binding for path/query/form/file parameters.
 - `route-owned`: explicit handler checks or exception translation visible in
-  `app/api/routes.py` or `app/web/routes.py`.
+  `app/api/routes/` or `app/web/routes.py`.
 - `service-owned`: validation delegated to service functions, usually reported
   through `ValueError`, domain exceptions or service result payloads.
 - `implicit/follow-up`: behavior currently accepted by broad defaults, free
@@ -242,7 +242,7 @@ Sensitive boundary:
 
 ### `app/api`
 
-`app/api/routes.py` exposes machine-oriented JSON routes. It should:
+`app/api/routes/` exposes machine-oriented JSON routes. It should:
 
 - validate HTTP inputs and convert service exceptions to HTTP errors;
 - obtain DB sessions through `Depends(get_db)` for request-scoped work;
@@ -288,19 +288,23 @@ actions and recommendation status/extend/restart actions.
 
 Services own product behavior and reusable workflows:
 
-- Import and parser: `importer.py`, `demo_parser.py`, `demo_storage.py`,
-  `demo_retention.py`.
-- Steam and storage guard: `steam_integration.py`,
-  `steam_demo_downloader.py`, `steam_match_metadata.py`,
-  `steam_storage_guard.py`.
-- Analytics and metric safety: `analytics.py`, `aim_stats.py`,
-  `metric_confidence.py`, `metric_truth.py`, `mistake_detection.py`,
-  `match_queries.py`.
-- Recommendations and reports: `recommendation_tracking.py`,
-  `report_generator.py`, `coach_rules.py`.
-- AI coach: `ai_coach.py`, `ai_validator.py`.
-- User/app/security support: `auth.py`, `app_settings.py`, `security.py`,
-  `i18n.py`.
+- `ingestion/` owns Steam history, acquisition, import jobs, storage and
+  canonical Steam match metadata.
+- `parsing/` owns DEM fact extraction, normalized events and parser evidence.
+- `metrics/` owns metric computation, snapshots, confidence, analytics and the
+  legacy metric-recommendation evaluator.
+- `coach/` owns evidence bundles, provider adapters, validation, deterministic
+  insights, reports and two-domain proposal generation.
+- `missions/` owns payloads, persistence queries, activation/lifecycle,
+  progress, rolling hypotheses and owner-facing mission serialization.
+- `owner/` owns identity/scope, auth/security, match-processing orchestration
+  and decomposed owner sync.
+- `shared/` contains only primitives used across bounded contexts, including
+  metric policy, retention policy, match queries and runtime-contract loading.
+
+Dependency direction is `shared/contracts/persistence -> ingestion -> parsing
+-> metrics -> coach -> missions`; owner orchestration may coordinate lower
+packages. Architecture checks reject reverse forbidden edges and cycles.
 
 Expected boundary:
 
@@ -316,20 +320,21 @@ Expected boundary:
 
 Sensitive services:
 
-- `steam_integration.py` and `steam_demo_downloader.py` touch live Steam/Valve
+- `ingestion/steam.py` and `ingestion/demo_downloader.py` touch live Steam/Valve
   import paths, import jobs, demo download state, storage budgets and external
   helper execution. Do not run or change these paths without explicit scope.
   `ImportJob.status` remains coarse; service behavior, UI/API labels and task
   reports must use `result_json` for detailed outcome, retryability and safety
   evidence.
-- `demo_parser.py` reads/stores DEM-derived facts and parser artifacts. Parser
+- `parsing/demo_parser.py` reads/stores DEM-derived facts and parser artifacts. Parser
   jobs on production data require explicit authorization.
-- `recommendation_tracking.py` writes recommendation evaluations and progress.
+- `metrics/recommendations.py` writes legacy recommendation evaluations and progress.
   Legacy recommendation and metric-confidence rules in `AGENTS.md` apply.
-- `report_generator.py` and `ai_coach.py` can create persistent reports or
+- `coach/reports.py` and `coach/provider.py` can create persistent reports or
   handoff files. Do not generate persistent app reports unless a task explicitly
   authorizes that side effect.
-- `demo_storage.py`, `demo_retention.py` and `steam_storage_guard.py` touch
+- `ingestion/demo_storage.py`, `shared/demo_retention.py` and
+  `ingestion/storage_guard.py` touch
   demo-file accounting and retention boundaries. Do not delete, move or
   compress raw demos without explicit storage scope.
 - Durable import workers, retry ledgers, queue runners, stale-job repair and
@@ -444,8 +449,8 @@ Write/mutation paths:
 Import/parser/evaluator-sensitive areas:
 
 - Steam routes and `app.services.steam_*`;
-- DEM import routes and `app.services.demo_parser`;
-- recommendation evaluation paths in `app.services.recommendation_tracking`;
+- DEM import routes and `app.services.parsing.demo_parser`;
+- recommendation evaluation paths in `app.services.metrics.recommendations`;
 - report/AI generation paths when they create persistent artifacts.
 
 Production-DB-sensitive areas:
@@ -458,7 +463,7 @@ Production-DB-sensitive areas:
 
 ## Common Change Placement
 
-- New JSON endpoint: add request/response orchestration in `app/api/routes.py`,
+- New JSON endpoint: add request/response orchestration in `app/api/routes/`,
   reusable behavior in `app/services`, and tests in `tests/`.
 - New browser page/form: add route/view model in `app/web/routes.py`, template
   in `app/templates`, static assets in `app/static` if needed, reusable logic
