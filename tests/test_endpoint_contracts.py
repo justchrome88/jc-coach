@@ -1,9 +1,11 @@
+import re
+
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.api import routes as api_routes
 from app.config import get_settings
-from app.db.models import User
+from app.db.models import SteamAccount, User
 from app.db.session import SessionLocal
 from app.main import app, create_app
 
@@ -33,6 +35,12 @@ def _health_endpoint():
     raise AssertionError("health route missing")
 
 
+def _csrf_from(response) -> str:
+    match = re.search(r'name="csrf_token" value="([^"]+)"', response.text)
+    assert match is not None
+    return match.group(1)
+
+
 def test_critical_endpoint_route_inventory_contract_is_stable():
     schema = app.openapi()
 
@@ -47,6 +55,41 @@ def test_critical_endpoint_route_inventory_contract_is_stable():
 
 def test_public_health_serialization_contract_is_stable():
     assert _health_endpoint()() == {"status": "ok"}
+
+
+def test_coach_domain_cards_require_owner_session_and_deny_cross_owner_access():
+    with TestClient(app) as client:
+        assert client.get("/api/coach/domains").status_code == 401
+        register = client.get("/register")
+        created = client.post(
+            "/register",
+            data={
+                "csrf_token": _csrf_from(register),
+                "display_name": "Owner",
+                "email": "domain-owner@example.test",
+                "password": "strong-password",
+            },
+            follow_redirects=False,
+        )
+        assert created.status_code == 303
+        with SessionLocal() as session:
+            owner = session.query(User).filter_by(email="domain-owner@example.test").one()
+            session.add(SteamAccount(user_id=owner.id, steam_id="76561198000000017"))
+            other = User(display_name="Other", email="domain-other@example.test", is_active=1)
+            session.add(other)
+            session.flush()
+            session.add(SteamAccount(user_id=other.id, steam_id="76561198000000018"))
+            session.commit()
+            other_id = other.id
+        own = client.get("/api/coach/domains")
+        denied = client.get("/api/coach/domains", params={"owner_user_id": other_id})
+
+    assert own.status_code == 200
+    assert [card["domain"]["key"] for card in own.json()["cards"]] == [
+        "impact_leak",
+        "bad_fight_selection",
+    ]
+    assert denied.status_code == 403
 
 
 def test_owner_api_read_serializes_empty_test_db_without_creating_user():

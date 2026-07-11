@@ -39,14 +39,11 @@ def coach_domain_slots_endpoint(
     technical_provenance: bool = False,
 ) -> dict:
     current = current_user_from_session(request, db)
-    resolved_owner = (
-        current.id if current is not None else (owner_user_id or personal_ai_coach_analysis_scope(db).owner_user_id)
-    )
-    if resolved_owner is None:
-        raise HTTPException(status_code=403, detail="Owner scope is required")
-    if current is not None and owner_user_id is not None and owner_user_id != current.id:
+    if current is None:
+        raise HTTPException(status_code=401, detail="Authenticated owner session is required")
+    if owner_user_id is not None and owner_user_id != current.id:
         raise HTTPException(status_code=403, detail="Cross-owner coach domain access denied")
-    return coach_domain_slots_payload(db, owner_user_id=resolved_owner, include_provenance=technical_provenance)
+    return coach_domain_slots_payload(db, owner_user_id=current.id, include_provenance=technical_provenance)
 
 @router.post("/coach/ai/handoff")
 def ai_coach_handoff_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:

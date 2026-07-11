@@ -1,13 +1,28 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
+from sqlalchemy import select
+
+from app.db.models import (
+    AIDomainAnalysis,
+    CoachDomainSlot,
+    CoachEvidenceBaseline,
+    CoachMissionProposal,
+    SteamAccount,
+    User,
+)
 from app.services.coach.domain_analysis import (
     OUTPUT_SCHEMA_VERSION,
+    activate_domain_proposal,
+    coach_domain_slots_payload,
     temporal_survival_metrics,
     validate_domain_output,
 )
+from app.services.missions.payloads import mission_domain_key
+from app.services.missions.repository import list_active_coach_missions
 
 
 def _evidence() -> dict:
@@ -100,3 +115,135 @@ def test_validator_accepts_grounded_no_problem_and_rejects_claim_injection() -> 
     errors = validate_domain_output(output, bundle)
     assert "unsupported_tactical_claim" in errors
     assert "secret_or_raw_payload_leakage" in errors
+
+
+def test_current_ai_domain_proposals_activate_explicit_domains_and_reuse(db) -> None:
+    owner = User(display_name="owner")
+    db.add(owner)
+    db.flush()
+    account = SteamAccount(user_id=owner.id, steam_id="76561198000000017")
+    db.add(account)
+    db.flush()
+    baseline = CoachEvidenceBaseline(
+        owner_user_id=owner.id,
+        owner_steam_id=account.steam_id,
+        analysis_cutoff=datetime.now(UTC),
+        status="eligible",
+        baseline_hash="b" * 64,
+        evidence_version="coach-domain-baseline-v1",
+        match_ids_json=json.dumps(list(range(1, 31))),
+        lineage_json="[]",
+        exclusions_json="[]",
+    )
+    db.add(baseline)
+    db.flush()
+
+    created = []
+    for index, domain in enumerate(("impact_leak", "bad_fight_selection"), start=1):
+        output = {
+            "analysis_status": "supported_hypothesis",
+            "domain_key": domain,
+            "headline": domain,
+            "hypothesis": f"Supported {domain}",
+            "recommended_focus": "Use supported trade evidence.",
+            "confidence": "medium",
+            "caveats": ["No spatial claim."],
+            "metric_refs": [
+                {
+                    "metric_key": "untraded_death_rate",
+                    "value": 0.8,
+                    "evidence_ref": "aggregate:untraded_death_rate",
+                }
+            ],
+        }
+        analysis = AIDomainAnalysis(
+            owner_user_id=owner.id,
+            owner_steam_id=account.steam_id,
+            domain_key=domain,
+            baseline_id=baseline.id,
+            baseline_hash=baseline.baseline_hash,
+            idempotency_key=str(index) * 64,
+            attempt_number=1,
+            prompt_version="two-domain-hypothesis-v1",
+            prompt_hash="p" * 64,
+            evidence_schema_version="coach-domain-evidence-v1",
+            evidence_hash=str(index + 2) * 64,
+            provider="fixture",
+            model="fixture",
+            routing_json="{}",
+            settings_json="{}",
+            raw_response_hash=str(index + 4) * 64,
+            structured_output_json=json.dumps(output),
+            validation_status="accepted",
+            validation_errors_json="[]",
+        )
+        db.add(analysis)
+        db.flush()
+        payload = {
+            "title": domain,
+            "goal": "Improve supported metric.",
+            "behavioral_focus": "Use supported trade evidence.",
+            "primary_metric": "untraded_death_rate",
+            "secondary_metrics": [],
+            "guardrail_metrics": [],
+            "baseline_value": 0.8,
+            "target_direction": "lower_is_better",
+            "target_value": 0.7,
+            "target_delta": -0.1,
+            "minimum_future_matches": 3,
+            "maximum_future_matches": 5,
+            "success_definition": "Lower supported rate.",
+            "failure_or_regression_definition": "Rate does not improve.",
+            "per_match_feedback_template": "Report supported rate.",
+        }
+        proposal = CoachMissionProposal(
+            owner_user_id=owner.id,
+            owner_steam_id=account.steam_id,
+            domain_key=domain,
+            analysis_id=analysis.id,
+            baseline_id=baseline.id,
+            proposal_hash=str(index + 6) * 64,
+            payload_json=json.dumps(payload),
+            provenance_json="{}",
+            is_current=True,
+        )
+        db.add(proposal)
+        db.flush()
+        slot = CoachDomainSlot(
+            owner_user_id=owner.id,
+            owner_steam_id=account.steam_id,
+            domain_key=domain,
+            status="proposal_ready",
+            baseline_id=baseline.id,
+            current_analysis_id=analysis.id,
+            current_proposal_id=proposal.id,
+            state_json="{}",
+        )
+        db.add(slot)
+        db.flush()
+        created.append(proposal)
+
+    first = activate_domain_proposal(db, owner_user_id=owner.id, proposal_id=created[0].id)
+    second = activate_domain_proposal(db, owner_user_id=owner.id, proposal_id=created[1].id)
+    repeated = activate_domain_proposal(db, owner_user_id=owner.id, proposal_id=created[0].id)
+
+    assert first["reused"] is False and second["reused"] is False
+    assert repeated["reused"] is True and repeated["mission"].id == first["mission"].id
+    missions = list_active_coach_missions(db, user_id=owner.id, owner_steam_id=account.steam_id)
+    assert len(missions) == 2
+    assert {mission_domain_key(mission) for mission in missions} == {
+        "impact_leak",
+        "bad_fight_selection",
+    }
+    slots = db.scalars(select(CoachDomainSlot).where(CoachDomainSlot.owner_user_id == owner.id)).all()
+    assert {slot.status for slot in slots} == {"active"}
+    payload = coach_domain_slots_payload(db, owner_user_id=owner.id, include_provenance=True)
+    assert [card["domain"]["key"] for card in payload["cards"]] == [
+        "impact_leak",
+        "bad_fight_selection",
+    ]
+    assert all(card["state"] == "active" for card in payload["cards"])
+    assert all(card["analysis_summary"] and card["evidence"] for card in payload["cards"])
+    assert all(card["proposal"] and card["mission_lifecycle"] for card in payload["cards"])
+    assert all(card["progress_history_summary"]["evaluation_count"] == 0 for card in payload["cards"])
+    json.dumps(payload)

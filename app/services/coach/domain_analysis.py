@@ -28,9 +28,19 @@ from app.db.models import (
 from app.services.coach.provider import configured_model_route_identity, invoke_configured_structured_model
 from app.services.coach_domain_model import CANONICAL_COACH_DOMAINS, require_canonical_domain
 from app.services.metrics.snapshots import upsert_metric_snapshot
+from app.services.missions.lifecycle import activate_coach_mission
 from app.services.missions.payloads import mission_domain_key
-from app.services.missions.presentation import serialize_coach_mission
-from app.services.missions.repository import list_active_coach_missions
+from app.services.missions.presentation import (
+    serialize_coach_mission,
+    serialize_mission_progress_evaluation,
+)
+from app.services.missions.repository import (
+    create_analysis_run,
+    create_coach_hypothesis,
+    list_active_coach_missions,
+    list_coach_missions,
+    list_mission_progress_evaluations,
+)
 from app.services.shared.runtime_contracts import metric_registry_contract
 
 BASELINE_VERSION = "coach-domain-baseline-v1"
@@ -624,6 +634,7 @@ def coach_domain_slots_payload(db: Session, *, owner_user_id: int, include_prove
     if account is None:
         raise PermissionError("owner_steam_identity_missing")
     result = {}
+    cards = []
     for domain in CANONICAL_COACH_DOMAINS:
         slot = db.scalar(
             select(CoachDomainSlot)
@@ -642,6 +653,15 @@ def coach_domain_slots_payload(db: Session, *, owner_user_id: int, include_prove
         output = json.loads(analysis.structured_output_json) if analysis and analysis.structured_output_json else None
         baseline = db.get(CoachEvidenceBaseline, slot.baseline_id) if slot and slot.baseline_id else None
         proposal = db.get(CoachMissionProposal, slot.current_proposal_id) if slot and slot.current_proposal_id else None
+        proposal_payload = json.loads(proposal.payload_json) if proposal else None
+        evaluations = (
+            list_mission_progress_evaluations(db, user_id=owner_user_id, mission_id=active.id)
+            if active
+            else []
+        )
+        progress_history = [serialize_mission_progress_evaluation(row) for row in evaluations]
+        latest_progress = progress_history[0] if progress_history else None
+        primary_progress = (latest_progress or {}).get("primary_metric_result") or {}
         item = {
             "domain": {
                 "key": domain,
@@ -664,11 +684,56 @@ def coach_domain_slots_payload(db: Session, *, owner_user_id: int, include_prove
             }
             if output
             else None,
-            "proposal_summary": json.loads(proposal.payload_json) if proposal else None,
+            "proposal_summary": proposal_payload,
             "confidence": output.get("confidence") if output else None,
             "caveats": output.get("caveats", []) if output else [],
             "activation_eligibility": bool(proposal and not active),
             "current_mission": serialize_coach_mission(active) if active else None,
+            "state": slot.status if slot else "insufficient_baseline",
+            "analysis_summary": {
+                "status": output.get("analysis_status"),
+                "headline": output.get("headline"),
+                "hypothesis": output.get("hypothesis"),
+                "primary_pattern": output.get("primary_pattern"),
+                "recommended_focus": output.get("recommended_focus"),
+            }
+            if output
+            else None,
+            "evidence": {
+                "baseline_hash": analysis.baseline_hash,
+                "evidence_schema_version": analysis.evidence_schema_version,
+                "evidence_hash": analysis.evidence_hash,
+                "metric_refs": list(output.get("metric_refs") or []),
+                "match_refs": list(output.get("match_refs") or []),
+            }
+            if analysis and output
+            else None,
+            "proposal": proposal_payload,
+            "mission_lifecycle": serialize_coach_mission(active) if active else None,
+            "baseline_current_target": {
+                "metric": primary_progress.get("metric_name")
+                or (proposal_payload or {}).get("primary_metric"),
+                "baseline": primary_progress.get("baseline_value")
+                if primary_progress
+                else (proposal_payload or {}).get("baseline_value"),
+                "current": primary_progress.get("evaluation_value") if primary_progress else None,
+                "target": primary_progress.get("target_value")
+                if primary_progress
+                else (proposal_payload or {}).get("target_value"),
+            },
+            "latest_match_contribution": latest_progress,
+            "progress_history_summary": {
+                "evaluation_count": len(progress_history),
+                "latest_status": latest_progress.get("status") if latest_progress else "no_evaluation_yet",
+                "evaluation_ids": [row["evaluation_id"] for row in progress_history],
+            },
+            "safe_insufficient_or_error_state": {
+                "status": latest_progress.get("status")
+                if latest_progress
+                else (slot.status if slot else "insufficient_baseline"),
+                "caveats": list(latest_progress.get("caveats") or []) if latest_progress else [],
+                "progress_explanation": latest_progress.get("progress_explanation") if latest_progress else None,
+            },
         }
         if include_provenance and analysis:
             item["technical_provenance"] = {
@@ -684,7 +749,182 @@ def coach_domain_slots_payload(db: Session, *, owner_user_id: int, include_prove
                 "validation_status": analysis.validation_status,
             }
         result[domain] = item
-    return {"schema_version": "coach-domain-slots-v1", "owner_user_id": owner_user_id, "coach_domain_slots": result}
+        cards.append(item)
+    return {
+        "schema_version": "coach-domain-slots-v1",
+        "owner_user_id": owner_user_id,
+        "coach_domain_slots": result,
+        "cards": cards,
+    }
+
+
+def activate_domain_proposal(
+    db: Session,
+    *,
+    owner_user_id: int,
+    proposal_id: int,
+) -> dict[str, Any]:
+    """Explicitly activate one validated current domain proposal."""
+    proposal = db.get(CoachMissionProposal, proposal_id)
+    if proposal is None or proposal.owner_user_id != owner_user_id:
+        raise PermissionError("coach_domain_proposal_not_owned")
+    if not proposal.is_current:
+        raise ValueError("coach_domain_proposal_not_current")
+    domain = require_canonical_domain(proposal.domain_key)
+    analysis = db.get(AIDomainAnalysis, proposal.analysis_id)
+    baseline = db.get(CoachEvidenceBaseline, proposal.baseline_id)
+    if analysis is None or analysis.validation_status != "accepted":
+        raise ValueError("coach_domain_proposal_analysis_not_accepted")
+    if baseline is None or baseline.owner_user_id != owner_user_id:
+        raise ValueError("coach_domain_proposal_baseline_missing")
+    slot = db.scalar(
+        select(CoachDomainSlot)
+        .where(CoachDomainSlot.owner_user_id == owner_user_id)
+        .where(CoachDomainSlot.domain_key == domain)
+    )
+    if slot is None or slot.current_proposal_id != proposal.id or slot.current_analysis_id != analysis.id:
+        raise ValueError("coach_domain_proposal_slot_mismatch")
+
+    for mission in list_coach_missions(db, user_id=owner_user_id):
+        source = json.loads(mission.source_payload_json or "{}")
+        if source.get("source_domain_proposal_id") == proposal.id:
+            return {"mission": mission, "slot": slot, "reused": True}
+
+    output = json.loads(analysis.structured_output_json or "{}")
+    proposal_payload = json.loads(proposal.payload_json)
+    if output.get("analysis_status") != "supported_hypothesis":
+        raise ValueError("coach_domain_proposal_not_supported")
+    if output.get("domain_key") != domain:
+        raise ValueError("coach_domain_proposal_domain_mismatch")
+
+    lineage = json.loads(baseline.lineage_json)
+    snapshot_ids = sorted(
+        {
+            int(snapshot_id)
+            for item in lineage
+            for values in item.get("snapshot_ids_by_metric_group", {}).values()
+            for snapshot_id in values
+        }
+    )
+    match_ids = [int(value) for value in json.loads(baseline.match_ids_json)]
+    primary_metric = str(proposal_payload["primary_metric"])
+    direction = str(proposal_payload["target_direction"])
+    criteria_direction = "stay_above" if direction == "stay_above_guardrail" else direction
+    confidence_level = str(output.get("confidence") or "medium").lower()
+    if confidence_level not in {"medium", "high"}:
+        raise ValueError("coach_domain_proposal_confidence_not_eligible")
+    minimum_matches = int(proposal_payload["minimum_future_matches"])
+    maximum_matches = int(proposal_payload["maximum_future_matches"])
+    evidence = [
+        {
+            "metric_id": ref.get("metric_key"),
+            "value": ref.get("value"),
+            "evidence_ref": ref.get("evidence_ref"),
+            "metric_confidence": confidence_level,
+        }
+        for ref in output.get("metric_refs", [])
+        if isinstance(ref, Mapping)
+    ]
+    insight_card = {
+        "id": f"ai-domain-proposal:{proposal.id}",
+        "problem": str(output.get("hypothesis") or output.get("headline") or domain),
+        "evidence": evidence,
+        "confidence": confidence_level,
+        "caveats": list(output.get("caveats") or []),
+        "recommended_focus": str(output.get("recommended_focus") or proposal_payload["behavioral_focus"]),
+        "target_metric_candidates": [primary_metric],
+        "mission_readiness": {
+            "source": "ai_domain_proposal",
+            "family": domain,
+            "canonical_domain_key": domain,
+            "can_become_mission": True,
+            "target_metric_candidate": primary_metric,
+            "baseline_value": proposal_payload["baseline_value"],
+            "confidence_eligibility": {
+                "level": confidence_level,
+                "usable_for_missions": True,
+                "hard_recommendation_eligible": True,
+            },
+            "missing_requirements": [],
+            "blocking_reason_codes": [],
+            "window": {
+                "type": "post_activation_matches",
+                "minimum_future_matches": minimum_matches,
+                "maximum_future_matches": maximum_matches,
+                "baseline_id": baseline.id,
+                "baseline_hash": baseline.baseline_hash,
+            },
+            "criteria": [
+                {
+                    "metric_name": primary_metric,
+                    "role": "primary",
+                    "direction": criteria_direction,
+                    "baseline_value": proposal_payload["baseline_value"],
+                    "target_value": proposal_payload["target_value"],
+                    "min_sample_matches": minimum_matches,
+                    "rule": {
+                        "source": "validated_ai_domain_proposal",
+                        "proposal_id": proposal.id,
+                        "analysis_id": analysis.id,
+                    },
+                }
+            ],
+        },
+    }
+    analysis_run = create_analysis_run(
+        db,
+        user_id=owner_user_id,
+        owner_steam_id=proposal.owner_steam_id,
+        status="proposal_selected",
+        source="ai_domain_proposal_activation",
+        selected_metric_snapshot_ids=snapshot_ids,
+        analysis_scope={
+            "domain_key": domain,
+            "baseline_id": baseline.id,
+            "baseline_hash": baseline.baseline_hash,
+            "baseline_match_ids": match_ids,
+        },
+        source_payload={
+            "proposal_id": proposal.id,
+            "proposal_hash": proposal.proposal_hash,
+            "analysis_id": analysis.id,
+            "evidence_hash": analysis.evidence_hash,
+        },
+    )
+    hypothesis = create_coach_hypothesis(
+        db,
+        user_id=owner_user_id,
+        analysis_run_id=analysis_run.id,
+        insight_card=insight_card,
+    )
+    mission = activate_coach_mission(
+        db,
+        user_id=owner_user_id,
+        hypothesis_id=hypothesis.id,
+        title=str(proposal_payload["title"]),
+        focus=str(proposal_payload["behavioral_focus"]),
+        source_payload={
+            "source_domain_proposal_id": proposal.id,
+            "source_domain_proposal_hash": proposal.proposal_hash,
+            "source_domain_analysis_id": analysis.id,
+            "source_domain_analysis_hash": analysis.raw_response_hash,
+            "source_evidence_hash": analysis.evidence_hash,
+            "activation_baseline": {
+                "id": baseline.id,
+                "hash": baseline.baseline_hash,
+                "match_ids": match_ids,
+                "primary_metric": primary_metric,
+                "baseline_value": proposal_payload["baseline_value"],
+                "target_value": proposal_payload["target_value"],
+            },
+        },
+    )
+    slot.status = "active"
+    slot.state_json = canonical_json(
+        {"analysis_status": output["analysis_status"], "mission_id": mission.id}
+    )
+    db.flush()
+    return {"mission": mission, "slot": slot, "reused": False}
 
 
 def _apply_accepted(

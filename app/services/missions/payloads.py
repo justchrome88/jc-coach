@@ -247,6 +247,9 @@ def _mission_domain_key_from_parts(
     mission_payload: Mapping[str, Any] | None,
 ) -> str | None:
     readiness = _json_load_mapping(hypothesis.mission_readiness_json)
+    explicit_domain_key = canonicalize_domain_key(_optional_str(readiness.get("canonical_domain_key")))
+    if explicit_domain_key is not None:
+        return explicit_domain_key
     source = _optional_str(readiness.get("source"))
     if source == "rolling_metric_window":
         window = _mapping(readiness.get("window"))
