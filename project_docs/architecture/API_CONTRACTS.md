@@ -1,0 +1,227 @@
+> R02A2 canonical source: `_legacy_archive/r02a2-2026-07-11/docs/API_CONTRACTS.md`. The original is preserved byte-identically; this copy updates canonical paths only.
+
+# API Contracts
+
+Last updated: 2026-07-08.
+
+## Purpose
+
+This document inventories the current core API and route contracts from
+`app/main.py`, `app/api/routes.py` and the public/owner web route boundary in
+`app/web/routes.py`. It is descriptive, not an API versioning guarantee. Unknown
+or service-owned details are marked conservatively.
+
+Changing endpoint paths, methods, authentication expectations, request inputs,
+response shapes or mutation semantics requires explicit future task scope.
+
+## Common Contract Notes
+
+- `GET /health`, `GET /robots.txt`, `/static/*`, `/`, `/login`, `/register`,
+  `/language/{locale}` and `GET /auth/steam/callback` are public at middleware
+  level.
+- Non-public web routes require an authenticated owner session and redirect to
+  `/login` when unauthenticated.
+- `/api/*` routes require either an authenticated owner session or a configured
+  `Authorization: Bearer <token>` API token.
+- Browser/session-backed state-changing requests require CSRF validation.
+  `/api/*` write requests using an API token do not rely on the browser CSRF
+  path.
+- API validation errors are generally `400`, parser failures can be `422`, and
+  missing latest resources can be `404` where the handler explicitly raises
+  those responses. Other service exceptions are not documented here as stable
+  contracts.
+- Response field summaries reflect current route serialization, not a complete
+  schema promise.
+- CS2 domain output follows `project_docs/product/CS2_DOMAIN_CONTRACT.md`: current map labels
+  are source-provided, playlist/mode remains unknown unless future reliable
+  metadata proves it, side metrics are display-only, economy/positioning/clutch
+  models are unavailable and hard trade recommendations are blocked before
+  parser hardening. API responses and AI/coach payloads must not imply stronger
+  certainty than those limitations allow.
+- Metric source trust, sample-size thresholds, aggregation rules and period
+  comparison semantics follow `project_docs/metrics/METRICS.md`. API responses that expose
+  aggregates, comparisons, coach evidence or AI payloads must preserve
+  low-sample, missing-value, mixed-source and date-source caveats instead of
+  upgrading them into hard claims.
+
+Endpoint contract test rule:
+
+- Any future change to endpoint path, method, authentication, owner/session
+  boundary, CSRF/API-token behavior, request parameter semantics, status code,
+  redirect target or representative response fields requires a focused endpoint
+  contract test in `tests/`.
+- Mutation endpoints require tests for the relevant auth/CSRF boundary and a
+  clear no-production-DB-touch declaration or DB/SHA evidence appropriate to
+  the task risk.
+- Import/parser/evaluator and Steam import endpoints require explicit PM/user
+  authorization before running live work; contract tests should use mocks,
+  temp files and temp DB fixtures only.
+- Schema/model/startup/migration changes are not implied by endpoint contract
+  edits and require separate explicit scope.
+
+Mutation classes:
+
+- `read`: no intended persistent mutation.
+- `session-write`: browser session or cookie write.
+- `db-write`: persistent database write.
+- `artifact-write`: persistent non-DB artifact write such as a handoff or
+  manifest.
+- `import-parser-write`: CSV/JSON/DEM import or parser-backed import.
+- `steam-import-write`: Steam/Valve import queue or run path.
+
+Endpoint safety classes:
+
+- `read-only`: `GET` routes whose intended behavior is to return health,
+  rendered pages, existing DB facts, existing filesystem/config state or
+  service-owned derived summaries. These routes still require focused tests
+  when they expose owner-only facts, report/AI content, recommendation evidence
+  or parser-derived detail.
+- `write/mutation`: routes with `session-write`, `db-write` or
+  `artifact-write` behavior. Future work touching these routes needs focused
+  auth/CSRF and side-effect tests. Production DB SHA evidence is required only
+  when the task inspects or mutates `data/cs2_coach.db` under `AGENTS.md`.
+- `import/parser/evaluator-risk`: routes with `import-parser-write` or
+  `steam-import-write`, plus any route that can run Steam import, demo import,
+  parser-backed import or queued import work. These require explicit task
+  authorization before import/parser execution, and tests should use isolated
+  fixtures or mocks rather than production data.
+- `auth/owner-sensitive`: public auth/session routes, Steam owner-linking and
+  all owner-only web/API routes. Future changes need focused owner-boundary,
+  CSRF and API-token/session tests.
+- `DB/schema-risk`: routes that can write persisted rows are DB-risk. They are
+  not schema-changing by themselves, but future changes that alter models,
+  startup schema behavior, migrations/baselines or copied DBs require explicit
+  schema scope.
+- `unknown`: route behavior, validation or side effects that cannot be proven
+  from route code and canonical docs. Treat unknowns as follow-up candidates,
+  not as accepted safe behavior.
+
+Route-level validation inventory:
+
+- Global middleware in `app/main.py` currently owns public-vs-owner route
+  gating, `/api/*` session/API-token auth, CSRF checks for browser-backed
+  writes, API state-change logging and coarse rate-limit buckets for mutation
+  groups.
+- FastAPI parameter binding currently validates declared path/query/form/file
+  types such as integer IDs, uploaded files and form/query fields. Where no
+  explicit bound, clamp or enum exists in the route, stronger validation is a
+  follow-up candidate.
+- Route handlers explicitly validate some cases: `/api/import/demo` requires a
+  `.dem` filename; parser failures map to `422`; service `ValueError` failures
+  usually map to `400` in JSON API routes or redirect messages in web routes;
+  missing latest recommendation/report/AI resources map to `404` where the
+  handler checks for absence.
+- Several validations are service-owned rather than route-owned, including
+  registration/credential rules, Steam OpenID/share-code/auth-code validation,
+  recommendation status/extend/restart constraints, AI result persistence
+  validation, app-setting validation and inbox-demo path safety. Future work
+  should test the service rule and the route translation separately when
+  behavior changes.
+- Current practical gaps are conservative follow-up candidates: stronger route
+  enum validation for filters/sort/direction/status/category where applicable,
+  explicit min/max validation for recommendation extension counts beyond
+  service checks, explicit route-level constraints for free-text AI/report
+  inputs, clearer web error status conventions for invalid dates or service
+  validation failures, and explicit tests that API-token writes bypass browser
+  CSRF only when a valid configured token is present.
+
+## Public And Web Boundary Contracts
+
+| Method | Path | Auth/owner expectation | Request/input summary | Response/output summary | Mutation/read class |
+|---|---|---|---|---|---|
+| `GET` | `/health` | Public. | None. | JSON `{"status": "ok"}`. | `read` |
+| `GET` | `/robots.txt` | Public. | None. | Plain text robots policy disallowing crawling. | `read` |
+| `GET` | `/` | Public. | Session may affect redirect. | Landing template or redirect to `/dashboard`. | `read` |
+| `GET` | `/login` | Public. | Optional `message`. | Login template or redirect to `/dashboard`. | `read` |
+| `POST` | `/login` | Public with CSRF. | Form `email`, `password`. | Redirect to `/dashboard` on success or login template `400` on failure. | `session-write` |
+| `GET` | `/register` | Public. | Optional `message`. | Register template or redirect to `/dashboard`. | `read` |
+| `POST` | `/register` | Public with CSRF. | Form `email`, `password`, optional `display_name`. | Creates user, logs in, redirects to `/dashboard`; template `400` for validation failure. | `db-write`, `session-write` |
+| `POST` | `/logout` | Owner session with CSRF. | None. | Clears session and redirects to `/`. | `session-write` |
+| `GET` | `/language/{locale}` | Public. | Path `locale`, optional referer header. | Sets locale cookie and redirects back or `/`. | `session-write` |
+| `GET` | `/auth/steam/callback` | Public at middleware level, but handler requires current owner session before linking. | Steam OpenID query parameters. | Redirects to import settings with success or error message. | `db-write` when link succeeds |
+
+Owner web pages and form posts are inventoried in `project_docs/architecture/ARCHITECTURE.md`.
+Their browser contract is template/redirect oriented rather than JSON oriented.
+
+## JSON API Contract Inventory
+
+### Matches And Analytics
+
+| Method | Path | Auth/owner expectation | Request/input summary | Response/output summary | Mutation/read class |
+|---|---|---|---|---|---|
+| `GET` | `/api/matches` | Owner session or API token. | None. | List of match dictionaries from playable matches. Fields include IDs, source, played date/source, source-provided map/mode/result, score and current metrics such as kills, deaths, ADR, KAST and utility values. Playlist/mode certainty remains limited by the CS2 domain contract. | `read` |
+| `GET` | `/api/analytics/summary` | Owner session or API token. | None. | Object with `summary`, `comparison` and `map_stats` from analytics services. Exact nested schema is service-owned. | `read` |
+| `GET` | `/api/analytics/aim` | Owner session or API token. | None. | Aim profile object from `get_aim_profile()`. Exact nested schema is service-owned. | `read` |
+
+### Imports And Demo Parser
+
+| Method | Path | Auth/owner expectation | Request/input summary | Response/output summary | Mutation/read class |
+|---|---|---|---|---|---|
+| `POST` | `/api/import/csv` | Owner session plus CSRF, or API token. | Multipart file upload. | `{"ok": true, ...result}` from `import_csv()`, currently including import counts. | `import-parser-write`, `db-write` |
+| `POST` | `/api/import/json` | Owner session plus CSRF, or API token. | Multipart file upload. | `{"ok": true, ...result}` from `import_json()`; invalid JSON/data can return `400`. | `import-parser-write`, `db-write` |
+| `POST` | `/api/import/demo` | Owner session plus CSRF, or API token. | Multipart `.dem` file and optional `player_identifier` query/form value as accepted by FastAPI. | `{"ok": true, ...result}` from `import_demo_file()`; non-`.dem` returns `400`, parser failure returns `422`. | `import-parser-write`, `db-write` |
+| `GET` | `/api/import/demo/inbox` | Owner session or API token. | None. | `{"files": [...]}` from `list_inbox_demos()`. File item schema is service-owned. | `read` |
+| `POST` | `/api/import/demo/inbox` | Owner session plus CSRF, or API token. | `filename` and optional `player_identifier` parameters. | `{"ok": true, ...result}` from `import_inbox_demo()`; parser failure returns `422`. | `import-parser-write`, `db-write` |
+| `GET` | `/api/import/jobs` | Owner session or API token. | None. | List of serialized import jobs with ID, provider, job type, status, timestamps and error message. | `read` |
+
+### Recommendations
+
+| Method | Path | Auth/owner expectation | Request/input summary | Response/output summary | Mutation/read class |
+|---|---|---|---|---|---|
+| `GET` | `/api/recommendations/active` | Owner session or API token. | None. | Active recommendation progress with ID, title, status, health, baseline, target, counts, progress score, match counts and summary. Returns `404` when absent. | `read` |
+| `GET` | `/api/recommendations` | Owner session or API token. | None. | List of recommendation progress objects with category, status, health, baseline/target, counts, progress score and summary. | `read` |
+| `GET` | `/api/recommendations/history` | Owner session or API token. | None. | List of recommendation history rows with ID, category, title, status, priority, start/end timestamps and period match counts. | `read` |
+| `GET` | `/api/recommendations/categories` | Owner session or API token. | None. | Category summary list from `recommendation_category_summary()`. Exact item schema is service-owned. | `read` |
+| `POST` | `/api/recommendations/{recommendation_id}/status` | Owner session plus CSRF, or API token. | Path `recommendation_id`; parameter `status`. | `{"ok": true, "id": ..., "status": ...}` or `400` for service validation failure. | `db-write` |
+| `POST` | `/api/recommendations/{recommendation_id}/extend` | Owner session plus CSRF, or API token. | Path `recommendation_id`; optional `additional_matches` default `5`. | `{"ok": true, "id": ..., "target_period_matches": ...}` or `400`. | `db-write` |
+| `POST` | `/api/recommendations/categories/{category}/restart` | Owner session plus CSRF, or API token. | Path `category`. | `{"ok": true, "id": ..., "category": ..., "status": ...}` or `400`. | `db-write` |
+
+### Reports And AI Coach
+
+| Method | Path | Auth/owner expectation | Request/input summary | Response/output summary | Mutation/read class |
+|---|---|---|---|---|---|
+| `POST` | `/api/reports/generate` | Owner session plus CSRF, or API token. | None. | `{"ok": true, "id": ..., "matches_count": ..., "created_at": ...}`. | `db-write`, `artifact-write` |
+| `GET` | `/api/reports/latest` | Owner session or API token. | None. | Latest report fields: ID, period start/end, match count, markdown and creation timestamp. Returns `404` when absent. | `read` |
+| `GET` | `/api/coach/ai/payload` | Owner session or API token. | None. | AI coach payload from `build_ai_coach_payload()`. Exact nested schema is service-owned. | `read` |
+| `POST` | `/api/coach/ai/handoff` | Owner session plus CSRF, or API token. | None. | `{"ok": true, ...handoff}` from `prepare_ai_coach_handoff()`. Handoff schema/path details are service-owned. | `artifact-write` |
+| `GET` | `/api/coach/ai/handoff/latest` | Owner session or API token. | None. | Latest handoff object from `latest_ai_handoff()` or `404` when absent. | `read` |
+| `GET` | `/api/coach/ai/provider/health` | Owner session or API token. | None. | Provider health object from `ai_provider_health()`. | `read` |
+| `POST` | `/api/coach/ai/generate` | Owner session plus CSRF, or API token. | None. | `{"ok": true, "id": ..., "created_at": ..., "source_ref": ...}`; service runtime errors return `400`. | `db-write`, `artifact-write` |
+| `POST` | `/api/coach/ai/result` | Owner session plus CSRF, or API token. | Parameters `report_markdown` and optional `source_ref`. | `{"ok": true, "id": ..., "created_at": ...}` or `400` for validation failure. | `db-write` |
+| `GET` | `/api/coach/ai/result/latest` | Owner session or API token. | None. | Serialized latest AI coach report or `404` when absent. | `read` |
+| `GET` | `/api/coach/ai/results` | Owner session or API token. | Optional `limit`, clamped to `1..50`, default `10`. | List of serialized AI coach reports. | `read` |
+
+AI coach payload/result consumers must preserve the source limitations carried
+by Metric Truth and `project_docs/product/CS2_DOMAIN_CONTRACT.md`. Unavailable economy,
+positioning and clutch models, display-only side metrics and weak trade
+semantics cannot be upgraded into confident API-level coach advice. Mixed
+sources, insufficient samples, missing values and incompatible comparison
+windows follow the source trust and aggregation policy in `project_docs/metrics/METRICS.md`.
+
+### Steam And Import Jobs
+
+| Method | Path | Auth/owner expectation | Request/input summary | Response/output summary | Mutation/read class |
+|---|---|---|---|---|---|
+| `GET` | `/api/steam/login-url` | Owner session or API token. | None. | `{"url": ...}` from `steam_login_url()`. | `read` |
+| `GET` | `/api/steam/accounts` | Owner session or API token. | None. | List of Steam accounts with ID, Steam ID, persona name, sync flag, last sync timestamp and auth-code presence flag. | `read` |
+| `POST` | `/api/steam/import/share-code` | Owner session plus CSRF, or API token. | Parameter `share_code`. | Creates queued share-code import job and returns `{"ok": true, "job_id": ..., "status": ...}` or `400`. | `steam-import-write`, `db-write` |
+| `POST` | `/api/steam/import/jobs/{job_id}/run` | Owner session plus CSRF, or API token. | Path `job_id`. | Runs/syncs job and returns `{"ok": result.status == "succeeded", ...result}` or `400`. Result schema is service-owned. | `steam-import-write`, `db-write` |
+| `POST` | `/api/steam/import/jobs/run-queued` | Owner session plus CSRF, or API token. | None. | `{"ok": all succeeded, "processed": count, "results": [...]}`. Result item schema is service-owned. | `steam-import-write`, `db-write` |
+| `POST` | `/api/steam/import/all` | Owner session plus CSRF, or API token. | None. | Queues all-match import and may start background task. Returns `ok`, `job_id`, `status` and progress message. | `steam-import-write`, `db-write` |
+| `GET` | `/api/steam/import/overview` | Owner session or API token. | None. | Import overview object plus serialized `current_job` or `null`. Exact overview fields are service-owned. | `read` |
+| `GET` | `/api/steam/demo-downloader/status` | Owner session or API token. | None. | `{"configured": true|false}`. | `read` |
+
+Import job result details are intentionally service-owned, but import reports
+and future API/UI labels must treat `ImportJob.status` as coarse and
+`ImportJob.result_json` as canonical for `overall_outcome`, `statuses`,
+`retryable`, source/context, progress and safety evidence. The current JSON
+shape expectation is documented in `project_docs/operations/STEAM_IMPORT.md`; changing endpoint
+response fields or mutation semantics still requires explicit API contract
+scope and focused tests.
+
+### Demo Storage
+
+| Method | Path | Auth/owner expectation | Request/input summary | Response/output summary | Mutation/read class |
+|---|---|---|---|---|---|
+| `GET` | `/api/storage/demos` | Owner session or API token. | None. | Demo storage report from `demo_storage_report()`. Exact nested schema is service-owned. | `read` |
+| `POST` | `/api/storage/demos/manifest` | Owner session plus CSRF, or API token. | None. | Writes manifest and returns `{"ok": true, "manifest_path": ..., "totals": ...}`. | `artifact-write` |

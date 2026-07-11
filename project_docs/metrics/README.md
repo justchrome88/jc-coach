@@ -1,0 +1,34 @@
+> R02A2 canonical source: `_legacy_archive/r02a2-2026-07-11/docs/metrics/README.md`. The original is preserved byte-identically; this copy updates canonical paths only.
+
+# JC Coach Metric Source of Truth
+
+This directory is the canonical metric knowledge base. Code remains executable behavior; disagreements between code and these contracts are defects or explicitly documented legacy semantics, not permission to guess.
+
+The registry's legacy `domain` field means **metric group/source
+classification**. It does not define a coach domain. The only MVP coach domains
+are `impact_leak` and `bad_fight_selection`.
+
+## Authority map
+
+- `registry/metrics.json`: machine-readable inventory, identity, semantics, versions, persistence, consumers, truth status, and discrepancies.
+- `contracts/*.md`: normative domain rules and boundaries shared by multiple metrics.
+- `METRIC_DATA_LINEAGE.md`: identities and joins from retained demo through UI and coach.
+- `METRIC_GOVERNANCE.md`: authority, confidence, validation, and quarantine rules.
+- `METRIC_CHANGE_POLICY.md`: add/change/deprecate/version/backfill workflow.
+- `GROUND_TRUTH_POLICY.md`: evidence hierarchy and comparator policy.
+- `investigations/`: time-bound evidence; it does not redefine a contract by itself.
+- `generated/METRIC_CATALOG.md`: reproducible view generated only from the registry.
+
+`project_docs/metrics/METRICS.md` and `app/services/metric_truth.py` are
+supporting human/runtime policy. They do not override a disputed machine
+registry entry or validated-version consumer gate.
+
+## Change workflow
+
+1. Identify the metric, metric-group contract, and any canonical coach-domain consumer; preserve identity and current semantic version.
+2. Add independent evidence and an acceptance fixture. A test that repeats the implementation formula is insufficient.
+3. For changed meaning, increment the semantic version and decide whether old snapshots are retained, quarantined, or backfilled into a new version.
+4. Update registry, contract, tests, golden evidence, and catalog together.
+5. Run `.venv/bin/python scripts/metrics_registry.py --write`, then `--check`, focused tests, semantic/golden fixtures, and `git diff --check`.
+
+Validation without rewriting the catalog: `.venv/bin/python scripts/metrics_registry.py --check`.

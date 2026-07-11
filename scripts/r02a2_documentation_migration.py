@@ -218,6 +218,16 @@ def atomic_json_write(path: Path, payload: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+def atomic_text_write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    with temporary.open("w", encoding="utf-8") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
 def build_manifest(args: argparse.Namespace) -> int:
     inventory_path = Path(args.inventory)
     inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
@@ -416,6 +426,72 @@ def record_compact_destination_changes(args: argparse.Namespace) -> int:
     return 0
 
 
+def migrate_human_docs(args: argparse.Namespace) -> int:
+    """Archive original human docs and write canonical path-updated copies."""
+    manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
+    records = {record["source_path"]: record for record in manifest["records"]}
+    replacements = {
+        **HUMAN_DESTINATIONS,
+        **RUNTIME_DESTINATIONS,
+        **AGENT_DESTINATIONS,
+        "docs/CURRENT_STATUS.md": "project_control/status/CURRENT_STATUS.md",
+        "docs/HANDOFF.md": "project_control/status/HANDOFF.md",
+        "docs/project_management/WP_REGISTRY.md": "project_control/planning/WP_REGISTRY.md",
+        "docs/project_management/VERSION_ROADMAP.md": "project_control/planning/VERSION_ROADMAP.md",
+        "docs/project_management/WORK_PACKAGE_BACKLOG.md": (
+            "project_control/planning/WORK_PACKAGE_BACKLOG.md"
+        ),
+        "docs/project_management/MASTER_WP_CHECKLIST.md": (
+            "project_control/checklists/MASTER_WP_CHECKLIST.md"
+        ),
+        "docs/project_management/ACCEPTANCE_MATRIX.md": (
+            "project_control/checklists/ACCEPTANCE_MATRIX.md"
+        ),
+        "docs/RELEASE_CHECKLIST.md": "project_control/checklists/RELEASE_CHECKLIST.md",
+        "docs/PUBLIC_DEPLOYMENT_CHECKLIST.md": (
+            "project_control/checklists/PUBLIC_DEPLOYMENT_CHECKLIST.md"
+        ),
+        "docs/README.md": "project_docs/README.md",
+    }
+    migrated = 0
+    for source, canonical in HUMAN_DESTINATIONS.items():
+        if source == "docs/metrics/generated/METRIC_CATALOG.md":
+            continue
+        source_path = ROOT / source
+        archive_path = ROOT / archive_destination(source)
+        canonical_path = ROOT / canonical
+        record = records[source]
+        if not source_path.is_file():
+            raise SystemExit(f"HUMAN_DOC_MIGRATION_ERROR=missing_source:{source}")
+        if source_path.stat().st_size != record["source_size"] or sha256(source_path) != record["source_sha256"]:
+            raise SystemExit(f"HUMAN_DOC_MIGRATION_ERROR=source_drift:{source}")
+        archive_path.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(source_path, archive_path)
+        text = archive_path.read_text(encoding="utf-8")
+        for old, new in sorted(replacements.items(), key=lambda item: len(item[0]), reverse=True):
+            text = text.replace(old, new)
+        text = text.replace(
+            "docs/audit/",
+            "_legacy_archive/r02a2-2026-07-11/docs/audit/",
+        ).replace(
+            "docs/audits/",
+            "_legacy_archive/r02a2-2026-07-11/docs/audits/",
+        ).replace(
+            "docs/refactor/",
+            "_legacy_archive/r02a2-2026-07-11/docs/refactor/",
+        )
+        provenance = (
+            "> R02A2 canonical source: "
+            f"`{archive_destination(source)}`. The original is preserved "
+            "byte-identically; this copy updates canonical paths only.\n\n"
+        )
+        atomic_text_write(canonical_path, provenance + text)
+        migrated += 1
+    print(f"HUMAN_DOCS_MIGRATED={migrated}")
+    print("HUMAN_DOC_MIGRATION_RESULT=complete")
+    return 0
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -439,6 +515,9 @@ def parse_args() -> argparse.Namespace:
     compact = subparsers.add_parser("record-compact-destination-changes")
     compact.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
     compact.set_defaults(func=record_compact_destination_changes)
+    human = subparsers.add_parser("migrate-human-docs")
+    human.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    human.set_defaults(func=migrate_human_docs)
     return parser.parse_args()
 
 

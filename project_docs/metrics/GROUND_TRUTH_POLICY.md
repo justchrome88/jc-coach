@@ -1,0 +1,29 @@
+> R02A2 canonical source: `_legacy_archive/r02a2-2026-07-11/docs/metrics/GROUND_TRUTH_POLICY.md`. The original is preserved byte-identically; this copy updates canonical paths only.
+
+# Ground Truth Policy
+
+Passing a formula test proves implementation consistency, not independent
+truth. Validation requires source evidence independent of the calculation under
+test. External comparator values are evidence only and must not be fitted.
+
+Match 124 independently accepts rounds, kills, deaths, K/D, ordinary/flash/
+combined assists, headshot kills, and headshot-kill rate. H01A-M04 additionally
+accepts effective enemy damage, ADR, KAST, quiet-round participation, explicit
+trade state, enemy-only utility damage, flash effectiveness and local aim
+primitives under Coach Metric Pack v1. Earlier ambiguous v1/v2 observations
+remain historical and quarantined; trusted consumers select v3 only.
+
+Evidence priority for demo-derived metrics:
+
+1. retained demo identity/hash plus a reproducible, versioned parser event ledger;
+2. independently audited normalized events with player/team/round identity;
+3. accepted golden fixtures derived independently of the implementation;
+4. persisted aggregates and snapshots;
+5. UI/API serialization;
+6. external services as semantic comparators only.
+
+An external value may expose a defect but cannot choose the product formula. UI values cannot validate their own persistence source. Unit tests that calculate expectations through the same helper are circular.
+
+A discrepancy verdict is `MATCH`, `MISMATCH`, `SEMANTIC_DIFFERENCE`, `INSUFFICIENT_EVIDENCE`, or `NOT_IMPLEMENTED`. A repair requires a localized layer and accepted semantics. Unresolved guesses are quarantined and excluded from M02 formula changes.
+
+For player metrics, owner identity and measured player identity are separate. Name matching is fallback evidence, never equivalent to a proven Steam ID. Team, self, world, warmup, post-round, post-match, disconnect/reconnect, side-switch, incomplete-round, and overtime treatment must be explicit.

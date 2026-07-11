@@ -55,7 +55,7 @@ def test_filter_confidence_labels_are_carried_with_selected_match_windows():
 
 
 def test_metric_formula_and_reliability_stay_in_sync_with_metrics_doc():
-    docs = Path("docs/METRICS.md").read_text(encoding="utf-8")
+    docs = Path("project_docs/metrics/METRICS.md").read_text(encoding="utf-8")
     core_table = docs.split("## Core Metric Table", 1)[1].split("## Runtime Policy", 1)[0]
     rows = [
         line
