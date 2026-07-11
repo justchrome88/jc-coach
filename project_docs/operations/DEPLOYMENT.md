@@ -2,7 +2,7 @@
 
 # Deployment
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-11.
 
 ## Current Shape
 
@@ -21,8 +21,7 @@ Current public/friends readiness: `BLOCKED`.
 Do not claim friends/public readiness until `project_docs/operations/SECURITY.md` blockers are
 closed and a future explicit public-readiness gate verifies the intended
 exposure model. Docs-only edits, roadmap edits and checklist updates do not
-make the service public-ready and do not change
-`READY_FOR_MAJOR_CS2_FEATURE_WORK: NO`.
+make the service public-ready.
 
 `project_control/checklists/PUBLIC_DEPLOYMENT_CHECKLIST.md` is a blocked preflight checklist, not an
 authorization to expose ports, edit `.env`, reload nginx, restart services or

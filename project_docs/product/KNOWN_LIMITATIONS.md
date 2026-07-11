@@ -2,7 +2,7 @@
 
 # Known Limitations
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-11.
 
 - Not secure for friends/public use yet; public/friends access remains blocked
   until the explicit gate in `project_docs/operations/SECURITY.md` and deploy verification in
@@ -16,22 +16,20 @@ Last updated: 2026-07-08.
 - CS2 domain boundaries are conservative in `project_docs/product/CS2_DOMAIN_CONTRACT.md`:
   economy, positioning and clutch models are unavailable; current map labels
   are source-provided until a canonical map registry is accepted; side metrics
-  are display-only; hard trade recommendations are blocked before parser
-  hardening; coach output must keep these source limitations visible.
-- Authenticated owner-browser timing was not captured by Codex for WP-017H.
-- `/coach` artifact overview is acceptable at 22 demos but should be optimized
-  before materially larger demo volume.
-- Historical queued non-parent Steam jobs `#1` and `#10` remain.
+  are display-only. Bounded aggregate same-round five-second trade
+  opportunities and traded/untraded death rates are accepted as context, but
+  they do not establish
+  exact position, spacing, angle, rotation, crosshair placement or individual
+  counterfactual trade instructions.
 - Metric Truth Layer exists, but some metrics remain approximate/low/unavailable and must stay warning-only or suppressed as defined in `project_docs/metrics/METRICS.md`.
-- Steam import is alpha and needs durable worker/retry/freshness hardening.
-- AI output validator exists for structured reports, but prompt versioning, provider-specific structured response mode and semantic entailment checks remain future work.
+- Steam import is accepted with warnings for controlled personal one-demo-capped
+  use; durable worker/retry/freshness operations and public readiness remain
+  incomplete.
+- R02 implements versioned prompts/contracts, strict structured output,
+  metric/match/value semantic validation, accepted/rejected attempt lineage and
+  provider/model provenance. The wider generic report path, durable queue,
+  provider operations, observability and cost controls remain incomplete.
 - `/coach` is coach-first over current tracked recommendation, but it is not recommendation planner and does not identify a verified top problem yet.
-- 2026-07-06 agentic-readiness audit score is `66%`; major CS2 feature work is
-  restricted until the foundation recovery gate passes.
-- Migration baseline/schema gate is a foundation blocker before schema features.
-- Structured risk register, source trust/sample-size policy, prompt/payload
-  versioning, semantic AI evals and API contract/gate enforcement remain
-  foundation hardening items.
 - Current rate limiting is in-memory and not public-grade; privacy/retention,
   incident/log taxonomy and safe environment-reference policies are documented
   but not accepted as public operations readiness.

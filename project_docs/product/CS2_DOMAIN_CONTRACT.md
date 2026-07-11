@@ -2,7 +2,7 @@
 
 # CS2 Domain Contract
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-11.
 
 ## Purpose
 
@@ -15,8 +15,9 @@ them.
 This document does not authorize product logic changes, DB/schema changes,
 production DB mutation, import/parser/evaluator jobs, live Steam/Valve work,
 service/deploy changes, package installation, import cap changes or major CS2
-feature unlocks. `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO` until the
-foundation readiness gate passes.
+feature unlocks. Current work authorization and sequencing live in
+`project_control/`; this durable domain contract does not declare a task or
+release gate.
 
 ## Match And Round Domain Map
 
@@ -31,7 +32,7 @@ Current accepted domain objects:
 | Economy | Buy type, equipment value, save/force/eco/full-buy and money-state model. | Unavailable. | Do not diagnose economy decisions or recommend buy strategy from current data. |
 | Positioning | Player location, pathing, angle, spacing, crosshair placement and heatmap model. | Unavailable. | Do not diagnose positioning, rotations, spacing, angle discipline or crosshair placement from current data. |
 | Clutch | End-of-round low-player-count state such as 1vX or Xv1. | Unavailable as an accepted model. | Do not claim clutch win rate, clutch conversion, clutch mistakes or clutch recommendations until parser-backed semantics are accepted. |
-| Trade | Trade kill/death semantics and traded/untraded death rate. | Current trade facts are weak context only. | Hard trade recommendations are blocked before parser hardening. |
+| Trade | Same-round five-second trade opportunity, trade kill and traded/untraded death semantics. | Validated counts/rates and opening context may support bounded aggregate `bad_fight_trade` patterns. | They do not prove exact position, spacing, angle, rotation, crosshair placement or what an individual should have done. |
 
 ## Source And Mode Limits
 
@@ -65,7 +66,7 @@ The following models are explicitly unavailable for hard advice:
 | Clutch model | Unavailable. | Suppress clutch win-rate, clutch conversion and clutch-mistake claims. |
 | Map registry | Planned, not accepted. | Treat map strings as source-provided labels until a registry is accepted. |
 | Side confidence model | Low confidence. | Keep side split metrics display-only. |
-| Trade model | Not hardened. | Block hard trade recommendations and traded/untraded-death claims. |
+| Spatial trade-cause model | Unavailable. | Keep validated aggregate trade counts/rates, but suppress exact tactical cause and individual counterfactual instructions. |
 
 ## Metric Usage Boundaries
 
@@ -76,9 +77,12 @@ This domain contract adds CS2-specific boundaries:
 
 - Side metrics stay display-only and warning-labeled until parser confidence
   improves.
-- `trade_kills` and KAST trade components may appear only as caveated context
-  under current reliability rules.
-- `traded_deaths` remains unavailable and suppressed.
+- Version `3.0.0` `trade_opportunities`, `trade_kills`, `trade_success_rate`,
+  `traded_deaths`, `untraded_deaths` and their accepted rates use explicit team
+  lineage and a bounded same-round five-second window.
+- These metrics may support aggregate opening/tradeability patterns only. They
+  cannot identify exact spacing, position, angle, rotation, crosshair placement
+  or a counterfactual action for an individual event.
 - `crosshair_placement` remains unavailable and suppressed.
 - `early_deaths` must use accepted parser timing anchors; it must not fallback
   to entry deaths.
@@ -103,9 +107,10 @@ approximate, low-confidence or source-limited facts:
   or needs review.
 - Do not present unavailable models as missing minor details; state that the
   model is unavailable when the concept would otherwise affect advice.
-- Do not convert side, trade, map, mode, economy, positioning or clutch gaps
-  into hard recommendations.
-- Hard trade recommendations remain blocked before parser hardening.
+- Do not convert side, map, mode, economy, positioning or clutch gaps into hard
+  recommendations.
+- Trade advice must remain bounded to validated aggregate opening/tradeability
+  patterns and must not claim spatial or tactical cause.
 - Playlist/mode limitations must remain visible anywhere mode-specific advice
   would otherwise be implied.
 
@@ -122,7 +127,7 @@ approximate, low-confidence or source-limited facts:
 | Economy | Money/equipment/buy-state model; unavailable. |
 | Positioning | Location, pathing, spacing, rotations, angles, crosshair placement and heatmap-style inference; unavailable. |
 | Clutch | Low-player-count end-round scenario such as 1vX; unavailable as an accepted model. |
-| Trade | Short-window teammate response after a kill/death; not hardened for hard recommendations. |
+| Trade | Same-round response within the accepted five-second window; usable for bounded aggregate patterns, not spatial or individual causal diagnosis. |
 | KAST | Kill, assist, survive or trade participation; approximate because the trade component is not fully reliable. |
 | Entry duel | Opening kill/death context from parser/source ordering; usable only within Metric Truth reliability limits. |
 | Utility | Grenade/flash damage and effect context; available only where parser/source support and Metric Truth allow it. |
@@ -150,9 +155,11 @@ Any upgrade from unavailable/display-only/caveated to hard advice requires a
 separate accepted task with evidence, tests or fixtures appropriate to the
 domain:
 
-- parser hardening for side switching, trade windows, traded deaths, clutch
-  states, economy and positioning;
+- parser hardening for side switching, clutch states, economy and positioning;
+- spatial evidence and an accepted causal contract before any exact trade
+  spacing/position/angle/rotation or individual counterfactual instruction;
 - source trust and sample-size thresholds for mixed source data;
 - confidence labels that reach coach output;
-- semantic AI/eval checks for overclaiming and unsupported metrics;
+- extensions to the existing semantic AI/eval checks when new claim classes or
+  metrics are introduced;
 - explicit product decision if a concept remains intentionally out of scope.

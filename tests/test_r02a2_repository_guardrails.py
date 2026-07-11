@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from scripts import r02a2_repository_guardrails as guardrails
@@ -141,3 +142,66 @@ def test_agent_principle_guard_rejects_incomplete_matrix_and_stale_commit_policy
         "agent_principle_matrix_incomplete",
         "conflicting_active_agent_principle",
     }
+
+
+def test_durable_docs_reject_current_routing_but_allow_explicit_history(tmp_path):
+    path = "project_docs/product/example.md"
+    _write(
+        tmp_path,
+        path,
+        "# Example\n\n## Historical Decisions\n\nCURRENT_TASK: OLD_TASK\n",
+    )
+    assert guardrails.durable_doc_route_errors(tmp_path) == []
+
+    _write(
+        tmp_path,
+        path,
+        "# Example\n\nNEXT_TASK: ACTIVE_ROUTE\n\n"
+        "## Superseded Route\n\nThe required next lane was OLD_LANE.\n",
+    )
+    errors = guardrails.durable_doc_route_errors(tmp_path)
+    assert [error.code for error in errors] == ["dynamic_route_in_durable_docs"]
+
+
+def test_current_document_contract_rejects_semantic_regressions(tmp_path):
+    shutil.copytree(guardrails.ROOT / "project_docs", tmp_path / "project_docs")
+
+    ai = tmp_path / "project_docs/product/AI_COACH.md"
+    ai.write_text(
+        ai.read_text(encoding="utf-8")
+        .replace("versioned domain prompts", "domain prompts without versions")
+        .replace("bounded aggregate", "aggregate")
+        + "\nPrompt versioning remains future work.\n",
+        encoding="utf-8",
+    )
+    steam = tmp_path / "project_docs/operations/STEAM_IMPORT.md"
+    steam.write_text(
+        steam.read_text(encoding="utf-8").replace(
+            "Steam import is accepted with warnings for controlled personal use.",
+            "Steam import acceptance is blocked.",
+        ),
+        encoding="utf-8",
+    )
+    testing = tmp_path / "project_docs/operations/TESTING.md"
+    testing.write_text(
+        testing.read_text(encoding="utf-8").replace(
+            "accepted general local CI-equivalent",
+            "accepted local CI-equivalent gate during the restricted foundation-hardening lane; legacy",
+        ),
+        encoding="utf-8",
+    )
+    domain = tmp_path / "project_docs/product/CANONICAL_COACH_DOMAIN_MODEL.md"
+    domain.write_text(
+        domain.read_text(encoding="utf-8").replace("exactly two MVP coach domains", "three MVP coach domains"),
+        encoding="utf-8",
+    )
+
+    codes = {error.code for error in guardrails.current_document_contract_errors(tmp_path)}
+    assert {
+        "current_domain_document_parity",
+        "trade_document_missing_bounded_capability",
+        "ai_contract_documentation_parity",
+        "implemented_ai_contract_described_as_future",
+        "steam_import_documentation_parity",
+        "testing_documentation_parity",
+    } <= codes

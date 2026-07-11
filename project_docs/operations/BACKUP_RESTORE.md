@@ -2,7 +2,7 @@
 
 # Backup And Restore
 
-Last updated: 2026-07-07.
+Last updated: 2026-07-11.
 
 ## Current Status
 
@@ -184,8 +184,7 @@ Before any future schema change or migration apply:
 
 - This process is local/VPS backup and restore verification, not hosted CI and
   not branch protection.
-- It does not resolve the known full-suite pytest stall.
-- It does not prove final foundation readiness.
+- It does not prove the full technical quality gate or release readiness.
 - It does not establish raw demo retention, deletion or storage migration
   policy.
 - It does not add migration support or adopt Alembic.

@@ -2,7 +2,7 @@
 
 # Metrics
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-11.
 
 > Status: supporting legacy runtime-policy summary. Canonical metric identity,
 > contracts and current assurance policy live in `project_docs/metrics/`, while
@@ -52,8 +52,10 @@ Usage decision:
 | `hltv_rating` | `approximate` | Source-provided rating. | Warning metric. | Это не локально проверенная HLTV 2.0 formula. |
 | `entry_kills`, `entry_deaths` | `medium` | Parser/source opening duel facts. | Allowed for diagnosis/recommendation, AI warns. | Зависит от event order и target player. |
 | `early_deaths` | `approximate` | Deaths inside parser early-round timing window when `round_freeze_end` or `round_start` anchors are available. | Warning metric; not hard scoring. | Если timing anchors отсутствуют, значение не заполняется; fallback в `entry_deaths` запрещён. |
-| `trade_kills` | `low` | Parser death-event order. | Suppressed from hard diagnosis/recommendation. | Trade window/team-side inference needs parser hardening. |
-| `traded_deaths` | `unavailable` | Не хранится как reliable match metric. | Suppressed. | Нельзя делать выводы о traded/untraded death rate. |
+| `trade_opportunities`, `trade_success_rate`, `untraded_deaths` | `trusted` | Explicit team lineage in a same-round five-second window. | Allowed for bounded aggregate opening/tradeability patterns. | Does not prove spatial ability, tactical expectation or an individual counterfactual. |
+| `trade_kills` | `low` | Generic unversioned parser input. | Warning/suppressed under generic Metric Truth; validated v3 pack consumers may use the versioned fact. | Trust requires explicit source/event-set/semantic-version lineage. |
+| `traded_deaths` | `unavailable` | Generic unversioned parser input. | Suppressed under generic Metric Truth; validated v3 pack consumers may use the versioned fact. | Do not upgrade a legacy alias without v3 provenance. |
+| `traded_death_rate`, `untraded_death_rate` | `low` | Generic unversioned derived-round input. | Warning/suppressed under generic Metric Truth; validated v3 pack consumers may use the versioned rates. | Does not prove exact position, spacing, angle, rotation or crosshair placement. |
 | `utility_damage` | `medium` | Grenade damage attribution. | Allowed, AI warns. | Зависит от parser utility weapon/damage support. |
 | `flash_assists`, `enemies_flashed` | `approximate` | Blind/kill correlation and blind events. | Warning metrics. | Не доказывают team impact без контекста. |
 | `grenade_rating` | `unavailable` | Stable formula отсутствует. | Suppressed. | Использовать отдельные utility metrics. |
@@ -63,6 +65,13 @@ Usage decision:
 | `swing_score` | `approximate` | Parser heuristic win-probability deltas. | Warning metric. | Heuristic model, depends on parser completeness. |
 | `side_split_metrics` | `low` | `side_t_*`, `side_ct_*`. | Display warning only; suppressed for diagnosis/recommendation. | Side switching/team inference low confidence. |
 | `crosshair_placement` | `unavailable` | Needs view-angle/position timeline. | Suppressed. | Must remain data gap. |
+
+The table's reliability column mirrors the generic, unversioned
+`app/services/metric_truth.py` contract. Coach Metric Pack and R02 consumers
+establish separate trust through explicit source, event-set and semantic
+version `3.0.0` lineage. That versioned path accepts bounded aggregate trade
+opportunities, kills, traded/untraded deaths and rates; it does not globally
+upgrade legacy aliases or support spatial/tactical cause.
 
 ## Runtime Policy
 
@@ -134,7 +143,7 @@ decision.
 |---|---|---|---|
 | CSV import | `medium_source` for explicit match totals; `low_source` for inferred event concepts. | Source-provided match rows, result, score, map label when present, kills, deaths and other explicit uploaded totals. | User/export quality is not independently verified. Do not infer round events, side, economy, positioning, clutch, trade or exact playlist/mode. Date precision depends on the uploaded field and must be caveated unless exact source is known. |
 | JSON import | `medium_source` for explicit structured totals; `low_source` for inferred event concepts. | Structured match rows and explicit fields provided by the import payload. | Same boundaries as CSV. The presence of structured JSON does not make unsupported fields reliable. |
-| Demo parser | `coverage_limited_source`; may be `trusted_source` or `medium_source` for specific parser-captured facts when Metric Truth allows it. | Parser-captured round count, player events, damage, utility/flash events, opening-duel facts and timing facts when the artifact contains the required anchors. | Parser coverage gaps remain binding. Side, trade, clutch, economy and positioning are not accepted for hard advice unless a future parser-hardening task upgrades them. `early_deaths` requires timing anchors and must not fallback to `entry_deaths`. |
+| Demo parser | `coverage_limited_source`; may be `trusted_source` or `medium_source` for specific parser-captured facts when Metric Truth allows it. | Parser-captured round count, player events, damage, utility/flash events, opening-duel facts, validated v3 same-round trade lineage and timing facts when the artifact contains the required anchors. | Parser coverage gaps remain binding. Validated trade aggregates do not establish spatial/tactical cause; side, clutch, economy and positioning remain unavailable for hard advice. `early_deaths` requires timing anchors and must not fallback to `entry_deaths`. |
 | Steam / Valve share-code import | `trusted_source` for Steam GC `match_time` where present and accepted match identity/date facts; `medium_source` for generic Valve matchmaking provenance and imported totals. | Exact date source `steam_gc_match_time` when present, imported match identity/provenance, result/score/totals where persisted by the accepted import path. | `Valve Matchmaking` is provenance, not exact playlist. Do not claim Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom mode from current Steam data. Demo header time and file modified time are not exact Steam match dates. |
 | FACEIT | `unavailable_source` until an explicit FACEIT integration/source task is accepted. | None for current hard advice. | Do not label matches, filters, comparisons or recommendations as FACEIT-backed unless future reliable metadata and source policy are accepted. |
 
@@ -151,10 +160,10 @@ recommendation or period comparison. They do not upgrade `warn`, `low` or
 | Single-match facts | One match result, score, kills/deaths for a match. | One accepted source row may be displayed or used as evidence for that match only. | Not applicable as a trend. | Do not describe as a pattern. |
 | Match-window outcome metrics | `winrate`, result counts, average round differential. | At least 10 matches in the window. | At least 10 matches in each compared window. | Show raw counts or caveated context; suppress hard trend/advice. |
 | Core volume/rate metrics | Kills, deaths, `kd_ratio`, `adr`. | At least 10 matches or 120 accepted rounds, and source coverage for the metric. | Same threshold in each window. | Show the value with sample caveat; do not assign hard cause. |
-| Event/opportunity metrics | `entry_kills`, `entry_deaths`, utility damage, flash impact. | At least 8 matches and 20 accepted opportunities/events for the metric. | Same opportunity threshold in each window. | Show counts only or warning context; suppress hard rate comparison. |
+| Event/opportunity metrics | Opening duels, bounded trade opportunities/deaths, utility damage, flash impact. | At least 8 matches and 20 accepted opportunities/events for the metric unless a stricter domain contract applies. | Same opportunity threshold in each window. | Show counts only or warning context when the floor is not met; never infer spatial/tactical cause. |
 | Approximate/warning metrics | `kast`, `hltv_rating`, `swing_score`, `early_deaths`, `headshot_rate` where usage is `warn`. | No sample size can make these hard evidence under current Metric Truth. | Compare only as caveated context when both windows meet the relevant category sample floor. | Keep warning semantics; do not use as sole recommendation basis. |
-| Low-confidence metrics | `trade_kills`, `accuracy`, `side_split_metrics`. | Not allowed for hard diagnosis/recommendation. | Suppressed from hard comparison. | Display-only or warning context according to Metric Truth. |
-| Unavailable metrics/models | `traded_deaths`, `grenade_rating`, `aim_rating`, `crosshair_placement`, economy, positioning, clutch. | Not allowed. | Not allowed. | Suppress and state the model or metric is unavailable when relevant. |
+| Low-confidence generic inputs | Unversioned `trade_kills`, traded/untraded death rates, `accuracy`, `side_split_metrics`. | Not allowed for hard diagnosis/recommendation without the explicit v3 pack gate. | Suppressed from hard comparison without the explicit v3 pack gate. | Versioned v3 trade facts follow the event/opportunity row; other entries stay warning/display-only. |
+| Unavailable generic metrics/models | Unversioned `traded_deaths`, `grenade_rating`, `aim_rating`, `crosshair_placement`, economy, positioning, clutch and spatial trade-cause diagnosis. | Not allowed without a separately trusted versioned contract. | Not allowed without a separately trusted versioned contract. | Validated v3 `traded_deaths` is accepted only through pack provenance; spatial cause stays unavailable. |
 
 If a window mixes sources, the sample count must be reported or carried with
 source coverage. A source with missing values contributes only to metrics it
@@ -182,8 +191,8 @@ actually supports; it must not inflate denominators for unsupported metrics.
   Metric Truth usage even when mixed with trusted metrics.
 - Suppressed or unavailable values must not appear in diagnosis,
   recommendation, AI evidence arrays or hard comparison claims.
-- Playlist/mode, side, map, economy, positioning, clutch and trade gaps must
-  not be filled by aggregate math.
+- Playlist/mode, side, map, economy, positioning, clutch and spatial/causal
+  trade gaps must not be filled by aggregate math.
 
 ### Period Comparison Semantics
 
@@ -234,11 +243,16 @@ Suppress or caveat a comparison when:
 - Survival recommendations no longer treat `early_deaths` as a hard success/failure signal.
 - AI payload includes selected metric definitions and suppressed metric lists.
 - Stage 8 AI Output Validator rejects unknown/suppressed/unavailable metric ids in structured AI output and requires caveats for approximate/warn metrics.
+- R02 domain analysis validates registered metric/version, exact value, match
+  and evidence references before accepting an analysis or proposal.
 - Diagnosis registry is still future work; existing rule-based diagnosis remains partial and must not be treated as final planner logic.
 
-## Next Work
+## Remaining Capability Gaps
 
-- Parser hardening for KAST/trade, traded deaths, side switching and utility attribution.
+- Parser hardening for KAST edge cases, side switching and utility attribution.
+- Spatial evidence and a causal contract before exact trade position, spacing,
+  angle, rotation or individual counterfactual instructions.
 - Diagnosis registry from verified problems.
 - Recommendation planner that chooses one primary recommendation from verified evidence.
-- Prompt/version tracking and deeper AI/provider structured response hardening after Stage 8 validator.
+- Broader generic AI/provider, queue, observability and cost hardening beyond
+  the accepted R02 domain path.

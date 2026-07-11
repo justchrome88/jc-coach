@@ -2,14 +2,15 @@
 
 # Architecture
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-11.
 
 ## Purpose
 
 This document is a current map of the JC Coach application shape and module
-boundaries. It is descriptive only: it does not mark foundation readiness as
-complete, authorize broad refactors, authorize production DB mutation, or
-approve import/parser/evaluator/runtime work.
+boundaries. It is descriptive only: it does not establish task or release
+readiness, authorize broad refactors, authorize production DB mutation, or
+approve import/parser/evaluator/runtime work. Task and release routing live in
+`project_control/`.
 
 ## Top-Level Shape
 
@@ -68,8 +69,10 @@ semantics are governed by `project_docs/metrics/METRICS.md`.
 
 CS2 domain claims are bounded by `project_docs/product/CS2_DOMAIN_CONTRACT.md`. Economy,
 positioning and clutch models are unavailable; side metrics are display-only;
-hard trade recommendations are blocked before parser hardening; map labels are
-source-provided until a canonical map registry is accepted. Coach, report,
+map labels are source-provided until a canonical map registry is accepted.
+Validated same-round five-second trade opportunities and traded/untraded death
+rates can support bounded aggregate patterns, but not exact position, spacing,
+angle, rotation, crosshair placement or individual counterfactual instructions. Coach, report,
 recommendation and AI surfaces must keep these source limitations visible
 instead of implying unsupported certainty. Mixed CSV, JSON, demo, Steam or
 future FACEIT facts must not be combined into hard advice unless source trust,

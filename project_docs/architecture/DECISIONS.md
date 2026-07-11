@@ -2,9 +2,9 @@
 
 # Decisions
 
-Last updated: 2026-07-09.
+Last updated: 2026-07-11.
 
-## Current Decisions
+## Accepted Decisions
 
 - 2026-07-05: `AGENTS.md` is the only root Codex operating contract.
 - 2026-07-05: `AGENT.md` is a superseded pointer and must not be used as the active operating contract.
@@ -21,14 +21,6 @@ Last updated: 2026-07-09.
 - 2026-07-06: `v0.9` Real Data Onboarding / Bulk Demo Usage is promoted with warnings by WP-017K for controlled personal use; cap remains `1`, exact playlist mode remains unknown/provenance-only, and friends/public readiness is not claimed.
 - 2026-07-06: Future prompts should use invocation modes and output modes from `project_control/agents/AGENT_WORKFLOW.md`; long, reviewable, WP-level, promotion, planning, QA and docs-audit outputs should prefer file-backed reports.
 - 2026-07-06: Control-plane docs may be changed only by explicit governance/control-plane tasks; if a rule blocks ordinary work, Codex must stop and request approval instead of weakening the rule.
-- 2026-07-08: FH-124R-03 accepted H1 final-readiness rerun evidence, and
-  FH-125_128 closes foundation hardening only as
-  `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`. The required
-  next lane is `POST_FOUNDATION_AUDIT_AND_STABILIZATION`; WP-018, major CS2
-  feature work, public/friends access and system `v1.0` claims remain blocked
-  until later explicit authorization after audit/stabilization.
-- 2026-07-08: `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`. H1 PASS
-  evidence, H2 closure and docs-only roadmap edits do not set it to `YES`.
 - 2026-07-09: User authorizes
   `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` after GATE-001. The lane permits
   explicitly scoped WPs for auth / Steam identity, import, demo storage,
@@ -45,7 +37,22 @@ Last updated: 2026-07-09.
 - 2026-07-05: Match mode classification remains deferred/unknown unless future metadata capture is implemented.
 - 2026-07-05: `v0.9` must not claim playlist-specific Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom mode labels.
 - 2026-07-05: Steam demo cap remains `1` unless explicitly changed by a future WP.
-- Historical: AI provider defaults to `codex_cli_handoff`; local LLM remains optional/scaffolded.
-- Historical: Steam import uses OpenID + Game Authentication Code + latest share-code cursor + service bot resolver.
-- Historical: Raw `.dem` deletion is disabled until parsed payload verification exists.
-- Historical: Friends/public release is blocked by security, ownership, CSRF/rate limit, secrets, backup and observability work.
+
+## Superseded Decisions
+
+- 2026-07-08: FH-124R-03 accepted H1 final-readiness rerun evidence, and
+  FH-125_128 closed foundation hardening as
+  `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`. At that
+  checkpoint the required next lane was
+  `POST_FOUNDATION_AUDIT_AND_STABILIZATION`. This route is superseded and is
+  not current task authority; current routing lives in `project_control/`.
+- 2026-07-08: `READY_FOR_MAJOR_CS2_FEATURE_WORK` remained `NO` at that
+  checkpoint. Current authorization comes from the explicit task and
+  `project_control/`, not this historical readiness flag.
+
+## Historical Decisions
+
+- AI provider defaulted to `codex_cli_handoff`; local LLM remained optional/scaffolded.
+- Steam import used OpenID + Game Authentication Code + latest share-code cursor + service bot resolver.
+- Raw `.dem` deletion was disabled until parsed payload verification existed.
+- Friends/public release was blocked by security, ownership, CSRF/rate limit, secrets, backup and observability work.

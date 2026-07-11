@@ -2,7 +2,7 @@
 
 # Testing
 
-Last updated: 2026-07-07.
+Last updated: 2026-07-11.
 
 ## Current Truth
 
@@ -38,10 +38,10 @@ Accepted local CI-equivalent gate command:
 .venv/bin/python scripts/local_quality_gate.py
 ```
 
-`scripts/local_quality_gate.py` is the accepted local CI-equivalent gate for JC
-Coach during the restricted foundation-hardening lane. It is the standard local
-command to run before an Executor claims PASS on code, script or test changes,
-subject to stricter Task Card requirements. It runs project gate preflight,
+`scripts/local_quality_gate.py` is the accepted general local CI-equivalent
+gate for JC Coach. It is the standard local command to run before an Executor
+claims PASS on code, script or test changes, subject to stricter Task Card
+requirements. It runs project gate preflight,
 changed and required-checks evidence; deterministic semantic AI eval fixtures;
 golden metric readiness fixtures; the full safe pytest command with
 `APP_ENV=test` and `PYTHONDONTWRITEBYTECODE=1`; Ruff; `git diff --check`; and
@@ -62,7 +62,8 @@ installation or branch protection. Hosted CI remains a separate future policy
 and configuration decision if the user explicitly approves it. The local gate
 also does not by itself prove the final readiness gate.
 
-Known residual quality-gate risk: H1 final readiness evidence recorded a
+Historical foundation/readiness suites remain regression evidence, not owners
+of the current gate or task route. H1 final readiness evidence recorded a
 full-suite pytest stall during
 `APP_ENV=test PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests -q -p no:cacheprovider`.
 FH-124R-01 bounded recovery diagnostics did not reproduce the stall: verbose
@@ -265,7 +266,7 @@ Not enough by itself:
 - Steam OpenID verification with mocked Steam responses only.
 - Migration status/copy tooling against temp DB or copied DB only.
 
-## Forbidden During Stage 0
+## Forbidden During Safe Local Tests
 
 - Import jobs.
 - Steam jobs.

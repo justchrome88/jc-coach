@@ -2,7 +2,7 @@
 
 # Recommendations
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-11.
 
 ## Current Truth
 
@@ -171,8 +171,8 @@ hard-evidence sources include:
 - mixed-source aggregates whose weakest relevant source or metric policy
   prevents hard advice;
 - display-only side metrics;
-- weak trade semantics, including `trade_kills` as hard evidence and
-  `traded_deaths` as an unavailable metric;
+- trade claims beyond validated v3 same-round five-second aggregate counts and
+  rates, including any spatial/tactical cause or individual counterfactual;
 - unavailable economy, positioning, clutch, crosshair placement, aim-rating,
   grenade-rating or canonical map models;
 - exact playlist/mode assumptions for Premier, Competitive, Wingman, Casual,
@@ -227,8 +227,7 @@ explicit future implementation task:
 Until those criteria pass, the accepted product behavior is still the existing
 recommendation tracking loop. This design does not create planner runtime
 behavior, does not authorize a new ProblemSnapshot table or schema artifact,
-does not unlock major CS2 feature work and does not change
-`READY_FOR_MAJOR_CS2_FEATURE_WORK`.
+and does not unlock unrelated product work.
 
 ## Progress And Weak-Evidence Wording
 
@@ -242,10 +241,11 @@ Progress language must match evidence strength:
   extending, completing, failing or replacing a recommendation;
 - unavailable or suppressed metrics must not appear as recommendation evidence.
 
-Unsupported hard advice from weak metrics is blocked. Trade, side, economy,
-positioning, clutch, exact playlist/mode and other unavailable or display-only
-concepts cannot drive recommendation priority or evaluation until future
-parser/source/domain work explicitly upgrades them.
+Unsupported hard advice from weak metrics is blocked. Validated v3 trade
+counts/rates may support bounded aggregate `bad_fight_trade` evidence, but side,
+economy, positioning, clutch, exact playlist/mode, spatial trade cause and other
+unavailable or display-only concepts cannot drive recommendation priority or
+evaluation.
 
 ## Rules
 
@@ -265,7 +265,7 @@ parser/source/domain work explicitly upgrades them.
 - Recommendation initialization/evaluation must happen through explicit command paths.
 - Show why a match was green/yellow/red against the active recommendation.
 
-## Next Work
+## Remaining Capability Gaps
 
 - Implement diagnosis registry only after the entry criteria above pass in an
   explicit scoped task.

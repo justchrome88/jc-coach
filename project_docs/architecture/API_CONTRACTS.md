@@ -2,7 +2,7 @@
 
 # API Contracts
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-11.
 
 ## Purpose
 
@@ -35,9 +35,10 @@ response shapes or mutation semantics requires explicit future task scope.
 - CS2 domain output follows `project_docs/product/CS2_DOMAIN_CONTRACT.md`: current map labels
   are source-provided, playlist/mode remains unknown unless future reliable
   metadata proves it, side metrics are display-only, economy/positioning/clutch
-  models are unavailable and hard trade recommendations are blocked before
-  parser hardening. API responses and AI/coach payloads must not imply stronger
-  certainty than those limitations allow.
+  models are unavailable. API/coach payloads may expose validated same-round
+  five-second trade opportunity counts and traded/untraded death rates for
+  bounded aggregate patterns, but must not imply exact position, spacing,
+  angle, rotation, crosshair placement or individual counterfactual advice.
 - Metric source trust, sample-size thresholds, aggregation rules and period
   comparison semantics follow `project_docs/metrics/METRICS.md`. API responses that expose
   aggregates, comparisons, coach evidence or AI payloads must preserve
@@ -193,8 +194,11 @@ Their browser contract is template/redirect oriented rather than JSON oriented.
 
 AI coach payload/result consumers must preserve the source limitations carried
 by Metric Truth and `project_docs/product/CS2_DOMAIN_CONTRACT.md`. Unavailable economy,
-positioning and clutch models, display-only side metrics and weak trade
-semantics cannot be upgraded into confident API-level coach advice. Mixed
+positioning and clutch models, display-only side metrics and trade semantics
+beyond the validated bounded aggregate contract cannot be upgraded into
+spatially causal API-level coach advice.
+Validated aggregate trade counts/rates remain usable within their bounded
+same-round five-second contract. Mixed
 sources, insufficient samples, missing values and incompatible comparison
 windows follow the source trust and aggregation policy in `project_docs/metrics/METRICS.md`.
 

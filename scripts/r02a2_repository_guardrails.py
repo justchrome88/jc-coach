@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import ast
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -112,6 +113,25 @@ REQUIRED_CANONICAL_PATHS = frozenset(
         "app/contracts/metrics/registry/metrics.json",
         "app/contracts/metrics/registry/metric-registry.schema.json",
     }
+)
+
+TRADE_DOCUMENTS = (
+    "project_docs/product/AI_COACH.md",
+    "project_docs/product/CS2_DOMAIN_CONTRACT.md",
+    "project_docs/product/KNOWN_LIMITATIONS.md",
+    "project_docs/product/RECOMMENDATIONS.md",
+    "project_docs/architecture/ARCHITECTURE.md",
+    "project_docs/architecture/API_CONTRACTS.md",
+    "project_docs/metrics/METRICS.md",
+)
+
+DYNAMIC_ROUTE_PATTERNS = (
+    re.compile(r"\bCURRENT_TASK\s*:", re.IGNORECASE),
+    re.compile(r"\bNEXT_TASK(?:_GATED)?\s*:", re.IGNORECASE),
+    re.compile(r"\bR02A3_MAY_START\s*:", re.IGNORECASE),
+    re.compile(r"\bthe (?:required )?next (?:task|lane|work package|WP)\b", re.IGNORECASE),
+    re.compile(r"\brequired next lane\b", re.IGNORECASE),
+    re.compile(r"^#{1,6}\s+Next Work\s*$", re.IGNORECASE | re.MULTILINE),
 )
 
 MIGRATION_EVIDENCE_TOOLS = frozenset({"scripts/r02a2_documentation_migration.py"})
@@ -227,6 +247,168 @@ def source_of_truth_errors(root: Path) -> list[GuardrailError]:
             errors.append(
                 GuardrailError("canonical_path_missing", path, "required post-migration source of truth is absent")
             )
+    return errors
+
+
+def current_markdown_content(content: str) -> str:
+    """Return active prose while excluding explicit historical/superseded sections."""
+    current: list[str] = []
+    excluded_level: int | None = None
+    for line in content.splitlines():
+        heading = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
+        if heading:
+            level = len(heading.group(1))
+            title = heading.group(2)
+            if excluded_level is not None and level <= excluded_level:
+                excluded_level = None
+            if re.search(r"\b(?:historical|superseded)\b", title, re.IGNORECASE):
+                excluded_level = level
+                continue
+        if excluded_level is None:
+            current.append(line)
+    return "\n".join(current)
+
+
+def durable_doc_route_errors(root: Path) -> list[GuardrailError]:
+    errors: list[GuardrailError] = []
+    docs_root = root / "project_docs"
+    if not docs_root.is_dir():
+        return errors
+    for file_path in sorted(docs_root.rglob("*.md")):
+        path = file_path.relative_to(root).as_posix()
+        content = current_markdown_content(file_path.read_text(encoding="utf-8"))
+        if any(pattern.search(content) for pattern in DYNAMIC_ROUTE_PATTERNS):
+            errors.append(
+                GuardrailError(
+                    "dynamic_route_in_durable_docs",
+                    path,
+                    "current task/next-task routing belongs under project_control",
+                )
+            )
+    return errors
+
+
+def current_document_contract_errors(root: Path) -> list[GuardrailError]:
+    errors: list[GuardrailError] = []
+
+    def read(path: str) -> str:
+        file_path = root / path
+        if not file_path.is_file():
+            errors.append(GuardrailError("current_document_missing", path, "required semantic owner is absent"))
+            return ""
+        return current_markdown_content(file_path.read_text(encoding="utf-8"))
+
+    def normalized(content: str) -> str:
+        return " ".join(content.split())
+
+    domain_path = "project_docs/product/CANONICAL_COACH_DOMAIN_MODEL.md"
+    domain = read(domain_path)
+    domain_normalized = normalized(domain)
+    domain_requirements = (
+        "exactly two MVP coach domains",
+        "`impact_leak`",
+        "`bad_fight_selection`",
+        "`performance`, `utility`, and `aim` are metric groups",
+        "They are not product domains",
+        "`utility_value`",
+        "`context-only`",
+    )
+    if domain and any(marker not in domain_normalized for marker in domain_requirements):
+        errors.append(
+            GuardrailError(
+                "current_domain_document_parity",
+                domain_path,
+                "two domains, metric-group-only labels, or utility_value context-only rule is missing",
+            )
+        )
+
+    for path in TRADE_DOCUMENTS:
+        content = read(path)
+        lowered = normalized(content).lower()
+        if content and "bounded aggregate" not in lowered:
+            errors.append(
+                GuardrailError(
+                    "trade_document_missing_bounded_capability",
+                    path,
+                    "validated bounded aggregate trade capability must remain explicit",
+                )
+            )
+        if content and not any(marker in lowered for marker in ("spatial", "exact position", "spacing")):
+            errors.append(
+                GuardrailError(
+                    "trade_document_missing_no_spatial_limit",
+                    path,
+                    "trade evidence must not imply spatial or individual tactical cause",
+                )
+            )
+
+    ai_path = "project_docs/product/AI_COACH.md"
+    ai = read(ai_path)
+    ai_normalized = normalized(ai)
+    ai_markers = (
+        "versioned domain prompts",
+        "strict `ai-domain-hypothesis-v1` structured-output schema",
+        "registered metric and semantic version",
+        "exact metric values",
+        "baseline match IDs",
+        "Rejected attempts remain append-only evidence",
+        "provider, model and route provenance",
+    )
+    if ai and any(marker not in ai_normalized for marker in ai_markers):
+        errors.append(
+            GuardrailError(
+                "ai_contract_documentation_parity",
+                ai_path,
+                "R02 version/schema/value/reference/lineage/provenance behavior is incomplete",
+            )
+        )
+    if ai and re.search(
+        r"(?:prompt versioning|semantic (?:validation|checks|evals?)|structured output).{0,80}(?:future|planned)",
+        ai_normalized,
+        re.IGNORECASE,
+    ):
+        errors.append(
+            GuardrailError(
+                "implemented_ai_contract_described_as_future",
+                ai_path,
+                "R02 prompt/schema/semantic validation is already implemented",
+            )
+        )
+
+    steam_path = "project_docs/operations/STEAM_IMPORT.md"
+    steam = read(steam_path)
+    steam_normalized = normalized(steam)
+    if steam and (
+        "Steam import is accepted with warnings for controlled personal use." not in steam_normalized
+        or "Accepted capabilities:" not in steam_normalized
+        or "Remaining limitations:" not in steam_normalized
+        or re.search(r"acceptance\s+is\s+blocked", steam_normalized, re.IGNORECASE)
+    ):
+        errors.append(
+            GuardrailError(
+                "steam_import_documentation_parity",
+                steam_path,
+                "current accepted capabilities and remaining limitations must be unambiguous",
+            )
+        )
+
+    testing_path = "project_docs/operations/TESTING.md"
+    testing = read(testing_path)
+    testing_normalized = normalized(testing)
+    if testing and (
+        "accepted general local CI-equivalent gate for JC Coach" not in testing_normalized
+        or "focused" not in testing_normalized.lower()
+        or "full safe pytest" not in testing_normalized.lower()
+        or "restricted foundation-hardening lane" in testing_normalized.lower()
+    ):
+        errors.append(
+            GuardrailError(
+                "testing_documentation_parity",
+                testing_path,
+                "the general focused/full local quality gate contract is missing or foundation-owned",
+            )
+        )
+
     return errors
 
 
@@ -459,6 +641,8 @@ def collect_errors(root: Path = ROOT, *, paths: set[str] | None = None) -> list[
         [
             *layout_errors(root, active_paths),
             *source_of_truth_errors(root),
+            *durable_doc_route_errors(root),
+            *current_document_contract_errors(root),
             *python_io_errors(root, active_paths),
             *domain_policy_errors(root),
             *agent_principle_parity_errors(root),
@@ -480,6 +664,8 @@ def main() -> int:
     print("CANONICAL_DOMAIN_POLICY=PASS")
     print("AGENT_PRINCIPLE_PARITY=PASS")
     print("SOURCE_OF_TRUTH_PATHS=PASS")
+    print("DURABLE_DOCS_CONTROL_PLANE_SEPARATION=PASS")
+    print("CURRENT_DOCUMENT_CONTRACT_PARITY=PASS")
     print("R02A2_REPOSITORY_GUARDRAILS=PASS")
     return 0
 

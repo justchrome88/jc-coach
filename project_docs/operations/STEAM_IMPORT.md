@@ -2,7 +2,7 @@
 
 # Steam Import
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-11.
 
 Canonical supporting docs:
 
@@ -17,9 +17,11 @@ Canonical supporting docs:
 4. Dedicated service bot resolves known share codes through the CS2 Game Coordinator.
 5. App downloads `.dem.bz2`, decompresses to `.dem`, imports through parser and stores Steam GC `match_time` as authoritative `played_at`.
 
-## Primary v0.6 Target
+## Controlled Personal Import Contract
 
-The primary `v0.6` import is one-button Steam/Valve import from the logged-in owner's import/settings page. Manual demo upload is secondary and exists for parser fixtures/debugging.
+The accepted controlled-personal import is one-button Steam/Valve import from
+the logged-in owner's import/settings page. Manual demo upload is secondary and
+exists for parser fixtures/debugging.
 
 Required primary behavior:
 
@@ -41,9 +43,35 @@ Exact match date means the actual match datetime from Valve/Steam/demo metadata.
 
 ## Current Status
 
-Steam import is accepted for controlled personal `v0.6` with warnings. It is not friends/public ready.
+Steam import is accepted with warnings for controlled personal use. It is not
+friends/public ready.
 
-WP-014A diagnosis found that the current one-button UI and backend path exist, but `v0.6` acceptance is blocked by incomplete status taxonomy, incomplete `import_job` coverage for exact share-code download/parser work, missing persisted raw-demo cleanup after successful parse/persist, weak failed-demo cleanup policy and inconsistent exact-date availability surfacing. See `_legacy_archive/r02a2-2026-07-11/docs/audit/WP_014A_STEAM_VALVE_IMPORT_DIAGNOSIS.md`.
+Accepted capabilities:
+
+- owner-linked OpenID/auth-code/latest-cursor flow and one-button orchestration;
+- import job creation and bounded progress/result recording before external or
+  parser work;
+- disk/free-space, byte-budget and per-run cap guards;
+- exactly one demo per run under `STEAM_IMPORT_MAX_DEMOS_PER_RUN=1`;
+- retained raw demo plus parser/import persistence;
+- exact Steam GC match time only when `steam_gc_match_time` is present;
+- deterministic cursor advance/failure behavior and stale-parent repair.
+
+Remaining limitations:
+
+- `ImportJob.status` is coarse; `result_json.overall_outcome/statuses` is the
+  canonical detailed outcome;
+- raw demos are retained, uploads/temp remain on the root volume and parser
+  memory still needs operational monitoring;
+- retries remain operator-driven; the durable worker/retry ledger and any cap
+  raise require separate accepted work;
+- freshness and public/friends operations are not production-hardened.
+
+## Historical Acceptance Lineage
+
+WP-014A originally found the one-button path incomplete. Later WP-014B through
+WP-014E repairs and the WP-014C4 controlled live acceptance superseded that
+blocked checkpoint; it is historical evidence, not the current status.
 
 WP-014B1 repaired import-job truth/status taxonomy without changing schema or demo cleanup lifecycle. The primary `steam_import_all` job now records `overall_outcome`, `statuses`, `clean_success`, `error_message` and the existing-status limitation in `result_json`. Exact share-code import is tracked by a `share_code_import` job before downloader/parser work, but remains a non-primary debug/manual path.
 
@@ -71,12 +99,9 @@ Standardized result statuses:
 
 Import cap status: `STEAM_IMPORT_MAX_DEMOS_PER_RUN` remains `1`. Larger Steam
 demo batches remain blocked until the import outcome taxonomy, `result_json`
-schema, durable worker plan and retry ledger plan are accepted by the
-foundation-hardening review, and until a separate explicit cap-change WP
-authorizes the cap change. This contract does not approve a cap raise.
-Warning-ledger carry-in `WL-FH-000-028` remains preserved for this blocker
-until PM review accepts the worker/retry/result safety contract or creates a
-successor warning.
+schema, durable worker plan and retry ledger plan are accepted, and until a
+separate explicit cap-change task authorizes the cap change. This contract does
+not approve a cap raise.
 
 WP-014B2 repaired exact match-date truth without changing schema or demo cleanup lifecycle. For the primary Steam/Valve path, `Match.played_at` is exact only when Steam GC metadata provides valid `match_time` with source `steam_gc_match_time`. If Steam GC `match_time` is missing, primary Steam import records `exact_match_date_unavailable`, clears the imported match `played_at` instead of retaining parser/file-mtime fallback as a match date, and records date truth in `raw_json`/`result_json`. Steam freshness comparison now uses only exact imported Steam dates; manual/file-mtime fallback dates do not silently block new Steam imports.
 

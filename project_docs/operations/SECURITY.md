@@ -2,7 +2,7 @@
 
 # Security
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-11.
 
 ## Current Truth
 
@@ -23,8 +23,7 @@ Current public/friends readiness: `BLOCKED`.
 Public or friends access must not be exposed, advertised or treated as ready
 until a future explicit public-readiness task verifies all of these conditions:
 
-- Foundation readiness gate has passed; until then
-  `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`.
+- The explicit public-readiness task and current control-plane gate have passed.
 - `project_docs/operations/DEPLOYMENT.md` deploy verification checklist passes without service,
   nginx, systemd or runtime configuration drift.
 - Authentication, owner boundary, CSRF and API-token behavior are verified for

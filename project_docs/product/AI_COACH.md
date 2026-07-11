@@ -13,7 +13,7 @@ counts from the duplicate files are not current truth.
 
 # AI Coach
 
-Last updated: 2026-07-09.
+Last updated: 2026-07-11.
 
 ## Current Truth
 
@@ -25,27 +25,32 @@ Stage 5 payloads include `metric_truth`: selected metric definitions plus metric
 
 Stage 6 parser payloads add clearer warnings for early-death timing, KAST trade component, traded deaths, side stats and utility/flash confidence. AI must treat those warnings as constraints, not as coachable facts by themselves.
 
-Stage 8 adds AI Output Validator without schema changes and without live AI calls. Structured AI output is validated before persistence/display; invalid or free-form output is replaced by safe fallback Markdown and validation metadata is stored in `coach_reports.report_json`.
+The generic report path applies the AI Output Validator without a DB schema
+change. Structured output is validated before persistence/display; invalid or
+free-form output uses safe fallback Markdown and records validation metadata in
+`coach_reports.report_json`.
 
-WP-018 preparation/prelude is closed. Runtime AI coach quality infrastructure
-now includes version/snapshot metadata, runtime CS2 domain constraints,
-semantic validation, safe fallback behavior and accepted/rejected
-output-quality fixtures. The next real WP-018 task is
-`WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
+R02 implements the two-domain hypothesis path with versioned domain prompts,
+`coach-domain-evidence-v1` evidence bundles and the strict
+`ai-domain-hypothesis-v1` structured-output schema. Deterministic validation
+checks the canonical domain, registered metric and semantic version, exact
+metric values, baseline match IDs, evidence/counterevidence references,
+prohibited tactical claims, leakage patterns and proposal targets before an
+analysis can be accepted.
 
-WP-018-04 extends runtime validation to enforce the current semantic coach
-contract when a payload snapshot is available. Persisted AI coach output is
-checked against the WP-018-02 version/snapshot metadata, WP-018-03 domain
-contract metadata, public/friends and `v1.0` blockers, playlist/mode
-limitations, weak-metric caveat requirements, legacy recommendation refresh
-boundaries and unavailable CS2 model boundaries. Output that violates those
-checks uses the same safe fallback path as invalid schema output.
+Every R02 attempt persists prompt/evidence hashes and versions, provider,
+model and route provenance, validation status, rejection reasons and retry/supersession
+lineage. Rejected attempts remain append-only evidence; only accepted analyses
+can produce the two current per-domain mission proposals.
 
 CS2 domain boundaries are defined in `project_docs/product/CS2_DOMAIN_CONTRACT.md`. AI coach
 payloads and results must keep those source limitations visible: playlist/mode
 is not exact in `v0.9`, economy/positioning/clutch models are unavailable, side
-metrics are display-only, current map labels are source-provided and hard trade
-recommendations are blocked before parser hardening.
+metrics are display-only and current map labels are source-provided. Validated
+trade opportunity counts, traded/untraded death rates and opening context may
+support bounded aggregate `bad_fight_trade` patterns within the same-round
+five-second window. They do not prove spacing, position, angle, rotation,
+crosshair placement or a counterfactual instruction for an individual death.
 
 Source trust, mixed-source aggregation, sample-size thresholds and period
 comparison semantics are defined in `project_docs/metrics/METRICS.md`. AI coach output must not
@@ -104,8 +109,9 @@ Progress wording must stay calibrated:
 
 Unsupported hard advice from weak metrics is blocked. This includes hard
 advice from `warn`, `low`, `suppressed` or `unavailable` metrics; unavailable
-economy, positioning or clutch models; display-only side metrics; weak trade
-semantics; exact playlist/mode assumptions; and samples below the thresholds
+economy, positioning or clutch models; display-only side metrics; trade claims
+that exceed bounded aggregate evidence; exact playlist/mode assumptions; and
+samples below the thresholds
 defined in `project_docs/metrics/METRICS.md`.
 
 ## Versioning And Snapshot Contract
@@ -160,7 +166,8 @@ available in the payload and the full prompt payload used for the report.
 - AI must present `warn` metrics as approximate/contextual, not as fully trusted facts.
 - AI recommendations are subordinate to verified metrics and the recommendation planner.
 - AI must not infer economy, positioning, clutch, exact playlist/mode,
-  canonical map identity or reliable trade semantics from adjacent metrics.
+  canonical map identity or spatial/causal trade diagnoses from adjacent
+  metrics.
 - AI must respect source trust and period comparison boundaries from
   `project_docs/metrics/METRICS.md`: insufficient samples, incompatible source mixes, missing
   values and approximate date sources require caveats or suppression.
@@ -168,15 +175,15 @@ available in the payload and the full prompt payload used for the report.
 - Accepted confident advice must preserve the evidence chain
   `problem -> metric -> match -> recommendation`.
 - `ai_coach_prompt_version`, `ai_coach_payload_schema_version` and the
-  metric-registry snapshot/version must be present before future AI advice can
-  be treated as accepted versioned evidence.
+  metric-registry snapshot/version must be present before AI advice can be
+  treated as accepted versioned evidence.
 - Unknown metric ids are rejected.
 - Suppressed or unavailable metrics cannot support diagnosis/recommendation claims.
 - Approximate/warn metrics require explicit `caveats`.
 - Persisted runtime validation rejects semantic contract violations when they
   are detectable from structured AI output and the payload snapshot.
 
-## Output Schema
+## Generic AI Coach Output Schema
 
 Accepted structured output:
 
@@ -210,17 +217,16 @@ confidence: low | medium | high
 
 Free-form Markdown is no longer accepted as confident coach advice. It is stored only as validator fallback content that says the AI output was rejected.
 
-## Gaps
+## Remaining Limitations
 
-- Provider-specific structured response enforcement is still shallow; current prompt asks for JSON, and validator rejects invalid output after generation/paste.
+- The R02 domain route supplies a strict output schema, while the broader
+  generic report path still relies on requested JSON plus post-generation
+  validation.
 - Validation metadata is stored inside existing `coach_reports.report_json`; there is no separate structured AI output table.
 - Deterministic semantic checks and fixtures cover known unsafe claim classes,
   but they are not a full natural-language entailment proof for every possible
   unsafe phrasing.
-- Wording calibration remains future WP-018 work.
-
-## Next Work
-
-- `WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS`.
-- Richer provider-specific structured response mode.
-- Recommendation planner integration after verified problem snapshots exist.
+- Final production provider, durable queue, retry operations, observability and
+  cost controls are not complete.
+- Wording calibration and recommendation-planner integration remain bounded
+  future improvements, subject to current control-plane authorization.
