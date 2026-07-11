@@ -2,6 +2,106 @@
   "archive_root": "_legacy_archive/r02a2-2026-07-11/",
   "authority": {
     "classification_changes": [],
+    "destination_plan_changes": [
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/DB_GUARDIAN.md",
+        "old_planned_destination": "project_control/agents/guardians/DB_GUARDIAN.md",
+        "source_path": "docs/agents/DB_GUARDIAN.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/IMPORT_GUARDIAN.md",
+        "old_planned_destination": "project_control/agents/guardians/IMPORT_GUARDIAN.md",
+        "source_path": "docs/agents/IMPORT_GUARDIAN.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/METRICS_GUARDIAN.md",
+        "old_planned_destination": "project_control/agents/guardians/METRICS_GUARDIAN.md",
+        "source_path": "docs/agents/METRICS_GUARDIAN.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/README.md",
+        "old_planned_destination": "project_control/agents/README.md",
+        "source_path": "docs/agents/README.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/RUNTIME_GUARDIAN.md",
+        "old_planned_destination": "project_control/agents/guardians/RUNTIME_GUARDIAN.md",
+        "source_path": "docs/agents/RUNTIME_GUARDIAN.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/TEST_GUARDIAN.md",
+        "old_planned_destination": "project_control/agents/guardians/TEST_GUARDIAN.md",
+        "source_path": "docs/agents/TEST_GUARDIAN.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/UI_COACH_GUARDIAN.md",
+        "old_planned_destination": "project_control/agents/guardians/UI_COACH_GUARDIAN.md",
+        "source_path": "docs/agents/UI_COACH_GUARDIAN.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/roles/DOCUMENTATION_STEWARD.md",
+        "old_planned_destination": "project_control/agents/roles/DOCUMENTATION_STEWARD.md",
+        "source_path": "docs/agents/roles/DOCUMENTATION_STEWARD.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/roles/IMPLEMENTATION_AGENT.md",
+        "old_planned_destination": "project_control/agents/roles/IMPLEMENTATION_AGENT.md",
+        "source_path": "docs/agents/roles/IMPLEMENTATION_AGENT.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/roles/QA_REVIEWER.md",
+        "old_planned_destination": "project_control/agents/roles/QA_REVIEWER.md",
+        "source_path": "docs/agents/roles/QA_REVIEWER.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/roles/ROLE_CARD_TEMPLATE.md",
+        "old_planned_destination": "project_control/agents/roles/ROLE_CARD_TEMPLATE.md",
+        "source_path": "docs/agents/roles/ROLE_CARD_TEMPLATE.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/project_management/AGENT_WORKFLOW.md",
+        "old_planned_destination": "project_control/agents/AGENT_WORKFLOW.md",
+        "source_path": "docs/project_management/AGENT_WORKFLOW.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/project_management/PROJECT_OPERATING_PROTOCOL.md",
+        "old_planned_destination": "project_control/agents/PROJECT_OPERATING_PROTOCOL.md",
+        "source_path": "docs/project_management/PROJECT_OPERATING_PROTOCOL.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 requires active controls to use project_control, project_docs, and app/contracts paths; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/project_management/PROMPT_PLAYBOOK.md",
+        "old_planned_destination": "project_control/agents/PROMPT_PLAYBOOK.md",
+        "source_path": "docs/project_management/PROMPT_PLAYBOOK.md"
+      }
+    ],
     "r02a1_final_artifact_commit": "ddd82b33b2ac48b428f491bcb97328ce2e06c6f9",
     "r02a1_inventory": "/opt/jc-coach-pm/reports/H01B-R02A1_source_of_truth_inventory.json",
     "r02a1_inventory_sha256": "795f252a20e75b880fb55d6509a2c4af89934267d1a5096b8a8110ad7a5e8c23"
@@ -445,8 +545,8 @@
       "source_size": 2609
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/guardians/DB_GUARDIAN.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/DB_GUARDIAN.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/DB_GUARDIAN.md",
@@ -455,8 +555,8 @@
       "source_size": 1216
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/guardians/IMPORT_GUARDIAN.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/IMPORT_GUARDIAN.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/IMPORT_GUARDIAN.md",
@@ -465,8 +565,8 @@
       "source_size": 2642
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/guardians/METRICS_GUARDIAN.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/METRICS_GUARDIAN.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/METRICS_GUARDIAN.md",
@@ -485,8 +585,8 @@
       "source_size": 1455
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/README.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/README.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/README.md",
@@ -495,8 +595,8 @@
       "source_size": 1805
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/guardians/RUNTIME_GUARDIAN.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/RUNTIME_GUARDIAN.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/RUNTIME_GUARDIAN.md",
@@ -505,8 +605,8 @@
       "source_size": 1210
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/guardians/TEST_GUARDIAN.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/TEST_GUARDIAN.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/TEST_GUARDIAN.md",
@@ -515,8 +615,8 @@
       "source_size": 824
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/guardians/UI_COACH_GUARDIAN.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/UI_COACH_GUARDIAN.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/UI_COACH_GUARDIAN.md",
@@ -525,8 +625,8 @@
       "source_size": 1182
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/roles/DOCUMENTATION_STEWARD.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/roles/DOCUMENTATION_STEWARD.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/DOCUMENTATION_STEWARD.md",
@@ -535,8 +635,8 @@
       "source_size": 3402
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/roles/IMPLEMENTATION_AGENT.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/roles/IMPLEMENTATION_AGENT.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/IMPLEMENTATION_AGENT.md",
@@ -555,8 +655,8 @@
       "source_size": 3759
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/roles/QA_REVIEWER.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/roles/QA_REVIEWER.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/QA_REVIEWER.md",
@@ -565,8 +665,8 @@
       "source_size": 2685
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/roles/ROLE_CARD_TEMPLATE.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/agents/roles/ROLE_CARD_TEMPLATE.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/ROLE_CARD_TEMPLATE.md",
@@ -3145,8 +3245,8 @@
       "source_size": 14416
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/AGENT_WORKFLOW.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/project_management/AGENT_WORKFLOW.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/AGENT_WORKFLOW.md",
@@ -3205,8 +3305,8 @@
       "source_size": 6087
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/PROJECT_OPERATING_PROTOCOL.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/project_management/PROJECT_OPERATING_PROTOCOL.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/PROJECT_OPERATING_PROTOCOL.md",
@@ -3215,8 +3315,8 @@
       "source_size": 7237
     },
     {
-      "destination_basis": "task agent-control mapping",
-      "planned_destination": "project_control/agents/PROMPT_PLAYBOOK.md",
+      "destination_basis": "original archived before canonical path/reference update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/project_management/PROMPT_PLAYBOOK.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_agent_control",
       "r02a1_recommended_destination": "project_control/agents/PROMPT_PLAYBOOK.md",

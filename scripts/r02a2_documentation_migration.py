@@ -340,6 +340,40 @@ def validate_manifest(args: argparse.Namespace) -> int:
     return 0
 
 
+def record_agent_destination_changes(args: argparse.Namespace) -> int:
+    """Record why active agent controls need archived originals plus updated copies."""
+    path = Path(args.manifest)
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    changes = []
+    for record in manifest["records"]:
+        source = record["source_path"]
+        if source not in AGENT_DESTINATIONS:
+            continue
+        old_destination = record["planned_destination"]
+        new_destination = archive_destination(source)
+        record["planned_destination"] = new_destination
+        record["destination_basis"] = (
+            "original archived before canonical path/reference update"
+        )
+        changes.append(
+            {
+                "source_path": source,
+                "old_planned_destination": old_destination,
+                "new_planned_destination": new_destination,
+                "classification_changed": False,
+                "evidence": (
+                    "R02A2 requires active controls to use project_control, "
+                    "project_docs, and app/contracts paths; preservation is not reduced"
+                ),
+            }
+        )
+    manifest["authority"]["destination_plan_changes"] = changes
+    atomic_json_write(path, manifest)
+    print(f"AGENT_DESTINATION_CHANGES={len(changes)}")
+    print("AGENT_DESTINATION_CHANGE_RESULT=recorded")
+    return 0
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -357,6 +391,9 @@ def parse_args() -> argparse.Namespace:
     validate = subparsers.add_parser("validate")
     validate.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
     validate.set_defaults(func=validate_manifest)
+    revise = subparsers.add_parser("record-agent-destination-changes")
+    revise.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    revise.set_defaults(func=record_agent_destination_changes)
     return parser.parse_args()
 
 
