@@ -497,14 +497,16 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
         )
     sequence = ("R02A3", "R02A4", "R03", "R04", "R05", "R06", "R07")
     positions = [roadmap.find(marker) for marker in sequence]
-    canonical_sequence = (
-        "R02A4 inserted acceptance gate → R03 → R04 → R05 planned → R06 planned → R07 deferred/planned"
+    canonical_sequences = (
+        "R02A4 inserted acceptance gate → R03 → R04 → R05 planned → R06 planned → R07 deferred/planned",
+        "R02A4R accepted → R02A4T timed evidence closure → R03 → R04 → "
+        "R05 planned → R06 planned → R07 deferred/planned",
     )
     normalized_roadmap = " ".join(roadmap.split())
     if roadmap and (
         any(position < 0 for position in positions)
         or positions != sorted(positions)
-        or canonical_sequence not in normalized_roadmap
+        or not any(sequence in normalized_roadmap for sequence in canonical_sequences)
     ):
         errors.append(
             GuardrailError(
@@ -545,13 +547,31 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
             )
         )
 
+    r02a4t_current = (
+        "CURRENT_TASK: `H01B-R02A4T_TRUE_TIMED_OBSERVABILITY_PROVENANCE_AND_TWO_CARD_SEMANTIC_CLOSURE`"
+        in registry
+    )
+    route_markers = (
+        (
+            "CURRENT_TASK: `H01B-R02A4T_TRUE_TIMED_OBSERVABILITY_PROVENANCE_AND_TWO_CARD_SEMANTIC_CLOSURE`",
+            "NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`",
+            "NEXT_TASK_GATED: `true`",
+            "| H01B-R02A4T | current |",
+            "| H01B-R03 | next_gated |",
+        )
+        if r02a4t_current
+        else (
+            "CURRENT_TASK: `none`",
+            "NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`",
+            "NEXT_TASK_GATED: `false`",
+            "| H01B-R02A4T | complete_with_warnings |",
+            "| H01B-R03 | next |",
+        )
+    )
     registry_markers = (
-        "CURRENT_TASK: `none`",
-        "NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`",
-        "NEXT_TASK_GATED: `false`",
+        *route_markers,
         "| H01B-R02A3 | complete_with_warnings |",
         "| H01B-R02A4 | complete_with_warnings |",
-        "| H01B-R03 | next |",
         "| H01B-R04 | pending |",
         "| H01B-R05 | planned |",
         "| H01B-R06 | planned |",
