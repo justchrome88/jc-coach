@@ -492,6 +492,66 @@ def migrate_human_docs(args: argparse.Namespace) -> int:
     return 0
 
 
+def archive_remaining(args: argparse.Namespace) -> int:
+    """Move every remaining non-shell docs/root legacy source to the archive."""
+    manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
+    records = {record["source_path"]: record for record in manifest["records"]}
+    moved = 0
+    for source, record in records.items():
+        source_path = ROOT / source
+        destination = ROOT / record["planned_destination"]
+        if source in DOCS_SHELL or not source.startswith("docs/") or not source_path.is_file():
+            continue
+        if not str(record["planned_destination"]).startswith(str(ARCHIVE / "docs")):
+            raise SystemExit(f"ARCHIVE_ERROR=active_source_still_present:{source}")
+        if source_path.stat().st_size != record["source_size"] or sha256(source_path) != record["source_sha256"]:
+            raise SystemExit(f"ARCHIVE_ERROR=source_drift:{source}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(source_path, destination)
+        moved += 1
+
+    for source in ("AGENT.md", "LATER.md", "WORKLOG.md"):
+        record = records[source]
+        source_path = ROOT / source
+        destination = ROOT / record["planned_destination"]
+        if source_path.stat().st_size != record["source_size"] or sha256(source_path) != record["source_sha256"]:
+            raise SystemExit(f"ARCHIVE_ERROR=source_drift:{source}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(source_path, destination)
+        moved += 1
+
+    for source in ("docs/README.md", "docs/project_management/DOCS_INDEX.md"):
+        record = records[source]
+        source_path = ROOT / source
+        destination = ROOT / record["planned_destination"]
+        if source_path.stat().st_size != record["source_size"] or sha256(source_path) != record["source_sha256"]:
+            raise SystemExit(f"ARCHIVE_ERROR=source_drift:{source}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(source_path, destination)
+
+    atomic_text_write(
+        ROOT / "docs/README.md",
+        "# Temporary Documentation Compatibility Shell\n\n"
+        "This is a temporary compatibility shell.\n\n"
+        "- Current human docs are in `project_docs/`.\n"
+        "- Current control/state is in `project_control/`.\n"
+        "- Runtime contracts are in `app/contracts/`.\n"
+        "- Old material is in `_legacy_archive/`.\n\n"
+        "DO NOT WRITE CURRENT FACTS HERE. Active writers target canonical paths only.\n\n"
+        "Remove this shell after accepted R03 or explicit cleanup approval.\n",
+    )
+    atomic_text_write(
+        ROOT / "docs/project_management/DOCS_INDEX.md",
+        "# Compatibility Stub: Documentation Map\n\n"
+        "Canonical file: `project_control/manifests/DOCS_MAP.md`.\n\n"
+        "DO NOT WRITE HERE. This file contains no independent current facts.\n\n"
+        "Remove after accepted R03 or explicit cleanup approval.\n",
+    )
+    print(f"ARCHIVE_SOURCES_MOVED={moved}")
+    print("ARCHIVE_REMAINING_RESULT=complete")
+    return 0
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -518,6 +578,9 @@ def parse_args() -> argparse.Namespace:
     human = subparsers.add_parser("migrate-human-docs")
     human.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
     human.set_defaults(func=migrate_human_docs)
+    archive = subparsers.add_parser("archive-remaining")
+    archive.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    archive.set_defaults(func=archive_remaining)
     return parser.parse_args()
 
 
