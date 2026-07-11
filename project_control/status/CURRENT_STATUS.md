@@ -11,9 +11,10 @@ Original sources preserved at:
 ## Current route
 
 - CURRENT_LANE: `H01B_DOCUMENTATION_AND_CODEBASE_CONSOLIDATION`
-- CURRENT_TASK: `none`
+- CURRENT_TASK: `H01B-R02A2C_CURRENT_DOCUMENT_BEHAVIORAL_RECONCILIATION`
 - NEXT_TASK: `H01B-R02A3_CODEBASE_SERVICE_BOUNDARY_CONSOLIDATION`
-- NEXT_TASK_GATED: `false`
+- NEXT_TASK_GATED: `true`
+- R02A3_MAY_START: `false`
 - THEN: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`
 - THEN: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`
 
@@ -25,6 +26,7 @@ Original sources preserved at:
 - H01B_R01_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A2_STATUS: `PASS_WITH_WARNINGS`.
+- H01B_R02A2C_STATUS: `IN_PROGRESS`.
 - Canonical coach domains: `impact_leak`, `bad_fight_selection`.
 - Performance, utility, and aim are metric groups, not coach domains.
 - Domain slots per owner: `2`; cross-domain proposals are allowed.

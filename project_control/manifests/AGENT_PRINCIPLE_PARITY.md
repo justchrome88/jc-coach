@@ -14,7 +14,7 @@ All listed originals are preserved by the R02A2 migration manifest.
 | source priority | root/PM `AGENTS.md` | root `AGENTS.md`; PM `AGENTS.md` | Stricter single nine-level order; archive and PM are subordinate. |
 | artifact/report paths | task; PM `AGENTS.md`; old workflow | explicit task; PM `AGENTS.md`; merged PM role | Equivalent: named PM artifacts and task-scoped outputs only. |
 | status/checklist update | old workflow/protocol; PM `AGENTS.md` | `project_control/agents/AGENT_WORKFLOW.md`; `PROJECT_OPERATING_PROTOCOL.md`; PM `AGENTS.md` | Equivalent: update canonical Product/PM route set together. |
-| current/next routing | Product Hot; PM state/indexes | `project_control/status/*`; `project_control/planning/WP_REGISTRY.md`; PM fixed files/indexes | Stricter: R02A2 accepted, no current task, then R02A3 → R03 → R04 everywhere. |
+| current/next routing | Product Hot; PM state/indexes | `project_control/status/*`; `project_control/planning/WP_REGISTRY.md`; `project_control/planning/WORK_PACKAGE_BACKLOG.md`; PM fixed files/indexes | Stricter: R02A2C is current; R02A3 is next but gated, then R03 → R04 everywhere. |
 | quality gates | root `AGENTS.md`; `docs/TESTING.md`; project gate | root `AGENTS.md`; `project_docs/operations/TESTING.md`; project gate; QA role | Equivalent or stricter: focused plus full applicable gates and no-mutation proof. |
 | token economy | root `AGENTS.md`; workflow | root `AGENTS.md`; canonical workflow/roles | Equivalent: smallest relevant context; block broad unclear expansion. |
 | stop/block conditions | task; Product/PM `AGENTS.md`; old roles | root/PM `AGENTS.md`; canonical workflow/roles/guardians | Stricter: authority, dirt, mutation, evidence, writer, path, and gate failures block. |
