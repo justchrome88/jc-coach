@@ -13,4 +13,4 @@ Source preserved at
 | Exact playlist | unknown/provenance-only |
 | Global metric correctness | not accepted; trusted subsets remain caveated |
 | Public/friends readiness | blocked |
-| Current route | R02A2C current; R02A3 next but gated; then R03 -> R04 |
+| Current route | R02A2C accepted; R02A3 next and released; then R03 -> R04 |

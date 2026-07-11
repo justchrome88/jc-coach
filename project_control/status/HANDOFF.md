@@ -15,9 +15,9 @@ deterministic owner-sync clock recovery. All 332 original `docs/` files remain
 accounted for, the six-file compatibility shell is read-only, runtime/archive
 dependencies are zero, and the production DB and service process are unchanged.
 
-R02A2C current-document behavioral reconciliation is active. R02A3
-service-boundary consolidation is next but gated and must not start until
-R02A2C passes. R03 mission-card and activation UI work remains blocked until
+R02A2C current-document behavioral reconciliation is accepted with warnings.
+R02A3 service-boundary consolidation is next and released to start under a new
+explicit task. R03 mission-card and activation UI work remains blocked until
 R02A3 is accepted; R04 replay follows R03.
 
 Current accepted behavior is summarized in `CURRENT_STATUS.md`. Historical

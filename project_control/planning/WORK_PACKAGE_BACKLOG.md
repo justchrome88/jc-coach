@@ -7,9 +7,9 @@ Source preserved at
 
 1. H01B-R02A2 is complete with warnings: no content loss and zero active
    `docs/` runtime dependencies.
-2. Complete H01B-R02A2C current-document behavioral reconciliation now.
-3. Execute H01B-R02A3 service/code boundary consolidation next, only after the
-   R02A2C gate passes.
+2. H01B-R02A2C current-document behavioral reconciliation is complete with
+   warnings.
+3. Execute H01B-R02A3 service/code boundary consolidation next; it is released.
 4. Then execute H01B-R03 two mission cards, activation, and match-feedback UI.
 5. Then execute H01B-R04 30+10 Product replay.
 

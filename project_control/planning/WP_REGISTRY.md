@@ -10,8 +10,8 @@ Original registry preserved at
 | H01B-R02 | complete_with_warnings | Accepted AI engine and two proposal-ready domain slots. |
 | H01B-R02A1 | complete_with_warnings | Audit/inventory accepted at PM commit `ddd82b3`. |
 | H01B-R02A2 | complete_with_warnings | No-loss migration accepted; six-file compatibility shell remains temporary. |
-| H01B-R02A2C | current | Current-document behavioral reconciliation and final acceptance. |
-| H01B-R02A3 | next_gated | Codebase and service-boundary consolidation; requires R02A2C acceptance. |
+| H01B-R02A2C | complete_with_warnings | Current documents reconciled; complete R02A2V and technical gates passed. |
+| H01B-R02A3 | next | Codebase and service-boundary consolidation; released after R02A2C acceptance. |
 | H01B-R03 | blocked_by_route | Two mission cards, activation, and feedback UI; requires R02A3. |
 | H01B-R04 | blocked_by_route | 30+10 Product replay; requires R03. |
 
