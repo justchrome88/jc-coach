@@ -26,34 +26,20 @@ from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, get_map_stats, get_summary
 from app.services.auth import current_user_from_session
 from app.services.coach_domain_ai import coach_domain_slots_payload
-from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
-from app.services.demo_storage import demo_storage_report, write_demo_storage_manifest
-from app.services.import_jobs import (
+from app.services.ingestion.demo_downloader import steam_demo_downloader_configured
+from app.services.ingestion.demo_storage import demo_storage_report, write_demo_storage_manifest
+from app.services.ingestion.jobs import (
     IMPORT_JOB_COMPLETED,
     IMPORT_JOB_IN_PROGRESS,
     IMPORT_JOB_QUEUED,
     create_import_request,
 )
-from app.services.import_orchestration import (
+from app.services.ingestion.orchestration import (
     CANONICAL_IMPORT_JOB_TYPE,
     import_block_handoff_contract,
     run_demo_import_orchestration,
 )
-from app.services.importer import import_csv, import_json
-from app.services.match_queries import playable_match_select
-from app.services.ownership import get_owned_import_job
-from app.services.recommendation_tracking import (
-    extend_recommendation_target,
-    get_active_recommendation_progress,
-    get_all_recommendation_progress,
-    list_recommendation_history,
-    recommendation_category_summary,
-    restart_recommendation_category,
-    update_recommendation_status,
-)
-from app.services.report_generator import generate_report, latest_report
-from app.services.steam_demo_downloader import steam_demo_downloader_configured
-from app.services.steam_integration import (
+from app.services.ingestion.steam import (
     create_steam_import_job,
     list_import_jobs,
     list_steam_accounts,
@@ -66,6 +52,20 @@ from app.services.steam_integration import (
     steam_login_url,
     sync_match_history_job,
 )
+from app.services.ingestion.structured_import import import_csv, import_json
+from app.services.match_queries import playable_match_select
+from app.services.ownership import get_owned_import_job
+from app.services.parsing.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
+from app.services.recommendation_tracking import (
+    extend_recommendation_target,
+    get_active_recommendation_progress,
+    get_all_recommendation_progress,
+    list_recommendation_history,
+    recommendation_category_summary,
+    restart_recommendation_category,
+    update_recommendation_status,
+)
+from app.services.report_generator import generate_report, latest_report
 
 router = APIRouter(prefix="/api")
 

@@ -44,14 +44,38 @@ from app.services.analytics import (
     get_summary,
     match_detail,
 )
-from app.services.app_settings import set_app_setting
 from app.services.auth import authenticate_user, current_user_from_session, login_user, logout_user, register_user
 from app.services.coach_rules import build_coach_focus
-from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
-from app.services.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.i18n import normalize_locale
-from app.services.import_jobs import IMPORT_JOB_COMPLETED, IMPORT_JOB_FAILED, IMPORT_JOB_IN_PROGRESS, IMPORT_JOB_QUEUED
-from app.services.importer import import_csv, import_json
+from app.services.ingestion.demo_downloader import steam_demo_downloader_configured
+from app.services.ingestion.demo_storage import demo_storage_report, write_demo_storage_manifest
+from app.services.ingestion.jobs import (
+    IMPORT_JOB_COMPLETED,
+    IMPORT_JOB_FAILED,
+    IMPORT_JOB_IN_PROGRESS,
+    IMPORT_JOB_QUEUED,
+)
+from app.services.ingestion.settings import set_app_setting
+from app.services.ingestion.steam import (
+    clear_steam_demo_download_errors,
+    create_steam_import_job,
+    import_steam_share_code_demo,
+    link_steam_account,
+    list_steam_accounts,
+    list_visible_steam_import_jobs,
+    mark_steam_import_all_job_interrupted,
+    match_date_truth,
+    process_queued_steam_jobs,
+    queue_match_history_sync,
+    queue_steam_import_all,
+    run_steam_import_all_job,
+    steam_import_overview,
+    steam_login_url,
+    sync_match_history_job,
+    update_match_auth_code,
+    validate_openid_callback,
+)
+from app.services.ingestion.structured_import import import_csv, import_json
 from app.services.match_queries import is_playable_match, playable_match_select
 from app.services.metric_confidence import (
     exact_date_matches,
@@ -74,6 +98,7 @@ from app.services.owner_coach_sync_batch import (
     run_owner_coach_sync_batch_step,
     start_owner_coach_sync_batch,
 )
+from app.services.parsing.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.recommendation_tracking import (
     extend_recommendation_target,
     get_active_recommendation_progress,
@@ -85,26 +110,6 @@ from app.services.recommendation_tracking import (
     update_recommendation_status,
 )
 from app.services.report_generator import generate_report, latest_report, markdown_to_html
-from app.services.steam_demo_downloader import steam_demo_downloader_configured
-from app.services.steam_integration import (
-    clear_steam_demo_download_errors,
-    create_steam_import_job,
-    import_steam_share_code_demo,
-    link_steam_account,
-    list_steam_accounts,
-    list_visible_steam_import_jobs,
-    mark_steam_import_all_job_interrupted,
-    match_date_truth,
-    process_queued_steam_jobs,
-    queue_match_history_sync,
-    queue_steam_import_all,
-    run_steam_import_all_job,
-    steam_import_overview,
-    steam_login_url,
-    sync_match_history_job,
-    update_match_auth_code,
-    validate_openid_callback,
-)
 
 router = APIRouter()
 

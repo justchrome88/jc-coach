@@ -1,3 +1,5 @@
+"""Canonical weapon-name normalization shared by parsing and metrics."""
+
 from __future__ import annotations
 
 _ALIASES = {

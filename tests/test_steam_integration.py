@@ -5,20 +5,14 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 
 from app.db.models import CoachRecommendation, ImportJob, Match, MatchRecommendationEvaluation, SteamAccount
-from app.services.demo_retention import (
-    DEMO_RETENTION_POLICY_RETAIN_RAW,
-    DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE,
-    DEMO_RETENTION_STATUS_RETAINED_FOR_DEV,
-)
-from app.services.match_queries import playable_match_select
-from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_recommendations_for_match
-from app.services.steam_demo_downloader import (
+from app.services.ingestion.demo_downloader import (
     _download_and_import_match,
     _download_demo_file,
     download_pending_steam_demos,
     steam_demo_downloader_configured,
 )
-from app.services.steam_integration import (
+from app.services.ingestion.match_metadata import parse_steam_match_time, steam_gc_metadata_from_item
+from app.services.ingestion.steam import (
     STEAM_IMPORT_APPROXIMATE_MATCH_DATE,
     STEAM_IMPORT_BATCH_CAP_REACHED,
     STEAM_IMPORT_DEMO_TOO_LARGE,
@@ -58,8 +52,14 @@ from app.services.steam_integration import (
     update_match_auth_code,
     validate_openid_callback,
 )
-from app.services.steam_match_metadata import parse_steam_match_time, steam_gc_metadata_from_item
-from app.services.steam_storage_guard import SteamImportStorageBudget
+from app.services.ingestion.storage_guard import SteamImportStorageBudget
+from app.services.match_queries import playable_match_select
+from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_recommendations_for_match
+from app.services.shared.demo_retention import (
+    DEMO_RETENTION_POLICY_RETAIN_RAW,
+    DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE,
+    DEMO_RETENTION_STATUS_RETAINED_FOR_DEV,
+)
 
 
 def test_steam_login_url_contains_openid_fields(monkeypatch):
@@ -98,7 +98,7 @@ def test_validate_openid_callback_requires_positive_steam_assertion(monkeypatch)
         assert "openid.mode=check_authentication" in request.full_url
         return FakeResponse()
 
-    monkeypatch.setattr("app.services.steam_integration.urlopen", fake_urlopen)
+    monkeypatch.setattr("app.services.ingestion.steam.urlopen", fake_urlopen)
 
     steam_id, error = validate_openid_callback(
         {
@@ -122,7 +122,7 @@ def test_validate_openid_callback_rejects_negative_steam_assertion(monkeypatch):
         def read(self):
             return b"ns:http://specs.openid.net/auth/2.0\nis_valid:false\n"
 
-    monkeypatch.setattr("app.services.steam_integration.urlopen", lambda *_args, **_kwargs: FakeResponse())
+    monkeypatch.setattr("app.services.ingestion.steam.urlopen", lambda *_args, **_kwargs: FakeResponse())
 
     steam_id, error = validate_openid_callback(
         {
@@ -185,9 +185,9 @@ def test_parent_checkpoint_persists_after_child_sync_success(db, monkeypatch):
     get_settings.cache_clear()
     account = link_steam_account(db, "76561198056634139", persona_name="JC")
     update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [])
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         lambda *_args, **_kwargs: {"configured": True, "processed": 0, "imported": 0, "failed": 0, "results": []},
     )
 
@@ -210,7 +210,7 @@ def test_parent_checkpoint_persists_before_demo_download(db, monkeypatch):
     get_settings.cache_clear()
     account = link_steam_account(db, "76561198056634139", persona_name="JC")
     update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [])
 
     def fake_download_pending_steam_demos(_db, **kwargs):
         kwargs["progress_callback"](
@@ -223,7 +223,7 @@ def test_parent_checkpoint_persists_before_demo_download(db, monkeypatch):
         return {"configured": True, "processed": 0, "imported": 0, "failed": 0, "pending": 1, "results": []}
 
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         fake_download_pending_steam_demos,
     )
 
@@ -244,7 +244,7 @@ def test_parent_checkpoint_persists_disk_budget_exceeded(db, monkeypatch):
     get_settings.cache_clear()
     account = link_steam_account(db, "76561198056634139", persona_name="JC")
     update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [])
 
     def fake_download_pending_steam_demos(_db, **kwargs):
         kwargs["progress_callback"](
@@ -265,7 +265,7 @@ def test_parent_checkpoint_persists_disk_budget_exceeded(db, monkeypatch):
         }
 
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         fake_download_pending_steam_demos,
     )
 
@@ -413,9 +413,9 @@ def test_run_steam_import_all_job_reports_no_new_clean_success(db, monkeypatch):
     get_settings.cache_clear()
     account = link_steam_account(db, "76561198056634139", persona_name="JC")
     update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [])
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         lambda *_args, **_kwargs: {"configured": True, "processed": 0, "imported": 0, "failed": 0, "results": []},
     )
 
@@ -445,11 +445,11 @@ def test_run_steam_import_all_job_reports_duplicate_skipped_clean_success(db, mo
     )
     db.commit()
     monkeypatch.setattr(
-        "app.services.steam_integration._collect_match_share_codes",
+        "app.services.ingestion.steam._collect_match_share_codes",
         lambda **_kwargs: ["CSGO-cAQhC-XL4SM-wWoxt-NNdVO-anUaK"],
     )
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         lambda *_args, **_kwargs: {"configured": True, "processed": 0, "imported": 0, "failed": 0, "results": []},
     )
 
@@ -578,7 +578,7 @@ def test_sync_match_history_job_stores_share_codes(db, monkeypatch):
         assert timeout == 30
         return FakeResponse(responses.pop(0))
 
-    monkeypatch.setattr("app.services.steam_integration.urlopen", fake_urlopen)
+    monkeypatch.setattr("app.services.ingestion.steam.urlopen", fake_urlopen)
     account = link_steam_account(db, "76561198056634139", persona_name="JC")
     update_match_auth_code(db, account.id, "AUTH-CODE")
     job = db.query(ImportJob).filter(ImportJob.job_type == "match_history_sync").one()
@@ -667,7 +667,7 @@ def test_import_all_available_steam_matches(db, monkeypatch):
 
     get_settings.cache_clear()
     monkeypatch.setattr(
-        "app.services.steam_integration._collect_match_share_codes",
+        "app.services.ingestion.steam._collect_match_share_codes",
         lambda **_kwargs: ["CSGO-cAQhC-XL4SM-wWoxt-NNdVO-anUaK"],
     )
     account = link_steam_account(db, "76561198056634139", persona_name="JC")
@@ -709,7 +709,7 @@ def test_import_all_available_steam_matches_uses_sync_even_after_recent_sync(db,
     db.commit()
 
     monkeypatch.setattr(
-        "app.services.steam_integration._collect_match_share_codes",
+        "app.services.ingestion.steam._collect_match_share_codes",
         lambda **_kwargs: ["CSGO-cAQhC-XL4SM-wWoxt-NNdVO-anUaK"],
     )
     try:
@@ -730,9 +730,9 @@ def test_import_all_available_steam_matches_reports_download_failure(db, monkeyp
     get_settings.cache_clear()
     account = link_steam_account(db, "76561198056634139", persona_name="JC")
     update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [])
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         lambda *_args, **_kwargs: {
             "configured": True,
             "processed": 1,
@@ -759,9 +759,9 @@ def test_import_all_available_steam_matches_reports_parser_failure(db, monkeypat
     get_settings.cache_clear()
     account = link_steam_account(db, "76561198056634139", persona_name="JC")
     update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [])
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         lambda *_args, **_kwargs: {
             "configured": True,
             "processed": 1,
@@ -788,9 +788,9 @@ def test_import_all_available_steam_matches_reports_partial_success(db, monkeypa
     get_settings.cache_clear()
     account = link_steam_account(db, "76561198056634139", persona_name="JC")
     update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [])
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         lambda *_args, **_kwargs: {
             "configured": True,
             "processed": 2,
@@ -827,9 +827,9 @@ def test_import_all_available_steam_matches_reports_approximate_match_date(db, m
     get_settings.cache_clear()
     account = link_steam_account(db, "76561198056634139", persona_name="JC")
     update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [])
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         lambda *_args, **_kwargs: {
             "configured": True,
             "processed": 1,
@@ -892,7 +892,7 @@ def test_import_steam_share_code_demo_creates_tracking_job_before_downloader(db,
         }
 
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         fake_download_pending_steam_demos,
     )
 
@@ -963,10 +963,10 @@ def test_steam_demo_batch_cap_leaves_remaining_pending(db, monkeypatch, tmp_path
         assert kwargs["evaluate_recommendations"] is False
         return {"match_id": None, "imported": 1, "skipped_duplicates": 0, "stored_path": str(demo_path)}
 
-    monkeypatch.setattr("app.services.steam_demo_downloader.steam_demo_downloader_configured", lambda: True)
-    monkeypatch.setattr("app.services.steam_demo_downloader._fetch_demo_urls", fake_fetch_demo_urls)
-    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
-    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.steam_demo_downloader_configured", lambda: True)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader._fetch_demo_urls", fake_fetch_demo_urls)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.import_demo_file", fake_import_demo_file)
 
     try:
         result = download_pending_steam_demos(db, limit=20)
@@ -987,9 +987,9 @@ def test_steam_demo_batch_cap_leaves_remaining_pending(db, monkeypatch, tmp_path
 def test_steam_import_result_reports_batch_cap(db, monkeypatch):
     account = link_steam_account(db, "76561198056634139", persona_name="JC")
     update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [])
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         lambda *_args, **_kwargs: {
             "configured": True,
             "processed": 1,
@@ -1026,7 +1026,7 @@ def test_steam_download_content_length_blocks_too_large_demo(monkeypatch, tmp_pa
         def read(self, _size=-1):
             return b"data"
 
-    monkeypatch.setattr("app.services.steam_demo_downloader.urlopen", lambda *_args, **_kwargs: FakeResponse())
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.urlopen", lambda *_args, **_kwargs: FakeResponse())
     try:
         budget = SteamImportStorageBudget()
         try:
@@ -1075,10 +1075,10 @@ def test_steam_job_byte_budget_stops_before_next_demo(db, monkeypatch, tmp_path)
     def fake_import_demo_file(_db, _demo_path, **_kwargs):
         return {"match_id": None, "imported": 1, "skipped_duplicates": 0, "stored_path": str(demo_path)}
 
-    monkeypatch.setattr("app.services.steam_demo_downloader.steam_demo_downloader_configured", lambda: True)
-    monkeypatch.setattr("app.services.steam_demo_downloader._fetch_demo_urls", fake_fetch_demo_urls)
-    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
-    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.steam_demo_downloader_configured", lambda: True)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader._fetch_demo_urls", fake_fetch_demo_urls)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.import_demo_file", fake_import_demo_file)
 
     try:
         result = download_pending_steam_demos(db, limit=20)
@@ -1113,7 +1113,7 @@ def test_streamed_download_writes_chunks_and_counts_bytes(monkeypatch, tmp_path)
         def read(self, _size=-1):
             return self.chunks.pop(0)
 
-    monkeypatch.setattr("app.services.steam_demo_downloader.urlopen", lambda *_args, **_kwargs: FakeResponse())
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.urlopen", lambda *_args, **_kwargs: FakeResponse())
     try:
         budget = SteamImportStorageBudget()
         path = _download_demo_file(
@@ -1155,7 +1155,7 @@ def test_streamed_bz2_decompression_counts_bytes(monkeypatch, tmp_path):
         def read(self, _size=-1):
             return self.chunks.pop(0)
 
-    monkeypatch.setattr("app.services.steam_demo_downloader.urlopen", lambda *_args, **_kwargs: FakeResponse())
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.urlopen", lambda *_args, **_kwargs: FakeResponse())
     try:
         budget = SteamImportStorageBudget()
         path = _download_demo_file(
@@ -1211,8 +1211,8 @@ def test_steam_downloader_passes_gc_match_time_to_demo_import(db, monkeypatch, t
             "parser_success": True,
         }
 
-    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
-    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.import_demo_file", fake_import_demo_file)
 
     result = _download_and_import_match(
         db,
@@ -1267,8 +1267,8 @@ def test_steam_downloader_writes_exact_gc_match_time_to_imported_match(db, monke
         inner_db.refresh(imported)
         return {"match_id": imported.id, "imported": 1, "skipped_duplicates": 0, "stored_path": str(demo_path)}
 
-    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
-    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.import_demo_file", fake_import_demo_file)
 
     result = _download_and_import_match(
         db,
@@ -1313,8 +1313,8 @@ def test_steam_downloader_cleans_test_owned_temp_acquisition_dir(db, monkeypatch
         inner_db.refresh(imported)
         return {"match_id": imported.id, "imported": 1, "skipped_duplicates": 0, "stored_path": "/retained/demo.dem"}
 
-    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
-    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.import_demo_file", fake_import_demo_file)
 
     _download_and_import_match(
         db,
@@ -1373,8 +1373,8 @@ def test_steam_downloader_evaluates_recommendations_after_exact_date_truth(db, m
             },
         }
 
-    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
-    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.import_demo_file", fake_import_demo_file)
 
     result = _download_and_import_match(
         db,
@@ -1448,8 +1448,8 @@ def test_steam_downloader_missing_gc_match_time_does_not_keep_file_mtime_as_matc
             "stored_path": str(demo_path),
         }
 
-    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
-    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.import_demo_file", fake_import_demo_file)
 
     result = _download_and_import_match(
         db,
@@ -1493,14 +1493,14 @@ def test_steam_freshness_ignores_approximate_imported_match_dates(db, monkeypatc
     update_match_auth_code(db, account.id, "AUTH-CODE", "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL")
     db.commit()
     captured = {}
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [])
 
     def fake_download_pending_steam_demos(_db, **kwargs):
         captured.update(kwargs)
         return {"configured": True, "processed": 0, "imported": 0, "failed": 0, "results": []}
 
     monkeypatch.setattr(
-        "app.services.steam_demo_downloader.download_pending_steam_demos",
+        "app.services.ingestion.demo_downloader.download_pending_steam_demos",
         fake_download_pending_steam_demos,
     )
 
@@ -1514,7 +1514,7 @@ def test_steam_freshness_ignores_approximate_imported_match_dates(db, monkeypatc
 
 
 def test_steam_download_parser_failure_records_retained_demo_metadata(db, monkeypatch, tmp_path):
-    from app.services.demo_parser import DemoParseError
+    from app.services.parsing.demo_parser import DemoParseError
 
     match = Match(
         source="steam_history",
@@ -1555,10 +1555,10 @@ def test_steam_download_parser_failure_records_retained_demo_metadata(db, monkey
             },
         )
 
-    monkeypatch.setattr("app.services.steam_demo_downloader.steam_demo_downloader_configured", lambda: True)
-    monkeypatch.setattr("app.services.steam_demo_downloader._fetch_demo_urls", fake_fetch_demo_urls)
-    monkeypatch.setattr("app.services.steam_demo_downloader._download_demo_file", fake_download_demo_file)
-    monkeypatch.setattr("app.services.steam_demo_downloader.import_demo_file", fake_import_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.steam_demo_downloader_configured", lambda: True)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader._fetch_demo_urls", fake_fetch_demo_urls)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader._download_demo_file", fake_download_demo_file)
+    monkeypatch.setattr("app.services.ingestion.demo_downloader.import_demo_file", fake_import_demo_file)
 
     result = download_pending_steam_demos(db)
 

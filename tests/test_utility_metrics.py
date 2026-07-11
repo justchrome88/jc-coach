@@ -2,7 +2,7 @@ from pathlib import Path
 
 from app.db.models import Match
 from app.services.metric_snapshots import metric_snapshot_payload
-from app.services.parser_artifact_reader import read_normalized_events_from_artifact_file
+from app.services.parsing.artifact_reader import read_normalized_events_from_artifact_file
 from app.services.utility_metrics import (
     UTILITY_METRICS_VERSION,
     calculate_and_store_utility_metrics,

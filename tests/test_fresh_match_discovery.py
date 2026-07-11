@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 
 from app.config import get_settings
 from app.db.models import ImportJob, Match, SteamAccount, User
-from app.services.fresh_match_discovery import (
+from app.services.ingestion.discovery import (
     FRESH_DISCOVERY_EVIDENCE_SCHEMA_VERSION,
     PERSISTED_DRY_RUN_REASON,
     fresh_match_ready_for_h01a,

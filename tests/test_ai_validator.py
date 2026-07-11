@@ -12,7 +12,7 @@ from app.services.ai_coach import (
     serialize_ai_coach_report,
 )
 from app.services.ai_validator import validate_ai_coach_output
-from app.services.importer import import_rows
+from app.services.ingestion.structured_import import import_rows
 from app.services.metric_truth import METRIC_REGISTRY_VERSION
 
 

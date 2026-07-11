@@ -53,7 +53,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     init_db()
     settings = get_settings()
     if settings.steam_import_repair_stale_on_startup:
-        from app.services.steam_integration import run_startup_stale_steam_import_repair
+        from app.services.ingestion.steam import run_startup_stale_steam_import_repair
 
         db = SessionLocal()
         try:

@@ -6,7 +6,6 @@ from pathlib import Path
 
 from app.db.models import Match, MetricSnapshot, SteamAccount, User
 from app.services.core_combat_metrics import calculate_core_combat_metrics
-from app.services.match_phase import accepted_events, accepted_match_phase, player_participation_rounds
 from app.services.metric_downstream_state import (
     MATCH_124_DISPOSITIONS,
     match_124_downstream_plan,
@@ -20,8 +19,9 @@ from app.services.metric_snapshots import (
     process_persisted_match_metric_snapshots_for_coach_loop,
     select_metric_snapshots_for_analysis_scope,
 )
-from app.services.parser_artifact_reader import normalized_events_from_parser_artifact
-from app.services.weapon_names import canonical_weapon_name
+from app.services.parsing.artifact_reader import normalized_events_from_parser_artifact
+from app.services.parsing.match_phase import accepted_events, accepted_match_phase, player_participation_rounds
+from app.services.shared.weapon_names import canonical_weapon_name
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = json.loads((ROOT / "tests/fixtures/metrics/match_124_metric_contract_v2.json").read_text())

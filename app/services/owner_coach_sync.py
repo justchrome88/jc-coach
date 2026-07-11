@@ -32,14 +32,14 @@ from app.services.ai_coach import (
     POST_METRICS_COACH_LOOP_SOURCE,
     build_ai_coach_payload,
 )
-from app.services.demo_parser import import_demo_file
-from app.services.fresh_match_discovery import PERSISTED_DRY_RUN_REASON
-from app.services.import_jobs import IMPORT_JOB_ACTIVE_STATUSES, IMPORT_JOB_COMPLETED
-from app.services.import_orchestration import run_demo_import_orchestration
+from app.services.ingestion.discovery import PERSISTED_DRY_RUN_REASON
+from app.services.ingestion.jobs import IMPORT_JOB_ACTIVE_STATUSES, IMPORT_JOB_COMPLETED
+from app.services.ingestion.orchestration import run_demo_import_orchestration
+from app.services.ingestion.steam import queue_match_history_sync, sync_match_history_job
 from app.services.match_processing import ACCEPTED_PARSER_ARTIFACT_STATUSES, process_owner_match_after_parser_artifact
 from app.services.metric_snapshots import owner_player_metric_snapshot_scope
 from app.services.mission_domain import active_mission_context_for_owner, list_mission_criteria
-from app.services.steam_integration import queue_match_history_sync, sync_match_history_job
+from app.services.parsing.demo_parser import import_demo_file
 
 OWNER_COACH_SYNC_RESULT_SCHEMA_VERSION = "owner-coach-sync-result-v1"
 OWNER_COACH_SYNC_OPERATION = "owner_coach_sync"

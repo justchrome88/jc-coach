@@ -13,7 +13,7 @@ if VENV_PYTHON.exists() and sys.prefix == sys.base_prefix:
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.db.session import SessionLocal  # noqa: E402
-from app.services.steam_integration import (  # noqa: E402
+from app.services.ingestion.steam import (  # noqa: E402
     is_stale_steam_import_all_job,
     mark_steam_import_all_job_interrupted,
 )

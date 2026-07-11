@@ -2,8 +2,7 @@ import json
 import subprocess
 
 from app.db.models import Match
-from app.services.import_jobs import create_import_request
-from app.services.steam_demo_acquisition import (
+from app.services.ingestion.demo_acquisition import (
     DEMO_ALREADY_AVAILABLE,
     DEMO_AUTH_MISSING,
     DEMO_DOWNLOAD_QUEUED_OR_READY,
@@ -12,6 +11,7 @@ from app.services.steam_demo_acquisition import (
     run_steam_demo_acquisition_job,
     validate_steam_demo_acquisition_config,
 )
+from app.services.ingestion.jobs import create_import_request
 
 SHARE_CODE = "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL"
 

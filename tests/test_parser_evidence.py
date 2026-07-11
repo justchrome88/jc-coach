@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from app.services.parser_evidence import (
+from app.services.parsing.evidence import (
     PARSER_EVIDENCE_SCHEMA_VERSION,
     ParserEvidenceError,
     parser_evidence_from_payload,

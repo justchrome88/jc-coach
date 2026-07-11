@@ -3,9 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from app.services.demo_retention import ARTIFACT_CATEGORY_NORMALIZED_EVENT_STORE, RETENTION_CLASS_DERIVED_REBUILDABLE
-from app.services.event_metric_dictionary import EVENT_METRIC_DICTIONARY, NORMALIZED_EVENT_SCHEMA
-from app.services.parser_artifact_reader import (
+from app.services.parsing.artifact_reader import (
     NORMALIZED_EVENT_SCHEMA_VERSION,
     NormalizedEventValidationError,
     ParserArtifactReaderError,
@@ -13,6 +11,11 @@ from app.services.parser_artifact_reader import (
     read_normalized_events,
     read_normalized_events_from_artifact_file,
     validate_normalized_event,
+)
+from app.services.parsing.event_dictionary import EVENT_METRIC_DICTIONARY, NORMALIZED_EVENT_SCHEMA
+from app.services.shared.demo_retention import (
+    ARTIFACT_CATEGORY_NORMALIZED_EVENT_STORE,
+    RETENTION_CLASS_DERIVED_REBUILDABLE,
 )
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "parser"

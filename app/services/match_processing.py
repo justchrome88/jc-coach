@@ -17,7 +17,7 @@ from app.services.metric_snapshots import (
     owner_player_metric_snapshot_scope,
     process_persisted_match_metric_snapshots_for_coach_loop,
 )
-from app.services.parser_artifact_reader import ParserArtifactReaderError, normalized_events_from_parser_artifact
+from app.services.parsing.artifact_reader import ParserArtifactReaderError, normalized_events_from_parser_artifact
 from app.services.utility_metrics import UTILITY_SNAPSHOT_SOURCE, calculate_and_store_utility_metrics
 
 MATCH_PROCESSING_BOUNDARY = "owner_match_after_parser_artifact"

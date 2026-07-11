@@ -1,3 +1,5 @@
+"""Storage-budget guardrails for Steam acquisition."""
+
 from __future__ import annotations
 
 import os

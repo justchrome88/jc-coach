@@ -1,3 +1,5 @@
+"""Integrity checks for acquired and retained artifacts."""
+
 from __future__ import annotations
 
 import hashlib

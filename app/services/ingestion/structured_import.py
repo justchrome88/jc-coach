@@ -1,3 +1,5 @@
+"""CSV and JSON match ingestion adapter."""
+
 from __future__ import annotations
 
 import csv

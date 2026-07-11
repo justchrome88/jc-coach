@@ -31,7 +31,6 @@ from app.services.coach_insights import (
     serialize_insight_cards,
 )
 from app.services.coach_rules import build_coach_focus
-from app.services.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, artifact_retention_metadata
 from app.services.match_queries import playable_match_select
 from app.services.metric_confidence import (
     exact_date_window_metadata,
@@ -69,6 +68,7 @@ from app.services.mistake_detection import category_scorecard, detect_structured
 from app.services.ownership import get_owned_metric_snapshot
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_all_recommendation_progress
 from app.services.report_generator import _serialize_recommendation_progress
+from app.services.shared.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, artifact_retention_metadata
 
 AI_COACH_PROMPT_VERSION = "ai-coach-prompt-v1"
 AI_COACH_PAYLOAD_SCHEMA_VERSION = "ai-coach-payload-v1"

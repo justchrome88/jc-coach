@@ -1,3 +1,5 @@
+"""Normalized event reader for persisted parser artifacts."""
+
 from __future__ import annotations
 
 import json
@@ -5,9 +7,9 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from app.services.demo_retention import ARTIFACT_CATEGORY_NORMALIZED_EVENT_STORE, artifact_retention_metadata
-from app.services.event_metric_dictionary import EVENT_METRIC_DICTIONARY, event_definition
-from app.services.parser_evidence import CONFIDENCE_LEVELS
+from app.services.parsing.event_dictionary import EVENT_METRIC_DICTIONARY, event_definition
+from app.services.parsing.evidence import CONFIDENCE_LEVELS
+from app.services.shared.demo_retention import ARTIFACT_CATEGORY_NORMALIZED_EVENT_STORE, artifact_retention_metadata
 
 NORMALIZED_EVENT_SCHEMA_VERSION = "normalized-parser-events-v1"
 SUPPORTED_ARTIFACT_READER_INPUTS = {

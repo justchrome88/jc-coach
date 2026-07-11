@@ -1,3 +1,5 @@
+"""Owner-scoped discovery of fresh Steam match candidates."""
+
 from __future__ import annotations
 
 import hashlib
@@ -10,7 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import ImportJob, Match, SteamAccount, User
-from app.services.steam_integration import preview_match_history_codes
+from app.services.ingestion.steam import preview_match_history_codes
 
 FRESH_DISCOVERY_EVIDENCE_SCHEMA_VERSION = "fresh-match-discovery-evidence-v1"
 PERSISTED_DRY_RUN_REASON = "remote_discovery_not_performed_in_persisted_dry_run"

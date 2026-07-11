@@ -1,3 +1,5 @@
+"""Canonical storage owner for acquired demo artifacts."""
+
 from __future__ import annotations
 
 import hashlib
@@ -12,14 +14,14 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.models import Match
-from app.services.artifact_integrity import (
+from app.services.ingestion.artifact_integrity import (
     ARTIFACT_STATE_AVAILABLE,
     ARTIFACT_STATE_MISSING,
     artifact_file_integrity,
     file_sha1,
     parser_artifact_integrity_report,
 )
-from app.services.demo_retention import (
+from app.services.shared.demo_retention import (
     ARTIFACT_CATEGORY_RAW_DEMO,
     ARTIFACT_RETENTION_CLASSES,
     CONSISTENCY_DB_REFERENCES_FILE_CHANGED,

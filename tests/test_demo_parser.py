@@ -14,8 +14,8 @@ from app.db.models import (
     DemoWeaponStat,
     Match,
 )
-from app.services.demo_parser import DemoParseError, import_demo_file, parse_demo
-from app.services.demo_retention import (
+from app.services.parsing.demo_parser import DemoParseError, import_demo_file, parse_demo
+from app.services.shared.demo_retention import (
     ARTIFACT_CATEGORY_PARSER_ARTIFACT,
     DEMO_RETENTION_POLICY_RETAIN_RAW,
     DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE,
@@ -95,7 +95,7 @@ def test_import_demo_file_filters_date_source_metadata_from_match_kwargs(monkeyp
     demo_path.write_bytes(b"HL2DEMO")
 
     monkeypatch.setattr(
-        "app.services.demo_parser.parse_demo",
+        "app.services.parsing.demo_parser.parse_demo",
         lambda *_args, **_kwargs: _parsed_demo_payload(
             external_match_id="steam-exact-date",
             played_at=datetime(2026, 7, 2, 20, 0, 0),
@@ -133,7 +133,7 @@ def test_import_demo_file_preserves_unavailable_date_truth_metadata(monkeypatch,
     parsed["match"]["played_at_source"] = "unavailable"
     parsed["match"]["match_date_status"] = "exact_match_date_unavailable"
     parsed["match"]["match_date_source"] = "unavailable"
-    monkeypatch.setattr("app.services.demo_parser.parse_demo", lambda *_args, **_kwargs: parsed)
+    monkeypatch.setattr("app.services.parsing.demo_parser.parse_demo", lambda *_args, **_kwargs: parsed)
 
     result = import_demo_file(db, demo_path, original_filename="steam-unknown-date.dem")
     match = db.get(Match, result["match_id"])
@@ -150,7 +150,7 @@ def test_import_demo_file_persists_storage_links_and_parser_handoff(monkeypatch,
     demo_path = tmp_path / "steam-acquired.dem"
     demo_path.write_bytes(b"HL2DEMO linked")
     parsed = _parsed_demo_payload(external_match_id="linked-storage", played_at=datetime(2026, 7, 2, 20, 0, 0))
-    monkeypatch.setattr("app.services.demo_parser.parse_demo", lambda *_args, **_kwargs: parsed)
+    monkeypatch.setattr("app.services.parsing.demo_parser.parse_demo", lambda *_args, **_kwargs: parsed)
 
     result = import_demo_file(
         db,

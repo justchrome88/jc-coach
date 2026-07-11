@@ -3,14 +3,18 @@ from pathlib import Path
 
 from app.api.routes import create_import_job_endpoint, import_contract_endpoint, import_job_endpoint
 from app.db.models import Match
-from app.services.demo_retention import ARTIFACT_CATEGORY_RAW_DEMO, RETENTION_CLASS_RETAINED_RAW
-from app.services.import_jobs import (
+from app.services.ingestion.demo_acquisition import (
+    DEMO_ALREADY_AVAILABLE,
+    DEMO_AUTH_MISSING,
+    DEMO_DOWNLOAD_QUEUED_OR_READY,
+)
+from app.services.ingestion.jobs import (
     IMPORT_JOB_COMPLETED,
     IMPORT_JOB_FAILED,
     IMPORT_JOB_SKIPPED_DUPLICATE,
     create_import_request,
 )
-from app.services.import_orchestration import (
+from app.services.ingestion.orchestration import (
     CANONICAL_IMPORT_JOB_TYPE,
     STORAGE_ALREADY_AVAILABLE,
     STORAGE_DUPLICATE,
@@ -20,12 +24,8 @@ from app.services.import_orchestration import (
     run_demo_import_orchestration,
     storage_acceptance_for_import_job,
 )
-from app.services.parser_artifact_reader import read_normalized_events
-from app.services.steam_demo_acquisition import (
-    DEMO_ALREADY_AVAILABLE,
-    DEMO_AUTH_MISSING,
-    DEMO_DOWNLOAD_QUEUED_OR_READY,
-)
+from app.services.parsing.artifact_reader import read_normalized_events
+from app.services.shared.demo_retention import ARTIFACT_CATEGORY_RAW_DEMO, RETENTION_CLASS_RETAINED_RAW
 
 SHARE_CODE = "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL"
 PARSER_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "parser" / "parser_artifact_c02.json"
@@ -332,8 +332,8 @@ def test_import_orchestration_downloads_reference_for_storage(db, monkeypatch, t
     from app.config import get_settings
 
     get_settings.cache_clear()
-    monkeypatch.setattr("app.services.steam_demo_acquisition._fetch_demo_urls", fake_fetcher)
-    monkeypatch.setattr("app.services.steam_demo_acquisition._download_demo_file", fake_downloader)
+    monkeypatch.setattr("app.services.ingestion.demo_acquisition._fetch_demo_urls", fake_fetcher)
+    monkeypatch.setattr("app.services.ingestion.demo_acquisition._download_demo_file", fake_downloader)
     try:
         job = run_demo_import_orchestration(db, payload={"share_code": SHARE_CODE})
     finally:
@@ -385,8 +385,8 @@ def test_import_orchestration_cleans_caller_owned_download_temp_after_retention(
     from app.config import get_settings
 
     get_settings.cache_clear()
-    monkeypatch.setattr("app.services.steam_demo_acquisition._fetch_demo_urls", fake_fetcher)
-    monkeypatch.setattr("app.services.steam_demo_acquisition._download_demo_file", lambda *_args: source)
+    monkeypatch.setattr("app.services.ingestion.demo_acquisition._fetch_demo_urls", fake_fetcher)
+    monkeypatch.setattr("app.services.ingestion.demo_acquisition._download_demo_file", lambda *_args: source)
     try:
         job = run_demo_import_orchestration(db, payload={"share_code": SHARE_CODE})
     finally:

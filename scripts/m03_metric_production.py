@@ -47,7 +47,7 @@ from app.services.metric_downstream_state import (  # noqa: E402
     stale_evidence_marker,
 )
 from app.services.metric_snapshots import upsert_metric_snapshot  # noqa: E402
-from app.services.parser_artifact_reader import normalized_events_from_parser_artifact  # noqa: E402
+from app.services.parsing.artifact_reader import normalized_events_from_parser_artifact  # noqa: E402
 from app.services.utility_metrics import (  # noqa: E402
     UTILITY_METRICS_VERSION,
     UTILITY_SEMANTIC_VERSION,

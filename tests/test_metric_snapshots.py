@@ -3,7 +3,6 @@ import json
 import pytest
 
 from app.db.models import DemoParseArtifact, Match, MetricSnapshot, SteamAccount, User
-from app.services.demo_retention import ARTIFACT_CATEGORY_METRIC_SNAPSHOT, RETENTION_CLASS_DERIVED_REBUILDABLE
 from app.services.metric_snapshots import (
     MetricSnapshotAnalysisScope,
     admin_debug_all_metric_snapshots_scope,
@@ -17,6 +16,7 @@ from app.services.metric_snapshots import (
     update_metric_snapshot,
     upsert_metric_snapshot,
 )
+from app.services.shared.demo_retention import ARTIFACT_CATEGORY_METRIC_SNAPSHOT, RETENTION_CLASS_DERIVED_REBUILDABLE
 
 
 def test_metric_snapshot_create_read_and_payload_are_independent_of_parser_artifact(db):

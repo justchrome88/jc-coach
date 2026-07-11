@@ -1,4 +1,4 @@
-from app.services.demo_retention import (
+from app.services.shared.demo_retention import (
     ARTIFACT_CATEGORY_COACH_OUTPUT,
     ARTIFACT_CATEGORY_METRIC_SNAPSHOT,
     ARTIFACT_CATEGORY_NORMALIZED_EVENT_STORE,

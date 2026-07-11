@@ -1,3 +1,5 @@
+"""Immutable retention policy shared by ingestion, parsing, metrics, and coach."""
+
 from __future__ import annotations
 
 from pathlib import Path

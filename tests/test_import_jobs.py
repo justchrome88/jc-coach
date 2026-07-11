@@ -2,7 +2,7 @@ import json
 
 from app.api.routes import create_import_job_endpoint
 from app.db.models import ImportJob
-from app.services.import_jobs import (
+from app.services.ingestion.jobs import (
     IMPORT_JOB_COMPLETED,
     IMPORT_JOB_FAILED,
     IMPORT_JOB_REQUESTED,

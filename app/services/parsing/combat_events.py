@@ -1,11 +1,13 @@
+"""Normalized combat-event derivation from parser evidence."""
+
 from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
-from app.services.event_metric_dictionary import EVENT_METRIC_DICTIONARY
-from app.services.parser_artifact_reader import NORMALIZED_EVENT_SCHEMA_VERSION, validate_normalized_event
+from app.services.parsing.artifact_reader import NORMALIZED_EVENT_SCHEMA_VERSION, validate_normalized_event
+from app.services.parsing.event_dictionary import EVENT_METRIC_DICTIONARY
 
 DEFAULT_TRADE_WINDOW_SECONDS = 5.0
 DEMO_TICK_RATE = 64.0

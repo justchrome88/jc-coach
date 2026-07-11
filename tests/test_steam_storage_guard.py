@@ -2,7 +2,7 @@ from collections import namedtuple
 
 import pytest
 
-from app.services.steam_storage_guard import (
+from app.services.ingestion.storage_guard import (
     STEAM_IMPORT_DISK_BUDGET_EXCEEDED,
     STEAM_IMPORT_STORAGE_PREFLIGHT_FAILED,
     SteamImportStorageBudget,
@@ -20,7 +20,7 @@ def test_storage_preflight_passes_with_enough_free(monkeypatch, tmp_path):
 
     get_settings.cache_clear()
     monkeypatch.setattr(
-        "app.services.steam_storage_guard.shutil.disk_usage",
+        "app.services.ingestion.storage_guard.shutil.disk_usage",
         lambda _path: DiskUsage(total=1000, used=100, free=900),
     )
     try:
@@ -39,7 +39,7 @@ def test_storage_preflight_fails_below_min_free(monkeypatch, tmp_path):
 
     get_settings.cache_clear()
     monkeypatch.setattr(
-        "app.services.steam_storage_guard.shutil.disk_usage",
+        "app.services.ingestion.storage_guard.shutil.disk_usage",
         lambda _path: DiskUsage(total=1000, used=900, free=100),
     )
     try:
@@ -60,7 +60,7 @@ def test_preserve_free_floor_blocks_operation(monkeypatch, tmp_path):
 
     get_settings.cache_clear()
     monkeypatch.setattr(
-        "app.services.steam_storage_guard.shutil.disk_usage",
+        "app.services.ingestion.storage_guard.shutil.disk_usage",
         lambda _path: DiskUsage(total=1000, used=600, free=400),
     )
     try:
@@ -81,7 +81,7 @@ def test_unknown_size_reserves_configured_bytes(monkeypatch, tmp_path):
 
     get_settings.cache_clear()
     monkeypatch.setattr(
-        "app.services.steam_storage_guard.shutil.disk_usage",
+        "app.services.ingestion.storage_guard.shutil.disk_usage",
         lambda _path: DiskUsage(total=10_000, used=100, free=9_900),
     )
     try:

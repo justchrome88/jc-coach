@@ -1,3 +1,5 @@
+"""Persistence transitions for ingestion jobs."""
+
 from __future__ import annotations
 
 import json

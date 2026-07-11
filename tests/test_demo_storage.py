@@ -3,14 +3,21 @@ import json
 from pathlib import Path
 
 from app.db.models import DemoParseArtifact, Match
-from app.services.artifact_integrity import (
+from app.services.ingestion.artifact_integrity import (
     ARTIFACT_STATE_AVAILABLE,
     ARTIFACT_STATE_CHECKSUM_MISMATCH,
     ARTIFACT_STATE_MISSING,
     ARTIFACT_STATE_STALE,
     parser_artifact_integrity_report,
 )
-from app.services.demo_retention import (
+from app.services.ingestion.demo_storage import (
+    classify_demo_file_consistency,
+    demo_storage_report,
+    deterministic_demo_path,
+    store_demo_file,
+    write_demo_storage_manifest,
+)
+from app.services.shared.demo_retention import (
     ARTIFACT_CATEGORY_RAW_DEMO,
     CONSISTENCY_DB_REFERENCES_FILE_CHANGED,
     CONSISTENCY_DB_REFERENCES_FILE_EXISTS,
@@ -18,13 +25,6 @@ from app.services.demo_retention import (
     CONSISTENCY_FILE_WITHOUT_DB_REFERENCE,
     DEMO_RETENTION_POLICY_RETAIN_RAW,
     RETENTION_CLASS_RETAINED_RAW,
-)
-from app.services.demo_storage import (
-    classify_demo_file_consistency,
-    demo_storage_report,
-    deterministic_demo_path,
-    store_demo_file,
-    write_demo_storage_manifest,
 )
 
 

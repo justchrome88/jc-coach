@@ -7,14 +7,14 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db.models import Match, MetricSnapshot
-from app.services.match_phase import (
+from app.services.metric_confidence import confidence_record
+from app.services.metric_snapshots import deterministic_input_hash, upsert_metric_snapshot
+from app.services.parsing.match_phase import (
     accepted_events,
     accepted_match_phase,
     kast_round_ledger,
     player_participation_rounds,
 )
-from app.services.metric_confidence import confidence_record
-from app.services.metric_snapshots import deterministic_input_hash, upsert_metric_snapshot
 
 CORE_COMBAT_METRICS_VERSION = "core-combat-metrics-v2"
 CORE_COMBAT_SEMANTIC_VERSION = "2.0.0"

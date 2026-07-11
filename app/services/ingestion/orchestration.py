@@ -1,3 +1,5 @@
+"""Application orchestration for controlled demo ingestion."""
+
 from __future__ import annotations
 
 import json
@@ -12,14 +14,19 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.models import DemoParseArtifact, ImportJob, Match
-from app.services.artifact_integrity import ARTIFACT_STATE_AVAILABLE, artifact_file_integrity
-from app.services.demo_retention import (
-    ARTIFACT_CATEGORY_RAW_DEMO,
-    RETENTION_CLASS_RETAINED_RAW,
-    artifact_retention_metadata,
+from app.services.ingestion.artifact_integrity import ARTIFACT_STATE_AVAILABLE, artifact_file_integrity
+from app.services.ingestion.demo_acquisition import (
+    DEMO_ACQUISITION_SUCCESS_OUTCOMES,
+    DEMO_ALREADY_AVAILABLE,
+    DEMO_AUTH_MISSING,
+    DEMO_DOWNLOAD_QUEUED_OR_READY,
+    DEMO_FAILED_WITH_ACTIONABLE_ERROR,
+    DEMO_NOT_FOUND,
+    acquire_steam_demo_reference,
+    validate_steam_demo_acquisition_config,
 )
-from app.services.demo_storage import deterministic_demo_path, store_demo_file
-from app.services.import_jobs import (
+from app.services.ingestion.demo_storage import deterministic_demo_path, store_demo_file
+from app.services.ingestion.jobs import (
     IMPORT_JOB_COMPLETED,
     IMPORT_JOB_FAILED,
     IMPORT_JOB_IN_PROGRESS,
@@ -33,15 +40,10 @@ from app.services.import_jobs import (
     start_import_job,
 )
 from app.services.ownership import assert_match_owner, attach_match_owner_from_import_job, resolve_owner_ids
-from app.services.steam_demo_acquisition import (
-    DEMO_ACQUISITION_SUCCESS_OUTCOMES,
-    DEMO_ALREADY_AVAILABLE,
-    DEMO_AUTH_MISSING,
-    DEMO_DOWNLOAD_QUEUED_OR_READY,
-    DEMO_FAILED_WITH_ACTIONABLE_ERROR,
-    DEMO_NOT_FOUND,
-    acquire_steam_demo_reference,
-    validate_steam_demo_acquisition_config,
+from app.services.shared.demo_retention import (
+    ARTIFACT_CATEGORY_RAW_DEMO,
+    RETENTION_CLASS_RETAINED_RAW,
+    artifact_retention_metadata,
 )
 
 CANONICAL_IMPORT_JOB_TYPE = "demo_import_orchestration"

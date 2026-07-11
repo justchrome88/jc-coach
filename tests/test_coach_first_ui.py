@@ -7,7 +7,7 @@ from app.db.models import CoachRecommendation, MatchRecommendationEvaluation
 from app.db.session import SessionLocal
 from app.main import app
 from app.services.ai_coach import save_ai_coach_result
-from app.services.importer import import_rows
+from app.services.ingestion.structured_import import import_rows
 from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_new_matches
 
 

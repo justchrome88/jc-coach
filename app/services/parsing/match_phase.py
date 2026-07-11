@@ -1,3 +1,5 @@
+"""Accepted match-phase and round-ledger primitives."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence

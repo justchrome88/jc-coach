@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Match, MetricSnapshot, SteamAccount
-from app.services.demo_retention import ARTIFACT_CATEGORY_METRIC_SNAPSHOT, artifact_retention_metadata
+from app.services.shared.demo_retention import ARTIFACT_CATEGORY_METRIC_SNAPSHOT, artifact_retention_metadata
 
 MetricPayload = Mapping[str, Any]
 AnalysisScopeSource = Literal["steam", "faceit", "unknown"]

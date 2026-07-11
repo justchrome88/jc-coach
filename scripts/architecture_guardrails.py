@@ -75,6 +75,41 @@ TARGET_PACKAGE_BY_LEGACY_MODULE = {
     "weapon_names": "shared",
 }
 
+CANONICAL_MODULE_BY_LEGACY_MODULE = {
+    legacy: f"app.services.{legacy}" for legacy in TARGET_PACKAGE_BY_LEGACY_MODULE
+}
+CANONICAL_MODULE_BY_LEGACY_MODULE.update(
+    {
+        "app_settings": "app.services.ingestion.settings",
+        "artifact_integrity": "app.services.ingestion.artifact_integrity",
+        "combat_event_derivation": "app.services.parsing.combat_events",
+        "demo_parser": "app.services.parsing.demo_parser",
+        "demo_retention": "app.services.shared.demo_retention",
+        "demo_storage": "app.services.ingestion.demo_storage",
+        "event_metric_dictionary": "app.services.parsing.event_dictionary",
+        "fresh_match_discovery": "app.services.ingestion.discovery",
+        "import_jobs": "app.services.ingestion.jobs",
+        "import_orchestration": "app.services.ingestion.orchestration",
+        "importer": "app.services.ingestion.structured_import",
+        "match_phase": "app.services.parsing.match_phase",
+        "parser_artifact_reader": "app.services.parsing.artifact_reader",
+        "parser_evidence": "app.services.parsing.evidence",
+        "steam_demo_acquisition": "app.services.ingestion.demo_acquisition",
+        "steam_demo_downloader": "app.services.ingestion.demo_downloader",
+        "steam_integration": "app.services.ingestion.steam",
+        "steam_match_metadata": "app.services.ingestion.match_metadata",
+        "steam_storage_guard": "app.services.ingestion.storage_guard",
+        "weapon_names": "app.services.shared.weapon_names",
+    }
+)
+
+COMPATIBILITY_FACADES = {
+    "app.services.demo_parser": "app.services.parsing.demo_parser",
+    "app.services.steam_demo_downloader": "app.services.ingestion.demo_downloader",
+    "app.services.steam_integration": "app.services.ingestion.steam",
+    "app.services.steam_match_metadata": "app.services.ingestion.match_metadata",
+}
+
 
 @dataclass(frozen=True)
 class ImportGraph:
@@ -208,6 +243,8 @@ def main() -> int:
     result = {
         "service_packages": list(SERVICE_PACKAGES),
         "target_package_by_legacy_module": TARGET_PACKAGE_BY_LEGACY_MODULE,
+        "canonical_module_by_legacy_module": CANONICAL_MODULE_BY_LEGACY_MODULE,
+        "compatibility_facades": COMPATIBILITY_FACADES,
         "cycles": cycles,
         "route_count": len(route_inventory()),
         "route_fingerprint": route_fingerprint(),

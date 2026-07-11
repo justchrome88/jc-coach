@@ -3,7 +3,7 @@ import json
 from sqlalchemy import select
 
 from app.db.models import Match
-from app.services.importer import import_csv, import_json, import_rows
+from app.services.ingestion.structured_import import import_csv, import_json, import_rows
 
 
 def test_csv_import_accepts_missing_columns(db):

@@ -2,13 +2,13 @@ import json
 from pathlib import Path
 
 from app.db.models import Match
-from app.services.combat_event_derivation import derive_combat_events
 from app.services.core_combat_metrics import (
     CORE_COMBAT_METRICS_VERSION,
     calculate_and_store_core_combat_metrics,
     calculate_core_combat_metrics,
 )
 from app.services.metric_snapshots import metric_snapshot_payload
+from app.services.parsing.combat_events import derive_combat_events
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "metrics" / "core_combat_events_d02.json"
 C04_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "parser" / "combat_derivation_c04_events.json"

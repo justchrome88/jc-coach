@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from app.services.combat_event_derivation import DEFAULT_TRADE_WINDOW_SECONDS, derive_combat_events
+from app.services.parsing.combat_events import DEFAULT_TRADE_WINDOW_SECONDS, derive_combat_events
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "parser" / "combat_derivation_c04_events.json"
 

@@ -1,5 +1,5 @@
 from app.db.models import Match
-from app.services.importer import import_rows
+from app.services.ingestion.structured_import import import_rows
 from app.services.report_generator import generate_report, markdown_to_html, render_markdown_report
 
 

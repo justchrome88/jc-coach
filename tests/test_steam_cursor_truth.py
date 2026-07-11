@@ -1,7 +1,7 @@
 import json
 
 from app.db.models import ImportJob, Match
-from app.services.steam_integration import (
+from app.services.ingestion.steam import (
     STEAM_INITIAL_CURSOR_SENTINEL,
     STEAM_SYNC_DUPLICATE_ALREADY_IMPORTED,
     STEAM_SYNC_STEAM_TEMPORARY_ERROR,
@@ -36,7 +36,7 @@ def test_initial_cursor_uses_explicit_knowncode_zero_sentinel(db, monkeypatch):
         captured.update(kwargs)
         return [NEXT_CODE]
 
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", fake_collect)
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", fake_collect)
     try:
         result = sync_match_history_job(db, job.id)
     finally:
@@ -55,7 +55,7 @@ def test_initial_cursor_uses_explicit_knowncode_zero_sentinel(db, monkeypatch):
 def test_successful_new_match_advances_cursor_only_after_local_persistence(db, monkeypatch):
     account, job, get_settings = _prepare_sync_job(db, monkeypatch, INITIAL_CODE)
     monkeypatch.setattr(
-        "app.services.steam_integration._collect_match_share_codes",
+        "app.services.ingestion.steam._collect_match_share_codes",
         lambda **_kwargs: [NEXT_CODE, THIRD_CODE],
     )
     try:
@@ -77,7 +77,7 @@ def test_failed_steam_response_does_not_advance_cursor(db, monkeypatch):
     def fake_collect(**_kwargs):
         raise RuntimeError("temporary Steam API failure")
 
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", fake_collect)
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", fake_collect)
     try:
         result = sync_match_history_job(db, job.id)
     finally:
@@ -101,7 +101,7 @@ def test_duplicate_share_code_does_not_create_duplicate_and_can_advance_cursor(d
         )
     )
     db.commit()
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [NEXT_CODE])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [NEXT_CODE])
     try:
         result = sync_match_history_job(db, job.id)
     finally:
@@ -117,7 +117,7 @@ def test_duplicate_share_code_does_not_create_duplicate_and_can_advance_cursor(d
 
 def test_no_new_matches_is_success_and_does_not_advance_cursor(db, monkeypatch):
     account, job, get_settings = _prepare_sync_job(db, monkeypatch, INITIAL_CODE)
-    monkeypatch.setattr("app.services.steam_integration._collect_match_share_codes", lambda **_kwargs: [])
+    monkeypatch.setattr("app.services.ingestion.steam._collect_match_share_codes", lambda **_kwargs: [])
     try:
         result = sync_match_history_job(db, job.id)
     finally:

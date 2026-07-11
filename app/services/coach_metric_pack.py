@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import MetricSnapshot
 from app.services.metric_snapshots import deterministic_input_hash, upsert_metric_snapshot
-from app.services.weapon_names import canonical_weapon_name
+from app.services.shared.weapon_names import canonical_weapon_name
 
 COACH_METRIC_PACK_VERSION = "coach-metric-pack-v1"
 COACH_METRIC_SEMANTIC_VERSION = "3.0.0"

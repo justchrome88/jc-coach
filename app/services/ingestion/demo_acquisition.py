@@ -1,3 +1,5 @@
+"""Steam demo-reference acquisition boundary."""
+
 from __future__ import annotations
 
 import json
@@ -14,7 +16,12 @@ from sqlalchemy.orm import Session
 
 from app.config import BASE_DIR, get_settings
 from app.db.models import ImportJob, Match
-from app.services.import_jobs import (
+from app.services.ingestion.demo_downloader import (
+    _download_demo_file,
+    _fetch_demo_urls,
+    steam_demo_downloader_configured,
+)
+from app.services.ingestion.jobs import (
     IMPORT_JOB_COMPLETED,
     IMPORT_JOB_FAILED,
     IMPORT_JOB_IN_PROGRESS,
@@ -23,7 +30,6 @@ from app.services.import_jobs import (
     fail_import_job,
     start_import_job,
 )
-from app.services.steam_demo_downloader import _download_demo_file, _fetch_demo_urls, steam_demo_downloader_configured
 
 DEMO_REFERENCE_FOUND = "demo_reference_found"
 DEMO_DOWNLOAD_QUEUED_OR_READY = "demo_download_queued_or_ready"
