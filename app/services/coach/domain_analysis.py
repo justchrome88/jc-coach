@@ -655,9 +655,7 @@ def coach_domain_slots_payload(db: Session, *, owner_user_id: int, include_prove
         proposal = db.get(CoachMissionProposal, slot.current_proposal_id) if slot and slot.current_proposal_id else None
         proposal_payload = json.loads(proposal.payload_json) if proposal else None
         evaluations = (
-            list_mission_progress_evaluations(db, user_id=owner_user_id, mission_id=active.id)
-            if active
-            else []
+            list_mission_progress_evaluations(db, user_id=owner_user_id, mission_id=active.id) if active else []
         )
         progress_history = [serialize_mission_progress_evaluation(row) for row in evaluations]
         latest_progress = progress_history[0] if progress_history else None
@@ -687,15 +685,21 @@ def coach_domain_slots_payload(db: Session, *, owner_user_id: int, include_prove
             "proposal_summary": proposal_payload,
             "confidence": output.get("confidence") if output else None,
             "caveats": output.get("caveats", []) if output else [],
-            "activation_eligibility": bool(proposal and not active),
+            "activation_eligibility": bool(
+                proposal and proposal.is_current and not active and slot and slot.status == "proposal_ready"
+            ),
             "current_mission": serialize_coach_mission(active) if active else None,
             "state": slot.status if slot else "insufficient_baseline",
             "analysis_summary": {
                 "status": output.get("analysis_status"),
                 "headline": output.get("headline"),
                 "hypothesis": output.get("hypothesis"),
+                "reasoning_summary": output.get("reasoning_summary"),
                 "primary_pattern": output.get("primary_pattern"),
                 "recommended_focus": output.get("recommended_focus"),
+                "confidence_rationale": output.get("confidence_rationale"),
+                "evidence_refs": list(output.get("evidence_refs") or []),
+                "counterevidence_refs": list(output.get("counterevidence_refs") or []),
             }
             if output
             else None,
@@ -709,10 +713,16 @@ def coach_domain_slots_payload(db: Session, *, owner_user_id: int, include_prove
             if analysis and output
             else None,
             "proposal": proposal_payload,
+            "proposal_ref": {
+                "id": proposal.id,
+                "domain_key": proposal.domain_key,
+                "is_current": proposal.is_current,
+            }
+            if proposal
+            else None,
             "mission_lifecycle": serialize_coach_mission(active) if active else None,
             "baseline_current_target": {
-                "metric": primary_progress.get("metric_name")
-                or (proposal_payload or {}).get("primary_metric"),
+                "metric": primary_progress.get("metric_name") or (proposal_payload or {}).get("primary_metric"),
                 "baseline": primary_progress.get("baseline_value")
                 if primary_progress
                 else (proposal_payload or {}).get("baseline_value"),
@@ -727,6 +737,7 @@ def coach_domain_slots_payload(db: Session, *, owner_user_id: int, include_prove
                 "latest_status": latest_progress.get("status") if latest_progress else "no_evaluation_yet",
                 "evaluation_ids": [row["evaluation_id"] for row in progress_history],
             },
+            "progress_history": progress_history[:10],
             "safe_insufficient_or_error_state": {
                 "status": latest_progress.get("status")
                 if latest_progress
@@ -763,6 +774,7 @@ def activate_domain_proposal(
     *,
     owner_user_id: int,
     proposal_id: int,
+    domain_key: str | None = None,
 ) -> dict[str, Any]:
     """Explicitly activate one validated current domain proposal."""
     proposal = db.get(CoachMissionProposal, proposal_id)
@@ -771,6 +783,8 @@ def activate_domain_proposal(
     if not proposal.is_current:
         raise ValueError("coach_domain_proposal_not_current")
     domain = require_canonical_domain(proposal.domain_key)
+    if domain_key is not None and require_canonical_domain(domain_key) != domain:
+        raise ValueError("coach_domain_proposal_domain_mismatch")
     analysis = db.get(AIDomainAnalysis, proposal.analysis_id)
     baseline = db.get(CoachEvidenceBaseline, proposal.baseline_id)
     if analysis is None or analysis.validation_status != "accepted":
@@ -920,9 +934,7 @@ def activate_domain_proposal(
         },
     )
     slot.status = "active"
-    slot.state_json = canonical_json(
-        {"analysis_status": output["analysis_status"], "mission_id": mission.id}
-    )
+    slot.state_json = canonical_json({"analysis_status": output["analysis_status"], "mission_id": mission.id})
     db.flush()
     return {"mission": mission, "slot": slot, "reused": False}
 
