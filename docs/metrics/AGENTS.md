@@ -1,9 +1,16 @@
-# Metrics Agent Contract
+# Metrics Agent Entry Point
 
-Before touching metric code or contracts, read `project_docs/metrics/README.md`,
-`app/contracts/metrics/registry/metrics.json`, and the applicable contract under
-`project_docs/metrics/contracts/`. Root `AGENTS.md` and this fixed-path nested
-contract both apply.
+This fixed-path file exists only for agent-policy discovery. It is not a metric
+registry, application contract, or Product source of truth.
+
+Before changing metric code, contracts, or human metric documentation, read:
+
+- `project_docs/metrics/README.md` and the applicable human contract or policy;
+- `app/contracts/metrics/registry/metrics.json` and applicable runtime contract;
+- `project_control/agents/guardians/METRICS_GUARDIAN.md` and
+  `project_control/agents/PROJECT_OPERATING_PROTOCOL.md`.
+
+Root `AGENTS.md` and this nested policy both apply.
 
 - Preserve a formula's semantic version or increment it; never silently overwrite prior semantics.
 - UI output and external comparators are evidence, never sole ground truth.
@@ -20,8 +27,4 @@ contract both apply.
   Metric Pack contract/evidence matrix under `project_docs/metrics/coach/`, an
   independent real-demo golden fixture, and
   `scripts/validate_coach_metric_pack.py`.
-- Current trusted coach consumers select explicit semantic version `3.0.0`
-  leaf keys. Generic `damage`, `utility_damage`, `headshot_rate`, and “latest
-  snapshot” aliases are forbidden for new hard claims.
-
 Production parsing, recomputation, backfill, DB mutation, and coach mutation still require explicit task authorization.

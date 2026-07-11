@@ -27,6 +27,7 @@ Original sources preserved at:
 - H01B_R02_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A2_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A2C_STATUS: `PASS_WITH_WARNINGS`.
+- H01B_R02A2D_STATUS: `PASS_WITH_WARNINGS`.
 - Canonical coach domains: `impact_leak`, `bad_fight_selection`.
 - Performance, utility, and aim are metric groups, not coach domains.
 - Domain slots per owner: `2`; cross-domain proposals are allowed.
@@ -38,6 +39,9 @@ Original sources preserved at:
 - Steam import cap remains `1`; exact playlist remains unknown/provenance-only.
 - Weak metrics and metric-confidence limitations remain caveated.
 - Public/friends readiness and `v1.0` claims remain blocked.
+- The final `docs/` compatibility root contains only `README.md` and the
+  fixed-path `metrics/AGENTS.md`; canonical Product and control truth lives
+  outside `docs/`.
 
 ## Runtime and safety
 

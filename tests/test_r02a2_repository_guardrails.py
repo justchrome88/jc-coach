@@ -30,25 +30,36 @@ def test_current_repository_passes_all_r02a2_guardrails():
     assert guardrails.collect_errors() == []
 
 
-def test_docs_shell_rejects_extra_narrative_and_runtime_contracts(tmp_path):
+def test_docs_shell_rejects_extra_narrative_runtime_and_metric_docs(tmp_path):
     _write(tmp_path, "docs/README.md", "# Current narrative\n")
     _write(tmp_path, "docs/current.schema.json", "{}\n")
+    _write(tmp_path, "docs/metrics/METRICS.md", "metric truth\n")
     errors = guardrails.layout_errors(
         tmp_path,
-        {"docs/README.md", "docs/current.schema.json"},
+        {"docs/README.md", "docs/current.schema.json", "docs/metrics/METRICS.md"},
     )
     codes = {error.code for error in errors}
     assert "current_narrative_under_docs" in codes
     assert "docs_file_not_allowlisted" in codes
     assert "runtime_contract_under_docs" in codes
+    assert "metric_human_doc_under_docs" in codes
 
 
-def test_docs_shell_rejects_more_than_six_files(tmp_path):
-    paths = {f"docs/extra-{index}.md" for index in range(7)}
+def test_docs_shell_rejects_more_than_two_files_and_current_control_files(tmp_path):
+    paths = {"docs/README.md", "docs/metrics/AGENTS.md", "docs/project_management/WP_REGISTRY.md"}
     for path in paths:
         _write(tmp_path, path, "DO NOT WRITE\n")
     errors = guardrails.layout_errors(tmp_path, paths)
-    assert "docs_file_count_exceeded" in {error.code for error in errors}
+    codes = {error.code for error in errors}
+    assert "docs_file_count_exceeded" in codes
+    assert "current_control_file_under_docs" in codes
+
+
+def test_docs_shell_rejects_empty_directories(tmp_path):
+    _write(tmp_path, "docs/README.md", "DO NOT WRITE\n")
+    (tmp_path / "docs" / "obsolete").mkdir()
+    errors = guardrails.layout_errors(tmp_path, {"docs/README.md"})
+    assert "empty_docs_directory" in {error.code for error in errors}
 
 
 def test_project_docs_rejects_runtime_prompts_and_schemas(tmp_path):
@@ -204,4 +215,45 @@ def test_current_document_contract_rejects_semantic_regressions(tmp_path):
         "implemented_ai_contract_described_as_future",
         "steam_import_documentation_parity",
         "testing_documentation_parity",
+    } <= codes
+
+
+def test_planning_contract_rejects_sequence_status_and_polish_regressions(tmp_path):
+    for relative in (
+        "project_control/planning/VERSION_ROADMAP.md",
+        "project_control/planning/WORK_PACKAGE_BACKLOG.md",
+        "project_control/planning/WP_REGISTRY.md",
+        "project_control/checklists/MASTER_WP_CHECKLIST.md",
+    ):
+        _write(tmp_path, relative, (guardrails.ROOT / relative).read_text(encoding="utf-8"))
+
+    roadmap = tmp_path / "project_control/planning/VERSION_ROADMAP.md"
+    roadmap.write_text(
+        roadmap.read_text(encoding="utf-8")
+        .replace("## D. Functional MVP milestone", "## Z. Functional milestone")
+        .replace("R02A3 → R03 → R04", "R03 → R02A3 → R04"),
+        encoding="utf-8",
+    )
+    registry = tmp_path / "project_control/planning/WP_REGISTRY.md"
+    registry.write_text(
+        registry.read_text(encoding="utf-8").replace(
+            "| H01B-R03 | pending |", "| H01B-R03 | completed |"
+        ),
+        encoding="utf-8",
+    )
+    checklist = tmp_path / "project_control/checklists/MASTER_WP_CHECKLIST.md"
+    checklist.write_text(
+        checklist.read_text(encoding="utf-8").replace(
+            "| Visual polish | planned |", "| Visual polish | next |"
+        ),
+        encoding="utf-8",
+    )
+
+    codes = {error.code for error in guardrails.planning_contract_errors(tmp_path)}
+    assert {
+        "roadmap_macro_contract_incomplete",
+        "roadmap_sequence_invalid",
+        "visual_polish_before_functional_mvp",
+        "wp_registry_route_incomplete",
+        "master_checklist_registry_mismatch",
     } <= codes

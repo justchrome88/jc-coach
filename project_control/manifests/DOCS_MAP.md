@@ -15,9 +15,10 @@ Original source preserved at
 | Coach runtime contracts | `app/contracts/coach/` | Runtime/tool input |
 | Metric runtime contracts | `app/contracts/metrics/` | Runtime/tool input |
 | DB schema baseline | `app/contracts/db/current_schema_baseline.json` | Read-only gate input |
-| Compatibility shell | `docs/` six-file allowlist | Temporary pointers only; never write |
+| Compatibility shell | `docs/README.md`, `docs/metrics/AGENTS.md` | Fixed-path agent discovery only; never Product/runtime truth |
 | Historical evidence | `_legacy_archive/` and Git history | Noncanonical; never active/runtime input |
 | PM reports/artifacts | `/opt/jc-coach-pm/reports/` | Task evidence |
 
-No active runtime or agent reader may load from `docs/` compatibility stubs or
-`_legacy_archive/`.
+No active runtime reader or writer may use `docs/` or `_legacy_archive/`. The
+only active `docs/` consumer is agent-policy discovery of
+`docs/metrics/AGENTS.md` as directed by root `AGENTS.md`.

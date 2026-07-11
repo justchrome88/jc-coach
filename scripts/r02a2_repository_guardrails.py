@@ -14,11 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS_ALLOWLIST = frozenset(
     {
         "docs/README.md",
-        "docs/CURRENT_STATUS.md",
-        "docs/HANDOFF.md",
         "docs/metrics/AGENTS.md",
-        "docs/project_management/WP_REGISTRY.md",
-        "docs/project_management/DOCS_INDEX.md",
     }
 )
 
@@ -102,8 +98,12 @@ REQUIRED_CANONICAL_PATHS = frozenset(
         "project_docs/README.md",
         "project_control/status/CURRENT_STATUS.md",
         "project_control/status/HANDOFF.md",
+        "project_control/planning/VERSION_ROADMAP.md",
+        "project_control/planning/WORK_PACKAGE_BACKLOG.md",
         "project_control/planning/WP_REGISTRY.md",
+        "project_control/checklists/MASTER_WP_CHECKLIST.md",
         "project_control/manifests/DOCS_MAP.md",
+        "README.md",
         "app/contracts/coach/coach-domain-model.json",
         "app/contracts/coach/prompts/impact_leak_hypothesis_prompt.md",
         "app/contracts/coach/prompts/bad_fight_selection_hypothesis_prompt.md",
@@ -169,7 +169,8 @@ def _git_paths(root: Path, *args: str) -> set[str]:
 
 
 def repository_paths(root: Path) -> set[str]:
-    return _git_paths(root, "ls-files") | _git_paths(root, "ls-files", "--others", "--exclude-standard")
+    candidates = _git_paths(root, "ls-files") | _git_paths(root, "ls-files", "--others", "--exclude-standard")
+    return {path for path in candidates if (root / path).is_file() or (root / path).is_symlink()}
 
 
 def _is_runtime_material(path: str) -> bool:
@@ -189,13 +190,13 @@ def layout_errors(root: Path, paths: set[str]) -> list[GuardrailError]:
     errors: list[GuardrailError] = []
     docs_paths = {path for path in paths if path.startswith("docs/")}
     for path in sorted(docs_paths - DOCS_ALLOWLIST):
-        errors.append(GuardrailError("docs_file_not_allowlisted", path, "compatibility shell is limited to six files"))
+        errors.append(GuardrailError("docs_file_not_allowlisted", path, "compatibility shell is limited to two files"))
     if len(docs_paths) > len(DOCS_ALLOWLIST):
         errors.append(
             GuardrailError(
                 "docs_file_count_exceeded",
                 "docs/",
-                f"found {len(docs_paths)} files; maximum is {len(DOCS_ALLOWLIST)}",
+                f"found {len(docs_paths)} files; required allowlist has {len(DOCS_ALLOWLIST)}",
             )
         )
 
@@ -203,6 +204,33 @@ def layout_errors(root: Path, paths: set[str]) -> list[GuardrailError]:
         if _is_runtime_material(path):
             errors.append(
                 GuardrailError("runtime_contract_under_docs", path, "runtime contracts belong under app/contracts")
+            )
+        if (
+            path.startswith("docs/metrics/")
+            and path != "docs/metrics/AGENTS.md"
+            and not _is_runtime_material(path)
+        ):
+            errors.append(
+                GuardrailError(
+                    "metric_human_doc_under_docs",
+                    path,
+                    "human metric documentation belongs under project_docs/metrics",
+                )
+            )
+        if path.startswith("docs/project_management/") or Path(path).name in {
+            "CURRENT_STATUS.md",
+            "HANDOFF.md",
+            "WP_REGISTRY.md",
+            "VERSION_ROADMAP.md",
+            "WORK_PACKAGE_BACKLOG.md",
+            "MASTER_WP_CHECKLIST.md",
+        }:
+            errors.append(
+                GuardrailError(
+                    "current_control_file_under_docs",
+                    path,
+                    "active route, planning, and checklist truth belongs under project_control",
+                )
             )
         if path == "docs/metrics/AGENTS.md":
             continue
@@ -213,6 +241,18 @@ def layout_errors(root: Path, paths: set[str]) -> list[GuardrailError]:
                 errors.append(
                     GuardrailError(
                         "current_narrative_under_docs", path, "compatibility files must remain short pointer stubs"
+                    )
+                )
+
+    docs_root = root / "docs"
+    if docs_root.is_dir():
+        for directory in sorted(path for path in docs_root.rglob("*") if path.is_dir()):
+            if not any(directory.iterdir()):
+                errors.append(
+                    GuardrailError(
+                        "empty_docs_directory",
+                        directory.relative_to(root).as_posix(),
+                        "obsolete empty documentation directories must be removed",
                     )
                 )
 
@@ -409,6 +449,141 @@ def current_document_contract_errors(root: Path) -> list[GuardrailError]:
             )
         )
 
+    return errors
+
+
+def planning_contract_errors(root: Path) -> list[GuardrailError]:
+    """Keep the macro route, detailed plan, registry, and checklist aligned."""
+    errors: list[GuardrailError] = []
+
+    def read(path: str) -> str:
+        file_path = root / path
+        if not file_path.is_file():
+            errors.append(GuardrailError("planning_document_missing", path, "canonical planning owner is absent"))
+            return ""
+        return file_path.read_text(encoding="utf-8")
+
+    roadmap_path = "project_control/planning/VERSION_ROADMAP.md"
+    backlog_path = "project_control/planning/WORK_PACKAGE_BACKLOG.md"
+    registry_path = "project_control/planning/WP_REGISTRY.md"
+    checklist_path = "project_control/checklists/MASTER_WP_CHECKLIST.md"
+    roadmap = read(roadmap_path)
+    backlog = read(backlog_path)
+    registry = read(registry_path)
+    checklist = read(checklist_path)
+
+    roadmap_markers = (
+        "personal CS2 AI Coach",
+        "exactly two canonical coaching domains",
+        "## C. Current milestone",
+        "## D. Functional MVP milestone",
+        "## E. End-to-end acceptance milestone",
+        "## F. Live personal beta milestone",
+        "## G. Visual Product milestone",
+        "## H. Operational hardening milestone",
+        "## I. Later/public scope",
+        "30-match immutable baseline",
+        "10 subsequent matches",
+        "no third coach domain",
+    )
+    if roadmap and any(marker not in roadmap for marker in roadmap_markers):
+        errors.append(
+            GuardrailError(
+                "roadmap_macro_contract_incomplete",
+                roadmap_path,
+                "Product goal, R02A3-R07 milestones, two-domain boundary, or 30+10 acceptance is missing",
+            )
+        )
+    sequence = ("R02A3", "R03", "R04", "R05", "R06", "R07")
+    positions = [roadmap.find(marker) for marker in sequence]
+    canonical_sequence = "R02A3 → R03 → R04 → R05 planned → R06 planned → R07 deferred/planned"
+    normalized_roadmap = " ".join(roadmap.split())
+    if roadmap and (
+        any(position < 0 for position in positions)
+        or positions != sorted(positions)
+        or canonical_sequence not in normalized_roadmap
+    ):
+        errors.append(
+            GuardrailError(
+                "roadmap_sequence_invalid",
+                roadmap_path,
+                "required sequence is R02A3 -> R03 -> R04 -> R05 -> R06 -> R07",
+            )
+        )
+    functional = roadmap.find("## D. Functional MVP milestone")
+    visual = roadmap.find("## G. Visual Product milestone")
+    if roadmap and (functional < 0 or visual < 0 or functional >= visual):
+        errors.append(
+            GuardrailError(
+                "visual_polish_before_functional_mvp",
+                roadmap_path,
+                "functional MVP acceptance must precede visual polish",
+            )
+        )
+
+    backlog_markers = (
+        "## H01B-R02A3 — next",
+        "## H01B-R03 — pending",
+        "## H01B-R04 — pending",
+        "## H01B-R05 — planned, not authorized",
+        "## H01B-R06 — planned, not authorized",
+        "## H01B-R07 — deferred/planned",
+        "**Explicit non-goals:**",
+        "WP-018",
+        "historical or superseded",
+    )
+    if backlog and any(marker not in backlog for marker in backlog_markers):
+        errors.append(
+            GuardrailError(
+                "work_package_backlog_incomplete",
+                backlog_path,
+                "R02A3-R07 detail, explicit non-goals, or historical disposition is missing",
+            )
+        )
+
+    registry_markers = (
+        "CURRENT_TASK: `none`",
+        "NEXT_TASK: `H01B-R02A3_CODEBASE_SERVICE_BOUNDARY_CONSOLIDATION`",
+        "NEXT_TASK_GATED: `false`",
+        "| H01B-R02A3 | next |",
+        "| H01B-R03 | pending |",
+        "| H01B-R04 | pending |",
+        "| H01B-R05 | planned |",
+        "| H01B-R06 | planned |",
+        "| H01B-R07 | deferred_planned |",
+    )
+    if registry and any(marker not in registry for marker in registry_markers):
+        errors.append(
+            GuardrailError(
+                "wp_registry_route_incomplete",
+                registry_path,
+                "exact current/next route or R02A3-R07 statuses are missing",
+            )
+        )
+
+    checklist_markers = (
+        "| Foundation/safety | completed |",
+        "| Import/parser/owner loop | completed |",
+        "| Metric correctness | completed |",
+        "| Two-domain backend | completed |",
+        "| Real LLM proposals | completed |",
+        "| Documentation/control migration | completed |",
+        "| Codebase architecture cleanup | next |",
+        "| Functional mission UI | pending |",
+        "| 30+10 replay | pending |",
+        "| Live personal beta | planned |",
+        "| Visual polish | planned |",
+        "| Provider/ops hardening | deferred_planned |",
+        "| Public/multi-user work | later |",
+    )
+    if checklist and any(marker not in checklist for marker in checklist_markers):
+        errors.append(
+            GuardrailError(
+                "master_checklist_registry_mismatch",
+                checklist_path,
+                "milestone statuses contradict or incompletely reflect WP_REGISTRY",
+            )
+        )
     return errors
 
 
@@ -643,6 +818,7 @@ def collect_errors(root: Path = ROOT, *, paths: set[str] | None = None) -> list[
             *source_of_truth_errors(root),
             *durable_doc_route_errors(root),
             *current_document_contract_errors(root),
+            *planning_contract_errors(root),
             *python_io_errors(root, active_paths),
             *domain_policy_errors(root),
             *agent_principle_parity_errors(root),
@@ -657,7 +833,10 @@ def main() -> int:
         for error in errors:
             print(f"GUARDRAIL_ERROR={error.code}:{error.path}:{error.detail}")
         return 1
-    print("DOCS_TRACKED_FILE_COUNT=6")
+    print("DOCS_TRACKED_FILE_COUNT=2")
+    print("METRIC_RUNTIME_ASSETS_UNDER_DOCS=0")
+    print("METRIC_HUMAN_DOCS_UNDER_DOCS=0")
+    print("EMPTY_DOCS_DIRECTORIES=0")
     print("RUNTIME_DOCS_DEPENDENCIES=0")
     print("ARCHIVE_RUNTIME_DEPENDENCIES=0")
     print("ACTIVE_WRITERS_TO_DOCS_STUBS=0")
@@ -666,6 +845,7 @@ def main() -> int:
     print("SOURCE_OF_TRUTH_PATHS=PASS")
     print("DURABLE_DOCS_CONTROL_PLANE_SEPARATION=PASS")
     print("CURRENT_DOCUMENT_CONTRACT_PARITY=PASS")
+    print("ROADMAP_REGISTRY_CHECKLIST_PARITY=PASS")
     print("R02A2_REPOSITORY_GUARDRAILS=PASS")
     return 0
 
