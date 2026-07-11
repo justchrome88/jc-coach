@@ -64,7 +64,7 @@ cards. R02A4T is not a second live external run. Evidence:
 `/opt/jc-coach-pm/reports/H01B-R02A4T_true_timed_observability_and_provenance_closure_report.md`.
 R03 is released.
 
-## E. Functional MVP milestone — R03 current
+## E. Functional MVP milestone — R03 accepted with warnings
 
 Deliver complete functionality with minimal styling:
 
@@ -78,7 +78,7 @@ Deliver complete functionality with minimal styling:
   after activation baseline; and
 - authentication and owner isolation across UI and API behavior.
 
-## F. End-to-end acceptance milestone — R04 gated
+## F. End-to-end acceptance milestone — R04 next, ungated
 
 Prove the full Product loop with a 30-match immutable baseline, two supported
 proposals, explicit activation of both, and 10 subsequent matches fed one by

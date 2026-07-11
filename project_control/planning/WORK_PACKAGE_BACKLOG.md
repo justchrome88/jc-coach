@@ -56,7 +56,7 @@ in `WP_REGISTRY.md`.
 - **Evidence/result:**
   `/opt/jc-coach-pm/reports/H01B-R02A4T_true_timed_observability_and_provenance_closure_report.md`.
 
-## H01B-R03 — current
+## H01B-R03 — completed with warnings
 
 - **Purpose:** deliver the minimal, complete two-mission functional MVP UI.
 - **Dependencies:** accepted R02A4R live function and R02A4T timed evidence closure.
@@ -70,9 +70,10 @@ in `WP_REGISTRY.md`.
 - **Acceptance summary:** an owner with 30 eligible validated matches can review
   one proposal per supported domain and independently activate/use both mission
   flows with subsequent-match-only progress.
-- **Evidence/result:** add the accepted R03 PM report when complete.
+- **Evidence/result:**
+  `/opt/jc-coach-pm/reports/H01B-R03_two_mission_cards_activation_and_match_feedback_ui_report.md`.
 
-## H01B-R04 — pending, gated
+## H01B-R04 — next, ungated
 
 - **Purpose:** accept the complete two-domain Product loop through a 30+10 replay.
 - **Dependencies:** accepted R03.

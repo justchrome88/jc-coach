@@ -552,6 +552,10 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
         in registry
     )
     r03_current = "CURRENT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`" in registry
+    r03_complete = (
+        "CURRENT_TASK: `none`" in registry
+        and "NEXT_TASK: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`" in registry
+    )
     route_markers = (
         (
             "CURRENT_TASK: `H01B-R02A4T_TRUE_TIMED_OBSERVABILITY_PROVENANCE_AND_TWO_CARD_SEMANTIC_CLOSURE`",
@@ -569,6 +573,14 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
             "| H01B-R04 | pending_gated |",
         )
         if r03_current
+        else (
+            "CURRENT_TASK: `none`",
+            "NEXT_TASK: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`",
+            "NEXT_TASK_GATED: `false`",
+            "| H01B-R03 | complete_with_warnings |",
+            "| H01B-R04 | next |",
+        )
+        if r03_complete
         else (
             "CURRENT_TASK: `none`",
             "NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`",
@@ -598,6 +610,11 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
     checklist_route_markers = (
         ("| Functional mission UI | current |", "| 30+10 replay | pending_gated |")
         if r03_current
+        else (
+            "| Functional mission UI | completed_with_warnings |",
+            "| 30+10 replay | next |",
+        )
+        if r03_complete
         else ("| Functional mission UI | next |", "| 30+10 replay | pending |")
     )
     checklist_markers = (

@@ -246,7 +246,8 @@ def test_planning_contract_rejects_sequence_status_and_polish_regressions(tmp_pa
         registry.read_text(encoding="utf-8")
         .replace("| H01B-R03 | next_gated |", "| H01B-R03 | completed |")
         .replace("| H01B-R03 | next |", "| H01B-R03 | completed |")
-        .replace("| H01B-R03 | current |", "| H01B-R03 | completed |"),
+        .replace("| H01B-R03 | current |", "| H01B-R03 | completed |")
+        .replace("| H01B-R03 | complete_with_warnings |", "| H01B-R03 | completed |"),
         encoding="utf-8",
     )
     checklist = tmp_path / "project_control/checklists/MASTER_WP_CHECKLIST.md"

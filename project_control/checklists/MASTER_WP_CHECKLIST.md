@@ -14,8 +14,8 @@ Last updated: 2026-07-11. Exact status and gating are authoritative in
 | Codebase architecture cleanup | completed_with_warnings | R02A3 yielded bounded service/package ownership with behavior and full gates preserved. |
 | Post-refactor vertical acceptance | completed_with_warnings | R02A4R proved one genuine, observable, isolated Steam-to-coach chain with production unchanged. |
 | Timed observability/provenance closure | completed_with_warnings | R02A4T proved a 29-stage clone-only timed replay, explicit source-date provenance, and distinct two-card semantics. |
-| Functional mission UI | current | R03 exposes two complete domain flows, explicit one/both/neither activation, owner isolation, and per-match progress with minimal styling. |
-| 30+10 replay | pending_gated | R04 proves two proposals and two activated missions across 10 subsequent matches with independent, idempotent DB/API/UI timelines. |
+| Functional mission UI | completed_with_warnings | R03 exposes two complete domain flows, explicit one/both/neither activation, owner isolation, and per-match progress with minimal styling. |
+| 30+10 replay | next | R04 proves two proposals and two activated missions across 10 subsequent matches with independent, idempotent DB/API/UI timelines. |
 | Live personal beta | planned | R05 evaluates real new-match usefulness, unsupported claims, latency/reliability, and target quality before polish. |
 | Visual polish | planned | R06 makes the validated flow responsive, accessible, readable, and visually consistent. |
 | Provider/ops hardening | deferred_planned | R07 adds measured provider/queue/observability/cost controls after validation unless needed to remove an earlier blocker. |
@@ -33,8 +33,8 @@ Last updated: 2026-07-11. Exact status and gating are authoritative in
 - [x] R02A4T: R02A4R remains the live functional proof; the v1 JSONL is a
   terminal summary, while the separate v2 clone replay has 29/29 real timed
   boundaries, explicit date provenance, and distinct card semantics.
-- [ ] R03 (current): an eligible owner can activate one, both, or neither proposal; never
+- [x] R03: an eligible owner can activate one, both, or neither proposal; never
   automatic activation; at most one active mission per owner and domain.
-- [ ] R04 (gated): progress uses only matches after activation baseline and preserves
+- [ ] R04 (next): progress uses only matches after activation baseline and preserves
   evidence, confidence, caveats, insufficient-data behavior, and idempotency.
 - [ ] R05: real personal-match findings are captured before R06 polish.

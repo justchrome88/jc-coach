@@ -11,9 +11,9 @@ Original sources preserved at:
 ## Current route
 
 - CURRENT_LANE: `H01B_DOCUMENTATION_AND_CODEBASE_CONSOLIDATION`
-- CURRENT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`
+- CURRENT_TASK: `none`
 - NEXT_TASK: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`
-- NEXT_TASK_GATED: `true`
+- NEXT_TASK_GATED: `false`
 - R02A3_MAY_START: `false`
 - THEN: `H01B-R05_LIVE_PERSONAL_BETA`
 
@@ -25,6 +25,7 @@ without reopening R02A4R or repeating external acceptance. R03 is released.
 - H01B_R02A4_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A4R_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A4T_STATUS: `PASS_WITH_WARNINGS`.
+- H01B_R03_STATUS: `PASS_WITH_WARNINGS`.
 - TRACE_CLASSIFICATION: R02A4 was the blocked storage trace; R02A4R was the
   genuine live functional acceptance with a complete terminal summary rather
   than a timed trace; R02A4T is the instrumented clone-only timed integration
@@ -62,6 +63,16 @@ without reopening R02A4R or repeating external acceptance. R03 is released.
 - One active mission per domain is supported; no mission was auto-activated.
 - Production baseline id `1`, accepted analyses `3` and `4`, proposal ids `1`
   and `2`, two `proposal_ready` slots, and zero active missions remain accepted.
+- `/coach` now owns the exactly-two-card Product workspace in stable canonical
+  order. Explicit owner/CSRF/domain/current-proposal activation supports one,
+  both, or neither mission and is idempotent. `/dashboard` has a concise
+  two-domain summary; owner-visible match detail has two-domain feedback.
+- Progress presentation uses persisted post-activation windows, never a
+  synthetic percentage, and distinguishes no evaluation, pre-activation,
+  insufficient data, improving, unchanged, regressing, and unavailable states.
+- R03 evidence:
+  `/opt/jc-coach-pm/reports/H01B-R03_two_mission_cards_activation_and_match_feedback_ui_report.md`
+  and `/opt/jc-coach-pm/reports/H01B-R03_functional_ui_acceptance_artifact.json`.
 - Recommendation `#5` is the current accepted hard recommendation. Legacy
   recommendations `#1`, `#3`, and `#4` require explicit refresh.
 - Steam import cap remains `1`; exact playlist remains unknown/provenance-only.

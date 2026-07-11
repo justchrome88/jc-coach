@@ -33,10 +33,12 @@ terminal summary rather than a timed trace, and adds a 29/29 v2 clone-only
 timed replay with explicit source-date provenance and distinct two-card
 semantics. It made zero external Steam or configured-model calls.
 
-R03 mission-card and activation UI work is current. Its
-backend can use the authenticated `coach-domain-slots-v1` two-card read model
-and explicit idempotent proposal activation boundary accepted in R02A4R. R04
-replay is gated until R03 acceptance, then planned R05 personal beta, R06 polish, and deferred
+R03 is accepted with warnings. `/coach` now presents the authenticated
+`coach-domain-slots-v1` read model as exactly two primary cards, with explicit
+owner/CSRF/domain-safe idempotent activation. Dashboard status and owner-safe
+match feedback use the same UI composition boundary. Historical recommendation
+and manual AI/report controls remain collapsed and noncanonical. R04 replay is
+released next, followed by planned R05 personal beta, R06 polish, and deferred
 R07 operational hardening.
 
 Current accepted behavior is summarized in `CURRENT_STATUS.md`. Historical
