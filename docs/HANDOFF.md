@@ -8,9 +8,16 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Current H01 User Acceptance Handoff
 
-- CURRENT_LANE: H01_USER_ACCEPTANCE.
+- CURRENT_LANE: METRICS_ASSURANCE.
 - CURRENT_TASK: none.
 - H01A_STATUS: PASS_WITH_WARNINGS.
+- H01A_M01_STATUS: PASS_WITH_WARNINGS.
+- METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
+- METRIC_DOCUMENTATION_CANONICALIZED: true.
+- MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
+- METRIC_CORRECTNESS_ACCEPTED: false.
+- COACH_INPUTS_TRUSTED: false.
+- H01B_STATUS: BLOCKED_PENDING_METRIC_ASSURANCE.
 - H01A_R02_STATUS: BLOCKED.
 - H01A_R02A_STATUS: PASS_WITH_WARNINGS.
 - FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
@@ -41,7 +48,7 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE.
+- NEXT_TASK: H01A-M02_METRIC_CONTRACT_REGISTRY_VALIDATION_AND_REPAIR.
 - ACTIVE_OUTBOX_TASK: none.
 - H01A accepted the real owner fresh-match vertical cycle. G02 discovered and
   processed one fresh match through retained demo, owner import, real parser,
@@ -187,8 +194,9 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Current Next Safe Step
 
-Run H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE under its explicit task
-card. H01A accepted the single fresh-match vertical cycle and idempotent
+Run H01A-M02_METRIC_CONTRACT_REGISTRY_VALIDATION_AND_REPAIR under its explicit
+task card. H01B remains blocked pending metric assurance. H01A accepted the
+single fresh-match vertical cycle and idempotent
 repeat; G02's thin adapter still does not authorize scheduler/login sync,
 public/friends scope or v1.0 claims.
 

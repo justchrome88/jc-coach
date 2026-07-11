@@ -2,11 +2,18 @@
 
 Last updated: 2026-07-11.
 
-## Current H01 User Acceptance State
+## Current H01 Metric Assurance State
 
-- CURRENT_LANE: H01_USER_ACCEPTANCE.
+- CURRENT_LANE: METRICS_ASSURANCE.
 - CURRENT_TASK: none.
 - H01A_STATUS: PASS_WITH_WARNINGS.
+- H01A_M01_STATUS: PASS_WITH_WARNINGS.
+- METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
+- METRIC_DOCUMENTATION_CANONICALIZED: true.
+- MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
+- METRIC_CORRECTNESS_ACCEPTED: false.
+- COACH_INPUTS_TRUSTED: false.
+- H01B_STATUS: BLOCKED_PENDING_METRIC_ASSURANCE.
 - H01A_R02_STATUS: BLOCKED.
 - H01A_R02A_STATUS: PASS_WITH_WARNINGS.
 - FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
@@ -37,8 +44,12 @@ Last updated: 2026-07-11.
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE.
+- NEXT_TASK: H01A-M02_METRIC_CONTRACT_REGISTRY_VALIDATION_AND_REPAIR.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A-M01 established the canonical `docs/metrics/` registry/contracts and a
+  deterministic read-only ledger for match 124. It confirmed post-match event,
+  round-participation, raw-damage, snapshot-version and source-selection defects.
+  Metric correctness and coach inputs remain unaccepted; H01B is blocked.
 - H01A accepted one genuinely fresh owner match through authenticated G02:
   remote discovery, retained demo, owner-linked import, real parser artifact,
   combat/utility snapshots, coach hypotheses and honest

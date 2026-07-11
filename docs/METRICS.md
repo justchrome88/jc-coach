@@ -2,7 +2,10 @@
 
 Last updated: 2026-07-08.
 
-Этот документ является каноническим описанием правды по метрикам. Runtime-источник для code-level политики: `app/services/metric_truth.py`.
+> Status: supporting legacy runtime-policy summary. Canonical metric identity,
+> contracts, assurance state, and investigations now live in `docs/metrics/`.
+> Runtime policy remains in `app/services/metric_truth.py` pending versioned
+> reconciliation; neither source overrides disputed entries in the canonical registry.
 
 ## Current Truth
 
