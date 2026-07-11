@@ -1,6 +1,6 @@
 # Master Work-Package Checklist
 
-Last updated: 2026-07-11. Exact status and gating are authoritative in
+Last updated: 2026-07-12. Exact status and gating are authoritative in
 `../planning/WP_REGISTRY.md`.
 
 | Product block | Status | Product-facing exit criteria |
@@ -15,8 +15,8 @@ Last updated: 2026-07-11. Exact status and gating are authoritative in
 | Post-refactor vertical acceptance | completed_with_warnings | R02A4R proved one genuine, observable, isolated Steam-to-coach chain with production unchanged. |
 | Timed observability/provenance closure | completed_with_warnings | R02A4T proved a 29-stage clone-only timed replay, explicit source-date provenance, and distinct two-card semantics. |
 | Functional mission UI | completed_with_warnings | R03 exposes two complete domain flows, explicit one/both/neither activation, owner isolation, and per-match progress with minimal styling. |
-| 30+10 replay | next | R04 proves two proposals and two activated missions across 10 subsequent matches with independent, idempotent DB/API/UI timelines. |
-| Live personal beta | planned | R05 evaluates real new-match usefulness, unsupported claims, latency/reliability, and target quality before polish. |
+| 30+10 replay | current | R04 proves two proposals and two activated missions across 10 subsequent matches with independent, idempotent DB/API/UI timelines. |
+| Live personal beta | pending_gated | Manual user-led R05 evaluates real new-match usefulness, unsupported claims, latency/reliability, and target quality after R04 acceptance. |
 | Visual polish | planned | R06 makes the validated flow responsive, accessible, readable, and visually consistent. |
 | Provider/ops hardening | deferred_planned | R07 adds measured provider/queue/observability/cost controls after validation unless needed to remove an earlier blocker. |
 | Public/multi-user work | later | Separate authorization establishes isolation, deployment, operations, and readiness beyond the personal MVP. |
@@ -35,6 +35,6 @@ Last updated: 2026-07-11. Exact status and gating are authoritative in
   boundaries, explicit date provenance, and distinct card semantics.
 - [x] R03: an eligible owner can activate one, both, or neither proposal; never
   automatic activation; at most one active mission per owner and domain.
-- [ ] R04 (next): progress uses only matches after activation baseline and preserves
+- [ ] R04 (current): progress uses only matches after activation baseline and preserves
   evidence, confidence, caveats, insufficient-data behavior, and idempotency.
 - [ ] R05: real personal-match findings are captured before R06 polish.

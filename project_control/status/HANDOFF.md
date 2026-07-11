@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-07-11.
+Last updated: 2026-07-12.
 
 Read, in order:
 
@@ -38,8 +38,8 @@ R03 is accepted with warnings. `/coach` now presents the authenticated
 owner/CSRF/domain-safe idempotent activation. Dashboard status and owner-safe
 match feedback use the same UI composition boundary. Historical recommendation
 and manual AI/report controls remain collapsed and noncanonical. R04 replay is
-released next, followed by planned R05 personal beta, R06 polish, and deferred
-R07 operational hardening.
+current; manual, user-led R05 personal beta remains gated until R04 acceptance,
+followed by R06 polish and deferred R07 operational hardening.
 
 Current accepted behavior is summarized in `CURRENT_STATUS.md`. Historical
 status blocks and task evidence are noncanonical under `_legacy_archive/` or PM

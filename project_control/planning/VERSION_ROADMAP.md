@@ -1,6 +1,6 @@
 # Version Roadmap
 
-Last updated: 2026-07-11.
+Last updated: 2026-07-12.
 
 This is the single macro Product roadmap. Detailed planned work belongs in
 `WORK_PACKAGE_BACKLOG.md`; exact task status belongs in `WP_REGISTRY.md`.
@@ -78,14 +78,14 @@ Deliver complete functionality with minimal styling:
   after activation baseline; and
 - authentication and owner isolation across UI and API behavior.
 
-## F. End-to-end acceptance milestone — R04 next, ungated
+## F. End-to-end acceptance milestone — R04 current
 
 Prove the full Product loop with a 30-match immutable baseline, two supported
 proposals, explicit activation of both, and 10 subsequent matches fed one by
 one. Acceptance requires independent progress timelines, insufficient-data
 handling, idempotent reprocessing, and DB/API/dashboard/match-page parity.
 
-## G. Live personal beta milestone — R05 planned, not authorized
+## G. Live personal beta milestone — R05 pending, gated, manual user-led
 
 Process real newly played personal matches; review hypothesis usefulness,
 false positives and unsupported claims, latency and provider reliability, and

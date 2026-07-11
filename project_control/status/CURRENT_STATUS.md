@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-07-11.
+Last updated: 2026-07-12.
 
 Original sources preserved at:
 
@@ -11,11 +11,12 @@ Original sources preserved at:
 ## Current route
 
 - CURRENT_LANE: `H01B_DOCUMENTATION_AND_CODEBASE_CONSOLIDATION`
-- CURRENT_TASK: `none`
-- NEXT_TASK: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`
-- NEXT_TASK_GATED: `false`
+- CURRENT_TASK: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`
+- NEXT_TASK: `H01B-R05_LIVE_PERSONAL_MATCH_BETA`
+- NEXT_TASK_GATED: `true`
+- R05_MODE: `manual_user_led`
 - R02A3_MAY_START: `false`
-- THEN: `H01B-R05_LIVE_PERSONAL_BETA`
+- THEN: `H01B-R06_UI_UX_VISUAL_POLISH`
 
 R02A4 is an accepted one-time acceptance gate proving the consolidated
 architecture as one observable Steam-to-coach vertical chain. R02A4T accepted

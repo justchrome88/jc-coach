@@ -73,7 +73,7 @@ in `WP_REGISTRY.md`.
 - **Evidence/result:**
   `/opt/jc-coach-pm/reports/H01B-R03_two_mission_cards_activation_and_match_feedback_ui_report.md`.
 
-## H01B-R04 — next, ungated
+## H01B-R04 — current
 
 - **Purpose:** accept the complete two-domain Product loop through a 30+10 replay.
 - **Dependencies:** accepted R03.
@@ -86,7 +86,7 @@ in `WP_REGISTRY.md`.
   idempotent, and behaviorally consistent at every persistence and UI boundary.
 - **Evidence/result:** add the accepted R04 PM report when complete.
 
-## H01B-R05 — planned, not authorized
+## H01B-R05 — pending, gated, manual user-led
 
 - **Purpose:** validate usefulness on real newly played personal matches.
 - **Dependencies:** accepted R04 and separate live-action authorization.
