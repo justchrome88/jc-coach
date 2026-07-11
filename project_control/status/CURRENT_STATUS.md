@@ -11,9 +11,10 @@ Original sources preserved at:
 ## Current route
 
 - CURRENT_LANE: `H01B_DOCUMENTATION_AND_CODEBASE_CONSOLIDATION`
-- CURRENT_TASK: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`
+- CURRENT_TASK: `none`
+- LAST_COMPLETED_TASK: `H01B-R04_PRODUCTION_DEPLOYMENT_AND_MANUAL_LIVE_BETA_RELEASE`
 - NEXT_TASK: `H01B-R05_LIVE_PERSONAL_MATCH_BETA`
-- NEXT_TASK_GATED: `true`
+- NEXT_TASK_GATED: `false`
 - R05_MODE: `manual_user_led`
 - R02A3_MAY_START: `false`
 - THEN: `H01B-R06_UI_UX_VISUAL_POLISH`
@@ -27,6 +28,13 @@ without reopening R02A4R or repeating external acceptance. R03 is released.
 - H01B_R02A4R_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A4T_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R03_STATUS: `PASS_WITH_WARNINGS`.
+- H01B_R04_STATUS: `PASS_WITH_WARNINGS`.
+- PRODUCTION_DEPLOYMENT_ACCEPTED: `true`; the verified pre-live-beta backup is
+  retained under `/var/backups/jc-coach/`, the service passed its single
+  controlled restart and health/smoke checks, and production data did not
+  mutate.
+- MANUAL_BETA_READINESS: user login, manual activation, and one-match-at-a-time
+  import are released; no activation or import was performed by R04.
 - TRACE_CLASSIFICATION: R02A4 was the blocked storage trace; R02A4R was the
   genuine live functional acceptance with a complete terminal summary rather
   than a timed trace; R02A4T is the instrumented clone-only timed integration

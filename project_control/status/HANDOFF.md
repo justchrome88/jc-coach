@@ -37,9 +37,12 @@ R03 is accepted with warnings. `/coach` now presents the authenticated
 `coach-domain-slots-v1` read model as exactly two primary cards, with explicit
 owner/CSRF/domain-safe idempotent activation. Dashboard status and owner-safe
 match feedback use the same UI composition boundary. Historical recommendation
-and manual AI/report controls remain collapsed and noncanonical. R04 replay is
-current; manual, user-led R05 personal beta remains gated until R04 acceptance,
-followed by R06 polish and deferred R07 operational hardening.
+and manual AI/report controls remain collapsed and noncanonical. R04 production
+deployment is accepted with warnings after one verified online DB backup, the
+full 626-test gate, one healthy service restart, live HTTP/read-model checks,
+and zero production mutation. Manual, user-led R05 personal beta is released;
+the user must initiate activation and one-match-at-a-time imports. R06 polish
+and deferred R07 operational hardening follow.
 
 Current accepted behavior is summarized in `CURRENT_STATUS.md`. Historical
 status blocks and task evidence are noncanonical under `_legacy_archive/` or PM

@@ -30,7 +30,7 @@ def test_current_repository_passes_all_r02a2_guardrails():
     assert guardrails.collect_errors() == []
 
 
-def test_planning_contract_accepts_r04_current_and_manual_r05_gate():
+def test_planning_contract_accepts_r04_closure_and_manual_r05_release():
     assert guardrails.planning_contract_errors(guardrails.ROOT) == []
 
 
