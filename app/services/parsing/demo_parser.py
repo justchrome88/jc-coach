@@ -4,44 +4,19 @@ from __future__ import annotations
 
 import hashlib
 import importlib.metadata
-import json
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import delete, select
-from sqlalchemy.orm import Session
-
 from app.config import get_settings
-from app.db.models import (
-    DemoDamageEvent,
-    DemoDuel,
-    DemoGrenadeEvent,
-    DemoParseArtifact,
-    DemoPlayerRound,
-    DemoRound,
-    DemoWeaponStat,
-    Match,
-)
-from app.services.ingestion.demo_storage import store_demo_file
-from app.services.ingestion.match_metadata import apply_steam_metadata_to_parsed_demo
-from app.services.metrics.recommendations import (
-    compact_recommendation_evaluations,
-    ensure_default_recommendation,
-    evaluate_recommendations_for_match,
-    recommendation_evaluation_metadata,
-)
-from app.services.shared.demo_retention import (
-    ARTIFACT_CATEGORY_PARSER_ARTIFACT,
-    ARTIFACT_CATEGORY_RAW_DEMO,
-    artifact_retention_metadata,
-    retention_metadata,
-)
+from app.services.shared.value_coercion import float_or_none, int_or_none, int_or_zero, jsonable
 from app.services.shared.weapon_names import canonical_weapon_name
 
 PARSER_PAYLOAD_VERSION = "2026-07-02.1"
+
 EARLY_DEATH_WINDOW_TICKS = 64 * 30
+
 GRENADE_EVENTS = (
     "flashbang_detonate",
     "smokegrenade_detonate",
@@ -50,193 +25,13 @@ GRENADE_EVENTS = (
     "molotov_detonate",
     "decoy_detonate",
 )
-BOMB_EVENTS = ("bomb_planted", "bomb_defused", "bomb_exploded", "bomb_beginplant", "bomb_begindefuse")
-MATCH_COLUMN_NAMES = frozenset(column.name for column in Match.__table__.columns)
 
+BOMB_EVENTS = ("bomb_planted", "bomb_defused", "bomb_exploded", "bomb_beginplant", "bomb_begindefuse")
 
 class DemoParseError(RuntimeError):
     def __init__(self, message: str, retention: dict[str, Any] | None = None):
         super().__init__(message)
         self.retention = retention or {}
-
-
-def list_inbox_demos() -> list[dict[str, Any]]:
-    inbox = Path(get_settings().demo_inbox_dir)
-    files = []
-    for path in sorted(inbox.glob("*.dem"), key=lambda item: item.stat().st_mtime, reverse=True):
-        stat = path.stat()
-        files.append(
-            {
-                "name": path.name,
-                "size_bytes": stat.st_size,
-                "size_mb": round(stat.st_size / 1024 / 1024, 2),
-                "modified_at": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
-            }
-        )
-    return files
-
-
-def import_inbox_demo(
-    db: Session,
-    filename: str,
-    player_identifier: str | None = None,
-) -> dict[str, Any]:
-    path = _resolve_inbox_demo(filename)
-    return import_demo_file(
-        db,
-        path,
-        original_filename=path.name,
-        player_identifier=player_identifier,
-    )
-
-
-def import_demo_file(
-    db: Session,
-    source_path: Path,
-    original_filename: str | None = None,
-    player_identifier: str | None = None,
-    steam_metadata: dict[str, Any] | None = None,
-    acquisition_metadata: dict[str, Any] | None = None,
-    storage_budget: Any | None = None,
-    evaluate_recommendations: bool = True,
-) -> dict[str, Any]:
-    stored = _store_demo(source_path, original_filename, storage_budget=storage_budget)
-    stored_path = Path(stored["path"])
-    try:
-        parsed = parse_demo(stored_path, player_identifier=player_identifier)
-    except DemoParseError as exc:
-        exc.retention = retention_metadata(raw_demo_path=stored_path, parser_success=False)
-        exc.retention["storage"] = stored
-        raise
-    if steam_metadata:
-        apply_steam_metadata_to_parsed_demo(parsed, steam_metadata)
-    storage_metadata = _storage_metadata(stored, acquisition_metadata=acquisition_metadata)
-    parsed["file"] = storage_metadata["parser_handoff_path"]
-    parsed["demo_sha1"] = storage_metadata["sha1"]
-    parsed["storage"] = storage_metadata
-    parsed["parser_handoff"] = {
-        "kind": "raw_demo_file",
-        "path": storage_metadata["parser_handoff_path"],
-        "state": storage_metadata["state"],
-        "sha1": storage_metadata["sha1"],
-        "size_bytes": storage_metadata["size_bytes"],
-        "integrity": storage_metadata["integrity"],
-        "retention": artifact_retention_metadata(
-            ARTIFACT_CATEGORY_RAW_DEMO,
-            path=storage_metadata["parser_handoff_path"],
-        ),
-    }
-    retention = retention_metadata(raw_demo_path=stored_path, parser_success=True)
-    parsed.update(retention)
-    parsed["demo_retention"] = retention
-    storage_links = storage_metadata["links"]
-    match_data = parsed["match"]
-    match_data["demo_file"] = str(stored_path)
-    match_data["source"] = "demo"
-    match_data["raw_json"] = json.dumps(parsed, ensure_ascii=False, default=str)
-    match_model_data = _match_model_kwargs(match_data)
-    match_model_data["user_id"] = _int_or_none(storage_links.get("user_id"))
-    match_model_data["steam_account_id"] = _int_or_none(storage_links.get("steam_account_id"))
-    match_model_data["import_job_id"] = _int_or_none(storage_links.get("import_job_id"))
-
-    existing = db.scalar(
-        select(Match).where(
-            Match.source == match_model_data["source"],
-            Match.external_match_id == match_model_data["external_match_id"],
-        )
-    )
-    if existing:
-        existing.played_at = match_model_data["played_at"]
-        existing.raw_json = match_model_data["raw_json"]
-        existing.demo_file = existing.demo_file or str(stored_path)
-        existing.user_id = existing.user_id or match_model_data["user_id"]
-        existing.steam_account_id = existing.steam_account_id or match_model_data["steam_account_id"]
-        existing.import_job_id = existing.import_job_id or match_model_data["import_job_id"]
-        db.commit()
-        db.refresh(existing)
-        _save_demo_parse_artifacts(db, existing, parsed)
-        duplicate_retention = retention_metadata(raw_demo_path=existing.demo_file, parser_success=True)
-        evaluation_metadata = recommendation_evaluation_metadata(
-            status="duplicate",
-            match_id=existing.id,
-            reason="demo_already_imported",
-        )
-        return {
-            "imported": 0,
-            "skipped_duplicates": 1,
-            "errors": 0,
-            "match_id": existing.id,
-            "recommendation_evaluations": evaluation_metadata["evaluations"],
-            "recommendation_evaluation": evaluation_metadata,
-            "player": parsed["player"],
-            "stored_path": existing.demo_file,
-            "match": parsed["match"],
-            "available_players": parsed["available_players"],
-            "event_counts": parsed["event_counts"],
-            "metric_confidence": parsed["metric_confidence"],
-            "parser_confidence": parsed["parser_confidence"],
-            "warnings": parsed["warnings"],
-            "storage": storage_metadata,
-            "parser_handoff": parsed["parser_handoff"],
-            **duplicate_retention,
-            "message": "Demo already imported.",
-        }
-
-    match = Match(**match_model_data)
-    db.add(match)
-    db.commit()
-    db.refresh(match)
-    _save_demo_parse_artifacts(db, match, parsed)
-    recommendation_evaluations = []
-    if evaluate_recommendations:
-        ensure_default_recommendation(db)
-        recommendation_evaluations = evaluate_recommendations_for_match(db, match.id)
-        evaluation_status = "created" if recommendation_evaluations else "not_eligible"
-        evaluation_reason = None if recommendation_evaluations else "no_eligible_recommendation_or_match"
-    else:
-        evaluation_status = "deferred"
-        evaluation_reason = "steam_date_truth_pending"
-    evaluation_metadata = recommendation_evaluation_metadata(
-        recommendation_evaluations,
-        status=evaluation_status,
-        match_id=match.id,
-        reason=evaluation_reason,
-    )
-    return {
-        "imported": 1,
-        "skipped_duplicates": 0,
-        "errors": 0,
-        "match_id": match.id,
-        "recommendation_evaluations": compact_recommendation_evaluations(recommendation_evaluations),
-        "recommendation_evaluation": evaluation_metadata,
-        "player": parsed["player"],
-        "stored_path": str(stored_path),
-        "match": parsed["match"],
-        "available_players": parsed["available_players"],
-        "event_counts": parsed["event_counts"],
-        "metric_confidence": parsed["metric_confidence"],
-        "parser_confidence": parsed["parser_confidence"],
-        "warnings": parsed["warnings"],
-        "storage": storage_metadata,
-        "parser_handoff": parsed["parser_handoff"],
-        **retention,
-        "message": parsed["message"],
-    }
-
-
-def _match_model_kwargs(match_data: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in match_data.items() if key in MATCH_COLUMN_NAMES}
-
-
-def _resolve_inbox_demo(filename: str) -> Path:
-    inbox = Path(get_settings().demo_inbox_dir).resolve()
-    candidate = (inbox / Path(filename).name).resolve()
-    if not candidate.is_file() or candidate.suffix.lower() != ".dem":
-        raise DemoParseError(f"Demo `{filename}` was not found in inbox.")
-    if inbox not in candidate.parents:
-        raise DemoParseError("Invalid demo path.")
-    return candidate
-
 
 def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, Any]:
     try:
@@ -374,7 +169,7 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "swing_summary": swing_summary,
         "deep": deep_payload,
         "aim_data_gaps": _aim_data_gaps(),
-        "header": _jsonable(header),
+        "header": jsonable(header),
         "event_counts": event_counts,
         "metric_confidence": metric_confidence,
         "parser_confidence": _overall_confidence(metric_confidence),
@@ -382,7 +177,6 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "available_players": _available_players(player_info, death_events, hurt_events),
         "message": "Demo imported with parser confidence metadata.",
     }
-
 
 def _metric_confidence(
     event_counts: dict[str, int],
@@ -417,7 +211,6 @@ def _metric_confidence(
         confidence["score"] = "high"
     return confidence
 
-
 def _overall_confidence(metric_confidence: dict[str, str]) -> str:
     weights = {"high": 2, "medium": 1, "low": 0}
     score = sum(weights.get(value, 0) for value in metric_confidence.values())
@@ -428,7 +221,6 @@ def _overall_confidence(metric_confidence: dict[str, str]) -> str:
     if ratio >= 0.42:
         return "medium"
     return "low"
-
 
 def _parser_warnings(metric_confidence: dict[str, str]) -> list[str]:
     warnings = []
@@ -448,7 +240,6 @@ def _parser_warnings(metric_confidence: dict[str, str]) -> list[str]:
         warnings.append("Weapon accuracy requires both weapon_fire and damage events.")
     return warnings
 
-
 def _safe_call(func, default):
     try:
         return func()
@@ -456,7 +247,6 @@ def _safe_call(func, default):
         if isinstance(exc, (KeyboardInterrupt, SystemExit)):
             raise
         return default
-
 
 def _safe_event(parser, event_name: str):
     try:
@@ -471,7 +261,6 @@ def _safe_event(parser, event_name: str):
                 raise
             raise DemoParseError(f"Could not read `{event_name}` from demo: {fallback_exc}") from fallback_exc
 
-
 def _safe_optional_event(parser, event_name: str):
     try:
         return parser.parse_event(event_name, other=["total_rounds_played"])
@@ -479,7 +268,6 @@ def _safe_optional_event(parser, event_name: str):
         if isinstance(exc, (KeyboardInterrupt, SystemExit)):
             raise
         return []
-
 
 def _safe_grenade_trajectories(parser, round_end_events) -> list[dict[str, Any]]:
     try:
@@ -523,47 +311,10 @@ def _safe_grenade_trajectories(parser, round_end_events) -> list[dict[str, Any]]
         if item["end_tick"] is None or tick > item["end_tick"]:
             item["end_tick"] = tick
             item["end_position"] = position
-        z = _float_or_none(row.get("z"))
+        z = float_or_none(row.get("z"))
         if z is not None and (item["max_z"] is None or z > item["max_z"]):
             item["max_z"] = z
     return list(grouped.values())
-
-
-def _store_demo(source_path: Path, original_filename: str | None, storage_budget: Any | None = None) -> dict[str, Any]:
-    return store_demo_file(source_path, original_filename, storage_budget=storage_budget)
-
-
-def _storage_metadata(
-    stored: dict[str, Any],
-    *,
-    acquisition_metadata: dict[str, Any] | None,
-) -> dict[str, Any]:
-    links = dict(acquisition_metadata or {})
-    return {
-        "schema_version": stored["storage_schema_version"],
-        "kind": stored["storage_kind"],
-        "status": stored["storage_status"],
-        "state": stored["state"],
-        "path": stored["path"],
-        "relative_path": stored["relative_path"],
-        "parser_handoff_path": stored["parser_handoff_path"],
-        "sha1": stored["sha1"],
-        "size_bytes": stored["size_bytes"],
-        "integrity": stored["integrity"],
-        "original_filename": stored["original_filename"],
-        "retention": stored["retention"],
-        "temporary_source": stored["temporary_source"],
-        "links": {
-            "import_job_id": links.get("import_job_id"),
-            "source_match_id": links.get("source_match_id"),
-            "source_match_external_id": links.get("source_match_external_id"),
-            "share_code": links.get("share_code"),
-            "user_id": links.get("user_id"),
-            "steam_account_id": links.get("steam_account_id"),
-            "steam_id": links.get("steam_id"),
-        },
-    }
-
 
 def _select_player(deaths, hurts, player_info, identifier: str | None) -> dict[str, str | None]:
     candidates = _available_players(player_info, deaths, hurts)
@@ -581,7 +332,6 @@ def _select_player(deaths, hurts, player_info, identifier: str | None) -> dict[s
     if jc_candidate:
         return jc_candidate
     return max(candidates, key=lambda item: item.get("activity", 0) or 0)
-
 
 def _available_players(player_info, deaths, hurts) -> list[dict[str, Any]]:
     by_key: dict[str, dict[str, Any]] = {}
@@ -611,7 +361,6 @@ def _available_players(player_info, deaths, hurts) -> list[dict[str, Any]]:
         else:
             by_key[name] = {"name": name, "steamid": None, "activity": count}
     return sorted(by_key.values(), key=lambda item: item.get("activity", 0), reverse=True)
-
 
 def _player_stats(
     player: dict[str, str | None],
@@ -719,7 +468,6 @@ def _player_stats(
         "weapon_breakdown": weapon_breakdown,
     }
 
-
 def _early_deaths_from_timing(
     player: dict[str, str | None],
     death_events,
@@ -743,7 +491,6 @@ def _early_deaths_from_timing(
             early_deaths += 1
     return early_deaths
 
-
 def _round_anchor_ticks(events) -> dict[int, int]:
     anchors = {}
     for row in _records(events):
@@ -753,11 +500,9 @@ def _round_anchor_ticks(events) -> dict[int, int]:
         anchors.setdefault(_round_number(row), tick)
     return anchors
 
-
 def _weapon(row: dict[str, Any]) -> str:
     weapon = str(row.get("weapon") or row.get("weapon_name") or row.get("attacker_weapon") or "unknown").lower()
     return canonical_weapon_name(weapon) or "unknown"
-
 
 def _accepted_round_boundary(round_end_events) -> tuple[set[Any], int | None]:
     rows = _records(round_end_events)
@@ -767,17 +512,14 @@ def _accepted_round_boundary(round_end_events) -> tuple[set[Any], int | None]:
     accepted_ticks = [tick for tick in ticks if tick is not None]
     return rounds, max(accepted_ticks) if accepted_ticks else None
 
-
 def _events_through_tick(events, final_round_end_tick: int | None) -> list[dict[str, Any]]:
     rows = _records(events)
     if final_round_end_tick is None:
         return rows
     return [row for row in rows if _tick_or_none(row) is None or _tick_or_none(row) <= final_round_end_tick]
 
-
 def _empty_weapon(weapon: str) -> dict[str, Any]:
     return {"weapon": weapon, "kills": 0, "headshots": 0, "deaths": 0, "damage": 0, "headshot_percent": None}
-
 
 def _aim_data_gaps() -> list[str]:
     return [
@@ -787,7 +529,6 @@ def _aim_data_gaps() -> list[str]:
         "ttk requires precise damage/death timing",
         "crosshair_placement requires view angles and position timeline",
     ]
-
 
 def _deep_parse_payload(
     *,
@@ -831,7 +572,6 @@ def _deep_parse_payload(
         "data_gaps": _deep_data_gaps(weapon_fire_events, grenade_trajectories),
     }
 
-
 def _player_lookup(*event_sets) -> dict[str, dict[str, Any]]:
     players: dict[str, dict[str, Any]] = {}
 
@@ -857,7 +597,6 @@ def _player_lookup(*event_sets) -> dict[str, dict[str, Any]]:
             add(row.get("attacker_name"), row.get("attacker_steamid"))
             add(row.get("assister_name"), row.get("assister_steamid"))
     return players
-
 
 def _round_summaries(
     round_start_events,
@@ -901,7 +640,6 @@ def _round_summaries(
                 rounds[number]["bomb_outcome"] = event_name.removeprefix("bomb_")
     return [rounds[key] for key in sorted(rounds)]
 
-
 def _duel_events(death_events) -> list[dict[str, Any]]:
     rows = sorted(_records(death_events), key=lambda row: (_round_number(row), _tick(row)))
     first_tick_by_round: dict[int, int] = {}
@@ -932,18 +670,17 @@ def _duel_events(death_events) -> list[dict[str, Any]]:
             "headshot": bool(row.get("headshot")),
             "opening_duel": tick == first_tick_by_round.get(round_number),
             "trade_kill": trade_kill,
-            "distance": _float_or_none(row.get("distance")),
+            "distance": float_or_none(row.get("distance")),
             "attacker_blind": bool(row.get("attackerblind")),
             "through_smoke": bool(row.get("thrusmoke")),
             "noscope": bool(row.get("noscope")),
-            "penetrated": _int_or_zero(row.get("penetrated")),
+            "penetrated": int_or_zero(row.get("penetrated")),
             "hitgroup": row.get("hitgroup"),
             "raw": _compact_row(row),
         }
         duels.append(item)
         last_death_by_victim_side[(round_number, victim_key)] = item
     return duels
-
 
 def _damage_events(hurt_events) -> list[dict[str, Any]]:
     events = []
@@ -958,15 +695,14 @@ def _damage_events(hurt_events) -> list[dict[str, Any]]:
                 "victim_steamid": _string_or_none(row.get("user_steamid")),
                 "weapon": _weapon(row),
                 "hitgroup": row.get("hitgroup"),
-                "damage_health": _int_or_zero(row.get("dmg_health") or row.get("health_damage") or row.get("damage")),
-                "damage_armor": _int_or_zero(row.get("dmg_armor")),
-                "victim_health_after": _int_or_none(row.get("health")),
-                "victim_armor_after": _int_or_none(row.get("armor")),
+                "damage_health": int_or_zero(row.get("dmg_health") or row.get("health_damage") or row.get("damage")),
+                "damage_armor": int_or_zero(row.get("dmg_armor")),
+                "victim_health_after": int_or_none(row.get("health")),
+                "victim_armor_after": int_or_none(row.get("armor")),
                 "raw": _compact_row(row),
             }
         )
     return events
-
 
 def _blind_events(blind_events) -> list[dict[str, Any]]:
     rows = []
@@ -979,13 +715,12 @@ def _blind_events(blind_events) -> list[dict[str, Any]]:
                 "attacker_steamid": _string_or_none(row.get("attacker_steamid")),
                 "victim_name": row.get("user_name") or row.get("user"),
                 "victim_steamid": _string_or_none(row.get("user_steamid")),
-                "blind_duration": _float_or_none(row.get("blind_duration")),
+                "blind_duration": float_or_none(row.get("blind_duration")),
                 "entity_id": _first_present(row, ("entityid", "entity_id")),
                 "raw": _compact_row(row),
             }
         )
     return rows
-
 
 def _grenade_event_rows(grenade_events: dict[str, Any], hurt_events, blind_events) -> list[dict[str, Any]]:
     flashed_by_entity = Counter()
@@ -997,7 +732,7 @@ def _grenade_event_rows(grenade_events: dict[str, Any], hurt_events, blind_event
     for row in _records(hurt_events):
         weapon = _weapon(row)
         if _is_utility_weapon(weapon):
-            damage_by_round_player_weapon[(_round_number(row), row.get("attacker_steamid"), weapon)] += _int_or_zero(
+            damage_by_round_player_weapon[(_round_number(row), row.get("attacker_steamid"), weapon)] += int_or_zero(
                 row.get("dmg_health") or row.get("health_damage") or row.get("damage")
             )
     rows = []
@@ -1013,9 +748,9 @@ def _grenade_event_rows(grenade_events: dict[str, Any], hurt_events, blind_event
                     "grenade_type": weapon,
                     "player_name": row.get("user_name") or row.get("user"),
                     "player_steamid": _string_or_none(row.get("user_steamid")),
-                    "x": _float_or_none(row.get("x")),
-                    "y": _float_or_none(row.get("y")),
-                    "z": _float_or_none(row.get("z")),
+                    "x": float_or_none(row.get("x")),
+                    "y": float_or_none(row.get("y")),
+                    "z": float_or_none(row.get("z")),
                     "flashed_count": int(flashed_by_entity.get(entity_id, 0)),
                     "damage": int(
                         damage_by_round_player_weapon.get((_round_number(row), row.get("user_steamid"), weapon), 0)
@@ -1025,7 +760,6 @@ def _grenade_event_rows(grenade_events: dict[str, Any], hurt_events, blind_event
                 }
             )
     return rows
-
 
 def _weapon_stats(death_events, hurt_events, weapon_fire_events) -> list[dict[str, Any]]:
     stats: dict[tuple[str, str], dict[str, Any]] = {}
@@ -1055,7 +789,7 @@ def _weapon_stats(death_events, hurt_events, weapon_fire_events) -> list[dict[st
     for row in _records(hurt_events):
         item = bucket(row.get("attacker_name") or row.get("attacker"), row.get("attacker_steamid"), _weapon(row))
         item["hits"] += 1
-        item["damage"] += _int_or_zero(row.get("dmg_health") or row.get("health_damage") or row.get("damage"))
+        item["damage"] += int_or_zero(row.get("dmg_health") or row.get("health_damage") or row.get("damage"))
     for row in _records(death_events):
         attacker = bucket(row.get("attacker_name") or row.get("attacker"), row.get("attacker_steamid"), _weapon(row))
         attacker["kills"] += 1
@@ -1066,7 +800,6 @@ def _weapon_stats(death_events, hurt_events, weapon_fire_events) -> list[dict[st
         item["accuracy"] = round(item["hits"] / item["shots"] * 100, 2) if item["shots"] else None
         item["headshot_percent"] = round(item["headshots"] / item["kills"] * 100, 2) if item["kills"] else None
     return sorted(stats.values(), key=lambda item: (item["player_name"] or "", item["weapon"]))
-
 
 def _player_rounds(players, death_events, hurt_events, blind_events) -> list[dict[str, Any]]:
     rounds: dict[tuple[int, str], dict[str, Any]] = {}
@@ -1124,7 +857,7 @@ def _player_rounds(players, death_events, hurt_events, blind_events) -> list[dic
         bucket(round_number, row.get("user_name") or row.get("user"), row.get("user_steamid"))["opening_death"] = 1
     for row in _records(hurt_events):
         item = bucket(_round_number(row), row.get("attacker_name") or row.get("attacker"), row.get("attacker_steamid"))
-        damage = _int_or_zero(row.get("dmg_health") or row.get("health_damage") or row.get("damage"))
+        damage = int_or_zero(row.get("dmg_health") or row.get("health_damage") or row.get("damage"))
         item["damage"] += damage
         if _is_utility_weapon(_weapon(row)):
             item["utility_damage"] += damage
@@ -1136,7 +869,6 @@ def _player_rounds(players, death_events, hurt_events, blind_events) -> list[dic
         item["kast"] = 1 if item["kills"] or item["assists"] or item["survived"] else 0
     return sorted(rounds.values(), key=lambda item: (item["round_number"], item["player_name"] or ""))
 
-
 def _economy_summary(item_pickup_events) -> list[dict[str, Any]]:
     counts = Counter()
     for row in _records(item_pickup_events):
@@ -1145,7 +877,6 @@ def _economy_summary(item_pickup_events) -> list[dict[str, Any]]:
         {"player_name": name, "player_steamid": steamid, "item": item, "count": count}
         for (name, steamid, item), count in counts.most_common(200)
     ]
-
 
 def _target_player_summary(target_key, player_rounds, weapon_stats, duels, damage_events) -> dict[str, Any]:
     target_rounds = [row for row in player_rounds if row.get("player_key") == target_key]
@@ -1174,7 +905,6 @@ def _target_player_summary(target_key, player_rounds, weapon_stats, duels, damag
         ),
     }
 
-
 def _deep_data_gaps(weapon_fire_events, grenade_trajectories) -> list[str]:
     gaps = []
     if not _records(weapon_fire_events):
@@ -1183,7 +913,6 @@ def _deep_data_gaps(weapon_fire_events, grenade_trajectories) -> list[str]:
         gaps.append("grenade trajectories were not parsed; only detonation/blind/damage events are available.")
     gaps.append("full per-tick movement/view-angle timeline is intentionally not stored yet to avoid database bloat.")
     return gaps
-
 
 def _swing_summary(
     player: dict[str, str | None],
@@ -1281,14 +1010,13 @@ def _swing_summary(
         ],
     }
 
-
 def _team_context(player: dict[str, str | None], player_info) -> dict[str, Any]:
     target_key = _player_key(player.get("steamid"), player.get("name"))
     target_team = None
     players_by_team: dict[int, set[str]] = defaultdict(set)
     for row in _records(player_info):
         key = _player_key(row.get("steamid"), row.get("name") or row.get("player_name"))
-        team_number = _int_or_none(row.get("team_number") or row.get("team"))
+        team_number = int_or_none(row.get("team_number") or row.get("team"))
         if team_number is None or team_number not in {2, 3}:
             continue
         players_by_team[team_number].add(key)
@@ -1303,7 +1031,6 @@ def _team_context(player: dict[str, str | None], player_info) -> dict[str, Any]:
         "enemy_players": players_by_team.get(enemy_team or 0, set()),
     }
 
-
 def _damage_share_by_round_victim(hurt_events) -> dict[tuple[int, str, str], float]:
     totals: Counter[tuple[int, str]] = Counter()
     by_attacker: Counter[tuple[int, str, str]] = Counter()
@@ -1311,7 +1038,7 @@ def _damage_share_by_round_victim(hurt_events) -> dict[tuple[int, str, str], flo
         round_number = _round_number(row)
         victim_key = _player_key(row.get("user_steamid"), row.get("user_name") or row.get("user"))
         attacker_key = _player_key(row.get("attacker_steamid"), row.get("attacker_name") or row.get("attacker"))
-        damage = _int_or_zero(row.get("dmg_health") or row.get("health_damage") or row.get("damage"))
+        damage = int_or_zero(row.get("dmg_health") or row.get("health_damage") or row.get("damage"))
         totals[(round_number, victim_key)] += damage
         by_attacker[(round_number, victim_key, attacker_key)] += damage
     shares = {}
@@ -1320,17 +1047,15 @@ def _damage_share_by_round_victim(hurt_events) -> dict[tuple[int, str, str], flo
         shares[key] = damage / total if total else 0
     return shares
 
-
 def _flash_by_round_victim(blind_events) -> set[tuple[int, str, str]]:
     flashes = set()
     for row in _records(blind_events):
         round_number = _round_number(row)
         victim_key = _player_key(row.get("user_steamid"), row.get("user_name") or row.get("user"))
         attacker_key = _player_key(row.get("attacker_steamid"), row.get("attacker_name") or row.get("attacker"))
-        if _float_or_none(row.get("blind_duration")) and _float_or_none(row.get("blind_duration")) >= 0.5:
+        if float_or_none(row.get("blind_duration")) and float_or_none(row.get("blind_duration")) >= 0.5:
             flashes.add((round_number, victim_key, attacker_key))
     return flashes
-
 
 def _swing_events(death_events, bomb_events: dict[str, Any]) -> list[dict[str, Any]]:
     events = []
@@ -1363,7 +1088,6 @@ def _swing_events(death_events, bomb_events: dict[str, Any]) -> list[dict[str, A
             )
     return sorted(events, key=lambda item: (item["round_number"], item.get("tick") or 0))
 
-
 def _round_win_probability(state: dict[str, Any], target_side: str | None) -> float:
     own_alive = max(0, int(state.get("own_alive") or 0))
     enemy_alive = max(0, int(state.get("enemy_alive") or 0))
@@ -1378,12 +1102,10 @@ def _round_win_probability(state: dict[str, Any], target_side: str | None) -> fl
         bomb_bonus = 0.16 if target_side == "T" else -0.16
     return round(min(0.99, max(0.01, alive_component + advantage + bomb_bonus)), 4)
 
-
 def _bomb_event_helps_target(event_type: str, target_side: str | None) -> bool:
     return (event_type == "bomb_exploded" and target_side == "T") or (
         event_type == "bomb_defused" and target_side == "CT"
     )
-
 
 def _score_for_player(
     player: dict[str, str | None],
@@ -1411,7 +1133,6 @@ def _score_for_player(
     result = "win" if rounds_for > rounds_against else "loss" if rounds_for < rounds_against else "draw"
     return {"rounds_for": rounds_for, "rounds_against": rounds_against, "result": result}
 
-
 def _player_team_by_round(player: dict[str, str | None], player_info, player_team_events) -> dict[int, str]:
     player_name = player.get("name")
     player_steamid = player.get("steamid")
@@ -1436,7 +1157,6 @@ def _player_team_by_round(player: dict[str, str | None], player_info, player_tea
     side = _team_number_to_side(team_number)
     return {round_number: side for round_number in rounds}
 
-
 def _team_number_to_side(team_number: Any) -> str:
     try:
         number = int(team_number)
@@ -1444,20 +1164,17 @@ def _team_number_to_side(team_number: Any) -> str:
         return "T"
     return "T" if number == 2 else "CT" if number == 3 else "T"
 
-
 def _matches_player(row: dict[str, Any], player_name: str | None, steamid: str | None, fields: tuple[str, ...]) -> bool:
     values = {str(row.get(field)) for field in fields if row.get(field) is not None}
     if player_name and player_name in values:
         return True
     return bool(steamid and steamid in values)
 
-
 def _rounds_count(deaths, hurts) -> int:
     rounds = {_round_id(row) for row in _records(deaths)}
     rounds.update(_round_id(row) for row in _records(hurts))
     rounds.discard(None)
     return len(rounds)
-
 
 def _records(data) -> list[dict[str, Any]]:
     if data is None:
@@ -1470,14 +1187,11 @@ def _records(data) -> list[dict[str, Any]]:
         return data
     return []
 
-
 def _round_id(row: dict[str, Any]) -> Any:
     return _first_present(row, ("total_rounds_played", "round", "round_num", "round_number")) or 0
 
-
 def _tick(row: dict[str, Any]) -> int:
     return int(row.get("tick") or row.get("game_time") or row.get("game_tick") or 0)
-
 
 def _first_present(row: dict[str, Any], fields: tuple[str, ...]) -> Any:
     for field in fields:
@@ -1485,12 +1199,10 @@ def _first_present(row: dict[str, Any], fields: tuple[str, ...]) -> Any:
             return row.get(field)
     return None
 
-
 def _header_value(header: Any, fields: tuple[str, ...]) -> str | None:
     if isinstance(header, dict):
         return next((str(header[field]) for field in fields if header.get(field)), None)
     return None
-
 
 def _header_datetime(header: Any) -> datetime | None:
     if not isinstance(header, dict):
@@ -1503,178 +1215,9 @@ def _header_datetime(header: Any) -> datetime | None:
     except (TypeError, ValueError, OSError):
         return None
 
-
 def _demo_external_id(path: Path, player: dict[str, str | None], stats: dict[str, Any]) -> str:
     payload = f"{_file_sha1(path)}:{player.get('steamid') or player.get('name')}:{stats['kills']}:{stats['deaths']}"
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()
-
-
-def _save_demo_parse_artifacts(db: Session, match: Match, parsed: dict[str, Any]) -> None:
-    deep = parsed.get("deep") or {}
-    for model in (
-        DemoParseArtifact,
-        DemoRound,
-        DemoPlayerRound,
-        DemoWeaponStat,
-        DemoDamageEvent,
-        DemoDuel,
-        DemoGrenadeEvent,
-    ):
-        db.execute(delete(model).where(model.match_id == match.id))
-    db.add(
-        DemoParseArtifact(
-            match_id=match.id,
-            import_job_id=match.import_job_id,
-            parser_name=str(parsed.get("parser") or "demoparser2"),
-            parser_version=parsed.get("parser_version"),
-            payload_version=str(parsed.get("payload_version") or PARSER_PAYLOAD_VERSION),
-            status=str(parsed.get("status") or "parsed"),
-            source_demo_file=parsed.get("file"),
-            demo_sha1=parsed.get("demo_sha1"),
-            event_counts_json=_to_json(parsed.get("event_counts") or {}),
-            confidence_json=_to_json(
-                {
-                    "metric_confidence": parsed.get("metric_confidence") or {},
-                    "parser_confidence": parsed.get("parser_confidence"),
-                }
-            ),
-            data_gaps_json=_to_json(
-                {
-                    "aim": parsed.get("aim_data_gaps") or [],
-                    "deep": deep.get("data_gaps") or [],
-                    "warnings": parsed.get("warnings") or [],
-                }
-            ),
-            payload_json=_to_json(
-                {
-                    "header": parsed.get("header") or {},
-                    "player": parsed.get("player") or {},
-                    "aim_summary": parsed.get("aim_summary") or {},
-                    "weapon_breakdown": parsed.get("weapon_breakdown") or {},
-                    "swing_summary": parsed.get("swing_summary") or {},
-                    "available_players": parsed.get("available_players") or [],
-                    "deep": deep,
-                    "artifact_retention": artifact_retention_metadata(ARTIFACT_CATEGORY_PARSER_ARTIFACT),
-                    "source_artifact": parsed.get("storage", {}).get("integrity"),
-                }
-            ),
-        )
-    )
-    for row in deep.get("rounds") or []:
-        db.add(
-            DemoRound(
-                match_id=match.id,
-                round_number=_int_or_zero(row.get("round_number")),
-                start_tick=_int_or_none(row.get("start_tick")),
-                freeze_end_tick=_int_or_none(row.get("freeze_end_tick")),
-                end_tick=_int_or_none(row.get("end_tick")),
-                winner_side=row.get("winner_side"),
-                end_reason=row.get("end_reason"),
-                bomb_planted_tick=_int_or_none(row.get("bomb_planted_tick")),
-                bomb_site=row.get("bomb_site"),
-                bomb_outcome=row.get("bomb_outcome"),
-                raw_json=_to_json(row),
-            )
-        )
-    for row in deep.get("player_rounds") or []:
-        db.add(
-            DemoPlayerRound(
-                match_id=match.id,
-                round_number=_int_or_zero(row.get("round_number")),
-                player_name=row.get("player_name"),
-                player_steamid=row.get("player_steamid"),
-                team_side=row.get("team_side"),
-                kills=_int_or_zero(row.get("kills")),
-                deaths=_int_or_zero(row.get("deaths")),
-                assists=_int_or_zero(row.get("assists")),
-                damage=_int_or_zero(row.get("damage")),
-                utility_damage=_int_or_zero(row.get("utility_damage")),
-                headshots=_int_or_zero(row.get("headshots")),
-                flash_assists=_int_or_zero(row.get("flash_assists")),
-                enemies_flashed=_int_or_zero(row.get("enemies_flashed")),
-                opening_kill=_int_or_zero(row.get("opening_kill")),
-                opening_death=_int_or_zero(row.get("opening_death")),
-                survived=_int_or_zero(row.get("survived")),
-                kast=_int_or_zero(row.get("kast")),
-                raw_json=_to_json(row),
-            )
-        )
-    for row in deep.get("weapon_stats") or []:
-        db.add(
-            DemoWeaponStat(
-                match_id=match.id,
-                player_name=row.get("player_name"),
-                player_steamid=row.get("player_steamid"),
-                weapon=str(row.get("weapon") or "unknown"),
-                shots=_int_or_zero(row.get("shots")),
-                hits=_int_or_zero(row.get("hits")),
-                kills=_int_or_zero(row.get("kills")),
-                deaths=_int_or_zero(row.get("deaths")),
-                damage=_int_or_zero(row.get("damage")),
-                headshots=_int_or_zero(row.get("headshots")),
-                accuracy=_float_or_none(row.get("accuracy")),
-                headshot_percent=_float_or_none(row.get("headshot_percent")),
-                raw_json=_to_json(row),
-            )
-        )
-    for row in deep.get("damage_events") or []:
-        db.add(
-            DemoDamageEvent(
-                match_id=match.id,
-                round_number=_int_or_zero(row.get("round_number")),
-                tick=_int_or_none(row.get("tick")),
-                attacker_name=row.get("attacker_name"),
-                attacker_steamid=row.get("attacker_steamid"),
-                victim_name=row.get("victim_name"),
-                victim_steamid=row.get("victim_steamid"),
-                weapon=row.get("weapon"),
-                hitgroup=row.get("hitgroup"),
-                damage_health=_int_or_zero(row.get("damage_health")),
-                damage_armor=_int_or_zero(row.get("damage_armor")),
-                victim_health_after=_int_or_none(row.get("victim_health_after")),
-                raw_json=_to_json(row),
-            )
-        )
-    for row in deep.get("duels") or []:
-        db.add(
-            DemoDuel(
-                match_id=match.id,
-                round_number=_int_or_zero(row.get("round_number")),
-                tick=_int_or_none(row.get("tick")),
-                attacker_name=row.get("attacker_name"),
-                attacker_steamid=row.get("attacker_steamid"),
-                victim_name=row.get("victim_name"),
-                victim_steamid=row.get("victim_steamid"),
-                assister_name=row.get("assister_name"),
-                assister_steamid=row.get("assister_steamid"),
-                weapon=row.get("weapon"),
-                headshot=1 if row.get("headshot") else 0,
-                opening_duel=1 if row.get("opening_duel") else 0,
-                trade_kill=1 if row.get("trade_kill") else 0,
-                distance=_float_or_none(row.get("distance")),
-                raw_json=_to_json(row),
-            )
-        )
-    for row in deep.get("grenade_events") or []:
-        db.add(
-            DemoGrenadeEvent(
-                match_id=match.id,
-                round_number=_int_or_zero(row.get("round_number")),
-                tick=_int_or_none(row.get("tick")),
-                event_type=str(row.get("event_type") or "grenade"),
-                grenade_type=row.get("grenade_type"),
-                player_name=row.get("player_name"),
-                player_steamid=row.get("player_steamid"),
-                x=_float_or_none(row.get("x")),
-                y=_float_or_none(row.get("y")),
-                z=_float_or_none(row.get("z")),
-                flashed_count=_int_or_zero(row.get("flashed_count")),
-                damage=_int_or_zero(row.get("damage")),
-                raw_json=_to_json(row),
-            )
-        )
-    db.commit()
-
 
 def _file_sha1(path: Path) -> str:
     digest = hashlib.sha1()
@@ -1683,35 +1226,19 @@ def _file_sha1(path: Path) -> str:
             digest.update(chunk)
     return digest.hexdigest()
 
-
-def _jsonable(value: Any) -> Any:
-    try:
-        json.dumps(value, default=str)
-        return value
-    except TypeError:
-        return str(value)
-
-
-def _to_json(value: Any) -> str:
-    return json.dumps(_jsonable(value), ensure_ascii=False, default=str)
-
-
 def _parser_version() -> str | None:
     try:
         return importlib.metadata.version("demoparser2")
     except importlib.metadata.PackageNotFoundError:
         return None
 
-
 def _round_number(row: dict[str, Any]) -> int:
     value = _first_present(row, ("total_rounds_played", "round", "round_num", "round_number"))
-    return _int_or_zero(value)
-
+    return int_or_zero(value)
 
 def _tick_or_none(row: dict[str, Any]) -> int | None:
     tick = _tick(row)
     return tick if tick else None
-
 
 def _player_key(steamid: Any, name: Any) -> str:
     steam = _string_or_none(steamid)
@@ -1721,58 +1248,24 @@ def _player_key(steamid: Any, name: Any) -> str:
         return f"name:{str(name).lower()}"
     return "unknown"
 
-
 def _string_or_none(value: Any) -> str | None:
     if value in (None, ""):
         return None
     return str(value)
 
-
-def _int_or_zero(value: Any) -> int:
-    try:
-        return int(float(value or 0))
-    except (TypeError, ValueError):
-        return 0
-
-
-def _int_or_none(value: Any) -> int | None:
-    if value in (None, ""):
-        return None
-    try:
-        return int(float(value))
-    except (TypeError, ValueError):
-        return None
-
-
-def _float_or_none(value: Any) -> float | None:
-    if value in (None, ""):
-        return None
-    try:
-        result = float(value)
-    except (TypeError, ValueError):
-        return None
-    if result != result:
-        return None
-    return result
-
-
 def _position(row: dict[str, Any]) -> dict[str, float | None]:
-    return {"x": _float_or_none(row.get("x")), "y": _float_or_none(row.get("y")), "z": _float_or_none(row.get("z"))}
-
+    return {"x": float_or_none(row.get("x")), "y": float_or_none(row.get("y")), "z": float_or_none(row.get("z"))}
 
 def _compact_row(row: dict[str, Any]) -> dict[str, Any]:
-    return {key: _jsonable(value) for key, value in row.items() if value not in (None, "")}
-
+    return {key: jsonable(value) for key, value in row.items() if value not in (None, "")}
 
 def _is_utility_weapon(weapon: str) -> bool:
     return any(part in weapon for part in ("hegrenade", "inferno", "molotov", "incgrenade", "flashbang", "smoke"))
-
 
 def _grenade_weapon(event_name: str) -> str:
     if event_name == "inferno_startburn":
         return "inferno"
     return event_name.removesuffix("_detonate")
-
 
 def _bomb_site(value: Any) -> str | None:
     if value in (None, ""):
@@ -1783,7 +1276,6 @@ def _bomb_site(value: Any) -> str | None:
         return "B"
     return str(value)
 
-
 def _round_by_tick_index(round_end_events) -> list[tuple[int, int]]:
     return sorted(
         (
@@ -1793,9 +1285,18 @@ def _round_by_tick_index(round_end_events) -> list[tuple[int, int]]:
         key=lambda item: item[1],
     )
 
-
 def _round_for_tick(tick: int, round_by_tick: list[tuple[int, int]]) -> int | None:
     for round_number, end_tick in round_by_tick:
         if tick <= end_tick:
             return round_number
     return round_by_tick[-1][0] if round_by_tick else None
+
+
+
+__all__ = (
+
+    "DemoParseError",
+
+    "parse_demo",
+
+)

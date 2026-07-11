@@ -14,7 +14,8 @@ from app.db.models import (
     DemoWeaponStat,
     Match,
 )
-from app.services.parsing.demo_parser import DemoParseError, import_demo_file, parse_demo
+from app.services.ingestion.demo_import import import_demo_file
+from app.services.parsing.demo_parser import DemoParseError, parse_demo
 from app.services.shared.demo_retention import (
     ARTIFACT_CATEGORY_PARSER_ARTIFACT,
     DEMO_RETENTION_POLICY_RETAIN_RAW,

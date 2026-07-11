@@ -46,6 +46,7 @@ from app.services.coach.provider import (
 from app.services.coach.reports import generate_report, latest_report, markdown_to_html
 from app.services.coach.rules import build_coach_focus
 from app.services.ingestion.demo_downloader import steam_demo_downloader_configured
+from app.services.ingestion.demo_import import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.ingestion.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.ingestion.jobs import (
     IMPORT_JOB_COMPLETED,
@@ -108,7 +109,6 @@ from app.services.owner.sync_batch import (
     run_owner_coach_sync_batch_step,
     start_owner_coach_sync_batch,
 )
-from app.services.parsing.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.shared.i18n import normalize_locale
 from app.services.shared.match_queries import is_playable_match, playable_match_select
 from app.services.shared.metric_policy import metric_definition, metric_warning, usage_decision

@@ -31,6 +31,7 @@ from app.db.models import (
 )
 from app.db.session import SessionLocal
 from app.services.ingestion.demo_acquisition import DEMO_ALREADY_AVAILABLE
+from app.services.ingestion.demo_import import import_demo_file
 from app.services.ingestion.jobs import IMPORT_JOB_COMPLETED, import_job_result
 from app.services.ingestion.orchestration import CANONICAL_IMPORT_JOB_TYPE, run_demo_import_orchestration
 from app.services.ingestion.steam import (
@@ -41,7 +42,7 @@ from app.services.ingestion.steam import (
 )
 from app.services.missions.lifecycle import cancel_coach_mission
 from app.services.owner.match_processing import process_owner_match_after_parser_artifact
-from app.services.parsing.demo_parser import DemoParseError, import_demo_file
+from app.services.parsing.demo_parser import DemoParseError
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 PM_DIR = Path("/opt/jc-coach-pm")

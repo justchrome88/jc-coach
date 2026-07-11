@@ -17,6 +17,7 @@ from app.api.routes.serializers import (
 from app.db.models import ImportJob
 from app.db.session import get_db
 from app.services.ingestion.demo_downloader import steam_demo_downloader_configured
+from app.services.ingestion.demo_import import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.ingestion.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.ingestion.jobs import (
     IMPORT_JOB_COMPLETED,
@@ -44,7 +45,6 @@ from app.services.ingestion.steam import (
 )
 from app.services.ingestion.structured_import import import_csv, import_json
 from app.services.owner.scope import get_owned_import_job
-from app.services.parsing.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 
 
 def _run_steam_import_all_background(job_id: int) -> None:

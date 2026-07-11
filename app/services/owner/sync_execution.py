@@ -16,6 +16,7 @@ from app.db.models import (
 from app.services.coach.ai import (
     build_ai_coach_payload,
 )
+from app.services.ingestion.demo_import import import_demo_file
 from app.services.ingestion.jobs import IMPORT_JOB_COMPLETED
 from app.services.ingestion.orchestration import run_demo_import_orchestration
 from app.services.metrics.snapshots import owner_player_metric_snapshot_scope
@@ -58,7 +59,6 @@ from app.services.owner.sync_types import (
     _OwnerContext,
     logger,
 )
-from app.services.parsing.demo_parser import import_demo_file
 
 
 def _process_candidate(
