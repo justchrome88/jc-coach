@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Match
-from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_new_matches
+from app.services.coach.recommendations import ensure_default_recommendation, evaluate_new_matches
 
 INT_FIELDS = {
     "rounds_for",

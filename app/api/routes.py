@@ -10,20 +10,32 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ImportJob, Match
 from app.db.session import get_db
-from app.services.ai_coach import (
-    ai_provider_health,
+from app.services.auth import current_user_from_session
+from app.services.coach.ai import (
     build_ai_coach_payload,
-    generate_ai_coach_with_provider,
     latest_ai_coach_report,
     latest_ai_handoff,
     list_ai_coach_reports,
     personal_ai_coach_analysis_scope,
-    prepare_ai_coach_handoff,
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
-from app.services.auth import current_user_from_session
-from app.services.coach_domain_ai import coach_domain_slots_payload
+from app.services.coach.domain_analysis import coach_domain_slots_payload
+from app.services.coach.provider import (
+    ai_provider_health,
+    generate_ai_coach_with_provider,
+    prepare_ai_coach_handoff,
+)
+from app.services.coach.recommendations import (
+    extend_recommendation_target,
+    get_active_recommendation_progress,
+    get_all_recommendation_progress,
+    list_recommendation_history,
+    recommendation_category_summary,
+    restart_recommendation_category,
+    update_recommendation_status,
+)
+from app.services.coach.reports import generate_report, latest_report
 from app.services.ingestion.demo_downloader import steam_demo_downloader_configured
 from app.services.ingestion.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.ingestion.jobs import (
@@ -55,16 +67,6 @@ from app.services.metrics.aim import get_aim_profile
 from app.services.metrics.analytics import compare_periods, get_map_stats, get_summary
 from app.services.ownership import get_owned_import_job
 from app.services.parsing.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
-from app.services.recommendation_tracking import (
-    extend_recommendation_target,
-    get_active_recommendation_progress,
-    get_all_recommendation_progress,
-    list_recommendation_history,
-    recommendation_category_summary,
-    restart_recommendation_category,
-    update_recommendation_status,
-)
-from app.services.report_generator import generate_report, latest_report
 from app.services.shared.match_queries import playable_match_select
 
 router = APIRouter(prefix="/api")

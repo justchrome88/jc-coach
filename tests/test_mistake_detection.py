@@ -1,4 +1,4 @@
-from app.services.mistake_detection import category_scorecard, detect_structured_mistakes, mistakes_by_match_id
+from app.services.coach.mistakes import category_scorecard, detect_structured_mistakes, mistakes_by_match_id
 from tests.conftest import make_match
 
 

@@ -1,4 +1,4 @@
-from app.services.coach_insights import (
+from app.services.coach.insights import (
     INSIGHT_CARD_SCHEMA_VERSION,
     MEDIUM_CONFIDENCE_CAVEAT,
     bad_fight_trade_insight_from_snapshot,

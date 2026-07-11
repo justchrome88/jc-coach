@@ -82,9 +82,14 @@ CANONICAL_MODULE_BY_LEGACY_MODULE.update(
     {
         "app_settings": "app.services.ingestion.settings",
         "artifact_integrity": "app.services.ingestion.artifact_integrity",
+        "ai_coach": "app.services.coach.ai",
+        "ai_validator": "app.services.coach.validation",
         "aim_stats": "app.services.metrics.aim",
         "analytics": "app.services.metrics.analytics",
         "coach_metric_pack": "app.services.metrics.coach_pack",
+        "coach_domain_ai": "app.services.coach.domain_analysis",
+        "coach_insights": "app.services.coach.insights",
+        "coach_rules": "app.services.coach.rules",
         "combat_event_derivation": "app.services.parsing.combat_events",
         "core_combat_metrics": "app.services.metrics.combat",
         "demo_parser": "app.services.parsing.demo_parser",
@@ -102,8 +107,11 @@ CANONICAL_MODULE_BY_LEGACY_MODULE.update(
         "metric_downstream_state": "app.services.metrics.downstream",
         "metric_snapshots": "app.services.metrics.snapshots",
         "metric_truth": "app.services.shared.metric_policy",
+        "mistake_detection": "app.services.coach.mistakes",
         "parser_artifact_reader": "app.services.parsing.artifact_reader",
         "parser_evidence": "app.services.parsing.evidence",
+        "recommendation_tracking": "app.services.coach.recommendations",
+        "report_generator": "app.services.coach.reports",
         "steam_demo_acquisition": "app.services.ingestion.demo_acquisition",
         "steam_demo_downloader": "app.services.ingestion.demo_downloader",
         "steam_integration": "app.services.ingestion.steam",
@@ -115,6 +123,8 @@ CANONICAL_MODULE_BY_LEGACY_MODULE.update(
 )
 
 COMPATIBILITY_FACADES = {
+    "app.services.ai_coach": "app.services.coach.ai",
+    "app.services.coach_domain_ai": "app.services.coach.domain_analysis",
     "app.services.demo_parser": "app.services.parsing.demo_parser",
     "app.services.metric_snapshots": "app.services.metrics.snapshots",
     "app.services.steam_demo_downloader": "app.services.ingestion.demo_downloader",

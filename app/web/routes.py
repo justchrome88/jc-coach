@@ -24,19 +24,38 @@ from app.db.models import (
 )
 from app.db.session import SessionLocal, get_db
 from app.main import templates
-from app.services.ai_coach import (
-    ai_provider_health,
-    generate_ai_coach_with_provider,
+from app.services.auth import authenticate_user, current_user_from_session, login_user, logout_user, register_user
+from app.services.coach.ai import (
     latest_ai_coach_report,
     latest_ai_handoff,
     list_ai_coach_reports,
     personal_ai_coach_analysis_scope,
-    prepare_ai_coach_handoff,
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
-from app.services.auth import authenticate_user, current_user_from_session, login_user, logout_user, register_user
-from app.services.coach_rules import build_coach_focus
+from app.services.coach.mistakes import (
+    category_scorecard,
+    detect_structured_mistakes,
+    match_coach_sections,
+    mistakes_by_match_id,
+)
+from app.services.coach.provider import (
+    ai_provider_health,
+    generate_ai_coach_with_provider,
+    prepare_ai_coach_handoff,
+)
+from app.services.coach.recommendations import (
+    extend_recommendation_target,
+    get_active_recommendation_progress,
+    get_all_recommendation_progress,
+    get_evaluations_by_match_id,
+    list_recommendation_history,
+    recommendation_category_summary,
+    restart_recommendation_category,
+    update_recommendation_status,
+)
+from app.services.coach.reports import generate_report, latest_report, markdown_to_html
+from app.services.coach.rules import build_coach_focus
 from app.services.i18n import normalize_locale
 from app.services.ingestion.demo_downloader import steam_demo_downloader_configured
 from app.services.ingestion.demo_storage import demo_storage_report, write_demo_storage_manifest
@@ -83,12 +102,6 @@ from app.services.metrics.confidence import (
     metric_context,
     sort_matches,
 )
-from app.services.mistake_detection import (
-    category_scorecard,
-    detect_structured_mistakes,
-    match_coach_sections,
-    mistakes_by_match_id,
-)
 from app.services.owner_coach_sync_batch import (
     MAX_SUCCESSFUL_TARGET,
     get_owner_coach_sync_batch,
@@ -97,17 +110,6 @@ from app.services.owner_coach_sync_batch import (
     start_owner_coach_sync_batch,
 )
 from app.services.parsing.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
-from app.services.recommendation_tracking import (
-    extend_recommendation_target,
-    get_active_recommendation_progress,
-    get_all_recommendation_progress,
-    get_evaluations_by_match_id,
-    list_recommendation_history,
-    recommendation_category_summary,
-    restart_recommendation_category,
-    update_recommendation_status,
-)
-from app.services.report_generator import generate_report, latest_report, markdown_to_html
 from app.services.shared.match_queries import is_playable_match, playable_match_select
 from app.services.shared.metric_policy import metric_definition, metric_warning, usage_decision
 

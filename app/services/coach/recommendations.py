@@ -1,3 +1,5 @@
+"""Legacy-but-required recommendation lifecycle and evaluation."""
+
 from __future__ import annotations
 
 import json

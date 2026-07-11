@@ -24,14 +24,14 @@ from app.db.models import (
     DemoWeaponStat,
     Match,
 )
-from app.services.ingestion.demo_storage import store_demo_file
-from app.services.ingestion.match_metadata import apply_steam_metadata_to_parsed_demo
-from app.services.recommendation_tracking import (
+from app.services.coach.recommendations import (
     compact_recommendation_evaluations,
     ensure_default_recommendation,
     evaluate_recommendations_for_match,
     recommendation_evaluation_metadata,
 )
+from app.services.ingestion.demo_storage import store_demo_file
+from app.services.ingestion.match_metadata import apply_steam_metadata_to_parsed_demo
 from app.services.shared.demo_retention import (
     ARTIFACT_CATEGORY_PARSER_ARTIFACT,
     ARTIFACT_CATEGORY_RAW_DEMO,

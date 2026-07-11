@@ -195,7 +195,7 @@ def test_versioned_snapshot_identity_and_trusted_payload_fail_closed(db, monkeyp
     assert [row.id for row in select_metric_snapshots_for_analysis_scope(db, scope)] == [accepted.id]
     called = {}
     monkeypatch.setattr(
-        "app.services.ai_coach.process_owner_match_metric_snapshots_for_coach_loop",
+        "app.services.coach.ai.process_owner_match_metric_snapshots_for_coach_loop",
         lambda _db, **kwargs: called.update(kwargs) or {"selected_metric_snapshot_ids": [accepted.id]},
     )
     process_persisted_match_metric_snapshots_for_coach_loop(

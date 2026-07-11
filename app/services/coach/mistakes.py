@@ -1,3 +1,5 @@
+"""Structured mistake detection for coach presentation."""
+
 from __future__ import annotations
 
 from collections import defaultdict

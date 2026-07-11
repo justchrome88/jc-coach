@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from app.services.ai_validator import validate_ai_coach_output
+from app.services.coach.validation import validate_ai_coach_output
 from app.services.shared.metric_policy import metric_definition, usage_decision
 
 SemanticConfidence = Literal["low", "medium", "high"]

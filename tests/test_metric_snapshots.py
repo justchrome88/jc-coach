@@ -279,7 +279,7 @@ def test_process_persisted_match_metric_snapshots_invokes_owner_coach_loop_after
             "mission_status_summaries": [],
         }
 
-    monkeypatch.setattr("app.services.ai_coach.process_owner_match_metric_snapshots_for_coach_loop", fake_hook)
+    monkeypatch.setattr("app.services.coach.ai.process_owner_match_metric_snapshots_for_coach_loop", fake_hook)
 
     result = process_persisted_match_metric_snapshots_for_coach_loop(
         db,

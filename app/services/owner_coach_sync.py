@@ -26,7 +26,7 @@ from app.db.models import (
     SteamAccount,
     User,
 )
-from app.services.ai_coach import (
+from app.services.coach.ai import (
     ANALYSIS_RUN_SOURCE,
     POST_METRICS_COACH_LOOP_HOOK,
     POST_METRICS_COACH_LOOP_SOURCE,

@@ -4,9 +4,7 @@ from datetime import datetime
 from sqlalchemy import select
 
 from app.db.models import CoachRecommendation, Match, MatchRecommendationEvaluation
-from app.services.ingestion.structured_import import import_rows
-from app.services.metrics.confidence import is_exact_date_match, metric_context
-from app.services.recommendation_tracking import (
+from app.services.coach.recommendations import (
     ensure_default_recommendation,
     evaluate_new_matches,
     evaluate_recommendations_for_match,
@@ -20,6 +18,8 @@ from app.services.recommendation_tracking import (
     restart_recommendation_category,
     update_recommendation_status,
 )
+from app.services.ingestion.structured_import import import_rows
+from app.services.metrics.confidence import is_exact_date_match, metric_context
 
 
 def test_creates_default_recommendation_with_baseline(db):

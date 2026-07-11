@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 
 from app.db.models import CoachRecommendation, ImportJob, Match, MatchRecommendationEvaluation, SteamAccount
+from app.services.coach.recommendations import ensure_default_recommendation, evaluate_recommendations_for_match
 from app.services.ingestion.demo_downloader import (
     _download_and_import_match,
     _download_demo_file,
@@ -53,7 +54,6 @@ from app.services.ingestion.steam import (
     validate_openid_callback,
 )
 from app.services.ingestion.storage_guard import SteamImportStorageBudget
-from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_recommendations_for_match
 from app.services.shared.demo_retention import (
     DEMO_RETENTION_POLICY_RETAIN_RAW,
     DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE,

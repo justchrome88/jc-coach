@@ -22,6 +22,10 @@ from sqlalchemy.orm import Session
 
 from app.config import BASE_DIR, get_settings
 from app.db.models import Match, SteamAccount
+from app.services.coach.recommendations import (
+    evaluate_recommendations_for_match,
+    recommendation_evaluation_metadata,
+)
 from app.services.ingestion.match_metadata import (
     STEAM_GC_PLAYED_AT_SOURCE,
     parse_steam_match_time,
@@ -35,10 +39,6 @@ from app.services.ingestion.storage_guard import (
     SteamStorageBudgetExceeded,
 )
 from app.services.parsing.demo_parser import DemoParseError, import_demo_file
-from app.services.recommendation_tracking import (
-    evaluate_recommendations_for_match,
-    recommendation_evaluation_metadata,
-)
 from app.services.shared.demo_retention import (
     DEMO_RETENTION_STATUS_CLEANUP_NEEDED,
     retention_metadata,

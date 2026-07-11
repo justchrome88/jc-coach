@@ -13,7 +13,7 @@ from app.db.models import (
     MissionProgressEvaluation,
     User,
 )
-from app.services.coach_insights import coach_insights_with_mission_readiness_from_snapshots
+from app.services.coach.insights import coach_insights_with_mission_readiness_from_snapshots
 from app.services.mission_domain import (
     MISSION_PAYLOAD_SCHEMA_VERSION,
     activate_coach_mission,

@@ -1,11 +1,11 @@
 from app.db.models import Match
+from app.services.coach.reports import generate_report, markdown_to_html, render_markdown_report
 from app.services.ingestion.structured_import import import_rows
-from app.services.report_generator import generate_report, markdown_to_html, render_markdown_report
 
 
 def test_render_markdown_report(sample_rows):
     matches = [Match(**row, source="test", external_match_id=f"id-{index}") for index, row in enumerate(sample_rows)]
-    from app.services.coach_rules import build_coach_focus
+    from app.services.coach.rules import build_coach_focus
     from app.services.metrics.analytics import compare_periods, detect_weaknesses, get_map_stats, get_summary
 
     summary = get_summary(matches)

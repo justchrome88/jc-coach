@@ -1,7 +1,7 @@
 import json
 from copy import deepcopy
 
-from app.services.ai_coach import (
+from app.services.coach.ai import (
     AI_COACH_DOMAIN_CONTRACT_VERSION,
     AI_COACH_PAYLOAD_SCHEMA_VERSION,
     AI_COACH_PROMPT_VERSION,
@@ -11,7 +11,7 @@ from app.services.ai_coach import (
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
-from app.services.ai_validator import validate_ai_coach_output
+from app.services.coach.validation import validate_ai_coach_output
 from app.services.ingestion.structured_import import import_rows
 from app.services.shared.metric_policy import METRIC_REGISTRY_VERSION
 

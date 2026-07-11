@@ -1,3 +1,5 @@
+"""Deterministic evidence-backed coach insight construction."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.services.coach_domain_ai import (
+from app.services.coach.domain_analysis import (
     OUTPUT_SCHEMA_VERSION,
     temporal_survival_metrics,
     validate_domain_output,

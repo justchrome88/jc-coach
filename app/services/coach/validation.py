@@ -1,3 +1,5 @@
+"""Canonical structured coach-output validation and safe rendering."""
+
 from __future__ import annotations
 
 import json
@@ -5,7 +7,7 @@ import re
 from dataclasses import asdict, dataclass
 from typing import Any, Literal
 
-from app.services.coach_insights import (
+from app.services.coach.insights import (
     no_data_insight_card,
     serialize_insight_cards,
     validate_insight_cards,

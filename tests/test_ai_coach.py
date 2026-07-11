@@ -6,15 +6,12 @@ import pytest
 
 from app.api import routes as api_routes
 from app.db.models import AnalysisRun, CoachHypothesis, CoachReport, Match, SteamAccount, User
-from app.services.ai_coach import (
+from app.services.coach.ai import (
     AI_COACH_DOMAIN_CONTRACT_VERSION,
     AI_COACH_PAYLOAD_SCHEMA_VERSION,
     AI_COACH_PROMPT_VERSION,
     AI_COACH_SNAPSHOT_CONTRACT_VERSION,
     AI_COACH_SNAPSHOT_GENERATED_BY,
-    CodexCliHandoffProvider,
-    LocalLLMProvider,
-    ai_provider_health,
     build_ai_coach_payload,
     build_ai_coach_prompt,
     latest_ai_coach_report,
@@ -24,6 +21,7 @@ from app.services.ai_coach import (
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
+from app.services.coach.provider import CodexCliHandoffProvider, LocalLLMProvider, ai_provider_health
 from app.services.ingestion.structured_import import import_rows
 from app.services.metrics.snapshots import (
     MetricSnapshotAnalysisScope,
@@ -1040,7 +1038,7 @@ def test_codex_handoff_provider_writes_prompt_and_payload(monkeypatch, tmp_path)
         ai_handoff_dir=tmp_path,
         ai_codex_command="codex exec",
     )
-    monkeypatch.setattr("app.services.ai_coach.get_settings", lambda: settings)
+    monkeypatch.setattr("app.services.coach.provider.get_settings", lambda: settings)
 
     result = CodexCliHandoffProvider().prepare(
         {
@@ -1213,7 +1211,7 @@ def test_local_llm_provider_calls_ollama(monkeypatch):
         local_llm_model="test-model",
         local_llm_timeout_seconds=5,
     )
-    monkeypatch.setattr("app.services.ai_coach.get_settings", lambda: settings)
+    monkeypatch.setattr("app.services.coach.provider.get_settings", lambda: settings)
 
     class FakeResponse:
         def __enter__(self):
@@ -1230,7 +1228,7 @@ def test_local_llm_provider_calls_ollama(monkeypatch):
         assert timeout == 5
         return FakeResponse()
 
-    monkeypatch.setattr("app.services.ai_coach.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("app.services.coach.provider.urllib.request.urlopen", fake_urlopen)
 
     result = LocalLLMProvider().generate(
         {
@@ -1247,7 +1245,7 @@ def test_local_llm_provider_calls_ollama(monkeypatch):
 
 def test_ai_provider_health_for_handoff(monkeypatch):
     settings = SimpleNamespace(ai_provider="codex_cli_handoff")
-    monkeypatch.setattr("app.services.ai_coach.get_settings", lambda: settings)
+    monkeypatch.setattr("app.services.coach.provider.get_settings", lambda: settings)
 
     health = ai_provider_health()
 
