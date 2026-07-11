@@ -27,11 +27,13 @@ domains, two clone missions, dual insufficient-data evaluations, two-card API,
 repeat/concurrency/failure behavior, and production no-mutation. The first
 blocked artifacts remain valid history.
 
-R02A4T is the current narrow clone-only timed-observability, source-provenance,
-and two-card semantic closure. It temporarily gates R03 and must not repeat the
-accepted external Steam, parser, or configured-model run.
+R02A4T is accepted with warnings. It preserves R02A4R as the genuine live
+functional acceptance, classifies the R02A4R JSONL honestly as a complete
+terminal summary rather than a timed trace, and adds a 29/29 v2 clone-only
+timed replay with explicit source-date provenance and distinct two-card
+semantics. It made zero external Steam or configured-model calls.
 
-R03 mission-card and activation UI work remains the next task. Its
+R03 mission-card and activation UI work is released as the next task. Its
 backend can use the authenticated `coach-domain-slots-v1` two-card read model
 and explicit idempotent proposal activation boundary accepted in R02A4R. R04
 replay follows R03, then planned R05 personal beta, R06 polish, and deferred

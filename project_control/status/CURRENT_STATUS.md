@@ -11,19 +11,24 @@ Original sources preserved at:
 ## Current route
 
 - CURRENT_LANE: `H01B_DOCUMENTATION_AND_CODEBASE_CONSOLIDATION`
-- CURRENT_TASK: `H01B-R02A4T_TRUE_TIMED_OBSERVABILITY_PROVENANCE_AND_TWO_CARD_SEMANTIC_CLOSURE`
+- CURRENT_TASK: `none`
 - NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`
-- NEXT_TASK_GATED: `true`
+- NEXT_TASK_GATED: `false`
 - R02A3_MAY_START: `false`
 - THEN: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`
 
 R02A4 is an accepted one-time acceptance gate proving the consolidated
-architecture as one observable Steam-to-coach vertical chain. R02A4T is the
-current narrow clone-only observability and provenance closure; it temporarily
-gates R03 without reopening R02A4R or repeating external acceptance.
+architecture as one observable Steam-to-coach vertical chain. R02A4T accepted
+the separate clone-only timed-observability, provenance, and semantic proof
+without reopening R02A4R or repeating external acceptance. R03 is released.
 
 - H01B_R02A4_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A4R_STATUS: `PASS_WITH_WARNINGS`.
+- H01B_R02A4T_STATUS: `PASS_WITH_WARNINGS`.
+- TRACE_CLASSIFICATION: R02A4 was the blocked storage trace; R02A4R was the
+  genuine live functional acceptance with a complete terminal summary rather
+  than a timed trace; R02A4T is the instrumented clone-only timed integration
+  replay.
 - STORAGE_CAPACITY_REMEDIATED: `true`; the external filesystem expansion let
   the unchanged 8 GiB minimum, 5 GiB preserve-free floor, and one-demo cap
   pass. The first blocked attempt remains valid historical evidence.
@@ -33,7 +38,10 @@ gates R03 without reopening R02A4R or repeating external acceptance.
   `/opt/jc-coach-pm/reports/H01B-R02A4_stage_trace.jsonl`,
   `/opt/jc-coach-pm/reports/H01B-R02A4R_storage_remediated_full_vertical_acceptance_report.md`,
   `/opt/jc-coach-pm/reports/H01B-R02A4R_full_vertical_acceptance_artifact.json`,
-  and `/opt/jc-coach-pm/reports/H01B-R02A4R_stage_trace.jsonl`.
+  `/opt/jc-coach-pm/reports/H01B-R02A4R_stage_trace.jsonl`,
+  `/opt/jc-coach-pm/reports/H01B-R02A4T_true_timed_observability_and_provenance_closure_report.md`,
+  `/opt/jc-coach-pm/reports/H01B-R02A4T_observability_provenance_and_semantic_artifact.json`,
+  and `/opt/jc-coach-pm/reports/H01B-R02A4T_timed_replay_trace.jsonl`.
 
 ## Accepted Product state
 
@@ -47,6 +55,7 @@ gates R03 without reopening R02A4R or repeating external acceptance.
 - H01B_R02A2D_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A3_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A4_STATUS: `PASS_WITH_WARNINGS`.
+- H01B_R02A4T_STATUS: `PASS_WITH_WARNINGS`.
 - Canonical coach domains: `impact_leak`, `bad_fight_selection`.
 - Performance, utility, and aim are metric groups, not coach domains.
 - Domain slots per owner: `2`; cross-domain proposals are allowed.

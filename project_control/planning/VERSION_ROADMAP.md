@@ -55,6 +55,13 @@ two-domain clone activation, subsequent-match evaluation, two-card backend,
 repeat/concurrency/failure behavior, complete sanitized trace, and production
 no-mutation. Evidence:
 `/opt/jc-coach-pm/reports/H01B-R02A4R_storage_remediated_full_vertical_acceptance_report.md`.
+
+R02A4T separately accepted true execution timing at the actual clone replay
+boundaries. Its v2 trace has all 29 terminal stages, real timestamps, monotonic
+durations, attempts, and implementation versions; it also proves explicit
+file-modified-fallback date provenance and semantically distinct canonical
+cards. R02A4T is not a second live external run. Evidence:
+`/opt/jc-coach-pm/reports/H01B-R02A4T_true_timed_observability_and_provenance_closure_report.md`.
 R03 is released.
 
 ## E. Functional MVP milestone — R03 minimal functional UI
@@ -103,6 +110,6 @@ Multi-user/public readiness, public deployment, broader coach domains, and
 additional tactical or spatial evidence are later work. They are not current
 MVP requirements; no third coach domain is authorized.
 
-Canonical sequence: **R02A4 inserted acceptance gate → R03 → R04 → R05 planned → R06 planned →
-R07 deferred/planned**. Working complete functionality precedes replay and real
+Canonical sequence: **R02A4R accepted → R02A4T timed evidence closure → R03 → R04 →
+R05 planned → R06 planned → R07 deferred/planned**. Working complete functionality precedes replay and real
 personal validation; visual polish follows both.

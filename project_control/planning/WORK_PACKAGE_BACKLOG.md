@@ -39,10 +39,27 @@ in `WP_REGISTRY.md`.
   and
   `/opt/jc-coach-pm/reports/H01B-R02A4R_storage_remediated_full_vertical_acceptance_report.md`.
 
+## H01B-R02A4T — completed with warnings
+
+- **Purpose:** close true timing, source-date provenance, and two-card semantic
+  evidence without repeating the accepted external run.
+- **Dependencies:** accepted R02A4R live functional checkpoint and retained
+  isolated source run `20260711T181221Z`.
+- **Scope:** compatible trace v2, actual clone replay boundary timing, explicit
+  persisted date provenance, safe semantic hashes/similarity, and full gates.
+- **Explicit non-goals:** no Steam/model call, parser recomputation, second DEM,
+  new metric/domain, UI, schema, production mutation, or service restart.
+- **Acceptance summary:** a fresh byte-identical child replay produced 29/29
+  timed terminal stages, non-universal-zero durations, explicit approximate
+  file-modified provenance, distinct two-card diagnoses, and zero production
+  mutation.
+- **Evidence/result:**
+  `/opt/jc-coach-pm/reports/H01B-R02A4T_true_timed_observability_and_provenance_closure_report.md`.
+
 ## H01B-R03 — next, ungated
 
 - **Purpose:** deliver the minimal, complete two-mission functional MVP UI.
-- **Dependencies:** accepted R02A4 inserted acceptance gate.
+- **Dependencies:** accepted R02A4R live function and R02A4T timed evidence closure.
 - **Scope:** two domain cards; analyzing/proposal/no-problem/insufficient/error
   states; pinning; explicit activation of one, both, or neither; per-domain
   mission lifecycle; baseline/current/target/confidence/caveats; per-match
