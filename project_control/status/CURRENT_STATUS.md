@@ -11,11 +11,11 @@ Original sources preserved at:
 ## Current route
 
 - CURRENT_LANE: `H01B_DOCUMENTATION_AND_CODEBASE_CONSOLIDATION`
-- CURRENT_TASK: `none`
-- NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`
-- NEXT_TASK_GATED: `false`
+- CURRENT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`
+- NEXT_TASK: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`
+- NEXT_TASK_GATED: `true`
 - R02A3_MAY_START: `false`
-- THEN: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`
+- THEN: `H01B-R05_LIVE_PERSONAL_BETA`
 
 R02A4 is an accepted one-time acceptance gate proving the consolidated
 architecture as one observable Steam-to-coach vertical chain. R02A4T accepted

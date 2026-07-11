@@ -56,7 +56,7 @@ in `WP_REGISTRY.md`.
 - **Evidence/result:**
   `/opt/jc-coach-pm/reports/H01B-R02A4T_true_timed_observability_and_provenance_closure_report.md`.
 
-## H01B-R03 — next, ungated
+## H01B-R03 — current
 
 - **Purpose:** deliver the minimal, complete two-mission functional MVP UI.
 - **Dependencies:** accepted R02A4R live function and R02A4T timed evidence closure.
@@ -72,7 +72,7 @@ in `WP_REGISTRY.md`.
   flows with subsequent-match-only progress.
 - **Evidence/result:** add the accepted R03 PM report when complete.
 
-## H01B-R04 — pending
+## H01B-R04 — pending, gated
 
 - **Purpose:** accept the complete two-domain Product loop through a 30+10 replay.
 - **Dependencies:** accepted R03.

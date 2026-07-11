@@ -33,8 +33,8 @@ Last updated: 2026-07-11. Exact status and gating are authoritative in
 - [x] R02A4T: R02A4R remains the live functional proof; the v1 JSONL is a
   terminal summary, while the separate v2 clone replay has 29/29 real timed
   boundaries, explicit date provenance, and distinct card semantics.
-- [ ] R03: an eligible owner can activate one, both, or neither proposal; never
+- [ ] R03 (current): an eligible owner can activate one, both, or neither proposal; never
   automatic activation; at most one active mission per owner and domain.
-- [ ] R04: progress uses only matches after activation baseline and preserves
+- [ ] R04 (gated): progress uses only matches after activation baseline and preserves
   evidence, confidence, caveats, insufficient-data behavior, and idempotency.
 - [ ] R05: real personal-match findings are captured before R06 polish.

@@ -33,10 +33,10 @@ terminal summary rather than a timed trace, and adds a 29/29 v2 clone-only
 timed replay with explicit source-date provenance and distinct two-card
 semantics. It made zero external Steam or configured-model calls.
 
-R03 mission-card and activation UI work is released as the next task. Its
+R03 mission-card and activation UI work is current. Its
 backend can use the authenticated `coach-domain-slots-v1` two-card read model
 and explicit idempotent proposal activation boundary accepted in R02A4R. R04
-replay follows R03, then planned R05 personal beta, R06 polish, and deferred
+replay is gated until R03 acceptance, then planned R05 personal beta, R06 polish, and deferred
 R07 operational hardening.
 
 Current accepted behavior is summarized in `CURRENT_STATUS.md`. Historical

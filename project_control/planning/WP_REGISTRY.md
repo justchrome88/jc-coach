@@ -6,9 +6,9 @@ This is the concise authoritative status registry. Detailed scope belongs in
 `WORK_PACKAGE_BACKLOG.md`; the human milestone view belongs in
 `../checklists/MASTER_WP_CHECKLIST.md`.
 
-- CURRENT_TASK: `none`
-- NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`
-- NEXT_TASK_GATED: `false`
+- CURRENT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`
+- NEXT_TASK: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`
+- NEXT_TASK_GATED: `true`
 - CANONICAL_SEQUENCE: `R02A4R accepted → R02A4T timed evidence closure → R03 → R04 → R05 planned → R06 planned → R07 deferred/planned`
 
 | Task/milestone | Status | Gate / dependency | Evidence |
@@ -22,8 +22,8 @@ This is the concise authoritative status registry. Detailed scope belongs in
 | H01B-R02A3 | complete_with_warnings | R02A2D | `/opt/jc-coach-pm/reports/H01B-R02A3_codebase_service_boundary_consolidation_report.md` |
 | H01B-R02A4 | complete_with_warnings | accepted by storage-remediated R02A4R continuation; first blocked evidence preserved | `/opt/jc-coach-pm/reports/H01B-R02A4R_storage_remediated_full_vertical_acceptance_report.md` |
 | H01B-R02A4T | complete_with_warnings | 29/29 clone-only timed replay, explicit date provenance, and distinct card semantics; no external rerun | `/opt/jc-coach-pm/reports/H01B-R02A4T_true_timed_observability_and_provenance_closure_report.md` |
-| H01B-R03 | next | accepted R02A4R live function plus R02A4T timed evidence; ungated | add accepted R03 report |
-| H01B-R04 | pending | requires accepted R03 | add accepted R04 report |
+| H01B-R03 | current | accepted R02A4R live function plus R02A4T timed evidence | add accepted R03 report |
+| H01B-R04 | pending_gated | requires accepted R03 | add accepted R04 report |
 | H01B-R05 | planned | requires accepted R04 and live-action authority | none |
 | H01B-R06 | planned | follows Product validation, including R05 findings | none |
 | H01B-R07 | deferred_planned | follows validation unless an earlier blocker proves need | none |
