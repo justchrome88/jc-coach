@@ -5,7 +5,7 @@ Last updated: 2026-07-11.
 This file owns detailed planned work. Exact status and gating are authoritative
 in `WP_REGISTRY.md`.
 
-## H01B-R02A3 — next
+## H01B-R02A3 — completed with warnings
 
 - **Purpose:** consolidate codebase and service boundaries before UI work.
 - **Dependencies:** R02A2D accepted; no remaining documentation gate.
@@ -15,12 +15,30 @@ in `WP_REGISTRY.md`.
   Product-domain, mission, provider, queue, or UI redesign.
 - **Acceptance summary:** stable behavior and public imports, clearer service
   ownership, no new root-level service sprawl, full technical gate PASS.
-- **Evidence/result:** add the accepted R02A3 PM report when complete.
+- **Evidence/result:** `/opt/jc-coach-pm/reports/H01B-R02A3_codebase_service_boundary_consolidation_report.md`.
+
+## H01B-R02A4 — current inserted acceptance gate
+
+- **Purpose:** prove the post-refactor owner-scoped Steam-to-coach pipeline as
+  one complete observable Product chain before UI implementation.
+- **Dependencies:** accepted R02A3 architecture checkpoint.
+- **Scope:** isolated clone, one genuine Steam acquisition, real parser and
+  current metrics, real configured-model calls for both canonical domains,
+  clone-only dual activation and subsequent-match evaluation, stable raw card
+  payloads, structured stage trace, repeat/concurrency/failure evidence, and
+  production no-mutation proof.
+- **Explicit non-goals:** no permanent feature, UI, new domain or metric,
+  provider architecture, queue, import-cap, schema, production activation, or
+  30+10 replay change.
+- **Acceptance summary:** every required vertical stage is real where mandated,
+  owner-isolated, lineage-stable, observable, idempotent, and leaves production
+  DB, artifacts, missions, and service untouched.
+- **Evidence/result:** add the R02A4 report, JSON artifact, and JSONL stage trace.
 
 ## H01B-R03 — pending
 
 - **Purpose:** deliver the minimal, complete two-mission functional MVP UI.
-- **Dependencies:** accepted R02A3.
+- **Dependencies:** accepted R02A4 inserted acceptance gate.
 - **Scope:** two domain cards; analyzing/proposal/no-problem/insufficient/error
   states; pinning; explicit activation of one, both, or neither; per-domain
   mission lifecycle; baseline/current/target/confidence/caveats; per-match

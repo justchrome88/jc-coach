@@ -27,18 +27,29 @@ confidence and caveats.
 | Real LLM 30-match hypothesis engine | Immutable 30-match baseline, real structured hypotheses, and two proposal slots accepted. | `/opt/jc-coach-pm/reports/H01B-R02_two_domain_ai_hypothesis_and_mission_proposal_engine_report.md` |
 | Documentation/control/runtime-contract consolidation | Canonical zones, current-document parity, and the final two-file compatibility shell accepted. | `/opt/jc-coach-pm/reports/H01B-R02A2D_final_docs_shell_and_roadmap_reconstruction_report.md` |
 
-## C. Current milestone — R02A3 codebase/service-boundary consolidation
+## C. Completed milestone — R02A3 codebase/service-boundary consolidation
 
 R02A3 makes the accepted backend easier to change safely before UI work. It
 consolidates application package and service boundaries without changing
 Product behavior, DB/schema/data, domain contracts, or the two-domain model.
 
-Exit criteria: bounded package ownership, reduced cross-service coupling,
+Accepted outcome: bounded package ownership, reduced cross-service coupling,
 stable public behavior and imports, an updated package-level code map, and all
-focused plus full technical gates passing. R03 remains gated on acceptance of
-R02A3.
+focused plus full technical gates passing.
 
-## D. Functional MVP milestone — R03 minimal functional UI
+## D. Current inserted acceptance gate — R02A4 full vertical observability
+
+R02A4 is a one-time acceptance gate inserted before UI work. It proves that the
+consolidated architecture operates as one complete owner-scoped Steam-to-coach
+pipeline using a genuine acquisition, real parser, current metrics, real model
+calls for both canonical domains, clone-only dual activation, subsequent-match
+progress, stable raw card serialization, and sanitized per-stage lineage.
+
+R02A4 does not add a permanent Product feature or expand domains, metrics,
+provider architecture, import capacity, schema, public readiness, or UI scope.
+R03 remains gated until this acceptance task closes.
+
+## E. Functional MVP milestone — R03 minimal functional UI
 
 Deliver complete functionality with minimal styling:
 
@@ -52,38 +63,38 @@ Deliver complete functionality with minimal styling:
   after activation baseline; and
 - authentication and owner isolation across UI and API behavior.
 
-## E. End-to-end acceptance milestone — R04 30+10 replay
+## F. End-to-end acceptance milestone — R04 30+10 replay
 
 Prove the full Product loop with a 30-match immutable baseline, two supported
 proposals, explicit activation of both, and 10 subsequent matches fed one by
 one. Acceptance requires independent progress timelines, insufficient-data
 handling, idempotent reprocessing, and DB/API/dashboard/match-page parity.
 
-## F. Live personal beta milestone — R05 planned, not authorized
+## G. Live personal beta milestone — R05 planned, not authorized
 
 Process real newly played personal matches; review hypothesis usefulness,
 false positives and unsupported claims, latency and provider reliability, and
 mission target quality. Collect Product changes before visual polish.
 
-## G. Visual Product milestone — R06 planned, not authorized
+## H. Visual Product milestone — R06 planned, not authorized
 
 After functional MVP acceptance and personal-match validation, improve
 responsive layout, visual hierarchy, loading/empty/error states, mission
 history presentation, readable evidence and caveats, accessibility, and design
 consistency.
 
-## H. Operational hardening milestone — R07 deferred/planned
+## I. Operational hardening milestone — R07 deferred/planned
 
 Harden provider routing, queues, observability, reliability, and cost controls
 after Product validation unless R03–R05 exposes an earlier blocker. This is not
 a prerequisite for the personal MVP by default.
 
-## I. Later/public scope
+## J. Later/public scope
 
 Multi-user/public readiness, public deployment, broader coach domains, and
 additional tactical or spatial evidence are later work. They are not current
 MVP requirements; no third coach domain is authorized.
 
-Canonical sequence: **R02A3 → R03 → R04 → R05 planned → R06 planned →
+Canonical sequence: **R02A4 inserted acceptance gate → R03 → R04 → R05 planned → R06 planned →
 R07 deferred/planned**. Working complete functionality precedes replay and real
 personal validation; visual polish follows both.
