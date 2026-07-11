@@ -19,27 +19,22 @@ Use this source-of-truth order when sources conflict:
 
 1. Current explicit user task, for scope and stricter constraints.
 2. This root `AGENTS.md`.
-3. `project_control/status/CURRENT_STATUS.md`.
-4. `project_control/status/HANDOFF.md`.
-5. `project_control/planning/WP_REGISTRY.md`.
-6. Task-relevant `project_docs/` or `project_control/` material.
-7. Current code and tests.
-8. `_legacy_archive/` and Git history, as noncanonical evidence only.
-9. PM working state when it does not conflict with Product truth.
+3. `docs/CURRENT_STATUS.md`.
+4. `docs/HANDOFF.md`.
+5. `docs/project_management/WP_REGISTRY.md`.
+6. Task-relevant Warm docs.
+7. Code, tests and task-relevant historical evidence.
 
 Do not read all docs by default.
 
-Hot context for ordinary tasks: `AGENTS.md`,
-`project_control/status/CURRENT_STATUS.md`,
-`project_control/status/HANDOFF.md` and
-`project_control/planning/WP_REGISTRY.md`.
+Hot context for ordinary tasks: `AGENTS.md`, `docs/CURRENT_STATUS.md`,
+`docs/HANDOFF.md` and `docs/project_management/WP_REGISTRY.md`.
 
 Read Warm docs only when task-relevant, such as roadmap, acceptance, workflow,
 DB/data safety, import/parser/evaluator, recommendation, UI, service,
 deployment, testing, security or historical WP review context. Old reports,
-prompts, audits and generated app reports in `_legacy_archive/` are
-evidence/history only; active agents and runtime code must not read them. They
-must not override this contract or Hot docs.
+prompts, audits and generated app reports are evidence/history only; they must
+not override this contract or Hot docs.
 
 For external library, framework, API or tooling behavior, use Context7 MCP or
 official current docs when the task depends on that behavior. External docs
@@ -61,8 +56,6 @@ never override project source-of-truth docs or the active task scope.
   scope.
 - Do not generate persistent app reports unless explicitly authorized.
 - Do not print secret values.
-- `.env` and `.env.example` remain root configuration entrypoints and are not
-  runtime contracts under `app/contracts/`.
 - If risky work is authorized, keep it narrow and report the requested safety
   evidence.
 
@@ -94,12 +87,6 @@ never override project source-of-truth docs or the active task scope.
 - WP-018 and major CS2 product work remain paused unless explicitly authorized
   by the current user task and Hot docs.
 - Public/friends readiness remains blocked.
-- Package version `0.1.0` and product maturity `v0.9` are intentionally
-  distinct; this contract does not authorize a package-version change.
-- `app/services/coach_domain_model.py` remains the runtime coach-domain source;
-  `app/contracts/coach/coach-domain-model.json` is its declared contract and
-  must pass strict whole-field parity validation. JSON must not silently
-  override runtime behavior.
 
 ## 6. Task Execution Defaults
 
@@ -109,11 +96,8 @@ never override project source-of-truth docs or the active task scope.
   rewriting unless explicitly scoped.
 - Do not mark deferred, paused or failed work as implemented.
 - Do not close blockers silently.
-- Use task-relevant `project_docs/` and `project_control/` files for detailed
-  workflow or safety mechanics instead of carrying historical bureaucracy into
-  every ordinary task.
-- Changes under `app/contracts/metrics/**` or `project_docs/metrics/**` must
-  also follow the fixed nested policy at `docs/metrics/AGENTS.md`.
+- Use task-relevant Warm docs for detailed workflow or safety mechanics instead
+  of carrying old Foundation-era bureaucracy into every ordinary task.
 
 ## 7. Reporting Defaults
 
@@ -143,30 +127,20 @@ Stop and report `BLOCKED` when:
 
 ## 9. Reference Map
 
-- Hot status: `project_control/status/CURRENT_STATUS.md`; handoff:
-  `project_control/status/HANDOFF.md`; WP order and gates:
-  `project_control/planning/WP_REGISTRY.md`.
-- Warm governance/process references:
-  `project_control/agents/PROJECT_OPERATING_PROTOCOL.md`,
-  `project_control/agents/AGENT_WORKFLOW.md`,
-  `project_control/checklists/MASTER_WP_CHECKLIST.md` and
-  `project_control/agents/roles/*`.
-- Warm roadmap/planning references:
-  `project_control/planning/VERSION_ROADMAP.md`,
-  `project_control/planning/WORK_PACKAGE_BACKLOG.md` and
-  `project_control/checklists/ACCEPTANCE_MATRIX.md`.
-- Human documentation starts at `project_docs/README.md`; runtime contracts
-  are under `app/contracts/`; `_legacy_archive/` is never current truth.
+- Hot status: `docs/CURRENT_STATUS.md`; handoff: `docs/HANDOFF.md`; WP order
+  and gates: `docs/project_management/WP_REGISTRY.md`.
+- Warm governance/process references: `docs/project_management/PROJECT_OPERATING_PROTOCOL.md`,
+  `docs/project_management/AGENT_WORKFLOW.md`,
+  `docs/project_management/MASTER_WP_CHECKLIST.md` and `docs/agents/roles/*`.
+- Warm roadmap/planning references: `docs/project_management/VERSION_ROADMAP.md`,
+  `docs/project_management/WORK_PACKAGE_BACKLOG.md` and
+  `docs/project_management/ACCEPTANCE_MATRIX.md`.
+- Historical reports and audits are task-relevant evidence only.
 
 ## 10. Manual Task Commit Policy
 
-Commit authority is mode-dependent. For manually executed Codex task cards,
-task-authorized local Product and PM commits are allowed; no push is allowed.
-In an autonomous runner Executor phase, follow the runner/PM protocol and do
-not independently invent commit authority. The explicit task card always wins.
-
-For ordinary manual tasks, local commit is authorized by default when the task
-finishes with `PASS` or `PASS_WITH_WARNINGS`.
+For manually executed Codex task cards, local commit is authorized by default
+when the task finishes with `PASS` or `PASS_WITH_WARNINGS`.
 
 The executor must:
 
@@ -197,7 +171,7 @@ Default context for product tasks:
 
 1. current task card;
 2. `/opt/jc-coach/AGENTS.md`;
-3. `/opt/jc-coach/project_control/status/CURRENT_STATUS.md`;
+3. `/opt/jc-coach/docs/CURRENT_STATUS.md`;
 4. only directly relevant product files;
 5. only directly relevant tests.
 
