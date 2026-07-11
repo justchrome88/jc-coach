@@ -20,7 +20,7 @@ This is the concise authoritative status registry. Detailed scope belongs in
 | H01B-R02 real LLM proposals | complete_with_warnings | R01 | `/opt/jc-coach-pm/reports/H01B-R02_two_domain_ai_hypothesis_and_mission_proposal_engine_report.md` |
 | H01B-R02A2D | complete_with_warnings | R02A2C | `/opt/jc-coach-pm/reports/H01B-R02A2D_final_docs_shell_and_roadmap_reconstruction_report.md` |
 | H01B-R02A3 | complete_with_warnings | R02A2D | `/opt/jc-coach-pm/reports/H01B-R02A3_codebase_service_boundary_consolidation_report.md` |
-| H01B-R02A4 | current | inserted post-refactor vertical acceptance gate | add R02A4 report, artifact, and stage trace |
+| H01B-R02A4 | current | blocked on unchanged isolated storage preflight; rerun after capacity remediation | `/opt/jc-coach-pm/reports/H01B-R02A4_post_refactor_full_vertical_acceptance_report.md` |
 | H01B-R03 | gated | requires accepted R02A4 | add accepted R03 report |
 | H01B-R04 | pending | requires accepted R03 | add accepted R04 report |
 | H01B-R05 | planned | requires accepted R04 and live-action authority | none |
@@ -31,3 +31,7 @@ This is the concise authoritative status registry. Detailed scope belongs in
 Task IDs must not be reused. An explicit current task card controls immediate
 scope. Deferred, failed, historical, or superseded work must never be reported
 as implemented.
+
+Current R02A4 blocker evidence also includes
+`/opt/jc-coach-pm/reports/H01B-R02A4_full_vertical_acceptance_artifact.json`
+and `/opt/jc-coach-pm/reports/H01B-R02A4_stage_trace.jsonl`. R03 remains gated.

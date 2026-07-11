@@ -25,6 +25,13 @@ observability against isolated mutable state. R03 mission-card and activation
 UI work is next but gated on accepted R02A4; R04 replay follows R03, then
 planned R05 personal beta, R06 polish, and deferred R07 operational hardening.
 
+R02A4 is blocked at the canonical isolated Steam storage preflight. The run
+filesystem had about 2.25 GB free versus the configured 8 GB minimum and 5 GB
+preserve-free floor. The guard was not weakened; no Steam acquisition, parser,
+model call, activation, or evaluation ran. Free at least enough space to pass
+the unchanged guard, then rerun R02A4 from a fresh byte-identical clone. R03
+remains gated.
+
 Current accepted behavior is summarized in `CURRENT_STATUS.md`. Historical
 status blocks and task evidence are noncanonical under `_legacy_archive/` or PM
 reports and must not be loaded as active context.

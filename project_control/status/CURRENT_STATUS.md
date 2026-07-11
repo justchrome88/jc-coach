@@ -21,6 +21,16 @@ R02A4 is an inserted acceptance gate proving the consolidated architecture as
 one observable Steam-to-coach vertical chain. It is not a permanent Product
 feature. R03 remains next but gated until R02A4 closes.
 
+- H01B_R02A4_STATUS: `BLOCKED`.
+- R02A4_BLOCKER: `BLOCKED_STORAGE_PREFLIGHT_CAPACITY` — the isolated run
+  filesystem had 2,249,969,664 bytes free, below the canonical 8,589,934,592
+  byte minimum and 5,368,709,120 byte preserve-free floor. No Steam or model
+  call was attempted and the storage guard was not weakened.
+- R02A4_EVIDENCE:
+  `/opt/jc-coach-pm/reports/H01B-R02A4_post_refactor_full_vertical_acceptance_report.md`,
+  `/opt/jc-coach-pm/reports/H01B-R02A4_full_vertical_acceptance_artifact.json`,
+  and `/opt/jc-coach-pm/reports/H01B-R02A4_stage_trace.jsonl`.
+
 ## Accepted Product state
 
 - PRODUCT_MATURITY: `v0.9`; PACKAGE_VERSION: `0.1.0` (intentional distinction).

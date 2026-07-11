@@ -33,7 +33,11 @@ in `WP_REGISTRY.md`.
 - **Acceptance summary:** every required vertical stage is real where mandated,
   owner-isolated, lineage-stable, observable, idempotent, and leaves production
   DB, artifacts, missions, and service untouched.
-- **Evidence/result:** add the R02A4 report, JSON artifact, and JSONL stage trace.
+- **Evidence/result:** blocked at the unchanged isolated storage preflight; see
+  `/opt/jc-coach-pm/reports/H01B-R02A4_post_refactor_full_vertical_acceptance_report.md`,
+  `/opt/jc-coach-pm/reports/H01B-R02A4_full_vertical_acceptance_artifact.json`,
+  and `/opt/jc-coach-pm/reports/H01B-R02A4_stage_trace.jsonl`. Rerun from a
+  fresh clone after safe capacity is available.
 
 ## H01B-R03 — pending
 

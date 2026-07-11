@@ -49,6 +49,10 @@ R02A4 does not add a permanent Product feature or expand domains, metrics,
 provider architecture, import capacity, schema, public readiness, or UI scope.
 R03 remains gated until this acceptance task closes.
 
+Current execution status: blocked by the unchanged isolated Steam storage
+preflight capacity floor. The acceptance run must restart from a clean clone
+after safe capacity is available; the guard must not be reduced to force PASS.
+
 ## E. Functional MVP milestone — R03 minimal functional UI
 
 Deliver complete functionality with minimal styling:

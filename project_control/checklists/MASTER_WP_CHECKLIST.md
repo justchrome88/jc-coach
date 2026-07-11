@@ -27,6 +27,8 @@ Last updated: 2026-07-11. Exact status and gating are authoritative in
   visual polish.
 - [ ] R02A4: one isolated genuine Steam-to-coach chain passes with complete
   sanitized stage lineage and production no-mutation proof.
+  Current status: blocked by unchanged storage preflight capacity; R03 remains
+  gated and no live operation was attempted.
 - [ ] R03: an eligible owner can activate one, both, or neither proposal; never
   automatic activation; at most one active mission per owner and domain.
 - [ ] R04: progress uses only matches after activation baseline and preserves
