@@ -30,6 +30,10 @@ def test_current_repository_passes_all_r02a2_guardrails():
     assert guardrails.collect_errors() == []
 
 
+def test_planning_contract_accepts_r04_current_and_manual_r05_gate():
+    assert guardrails.planning_contract_errors(guardrails.ROOT) == []
+
+
 def test_docs_shell_rejects_extra_narrative_runtime_and_metric_docs(tmp_path):
     _write(tmp_path, "docs/README.md", "# Current narrative\n")
     _write(tmp_path, "docs/current.schema.json", "{}\n")
