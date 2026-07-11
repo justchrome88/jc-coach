@@ -11,7 +11,6 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = Path("_legacy_archive/r02a2-2026-07-11")
 DEFAULT_INVENTORY = Path(
@@ -268,7 +267,9 @@ def build_manifest(args: argparse.Namespace) -> int:
                 ),
                 "r02a1_recommended_destination": destination,
                 "planned_destination": destination,
-                "destination_basis": "task fixed-entrypoint preservation" if source in {"AGENTS.md", "README.md"} else "R02A1 root legacy audit",
+                "destination_basis": "task fixed-entrypoint preservation"
+                if source in {"AGENTS.md", "README.md"}
+                else "R02A1 root legacy audit",
                 "preservation": "byte_identical",
             }
         )

@@ -42,6 +42,7 @@ def test_local_quality_gate_runs_required_commands_in_order(monkeypatch):
         (".venv/bin/python", "scripts/project_gate.py", "preflight"),
         (".venv/bin/python", "scripts/project_gate.py", "changed"),
         (".venv/bin/python", "scripts/project_gate.py", "required-checks"),
+        (".venv/bin/python", "scripts/r02a2_repository_guardrails.py"),
         (".venv/bin/pytest", "tests/test_semantic_ai_eval.py", "-q", "-p", "no:cacheprovider"),
         (".venv/bin/pytest", "tests/test_metrics_c2_fixtures.py", "-q", "-p", "no:cacheprovider"),
         (".venv/bin/pytest", "tests", "-q", "-p", "no:cacheprovider"),
