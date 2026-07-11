@@ -14,8 +14,8 @@ Last updated: 2026-07-11. Exact status and gating are authoritative in
 | Codebase architecture cleanup | completed_with_warnings | R02A3 yielded bounded service/package ownership with behavior and full gates preserved. |
 | Post-refactor vertical acceptance | completed_with_warnings | R02A4R proved one genuine, observable, isolated Steam-to-coach chain with production unchanged. |
 | Timed observability/provenance closure | completed_with_warnings | R02A4T proved a 29-stage clone-only timed replay, explicit source-date provenance, and distinct two-card semantics. |
-| Functional mission UI | next | R03 exposes two complete domain flows, explicit one/both/neither activation, owner isolation, and per-match progress with minimal styling. |
-| 30+10 replay | pending | R04 proves two proposals and two activated missions across 10 subsequent matches with independent, idempotent DB/API/UI timelines. |
+| Functional mission UI | current | R03 exposes two complete domain flows, explicit one/both/neither activation, owner isolation, and per-match progress with minimal styling. |
+| 30+10 replay | pending_gated | R04 proves two proposals and two activated missions across 10 subsequent matches with independent, idempotent DB/API/UI timelines. |
 | Live personal beta | planned | R05 evaluates real new-match usefulness, unsupported claims, latency/reliability, and target quality before polish. |
 | Visual polish | planned | R06 makes the validated flow responsive, accessible, readable, and visually consistent. |
 | Provider/ops hardening | deferred_planned | R07 adds measured provider/queue/observability/cost controls after validation unless needed to remove an earlier blocker. |

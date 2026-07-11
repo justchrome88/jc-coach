@@ -529,8 +529,8 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
     backlog_markers = (
         "## H01B-R02A3 — completed with warnings",
         "## H01B-R02A4 — completed with warnings",
-        "## H01B-R03 — next, ungated",
-        "## H01B-R04 — pending",
+        "## H01B-R03 —",
+        "## H01B-R04 —",
         "## H01B-R05 — planned, not authorized",
         "## H01B-R06 — planned, not authorized",
         "## H01B-R07 — deferred/planned",
@@ -551,6 +551,7 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
         "CURRENT_TASK: `H01B-R02A4T_TRUE_TIMED_OBSERVABILITY_PROVENANCE_AND_TWO_CARD_SEMANTIC_CLOSURE`"
         in registry
     )
+    r03_current = "CURRENT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`" in registry
     route_markers = (
         (
             "CURRENT_TASK: `H01B-R02A4T_TRUE_TIMED_OBSERVABILITY_PROVENANCE_AND_TWO_CARD_SEMANTIC_CLOSURE`",
@@ -561,18 +562,26 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
         )
         if r02a4t_current
         else (
+            "CURRENT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`",
+            "NEXT_TASK: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`",
+            "NEXT_TASK_GATED: `true`",
+            "| H01B-R03 | current |",
+            "| H01B-R04 | pending_gated |",
+        )
+        if r03_current
+        else (
             "CURRENT_TASK: `none`",
             "NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`",
             "NEXT_TASK_GATED: `false`",
             "| H01B-R02A4T | complete_with_warnings |",
             "| H01B-R03 | next |",
+            "| H01B-R04 | pending |",
         )
     )
     registry_markers = (
         *route_markers,
         "| H01B-R02A3 | complete_with_warnings |",
         "| H01B-R02A4 | complete_with_warnings |",
-        "| H01B-R04 | pending |",
         "| H01B-R05 | planned |",
         "| H01B-R06 | planned |",
         "| H01B-R07 | deferred_planned |",
@@ -586,6 +595,11 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
             )
         )
 
+    checklist_route_markers = (
+        ("| Functional mission UI | current |", "| 30+10 replay | pending_gated |")
+        if r03_current
+        else ("| Functional mission UI | next |", "| 30+10 replay | pending |")
+    )
     checklist_markers = (
         "| Foundation/safety | completed |",
         "| Import/parser/owner loop | completed |",
@@ -595,8 +609,7 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
         "| Documentation/control migration | completed |",
         "| Codebase architecture cleanup | completed_with_warnings |",
         "| Post-refactor vertical acceptance | completed_with_warnings |",
-        "| Functional mission UI | next |",
-        "| 30+10 replay | pending |",
+        *checklist_route_markers,
         "| Live personal beta | planned |",
         "| Visual polish | planned |",
         "| Provider/ops hardening | deferred_planned |",

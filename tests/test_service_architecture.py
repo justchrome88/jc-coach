@@ -25,7 +25,13 @@ from scripts.architecture_guardrails import (
     strongly_connected_components,
 )
 
-EXPECTED_ROUTE_FINGERPRINT = "92cfbaef7254c8b2ed5284876ebd5ceeff3285dbb6e03946649c32c958403168"
+EXPECTED_ROUTE_FINGERPRINT = "1daa112946fff309fbfb11f2593b4980dae977d15582143dd2f2be9364b90653"
+R03_ALLOWLISTED_ROUTE_ADDITION = {
+    "source": "web",
+    "path": "/coach/domains/{domain}/activate",
+    "methods": ["POST"],
+    "name": "activate_coach_domain_page",
+}
 
 
 def test_target_service_packages_are_shallow_and_explicit():
@@ -53,7 +59,8 @@ def test_temporary_compatibility_facades_import_canonical_public_symbols():
 
 
 def test_registered_route_contract_matches_pre_refactor_baseline():
-    assert len(route_inventory()) == 87
+    assert len(route_inventory()) == 88
+    assert R03_ALLOWLISTED_ROUTE_ADDITION in route_inventory()
     assert route_fingerprint() == EXPECTED_ROUTE_FINGERPRINT
 
 
