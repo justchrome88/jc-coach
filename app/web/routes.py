@@ -43,16 +43,6 @@ from app.services.coach.provider import (
     generate_ai_coach_with_provider,
     prepare_ai_coach_handoff,
 )
-from app.services.coach.recommendations import (
-    extend_recommendation_target,
-    get_active_recommendation_progress,
-    get_all_recommendation_progress,
-    get_evaluations_by_match_id,
-    list_recommendation_history,
-    recommendation_category_summary,
-    restart_recommendation_category,
-    update_recommendation_status,
-)
 from app.services.coach.reports import generate_report, latest_report, markdown_to_html
 from app.services.coach.rules import build_coach_focus
 from app.services.ingestion.demo_downloader import steam_demo_downloader_configured
@@ -99,6 +89,16 @@ from app.services.metrics.confidence import (
     is_exact_date_match,
     metric_context,
     sort_matches,
+)
+from app.services.metrics.recommendations import (
+    extend_recommendation_target,
+    get_active_recommendation_progress,
+    get_all_recommendation_progress,
+    get_evaluations_by_match_id,
+    list_recommendation_history,
+    recommendation_category_summary,
+    restart_recommendation_category,
+    update_recommendation_status,
 )
 from app.services.owner.auth import authenticate_user, current_user_from_session, login_user, logout_user, register_user
 from app.services.owner.sync_batch import (
