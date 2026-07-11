@@ -8,7 +8,7 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 
 ## Current H01 User Acceptance Handoff
 
-- CURRENT_LANE: METRICS_ASSURANCE.
+- CURRENT_LANE: AI_COACH_PRODUCT_COMPLETION.
 - CURRENT_TASK: none.
 - H01A_STATUS: PASS_WITH_WARNINGS.
 - H01A_M01_STATUS: PASS_WITH_WARNINGS.
@@ -40,6 +40,11 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - COACH_INPUTS_TRUSTED: true.
 - H01B_STATUS: PASS_WITH_WARNINGS.
 - H01B_R01_STATUS: PASS_WITH_WARNINGS.
+- H01B_R02_STATUS: PASS_WITH_WARNINGS.
+- AI_HYPOTHESIS_ENGINE_ACTIVE: true.
+- REAL_MODEL_PATH_ACCEPTED: true.
+- DOMAIN_SLOT_COUNT_PER_OWNER: 2.
+- AUTO_ACTIVATION_PERFORMED: false.
 - CANONICAL_COACH_DOMAINS: impact_leak, bad_fight_selection.
 - COACH_METRIC_GROUPS: performance, utility, aim.
 - THIRD_DOMAIN_BLOCKED: true.
@@ -79,8 +84,11 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: derive from canonical Hot route.
+- NEXT_TASK: H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI.
 - ACTIVE_OUTBOX_TASK: none.
+- H01B-R02 freezes one immutable 30-match evidence baseline for owner 17 and
+  exposes two validated `proposal_ready` domain slots from the real configured
+  model. Production has zero active missions; activation remains R03 scope.
 - H01B-R01 freezes `impact_leak` and `bad_fight_selection` as the only coach
   domains. Performance, utility and aim are metric groups; `utility_value` is
   context-only. Mission 3 and all criteria/progress remain historical evidence,

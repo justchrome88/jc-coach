@@ -1,6 +1,82 @@
 {
-  "registry_version": "3.0.0",
+  "registry_version": "3.1.0",
   "metrics": [
+    {
+      "metric_key": "average_death_time_ct_side_seconds",
+      "display_name": "Average CT-side death time",
+      "domain": "performance", "scope": "player_match", "unit": "seconds", "value_type": "nullable_number",
+      "source_kind": "accepted_round_temporal_ledger", "source_tables_or_events": ["coach-metric-events-v1", "round_start", "round_end", "player_death", "owner presence"],
+      "identity_keys": ["owner_user_id", "match_id", "player_steamid", "source_event_set_id", "semantic_version"],
+      "numerator_definition": "sum of accepted CT-side owner death times", "denominator_definition": "accepted CT-side owner deaths",
+      "include_rules": ["completed participated CT rounds", "death within round boundary"], "exclude_rules": ["warmup", "not participating", "disconnect round", "incomplete round", "post-round/post-match death"],
+      "rounding_storage": "3 decimals", "rounding_display": "seconds", "semantic_version": "3.1.0",
+      "implementation_entrypoints": ["app/services/coach_domain_ai.py::temporal_survival_metrics"], "persistence_targets": ["metric_snapshots.metrics_json"],
+      "ui_consumers": ["future domain cards"], "coach_consumers": ["impact_leak", "bad_fight_selection"],
+      "validation_rules": ["accepted presence and death-or-round-end boundary ledger"], "ground_truth_status": "verified", "status": "active",
+      "last_verified_evidence": ["H01B-R02 retained real-demo corpus"], "known_discrepancies": [], "critical": true,
+      "round_phase_boundary": "completed regulation/overtime rounds only", "classification": "validated_candidate", "validation_status": "validated", "consumer_policy": "trusted",
+      "backfill_requirement": "append 3.1.0 temporal performance supplements; preserve 3.0.0"
+    },
+    {
+      "metric_key": "average_death_time_seconds", "display_name": "Average death time", "domain": "performance", "scope": "player_match", "unit": "seconds", "value_type": "nullable_number",
+      "source_kind": "accepted_round_temporal_ledger", "source_tables_or_events": ["coach-metric-events-v1", "round_start", "round_end", "player_death", "owner presence"],
+      "identity_keys": ["owner_user_id", "match_id", "player_steamid", "source_event_set_id", "semantic_version"], "numerator_definition": "sum of accepted owner death times", "denominator_definition": "accepted owner deaths",
+      "include_rules": ["completed participated rounds", "death within round boundary"], "exclude_rules": ["warmup", "not participating", "disconnect round", "incomplete round", "post-round/post-match death"],
+      "rounding_storage": "3 decimals", "rounding_display": "seconds", "semantic_version": "3.1.0", "implementation_entrypoints": ["app/services/coach_domain_ai.py::temporal_survival_metrics"],
+      "persistence_targets": ["metric_snapshots.metrics_json"], "ui_consumers": ["future domain cards"], "coach_consumers": ["impact_leak", "bad_fight_selection"],
+      "validation_rules": ["accepted presence and death-or-round-end boundary ledger"], "ground_truth_status": "verified", "status": "active", "last_verified_evidence": ["H01B-R02 retained real-demo corpus"],
+      "known_discrepancies": [], "critical": true, "round_phase_boundary": "completed regulation/overtime rounds only", "classification": "validated_candidate", "validation_status": "validated", "consumer_policy": "trusted", "backfill_requirement": "append 3.1.0 temporal performance supplements; preserve 3.0.0"
+    },
+    {
+      "metric_key": "average_death_time_t_side_seconds", "display_name": "Average T-side death time", "domain": "performance", "scope": "player_match", "unit": "seconds", "value_type": "nullable_number",
+      "source_kind": "accepted_round_temporal_ledger", "source_tables_or_events": ["coach-metric-events-v1", "round_start", "round_end", "player_death", "owner presence"],
+      "identity_keys": ["owner_user_id", "match_id", "player_steamid", "source_event_set_id", "semantic_version"], "numerator_definition": "sum of accepted T-side owner death times", "denominator_definition": "accepted T-side owner deaths",
+      "include_rules": ["completed participated T rounds", "death within round boundary"], "exclude_rules": ["warmup", "not participating", "disconnect round", "incomplete round", "post-round/post-match death"],
+      "rounding_storage": "3 decimals", "rounding_display": "seconds", "semantic_version": "3.1.0", "implementation_entrypoints": ["app/services/coach_domain_ai.py::temporal_survival_metrics"],
+      "persistence_targets": ["metric_snapshots.metrics_json"], "ui_consumers": ["future domain cards"], "coach_consumers": ["impact_leak", "bad_fight_selection"],
+      "validation_rules": ["accepted presence and death-or-round-end boundary ledger"], "ground_truth_status": "verified", "status": "active", "last_verified_evidence": ["H01B-R02 retained real-demo corpus"],
+      "known_discrepancies": [], "critical": true, "round_phase_boundary": "completed regulation/overtime rounds only", "classification": "validated_candidate", "validation_status": "validated", "consumer_policy": "trusted", "backfill_requirement": "append 3.1.0 temporal performance supplements; preserve 3.0.0"
+    },
+    {
+      "metric_key": "average_survival_time_seconds", "display_name": "Average survival time", "domain": "performance", "scope": "player_match", "unit": "seconds", "value_type": "number",
+      "source_kind": "accepted_round_temporal_ledger", "source_tables_or_events": ["coach-metric-events-v1", "round_start", "round_end", "player_death", "owner presence"],
+      "identity_keys": ["owner_user_id", "match_id", "player_steamid", "source_event_set_id", "semantic_version"], "numerator_definition": "sum of death-or-round-end survival seconds", "denominator_definition": "accepted participated complete rounds",
+      "include_rules": ["completed participated rounds"], "exclude_rules": ["warmup", "not participating", "disconnect round", "incomplete round", "post-round/post-match death"],
+      "rounding_storage": "3 decimals", "rounding_display": "seconds", "semantic_version": "3.1.0", "implementation_entrypoints": ["app/services/coach_domain_ai.py::temporal_survival_metrics"],
+      "persistence_targets": ["metric_snapshots.metrics_json"], "ui_consumers": ["future domain cards"], "coach_consumers": ["impact_leak", "bad_fight_selection"],
+      "validation_rules": ["accepted presence and death-or-round-end boundary ledger"], "ground_truth_status": "verified", "status": "active", "last_verified_evidence": ["H01B-R02 retained real-demo corpus"],
+      "known_discrepancies": [], "critical": true, "round_phase_boundary": "completed regulation/overtime rounds only", "classification": "validated_candidate", "validation_status": "validated", "consumer_policy": "trusted", "backfill_requirement": "append 3.1.0 temporal performance supplements; preserve 3.0.0"
+    },
+    {
+      "metric_key": "early_death_rate_before_45_seconds", "display_name": "Early death rate before 45 seconds", "domain": "performance", "scope": "player_match", "unit": "fraction", "value_type": "ratio",
+      "source_kind": "accepted_round_temporal_ledger", "source_tables_or_events": ["coach-metric-events-v1", "round_start", "round_end", "player_death", "owner presence"],
+      "identity_keys": ["owner_user_id", "match_id", "player_steamid", "source_event_set_id", "semantic_version"], "numerator_definition": "accepted owner deaths under 45 seconds", "denominator_definition": "accepted participated complete rounds",
+      "include_rules": ["completed participated rounds"], "exclude_rules": ["warmup", "not participating", "disconnect round", "incomplete round", "post-round/post-match death"],
+      "rounding_storage": "3 decimals", "rounding_display": "percent", "semantic_version": "3.1.0", "implementation_entrypoints": ["app/services/coach_domain_ai.py::temporal_survival_metrics"],
+      "persistence_targets": ["metric_snapshots.metrics_json"], "ui_consumers": ["future domain cards"], "coach_consumers": ["impact_leak", "bad_fight_selection"],
+      "validation_rules": ["accepted presence and death-or-round-end boundary ledger"], "ground_truth_status": "verified", "status": "active", "last_verified_evidence": ["H01B-R02 retained real-demo corpus"],
+      "known_discrepancies": [], "critical": true, "round_phase_boundary": "completed regulation/overtime rounds only", "classification": "validated_candidate", "validation_status": "validated", "consumer_policy": "trusted", "backfill_requirement": "append 3.1.0 temporal performance supplements; preserve 3.0.0"
+    },
+    {
+      "metric_key": "median_survival_time_seconds", "display_name": "Median survival time", "domain": "performance", "scope": "player_match", "unit": "seconds", "value_type": "number",
+      "source_kind": "accepted_round_temporal_ledger", "source_tables_or_events": ["coach-metric-events-v1", "round_start", "round_end", "player_death", "owner presence"],
+      "identity_keys": ["owner_user_id", "match_id", "player_steamid", "source_event_set_id", "semantic_version"], "numerator_definition": "median death-or-round-end survival seconds", "denominator_definition": "accepted participated complete rounds",
+      "include_rules": ["completed participated rounds"], "exclude_rules": ["warmup", "not participating", "disconnect round", "incomplete round", "post-round/post-match death"],
+      "rounding_storage": "3 decimals", "rounding_display": "seconds", "semantic_version": "3.1.0", "implementation_entrypoints": ["app/services/coach_domain_ai.py::temporal_survival_metrics"],
+      "persistence_targets": ["metric_snapshots.metrics_json"], "ui_consumers": ["future domain cards"], "coach_consumers": ["impact_leak", "bad_fight_selection"],
+      "validation_rules": ["accepted presence and death-or-round-end boundary ledger"], "ground_truth_status": "verified", "status": "active", "last_verified_evidence": ["H01B-R02 retained real-demo corpus"],
+      "known_discrepancies": [], "critical": true, "round_phase_boundary": "completed regulation/overtime rounds only", "classification": "validated_candidate", "validation_status": "validated", "consumer_policy": "trusted", "backfill_requirement": "append 3.1.0 temporal performance supplements; preserve 3.0.0"
+    },
+    {
+      "metric_key": "p25_survival_time_seconds", "display_name": "25th percentile survival time", "domain": "performance", "scope": "player_match", "unit": "seconds", "value_type": "number",
+      "source_kind": "accepted_round_temporal_ledger", "source_tables_or_events": ["coach-metric-events-v1", "round_start", "round_end", "player_death", "owner presence"],
+      "identity_keys": ["owner_user_id", "match_id", "player_steamid", "source_event_set_id", "semantic_version"], "numerator_definition": "linear p25 of death-or-round-end survival seconds", "denominator_definition": "accepted participated complete rounds",
+      "include_rules": ["completed participated rounds"], "exclude_rules": ["warmup", "not participating", "disconnect round", "incomplete round", "post-round/post-match death"],
+      "rounding_storage": "3 decimals", "rounding_display": "seconds", "semantic_version": "3.1.0", "implementation_entrypoints": ["app/services/coach_domain_ai.py::temporal_survival_metrics"],
+      "persistence_targets": ["metric_snapshots.metrics_json"], "ui_consumers": ["future domain cards"], "coach_consumers": ["impact_leak", "bad_fight_selection"],
+      "validation_rules": ["accepted presence and death-or-round-end boundary ledger"], "ground_truth_status": "verified", "status": "active", "last_verified_evidence": ["H01B-R02 retained real-demo corpus"],
+      "known_discrepancies": [], "critical": true, "round_phase_boundary": "completed regulation/overtime rounds only", "classification": "validated_candidate", "validation_status": "validated", "consumer_policy": "trusted", "backfill_requirement": "append 3.1.0 temporal performance supplements; preserve 3.0.0"
+    },
     {
       "metric_key": "accepted_hits",
       "display_name": "Accepted hits",

@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from app.db.models import ImportJob, Match
@@ -24,6 +24,8 @@ from app.services.ai_coach import (
 )
 from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, get_map_stats, get_summary
+from app.services.auth import current_user_from_session
+from app.services.coach_domain_ai import coach_domain_slots_payload
 from app.services.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.import_jobs import (
@@ -299,6 +301,24 @@ def latest_report_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
 @router.get("/coach/ai/payload")
 def ai_coach_payload_endpoint(db: Annotated[Session, Depends(get_db)]) -> dict:
     return build_ai_coach_payload(db, analysis_scope=personal_ai_coach_analysis_scope(db))
+
+
+@router.get("/coach/domains")
+def coach_domain_slots_endpoint(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    owner_user_id: int | None = None,
+    technical_provenance: bool = False,
+) -> dict:
+    current = current_user_from_session(request, db)
+    resolved_owner = (
+        current.id if current is not None else (owner_user_id or personal_ai_coach_analysis_scope(db).owner_user_id)
+    )
+    if resolved_owner is None:
+        raise HTTPException(status_code=403, detail="Owner scope is required")
+    if current is not None and owner_user_id is not None and owner_user_id != current.id:
+        raise HTTPException(status_code=403, detail="Cross-owner coach domain access denied")
+    return coach_domain_slots_payload(db, owner_user_id=resolved_owner, include_provenance=technical_provenance)
 
 
 @router.post("/coach/ai/handoff")

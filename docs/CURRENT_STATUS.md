@@ -4,7 +4,7 @@ Last updated: 2026-07-11.
 
 ## Current H01 Metric Assurance State
 
-- CURRENT_LANE: METRICS_ASSURANCE.
+- CURRENT_LANE: AI_COACH_PRODUCT_COMPLETION.
 - CURRENT_TASK: none.
 - H01A_STATUS: PASS_WITH_WARNINGS.
 - H01A_M01_STATUS: PASS_WITH_WARNINGS.
@@ -36,6 +36,16 @@ Last updated: 2026-07-11.
 - COACH_INPUTS_TRUSTED: true.
 - H01B_STATUS: PASS_WITH_WARNINGS.
 - H01B_R01_STATUS: PASS_WITH_WARNINGS.
+- H01B_R02_STATUS: PASS_WITH_WARNINGS.
+- AI_HYPOTHESIS_ENGINE_ACTIVE: true.
+- REAL_MODEL_PATH_ACCEPTED: true.
+- THIRTY_MATCH_BASELINE_CONTRACT_ACCEPTED: true.
+- TEMPORAL_SURVIVAL_METRICS_ACCEPTED: true.
+- EVIDENCE_GROUNDED_OUTPUT_VALIDATION_ACTIVE: true.
+- DOMAIN_SLOT_COUNT_PER_OWNER: 2.
+- CROSS_DOMAIN_PROPOSALS_ALLOWED: true.
+- ONE_ACTIVE_MISSION_PER_DOMAIN_CAPABILITY: true.
+- AUTO_ACTIVATION_PERFORMED: false.
 - CANONICAL_COACH_DOMAINS: impact_leak, bad_fight_selection.
 - COACH_METRIC_GROUPS: performance, utility, aim.
 - THIRD_DOMAIN_BLOCKED: true.
@@ -75,8 +85,12 @@ Last updated: 2026-07-11.
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: derive from canonical Hot route.
+- NEXT_TASK: H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI.
 - ACTIVE_OUTBOX_TASK: none.
+- H01B-R02 accepted the configured `gpt-5.6-sol` reasoning path, immutable
+  owner-17 30-match baseline, append-only temporal survival evidence, strict
+  claim/target validation, two independent proposal-ready domain slots, and
+  production repeat no-op. No mission was auto-activated.
 - H01B-R01 corrected the M04 naming drift: `impact_leak` and
   `bad_fight_selection` are the only coach domains, while performance/utility/
   aim remain metric groups. `utility_value` is context-only. Mission 3 and all

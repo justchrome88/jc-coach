@@ -2,12 +2,12 @@
 
 ## Decision
 
-The MVP permits at most one active mission globally per owner. No earlier
-canonical contract chose per-domain parallel missions; H01B-R01 therefore uses
-the safest accepted fallback. Zero active missions is valid.
+H01B-R02 permits at most one active mission per owner and canonical domain.
+Impact Leak and Bad Fight Selection missions may coexist. Zero active missions
+is valid.
 
 Mission activation accepts only `impact_leak` or `bad_fight_selection`.
-Suppression is owner-global, while the candidate retains its canonical domain
+Suppression is owner-and-domain scoped, while the candidate retains its canonical domain
 for explanation and later selection. `utility_value`, metric groups, unknown
 aliases, and missing domain identity fail closed.
 

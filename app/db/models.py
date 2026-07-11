@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
@@ -8,9 +8,7 @@ from app.db.session import Base
 
 class Match(Base):
     __tablename__ = "matches"
-    __table_args__ = (
-        UniqueConstraint("source", "external_match_id", name="uq_matches_source_external_id"),
-    )
+    __table_args__ = (UniqueConstraint("source", "external_match_id", name="uq_matches_source_external_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
@@ -101,9 +99,7 @@ class MetricSnapshot(Base):
     metric_domain: Mapped[str] = mapped_column(String(80), default="legacy", nullable=False, index=True)
     semantic_version: Mapped[str] = mapped_column(String(40), default="1.0.0", nullable=False, index=True)
     scope: Mapped[str] = mapped_column(String(40), default="player_match", nullable=False, index=True)
-    validation_status: Mapped[str] = mapped_column(
-        String(40), default="legacy_unverified", nullable=False, index=True
-    )
+    validation_status: Mapped[str] = mapped_column(String(40), default="legacy_unverified", nullable=False, index=True)
     implementation_version: Mapped[str | None] = mapped_column(String(120), index=True)
     input_event_hash: Mapped[str | None] = mapped_column(String(64), index=True)
     source_parser_artifact_id: Mapped[int | None] = mapped_column(ForeignKey("demo_parse_artifacts.id"), index=True)
@@ -236,6 +232,105 @@ class MissionProgressEvaluation(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+
+
+class CoachEvidenceBaseline(Base):
+    """Immutable owner-scoped evidence selection for one AI analysis cutoff."""
+
+    __tablename__ = "coach_evidence_baselines"
+    __table_args__ = (UniqueConstraint("baseline_hash", name="uq_coach_evidence_baseline_hash"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    owner_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    owner_steam_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    analysis_cutoff: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    baseline_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    evidence_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    match_ids_json: Mapped[str] = mapped_column(Text, nullable=False)
+    lineage_json: Mapped[str] = mapped_column(Text, nullable=False)
+    exclusions_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+
+
+class AIDomainAnalysis(Base):
+    """Append-only configured-model attempt and deterministic validation result."""
+
+    __tablename__ = "ai_domain_analyses"
+    __table_args__ = (UniqueConstraint("idempotency_key", "attempt_number", name="uq_ai_domain_analysis_attempt"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    owner_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    owner_steam_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    domain_key: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    baseline_id: Mapped[int] = mapped_column(ForeignKey("coach_evidence_baselines.id"), nullable=False, index=True)
+    baseline_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    attempt_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    prompt_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_schema_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    evidence_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    provider: Mapped[str] = mapped_column(String(80), nullable=False)
+    model: Mapped[str] = mapped_column(String(120), nullable=False)
+    routing_json: Mapped[str] = mapped_column(Text, nullable=False)
+    settings_json: Mapped[str] = mapped_column(Text, nullable=False)
+    request_id: Mapped[str | None] = mapped_column(String(255), index=True)
+    input_tokens: Mapped[int | None] = mapped_column(Integer)
+    output_tokens: Mapped[int | None] = mapped_column(Integer)
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    raw_response_hash: Mapped[str | None] = mapped_column(String(64))
+    structured_output_json: Mapped[str | None] = mapped_column(Text)
+    validation_status: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    validation_errors_json: Mapped[str] = mapped_column(Text, nullable=False)
+    failure_reason_code: Mapped[str | None] = mapped_column(String(80), index=True)
+    supersedes_analysis_id: Mapped[int | None] = mapped_column(ForeignKey("ai_domain_analyses.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+
+
+class CoachMissionProposal(Base):
+    __tablename__ = "coach_mission_proposals"
+    __table_args__ = (
+        Index(
+            "uq_current_coach_proposal_owner_domain",
+            "owner_user_id",
+            "domain_key",
+            unique=True,
+            sqlite_where=text("is_current = 1"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    owner_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    owner_steam_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    domain_key: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    analysis_id: Mapped[int] = mapped_column(ForeignKey("ai_domain_analyses.id"), nullable=False, unique=True)
+    baseline_id: Mapped[int] = mapped_column(ForeignKey("coach_evidence_baselines.id"), nullable=False, index=True)
+    proposal_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+    provenance_json: Mapped[str] = mapped_column(Text, nullable=False)
+    is_current: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    superseded_by_id: Mapped[int | None] = mapped_column(ForeignKey("coach_mission_proposals.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+
+
+class CoachDomainSlot(Base):
+    __tablename__ = "coach_domain_slots"
+    __table_args__ = (UniqueConstraint("owner_user_id", "domain_key", name="uq_coach_domain_slot_owner_domain"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    owner_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    owner_steam_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    domain_key: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    baseline_id: Mapped[int | None] = mapped_column(ForeignKey("coach_evidence_baselines.id"), index=True)
+    current_analysis_id: Mapped[int | None] = mapped_column(ForeignKey("ai_domain_analyses.id"), index=True)
+    current_proposal_id: Mapped[int | None] = mapped_column(ForeignKey("coach_mission_proposals.id"), index=True)
+    state_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False, index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
 
@@ -407,9 +502,7 @@ class CoachRecommendation(Base):
 
 class MatchRecommendationEvaluation(Base):
     __tablename__ = "match_recommendation_evaluations"
-    __table_args__ = (
-        UniqueConstraint("recommendation_id", "match_id", name="uq_match_recommendation_evaluation"),
-    )
+    __table_args__ = (UniqueConstraint("recommendation_id", "match_id", name="uq_match_recommendation_evaluation"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     recommendation_id: Mapped[int] = mapped_column(ForeignKey("coach_recommendations.id"), nullable=False, index=True)

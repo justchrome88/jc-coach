@@ -60,8 +60,9 @@ Allowed statuses: `planned`, `not_started`, `active`, `in_progress`, `done`,
 | H01A-M03_PRODUCTION_METRIC_MIGRATION_TRUSTED_SUBSET_ACCEPTANCE_AND_H01B_RELEASE_DECISION | accepted_with_warnings | Production v2 migration/backfill, trusted match-124 acceptance, PM report/artifact | 1,153 legacy + 110 owner v2 rows; mission 3 still uses quarantined utility_damage, so H01B remains blocked. |
 | H01A-M04_COACH_METRIC_PACK_V1_COMPLETION | accepted_with_warnings | Product v3 pack/event sets/golden corpus/validator; PM M04 report/artifact | 55 enriched event sets + 165 validated v3 snapshots; mission 3 uses validated effective enemy utility damage; H01B READY. |
 | H01B-R01_CANONICAL_TWO_DOMAIN_RECONCILIATION_AND_TEN_MATCH_REPLAY | accepted_with_warnings | Canonical model/runtime/tests/harness; PM report/artifact | Exactly two coach domains; mission 3 superseded; ten-match/S1-S10/full-stack/idempotency accepted; known Starlette warning only. |
+| H01B-R02_TWO_DOMAIN_AI_HYPOTHESIS_AND_MISSION_PROPOSAL_ENGINE | accepted_with_warnings | Configured-model engine, immutable baseline, temporal metrics, validator, slots, proposals, API | Two real validated domain analyses; two proposal-ready slots; no auto-activation; known Starlette warning only. |
 
-CURRENT_LANE: METRICS_ASSURANCE. CURRENT_TASK: none. Mission backend status:
+CURRENT_LANE: AI_COACH_PRODUCT_COMPLETION. CURRENT_TASK: none. Mission backend status:
 ACCEPTED_FOR_UI_API. H01A_STATUS: PASS_WITH_WARNINGS.
 H01A_R02_STATUS: BLOCKED. H01A_R02A_STATUS: PASS_WITH_WARNINGS.
 H01A_M01_STATUS: PASS_WITH_WARNINGS. METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
@@ -96,7 +97,7 @@ ORDINARY_BASELINE_NO_OP_RESTORED: true.
 FRESH_MATCH_DISCOVERY_PRESERVED: true.
 DEEPER_HISTORY_TRAVERSAL_PRESERVED: true.
 BATCH_31_COMPATIBILITY_PRESERVED: true. NEXT_TASK:
-derive from canonical Hot route.
+H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI.
 Owner-only personal scope, fail-closed weak evidence, no public/friends
 readiness and no v1.0 claim remain mandatory.
 

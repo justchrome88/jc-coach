@@ -2052,7 +2052,7 @@ def test_valid_utility_trend_persists_context_without_hypothesis_or_mission(db):
     assert list_coach_missions(db, user_id=owner.id) == []
 
 
-def test_global_active_mission_suppresses_canonical_candidates_and_utility_stays_context(db):
+def test_same_domain_active_mission_suppresses_candidates_and_utility_stays_context(db):
     owner = _user(db, "utility-domain-suppression")
     owner_steam_id = "76561198000000302"
     matches, _ = _utility_trend_snapshots(
@@ -2092,7 +2092,7 @@ def test_global_active_mission_suppresses_canonical_candidates_and_utility_stays
     trade = next(candidate for candidate in result["candidates"] if candidate["family"] == "bad_fight_trade")
     assert all(candidate["family"] != "utility_value" for candidate in result["candidates"])
     assert trade["suppressed_by_active_mission"] is True
-    assert trade["suppression_reason"] == "active_mission_global_owner"
+    assert trade["suppression_reason"] == "active_mission_same_domain"
     assert result["coach_hypothesis_ids"] == []
 
 
@@ -2191,8 +2191,8 @@ def test_rolling_candidates_suppress_active_duplicate_and_persist_hypotheses(db)
         candidate for candidate in result["candidates"] if candidate["primary_metric"] == "opening_death_rate"
     )
     assert opening["suppressed_by_active_mission"] is True
-    assert opening["suppression_reason"] == "active_mission_global_owner"
-    assert opening["suppression_reason_codes"] == ["active_mission_global_owner"]
+    assert opening["suppression_reason"] == "active_mission_same_domain"
+    assert opening["suppression_reason_codes"] == ["active_mission_same_domain"]
     assert opening["suppression_key"]["domain_key"] == "bad_fight_selection"
     assert result["coach_hypothesis_ids"] == []
     persisted = get_analysis_run(db, user_id=owner.id, analysis_run_id=result["analysis_run_id"])
@@ -2339,7 +2339,7 @@ def test_duplicate_active_mission_same_owner_domain_is_rejected_or_replaced(db):
         insight_card=_ready_survival_with_adr_guardrail_card(),
     )
 
-    with pytest.raises(ValueError, match="Duplicate active mission for owner:"):
+    with pytest.raises(ValueError, match="Duplicate active mission for owner/domain:"):
         activate_coach_mission(
             db,
             user_id=owner.id,

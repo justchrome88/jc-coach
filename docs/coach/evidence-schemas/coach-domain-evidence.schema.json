@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coach-domain-evidence-v1",
+  "type": "object",
+  "required": ["schema_version", "domain_key", "owner", "baseline", "metric_versions", "aggregates", "chronological_trends", "per_match_observations", "strong_positive_examples", "counterexamples", "confidence", "availability", "caveats", "allowed_claim_boundaries", "target_policy", "evidence_refs", "source_snapshot_event_set_lineage"],
+  "properties": {
+    "schema_version": {"const": "coach-domain-evidence-v1"},
+    "domain_key": {"enum": ["impact_leak", "bad_fight_selection"]},
+    "owner": {"type": "object"},
+    "baseline": {"type": "object", "required": ["id", "hash", "analysis_cutoff", "match_ids", "sample_matches"]},
+    "metric_versions": {"type": "object"},
+    "aggregates": {"type": "object"},
+    "chronological_trends": {"type": "object"},
+    "per_match_observations": {"type": "array", "minItems": 30, "maxItems": 30},
+    "strong_positive_examples": {"type": "array"},
+    "counterexamples": {"type": "array"},
+    "confidence": {"type": "string"},
+    "availability": {"type": "object"},
+    "caveats": {"type": "array"},
+    "allowed_claim_boundaries": {"type": "object"},
+    "target_policy": {"type": "object"},
+    "evidence_refs": {"type": "object"},
+    "source_snapshot_event_set_lineage": {"type": "array"}
+  }
+}

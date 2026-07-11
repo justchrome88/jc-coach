@@ -1218,17 +1218,20 @@ def mission_suppression_decision_for_payload(
     key = dict(candidate_key)
     candidate_owner = key.get("owner_user_id")
     candidate_steam = key.get("owner_steam_id")
+    candidate_domain = key.get("domain_key")
     for summary in active_mission_summaries:
         active_key = _mapping(summary.get("suppression_key"))
         if active_key.get("owner_user_id") != candidate_owner:
             continue
         if active_key.get("owner_steam_id") != candidate_steam:
             continue
+        if active_key.get("domain_key") != candidate_domain:
+            continue
         if summary.get("mission_status") == "active":
             return MissionSuppressionDecision(
                 suppressed=True,
-                reason="active_mission_global_owner",
-                reason_codes=("active_mission_global_owner",),
+                reason="active_mission_same_domain",
+                reason_codes=("active_mission_same_domain",),
                 active_mission_id=_optional_int(summary.get("mission_id")),
                 active_mission_title=_optional_str(summary.get("title")),
                 active_mission_status=_optional_str(summary.get("mission_status")),
@@ -2524,14 +2527,16 @@ def _handle_duplicate_active_mission(
             user_id=user_id,
             owner_steam_id=owner_steam_id,
         )
-        if mission.id != exclude_mission_id and mission.owner_steam_id == owner_steam_id
+        if mission.id != exclude_mission_id
+        and mission.owner_steam_id == owner_steam_id
+        and mission_domain_key(mission) == domain_key
     ]
     if not duplicates:
         return
     if duplicate_policy == "allow":
         return
     if duplicate_policy == "reject":
-        raise ValueError(f"Duplicate active mission for owner: {user_id}/{owner_steam_id}")
+        raise ValueError(f"Duplicate active mission for owner/domain: {user_id}/{owner_steam_id}/{domain_key}")
     ended_at = datetime.now(UTC)
     for duplicate in duplicates:
         previous_status = duplicate.status

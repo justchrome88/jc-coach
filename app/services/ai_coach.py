@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
+import tempfile
+import time
+import tomllib
 import urllib.error
 import urllib.request
 from collections.abc import Mapping, Sequence
@@ -101,7 +106,7 @@ class CodexCliHandoffProvider:
         prompt = build_ai_coach_prompt(payload)
         payload_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
         prompt_path.write_text(prompt, encoding="utf-8")
-        command = f"{settings.ai_codex_command} --cd /opt/jc-coach \"$(cat {prompt_path})\""
+        command = f'{settings.ai_codex_command} --cd /opt/jc-coach "$(cat {prompt_path})"'
         metadata = {
             "provider": self.name,
             "status": "handoff_ready",
@@ -155,6 +160,115 @@ class LocalLLMProvider:
             prompt,
             settings.local_llm_timeout_seconds,
         )
+
+
+def invoke_configured_structured_model(
+    *, prompt: str, schema_path: Path, timeout_seconds: int | None = None
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Invoke the accepted configured route and return schema-constrained JSON plus safe telemetry."""
+    settings = get_settings()
+    provider = settings.ai_provider.strip().lower()
+    started = time.monotonic()
+    if provider == "codex_cli_handoff":
+        with tempfile.TemporaryDirectory(prefix="jc-coach-domain-ai-") as temporary:
+            output_path = Path(temporary) / "result.json"
+            command = [
+                *settings.ai_codex_command.split(),
+                "--ephemeral",
+                "--sandbox",
+                "read-only",
+                "--output-schema",
+                str(schema_path),
+                "--output-last-message",
+                str(output_path),
+                "--json",
+                "--cd",
+                temporary,
+                "--skip-git-repo-check",
+                "-",
+            ]
+            try:
+                completed = subprocess.run(
+                    command,
+                    input=prompt,
+                    text=True,
+                    capture_output=True,
+                    timeout=timeout_seconds or settings.local_llm_timeout_seconds,
+                    check=False,
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise TimeoutError("configured_model_timeout") from exc
+            if completed.returncode != 0 or not output_path.exists():
+                raise RuntimeError("configured_model_invocation_failed")
+            raw = output_path.read_text(encoding="utf-8")
+            telemetry = _codex_jsonl_telemetry(completed.stdout)
+        return json.loads(raw), {
+            "provider": "codex_cli_handoff",
+            "model": telemetry.get("model") or _codex_configured_model(),
+            "route": "codex_exec_output_schema",
+            "request_id": telemetry.get("thread_id"),
+            "input_tokens": telemetry.get("input_tokens"),
+            "output_tokens": telemetry.get("output_tokens"),
+            "latency_ms": round((time.monotonic() - started) * 1000),
+            "raw_response_hash": hashlib.sha256(raw.encode()).hexdigest(),
+        }
+    if provider == "local_llm":
+        if not settings.local_llm_base_url or not settings.local_llm_model:
+            raise RuntimeError("configured_model_unavailable")
+        base_url = settings.local_llm_base_url.rstrip("/")
+        if base_url.endswith(":11434") or "ollama" in base_url:
+            raw = _call_ollama(
+                base_url, settings.local_llm_model, prompt, timeout_seconds or settings.local_llm_timeout_seconds
+            )
+        else:
+            raw = _call_openai_compatible(
+                base_url, settings.local_llm_model, prompt, timeout_seconds or settings.local_llm_timeout_seconds
+            )
+        return json.loads(raw), {
+            "provider": "local_llm",
+            "model": settings.local_llm_model,
+            "route": "local_llm_existing_adapter",
+            "request_id": None,
+            "input_tokens": None,
+            "output_tokens": None,
+            "latency_ms": round((time.monotonic() - started) * 1000),
+            "raw_response_hash": hashlib.sha256(raw.encode()).hexdigest(),
+        }
+    raise RuntimeError("configured_model_unavailable")
+
+
+def configured_model_route_identity() -> str:
+    settings = get_settings()
+    if settings.ai_provider.strip().lower() == "codex_cli_handoff":
+        return f"codex_cli_handoff:{_codex_configured_model()}"
+    return f"{settings.ai_provider}:{settings.local_llm_model or 'unconfigured'}"
+
+
+def _codex_configured_model() -> str:
+    config = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")) / "config.toml"
+    try:
+        value = tomllib.loads(config.read_text(encoding="utf-8")).get("model")
+    except (OSError, tomllib.TOMLDecodeError):
+        value = None
+    return str(value) if value else "configured_default"
+
+
+def _codex_jsonl_telemetry(raw: str) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for line in raw.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("thread_id"):
+            result["thread_id"] = event["thread_id"]
+        usage = event.get("usage") or (event.get("item") or {}).get("usage") or {}
+        for key in ("input_tokens", "output_tokens"):
+            if isinstance(usage.get(key), int):
+                result[key] = int(usage[key])
+        if event.get("model"):
+            result["model"] = str(event["model"])
+    return result
 
 
 def prepare_ai_coach_handoff(
@@ -391,9 +505,7 @@ def process_owner_match_metric_snapshots_for_coach_loop(
         if existing_evaluation is not None:
             evaluations.append(existing_evaluation)
             reused_evaluation_ids.append(existing_evaluation.id)
-            mission_evaluation_summary.append(
-                _mission_evaluation_result_summary(existing_evaluation, reused=True)
-            )
+            mission_evaluation_summary.append(_mission_evaluation_result_summary(existing_evaluation, reused=True))
             continue
         evaluation = evaluate_mission_progress(
             db,
@@ -408,9 +520,7 @@ def process_owner_match_metric_snapshots_for_coach_loop(
             },
         )
         evaluations.append(evaluation)
-        mission_evaluation_summary.append(
-            _mission_evaluation_result_summary(evaluation, reused=False)
-        )
+        mission_evaluation_summary.append(_mission_evaluation_result_summary(evaluation, reused=False))
     evaluated_mission_ids = {evaluation.mission_id for evaluation in evaluations}
     considered_mission_ids = sorted(evaluated_mission_ids | skipped_mission_ids)
     active_mission_ids = [mission.id for mission in active_owner_missions]
@@ -452,10 +562,7 @@ def process_owner_match_metric_snapshots_for_coach_loop(
             "reused_mission_progress_evaluation_ids": reused_evaluation_ids,
         },
         "mission_evaluation_summary": mission_evaluation_summary,
-        "mission_status_summaries": [
-            serialize_mission_progress_evaluation(evaluation)
-            for evaluation in evaluations
-        ],
+        "mission_status_summaries": [serialize_mission_progress_evaluation(evaluation) for evaluation in evaluations],
     }
 
 
@@ -731,11 +838,7 @@ def list_ai_coach_reports(db: Session, limit: int = 10, *, user_id: int | None =
     candidates = db.scalars(
         stmt.order_by(CoachReport.created_at.desc(), CoachReport.id.desc()).limit(max(limit * 3, limit))
     ).all()
-    return list(
-        report
-        for report in candidates
-        if _report_has_presentable_personal_scope(report)
-    )[:limit]
+    return list(report for report in candidates if _report_has_presentable_personal_scope(report))[:limit]
 
 
 def serialize_ai_coach_report(report: CoachReport) -> dict[str, Any]:
@@ -860,11 +963,7 @@ def build_ai_coach_payload(
             "suppressed_recommendations": suppressed_mission_recommendations,
             "suppressed_count": len(suppressed_mission_recommendations),
             "reason_codes": sorted(
-                {
-                    reason
-                    for item in suppressed_mission_recommendations
-                    for reason in item.get("reason_codes", [])
-                }
+                {reason for item in suppressed_mission_recommendations for reason in item.get("reason_codes", [])}
             ),
         },
         "metric_truth": {
@@ -978,9 +1077,19 @@ def _metric_snapshot_payloads_for_scope(
 def _trusted_consumer_summary(summary: Mapping[str, Any]) -> dict[str, Any]:
     trusted = dict(summary)
     for key in (
-        "avg_kd", "avg_adr", "avg_kast", "avg_rating", "avg_swing_score",
-        "avg_headshot_percent", "avg_deaths", "avg_utility_damage", "avg_flash_assists",
-        "entry_kills", "entry_deaths", "entry_diff", "form_score",
+        "avg_kd",
+        "avg_adr",
+        "avg_kast",
+        "avg_rating",
+        "avg_swing_score",
+        "avg_headshot_percent",
+        "avg_deaths",
+        "avg_utility_damage",
+        "avg_flash_assists",
+        "entry_kills",
+        "entry_deaths",
+        "entry_diff",
+        "form_score",
     ):
         trusted[key] = None
     trusted["consumer_gate"] = {
@@ -1126,11 +1235,7 @@ def _coach_mission_payloads_from_insight_cards(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     payloads: list[dict[str, Any]] = []
     suppressed: list[dict[str, Any]] = []
-    active_missions = [
-        item
-        for item in active_mission_context.get("active_missions", [])
-        if isinstance(item, Mapping)
-    ]
+    active_missions = [item for item in active_mission_context.get("active_missions", []) if isinstance(item, Mapping)]
     for card in cards:
         mission_payload = mission_payload_from_insight_card(card)
         serialized = serialize_mission_payload(mission_payload) if mission_payload is not None else {}
@@ -1198,9 +1303,14 @@ def _evidence_matches_owner_snapshot(
         if evidence_match_ids and snapshot_match_id not in evidence_match_ids:
             continue
         snapshot_value = _number(metrics.get(metric_id))
-        if evidence_value is not None and snapshot_value is not None and round(evidence_value, 3) != round(
-            snapshot_value,
-            3,
+        if (
+            evidence_value is not None
+            and snapshot_value is not None
+            and round(evidence_value, 3)
+            != round(
+                snapshot_value,
+                3,
+            )
         ):
             continue
         return True
