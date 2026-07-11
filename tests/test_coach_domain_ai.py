@@ -56,11 +56,13 @@ def test_temporal_survival_distinguishes_death_survival_disconnect_overtime_and_
 
 
 def test_structured_schema_is_strict_and_json_valid() -> None:
-    schema = json.loads((Path(__file__).parents[1] / "docs/coach/schemas/ai-domain-hypothesis.schema.json").read_text())
+    schema = json.loads(
+        (Path(__file__).parents[1] / "app/contracts/coach/schemas/ai-domain-hypothesis.schema.json").read_text()
+    )
     assert schema["additionalProperties"] is False
     assert schema["properties"]["mission_proposal"]["anyOf"][1]["additionalProperties"] is False
     evidence_schema = json.loads(
-        (Path(__file__).parents[1] / "docs/coach/evidence-schemas/coach-domain-evidence.schema.json").read_text()
+        (Path(__file__).parents[1] / "app/contracts/coach/schemas/coach-domain-evidence.schema.json").read_text()
     )
     assert evidence_schema["$id"] == "coach-domain-evidence-v1"
     assert evidence_schema["properties"]["per_match_observations"]["minItems"] == 30

@@ -374,6 +374,48 @@ def record_agent_destination_changes(args: argparse.Namespace) -> int:
     return 0
 
 
+def record_compact_destination_changes(args: argparse.Namespace) -> int:
+    """Record originals archived before contract/doc path or semantic updates."""
+    path = Path(args.manifest)
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    sources = {
+        *HUMAN_DESTINATIONS,
+        "docs/coach/coach-domain-model.json",
+        "docs/project_management/DOCS_MAP.md",
+        "docs/metrics/generated/METRIC_CATALOG.md",
+    }
+    changes = manifest["authority"].setdefault("destination_plan_changes", [])
+    changed_sources = {change["source_path"] for change in changes}
+    added = 0
+    for record in manifest["records"]:
+        source = record["source_path"]
+        if source not in sources or source in changed_sources:
+            continue
+        old_destination = record["planned_destination"]
+        new_destination = archive_destination(source)
+        record["planned_destination"] = new_destination
+        record["destination_basis"] = (
+            "original archived before canonical path or runtime-contract update"
+        )
+        changes.append(
+            {
+                "source_path": source,
+                "old_planned_destination": old_destination,
+                "new_planned_destination": new_destination,
+                "classification_changed": False,
+                "evidence": (
+                    "R02A2 canonical files require new-zone references or "
+                    "runtime-parity semantics; preservation is not reduced"
+                ),
+            }
+        )
+        added += 1
+    atomic_json_write(path, manifest)
+    print(f"COMPACT_DESTINATION_CHANGES={added}")
+    print("COMPACT_DESTINATION_CHANGE_RESULT=recorded")
+    return 0
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -394,6 +436,9 @@ def parse_args() -> argparse.Namespace:
     revise = subparsers.add_parser("record-agent-destination-changes")
     revise.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
     revise.set_defaults(func=record_agent_destination_changes)
+    compact = subparsers.add_parser("record-compact-destination-changes")
+    compact.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    compact.set_defaults(func=record_compact_destination_changes)
     return parser.parse_args()
 
 

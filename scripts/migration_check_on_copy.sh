@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE_DB="${SOURCE_DB:-$ROOT_DIR/data/cs2_coach.db}"
 TARGET_DB="${TARGET_DB:-$(mktemp /tmp/jc-coach-migration-check.XXXXXX.db)}"
-SCHEMA_BASELINE="${SCHEMA_BASELINE:-$ROOT_DIR/docs/foundation_hardening/2026-07-06-readiness-recovery-plan/current_schema_baseline.json}"
+SCHEMA_BASELINE="${SCHEMA_BASELINE:-$ROOT_DIR/app/contracts/db/current_schema_baseline.json}"
 PYTHON_BIN="${PYTHON:-python3}"
 
 source_abs="$(realpath -m "$SOURCE_DB")"

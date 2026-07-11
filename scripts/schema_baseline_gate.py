@@ -8,6 +8,7 @@ import copy
 import difflib
 import hashlib
 import json
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -17,9 +18,9 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DB = ROOT / "data" / "cs2_coach.db"
 DEFAULT_BASELINE = (
     ROOT
-    / "docs"
-    / "foundation_hardening"
-    / "2026-07-06-readiness-recovery-plan"
+    / "app"
+    / "contracts"
+    / "db"
     / "current_schema_baseline.json"
 )
 BASELINE_VERSION = 1
@@ -182,6 +183,11 @@ def build_baseline(db_path: Path) -> dict[str, Any]:
     schema = inspect_schema(db_path)
     return {
         "schema_baseline_version": BASELINE_VERSION,
+        "source_files": [
+            "data/cs2_coach.db (schema only, read-only)",
+            "_legacy_archive/r02a2-2026-07-11/docs/foundation_hardening/"
+            "2026-07-06-readiness-recovery-plan/current_schema_baseline.json",
+        ],
         "schema_hash": schema_hash(schema),
         "schema": schema,
     }
@@ -203,7 +209,12 @@ def write_baseline(args: argparse.Namespace) -> int:
     output_path = Path(args.output)
     baseline = build_baseline(db_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(canonical_json(baseline), encoding="utf-8")
+    temporary = output_path.with_name(f".{output_path.name}.tmp-{os.getpid()}")
+    with temporary.open("w", encoding="utf-8") as handle:
+        handle.write(canonical_json(baseline))
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, output_path)
     print(f"SCHEMA_BASELINE_DB={db_path.resolve()}")
     print(f"SCHEMA_BASELINE_OUTPUT={output_path.resolve()}")
     print(f"SCHEMA_BASELINE_HASH={baseline['schema_hash']}")

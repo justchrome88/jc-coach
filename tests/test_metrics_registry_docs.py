@@ -7,15 +7,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_registry_validates_and_catalog_is_reproducible() -> None:
-    registry = json.loads((ROOT / "docs/metrics/registry/metrics.json").read_text())
-    schema = json.loads((ROOT / "docs/metrics/registry/metric-registry.schema.json").read_text())
+    registry = json.loads((ROOT / "app/contracts/metrics/registry/metrics.json").read_text())
+    schema = json.loads((ROOT / "app/contracts/metrics/registry/metric-registry.schema.json").read_text())
 
     assert validate_registry(registry, schema) == []
-    assert (ROOT / "docs/metrics/generated/METRIC_CATALOG.md").read_text() == render_catalog(registry)
+    assert (ROOT / "project_docs/metrics/generated/METRIC_CATALOG.md").read_text() == render_catalog(registry)
 
 
 def test_disputed_metrics_do_not_claim_verified_ground_truth() -> None:
-    registry = json.loads((ROOT / "docs/metrics/registry/metrics.json").read_text())
+    registry = json.loads((ROOT / "app/contracts/metrics/registry/metrics.json").read_text())
     by_key = {metric["metric_key"]: metric for metric in registry["metrics"]}
 
     for key in ("damage", "rounds"):
@@ -37,7 +37,7 @@ def test_disputed_metrics_do_not_claim_verified_ground_truth() -> None:
 
 
 def test_every_critical_metric_has_explicit_terminal_validation_and_identity() -> None:
-    registry = json.loads((ROOT / "docs/metrics/registry/metrics.json").read_text())
+    registry = json.loads((ROOT / "app/contracts/metrics/registry/metrics.json").read_text())
     critical = [metric for metric in registry["metrics"] if metric["critical"]]
 
     assert critical
@@ -54,7 +54,7 @@ def test_every_critical_metric_has_explicit_terminal_validation_and_identity() -
 
 
 def test_registry_implementation_paths_exist_and_deprecated_aliases_fail_closed() -> None:
-    registry = json.loads((ROOT / "docs/metrics/registry/metrics.json").read_text())
+    registry = json.loads((ROOT / "app/contracts/metrics/registry/metrics.json").read_text())
     by_key = {metric["metric_key"]: metric for metric in registry["metrics"]}
     for metric in registry["metrics"]:
         for entrypoint in metric["implementation_entrypoints"]:

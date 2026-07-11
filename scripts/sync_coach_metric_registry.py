@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-REGISTRY = ROOT / "docs/metrics/registry/metrics.json"
+REGISTRY = ROOT / "app/contracts/metrics/registry/metrics.json"
 
 SEMANTIC_VERSION = "3.0.0"
 IMPLEMENTATION = "app/services/coach_metric_pack.py"
@@ -370,7 +371,12 @@ def main() -> None:
         by_key[key] = _entry(key, spec, by_key.get(key))
     document["registry_version"] = SEMANTIC_VERSION
     document["metrics"] = sorted(by_key.values(), key=lambda item: item["metric_key"])
-    REGISTRY.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temporary = REGISTRY.with_name(f".{REGISTRY.name}.tmp-{os.getpid()}")
+    with temporary.open("w", encoding="utf-8") as handle:
+        handle.write(json.dumps(document, ensure_ascii=False, indent=2) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, REGISTRY)
 
 
 if __name__ == "__main__":

@@ -6,8 +6,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-REGISTRY_PATH = ROOT / "docs/metrics/registry/metrics.json"
-DOMAIN_PATH = ROOT / "docs/metrics/coach/coach-domain-metric-requirements.json"
+REGISTRY_PATH = ROOT / "app/contracts/metrics/registry/metrics.json"
+DOMAIN_PATH = ROOT / "app/contracts/metrics/coach-domain-metric-requirements.json"
 GOLDEN_PATH = ROOT / "tests/fixtures/metrics/coach_metric_real_demo_corpus.json"
 IMPLEMENTATION_PATH = ROOT / "app/services/coach_metric_pack.py"
 VERSION = "3.0.0"

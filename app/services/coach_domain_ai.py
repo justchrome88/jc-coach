@@ -50,10 +50,10 @@ ANALYSIS_STATUSES = {"supported_hypothesis", "no_material_problem", "insufficien
 ALLOWED_VERSIONS = {"3.0.0", TEMPORAL_SEMANTIC_VERSION}
 WINDOW_MIN, WINDOW_MAX = 3, 5
 PROMPT_PATHS = {
-    "impact_leak": BASE_DIR / "docs/coach/prompts/impact_leak_hypothesis_prompt.md",
-    "bad_fight_selection": BASE_DIR / "docs/coach/prompts/bad_fight_selection_hypothesis_prompt.md",
+    "impact_leak": BASE_DIR / "app/contracts/coach/prompts/impact_leak_hypothesis_prompt.md",
+    "bad_fight_selection": BASE_DIR / "app/contracts/coach/prompts/bad_fight_selection_hypothesis_prompt.md",
 }
-SCHEMA_PATH = BASE_DIR / "docs/coach/schemas/ai-domain-hypothesis.schema.json"
+SCHEMA_PATH = BASE_DIR / "app/contracts/coach/schemas/ai-domain-hypothesis.schema.json"
 FORBIDDEN_CLAIMS = re.compile(
     r"\b(exact (angle|position|rotation|spacing)|crosshair placement|economy mistake|clutch decision)\b",
     re.IGNORECASE,
@@ -864,7 +864,9 @@ def _observation_score(domain: str, observation: Mapping[str, Any]) -> float:
 
 
 def _registered_metric_keys() -> set[str]:
-    registry = json.loads((BASE_DIR / "docs/metrics/registry/metrics.json").read_text(encoding="utf-8"))
+    registry = json.loads(
+        (BASE_DIR / "app/contracts/metrics/registry/metrics.json").read_text(encoding="utf-8")
+    )
     return {row["metric_key"] for row in registry["metrics"]} | {
         "average_survival_time_seconds",
         "median_survival_time_seconds",

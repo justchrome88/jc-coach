@@ -100,6 +100,265 @@
         "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/project_management/PROMPT_PLAYBOOK.md",
         "old_planned_destination": "project_control/agents/PROMPT_PLAYBOOK.md",
         "source_path": "docs/project_management/PROMPT_PLAYBOOK.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/AI_COACH.md",
+        "old_planned_destination": "project_docs/product/AI_COACH.md",
+        "source_path": "docs/AI_COACH.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/API_CONTRACTS.md",
+        "old_planned_destination": "project_docs/architecture/API_CONTRACTS.md",
+        "source_path": "docs/API_CONTRACTS.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/ARCHITECTURE.md",
+        "old_planned_destination": "project_docs/architecture/ARCHITECTURE.md",
+        "source_path": "docs/ARCHITECTURE.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/BACKUP_RESTORE.md",
+        "old_planned_destination": "project_docs/operations/BACKUP_RESTORE.md",
+        "source_path": "docs/BACKUP_RESTORE.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/CS2_DOMAIN_CONTRACT.md",
+        "old_planned_destination": "project_docs/product/CS2_DOMAIN_CONTRACT.md",
+        "source_path": "docs/CS2_DOMAIN_CONTRACT.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/DECISIONS.md",
+        "old_planned_destination": "project_docs/architecture/DECISIONS.md",
+        "source_path": "docs/DECISIONS.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/DEPLOYMENT.md",
+        "old_planned_destination": "project_docs/operations/DEPLOYMENT.md",
+        "source_path": "docs/DEPLOYMENT.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/KNOWN_LIMITATIONS.md",
+        "old_planned_destination": "project_docs/product/KNOWN_LIMITATIONS.md",
+        "source_path": "docs/KNOWN_LIMITATIONS.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/METRICS.md",
+        "old_planned_destination": "project_docs/metrics/METRICS.md",
+        "source_path": "docs/METRICS.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/MIGRATIONS.md",
+        "old_planned_destination": "project_docs/operations/MIGRATIONS.md",
+        "source_path": "docs/MIGRATIONS.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/RECOMMENDATIONS.md",
+        "old_planned_destination": "project_docs/product/RECOMMENDATIONS.md",
+        "source_path": "docs/RECOMMENDATIONS.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/SECURITY.md",
+        "old_planned_destination": "project_docs/operations/SECURITY.md",
+        "source_path": "docs/SECURITY.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/STEAM_IMPORT.md",
+        "old_planned_destination": "project_docs/operations/STEAM_IMPORT.md",
+        "source_path": "docs/STEAM_IMPORT.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/STEAM_IMPORT_ARCHITECTURE.md",
+        "old_planned_destination": "project_docs/architecture/STEAM_IMPORT_ARCHITECTURE.md",
+        "source_path": "docs/STEAM_IMPORT_ARCHITECTURE.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/TESTING.md",
+        "old_planned_destination": "project_docs/operations/TESTING.md",
+        "source_path": "docs/TESTING.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/acceptance/CANONICAL_TWO_DOMAIN_VERTICAL_REPLAY.md",
+        "old_planned_destination": "project_docs/acceptance/CANONICAL_TWO_DOMAIN_VERTICAL_REPLAY.md",
+        "source_path": "docs/acceptance/CANONICAL_TWO_DOMAIN_VERTICAL_REPLAY.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/coach/AI_HYPOTHESIS_ENGINE_ARCHITECTURE.md",
+        "old_planned_destination": "project_docs/architecture/AI_HYPOTHESIS_ENGINE_ARCHITECTURE.md",
+        "source_path": "docs/coach/AI_HYPOTHESIS_ENGINE_ARCHITECTURE.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/coach/CANONICAL_COACH_DOMAIN_MODEL.md",
+        "old_planned_destination": "project_docs/product/CANONICAL_COACH_DOMAIN_MODEL.md",
+        "source_path": "docs/coach/CANONICAL_COACH_DOMAIN_MODEL.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/coach/MISSION_LINEAGE_AND_SELECTION_MODEL.md",
+        "old_planned_destination": "project_docs/product/MISSION_LINEAGE_AND_SELECTION_MODEL.md",
+        "source_path": "docs/coach/MISSION_LINEAGE_AND_SELECTION_MODEL.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/coach/coach-domain-model.json",
+        "old_planned_destination": "app/contracts/coach/coach-domain-model.json",
+        "source_path": "docs/coach/coach-domain-model.json"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/GROUND_TRUTH_POLICY.md",
+        "old_planned_destination": "project_docs/metrics/GROUND_TRUTH_POLICY.md",
+        "source_path": "docs/metrics/GROUND_TRUTH_POLICY.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/METRIC_CHANGE_POLICY.md",
+        "old_planned_destination": "project_docs/metrics/METRIC_CHANGE_POLICY.md",
+        "source_path": "docs/metrics/METRIC_CHANGE_POLICY.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/METRIC_DATA_LINEAGE.md",
+        "old_planned_destination": "project_docs/metrics/METRIC_DATA_LINEAGE.md",
+        "source_path": "docs/metrics/METRIC_DATA_LINEAGE.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/METRIC_GOVERNANCE.md",
+        "old_planned_destination": "project_docs/metrics/METRIC_GOVERNANCE.md",
+        "source_path": "docs/metrics/METRIC_GOVERNANCE.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/README.md",
+        "old_planned_destination": "project_docs/metrics/README.md",
+        "source_path": "docs/metrics/README.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/coach/ADDING_A_COACH_METRIC.md",
+        "old_planned_destination": "project_docs/metrics/coach/ADDING_A_COACH_METRIC.md",
+        "source_path": "docs/metrics/coach/ADDING_A_COACH_METRIC.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/coach/COACH_DOMAIN_METRIC_REQUIREMENTS.md",
+        "old_planned_destination": "project_docs/metrics/coach/COACH_DOMAIN_METRIC_REQUIREMENTS.md",
+        "source_path": "docs/metrics/coach/COACH_DOMAIN_METRIC_REQUIREMENTS.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/coach/COACH_METRIC_EVIDENCE_CAPABILITY_MATRIX.md",
+        "old_planned_destination": "project_docs/metrics/coach/COACH_METRIC_EVIDENCE_CAPABILITY_MATRIX.md",
+        "source_path": "docs/metrics/coach/COACH_METRIC_EVIDENCE_CAPABILITY_MATRIX.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/coach/COACH_METRIC_PACK_V1.md",
+        "old_planned_destination": "project_docs/metrics/coach/COACH_METRIC_PACK_V1.md",
+        "source_path": "docs/metrics/coach/COACH_METRIC_PACK_V1.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/coach/TEN_MATCH_REPLAY_CORPUS.md",
+        "old_planned_destination": "project_docs/acceptance/TEN_MATCH_REPLAY_CORPUS.md",
+        "source_path": "docs/metrics/coach/TEN_MATCH_REPLAY_CORPUS.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/contracts/aim_weapon.md",
+        "old_planned_destination": "project_docs/metrics/contracts/aim_weapon.md",
+        "source_path": "docs/metrics/contracts/aim_weapon.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/contracts/core_combat.md",
+        "old_planned_destination": "project_docs/metrics/contracts/core_combat.md",
+        "source_path": "docs/metrics/contracts/core_combat.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/contracts/round_participation.md",
+        "old_planned_destination": "project_docs/metrics/contracts/round_participation.md",
+        "source_path": "docs/metrics/contracts/round_participation.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/contracts/temporal_survival.md",
+        "old_planned_destination": "project_docs/metrics/contracts/temporal_survival.md",
+        "source_path": "docs/metrics/contracts/temporal_survival.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/contracts/utility.md",
+        "old_planned_destination": "project_docs/metrics/contracts/utility.md",
+        "source_path": "docs/metrics/contracts/utility.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/generated/METRIC_CATALOG.md",
+        "old_planned_destination": "project_docs/metrics/generated/METRIC_CATALOG.md",
+        "source_path": "docs/metrics/generated/METRIC_CATALOG.md"
+      },
+      {
+        "classification_changed": false,
+        "evidence": "R02A2 canonical files require new-zone references or runtime-parity semantics; preservation is not reduced",
+        "new_planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/project_management/DOCS_MAP.md",
+        "old_planned_destination": "project_control/manifests/DOCS_MAP.md",
+        "source_path": "docs/project_management/DOCS_MAP.md"
       }
     ],
     "r02a1_final_artifact_commit": "ddd82b33b2ac48b428f491bcb97328ce2e06c6f9",
@@ -135,8 +394,8 @@
   },
   "records": [
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/product/AI_COACH.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/AI_COACH.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/AI_COACH.md",
@@ -165,8 +424,8 @@
       "source_size": 7690
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/architecture/API_CONTRACTS.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/API_CONTRACTS.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/API_CONTRACTS.md",
@@ -175,8 +434,8 @@
       "source_size": 17966
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/architecture/ARCHITECTURE.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/ARCHITECTURE.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/ARCHITECTURE.md",
@@ -185,8 +444,8 @@
       "source_size": 30337
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/operations/BACKUP_RESTORE.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/BACKUP_RESTORE.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/BACKUP_RESTORE.md",
@@ -215,8 +474,8 @@
       "source_size": 7507
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/product/CS2_DOMAIN_CONTRACT.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/CS2_DOMAIN_CONTRACT.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/CS2_DOMAIN_CONTRACT.md",
@@ -245,8 +504,8 @@
       "source_size": 20316
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/architecture/DECISIONS.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/DECISIONS.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/DECISIONS.md",
@@ -275,8 +534,8 @@
       "source_size": 8039
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/operations/DEPLOYMENT.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/DEPLOYMENT.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/DEPLOYMENT.md",
@@ -325,8 +584,8 @@
       "source_size": 16215
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/product/KNOWN_LIMITATIONS.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/KNOWN_LIMITATIONS.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/KNOWN_LIMITATIONS.md",
@@ -335,8 +594,8 @@
       "source_size": 2539
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/METRICS.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/METRICS.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/METRICS.md",
@@ -355,8 +614,8 @@
       "source_size": 6228
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/operations/MIGRATIONS.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/MIGRATIONS.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/MIGRATIONS.md",
@@ -445,8 +704,8 @@
       "source_size": 3011
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/product/RECOMMENDATIONS.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/RECOMMENDATIONS.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/RECOMMENDATIONS.md",
@@ -475,8 +734,8 @@
       "source_size": 1731
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/operations/SECURITY.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/SECURITY.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/SECURITY.md",
@@ -485,8 +744,8 @@
       "source_size": 9790
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/operations/STEAM_IMPORT.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/STEAM_IMPORT.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/STEAM_IMPORT.md",
@@ -495,8 +754,8 @@
       "source_size": 29735
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/architecture/STEAM_IMPORT_ARCHITECTURE.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/STEAM_IMPORT_ARCHITECTURE.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/STEAM_IMPORT_ARCHITECTURE.md",
@@ -515,8 +774,8 @@
       "source_size": 4965
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/operations/TESTING.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/TESTING.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/TESTING.md",
@@ -535,8 +794,8 @@
       "source_size": 2438
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/acceptance/CANONICAL_TWO_DOMAIN_VERTICAL_REPLAY.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/acceptance/CANONICAL_TWO_DOMAIN_VERTICAL_REPLAY.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/CANONICAL_TWO_DOMAIN_VERTICAL_REPLAY.md",
@@ -2805,8 +3064,8 @@
       "source_size": 834
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/architecture/AI_HYPOTHESIS_ENGINE_ARCHITECTURE.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/coach/AI_HYPOTHESIS_ENGINE_ARCHITECTURE.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/AI_HYPOTHESIS_ENGINE_ARCHITECTURE.md",
@@ -2815,8 +3074,8 @@
       "source_size": 2688
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/product/CANONICAL_COACH_DOMAIN_MODEL.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/coach/CANONICAL_COACH_DOMAIN_MODEL.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/CANONICAL_COACH_DOMAIN_MODEL.md",
@@ -2825,8 +3084,8 @@
       "source_size": 2403
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/product/MISSION_LINEAGE_AND_SELECTION_MODEL.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/coach/MISSION_LINEAGE_AND_SELECTION_MODEL.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/MISSION_LINEAGE_AND_SELECTION_MODEL.md",
@@ -2835,8 +3094,8 @@
       "source_size": 2425
     },
     {
-      "destination_basis": "task runtime-contract mapping",
-      "planned_destination": "app/contracts/coach/coach-domain-model.json",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/coach/coach-domain-model.json",
       "preservation": "byte_identical",
       "r02a1_primary_class": "runtime_manifest_or_registry",
       "r02a1_recommended_destination": "app/contracts/coach/coach-domain-model.json",
@@ -3025,8 +3284,8 @@
       "source_size": 1525
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/GROUND_TRUTH_POLICY.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/GROUND_TRUTH_POLICY.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/GROUND_TRUTH_POLICY.md",
@@ -3035,8 +3294,8 @@
       "source_size": 1861
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/METRIC_CHANGE_POLICY.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/METRIC_CHANGE_POLICY.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/METRIC_CHANGE_POLICY.md",
@@ -3045,8 +3304,8 @@
       "source_size": 2036
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/METRIC_DATA_LINEAGE.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/METRIC_DATA_LINEAGE.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/METRIC_DATA_LINEAGE.md",
@@ -3055,8 +3314,8 @@
       "source_size": 4342
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/METRIC_GOVERNANCE.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/METRIC_GOVERNANCE.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/METRIC_GOVERNANCE.md",
@@ -3065,8 +3324,8 @@
       "source_size": 1430
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/README.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/README.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/README.md",
@@ -3075,8 +3334,8 @@
       "source_size": 2112
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/coach/ADDING_A_COACH_METRIC.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/coach/ADDING_A_COACH_METRIC.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/ADDING_A_COACH_METRIC.md",
@@ -3085,8 +3344,8 @@
       "source_size": 1429
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/coach/COACH_DOMAIN_METRIC_REQUIREMENTS.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/coach/COACH_DOMAIN_METRIC_REQUIREMENTS.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/COACH_DOMAIN_METRIC_REQUIREMENTS.md",
@@ -3095,8 +3354,8 @@
       "source_size": 1202
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/coach/COACH_METRIC_EVIDENCE_CAPABILITY_MATRIX.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/coach/COACH_METRIC_EVIDENCE_CAPABILITY_MATRIX.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/COACH_METRIC_EVIDENCE_CAPABILITY_MATRIX.md",
@@ -3105,8 +3364,8 @@
       "source_size": 2707
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/coach/COACH_METRIC_PACK_V1.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/coach/COACH_METRIC_PACK_V1.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/COACH_METRIC_PACK_V1.md",
@@ -3115,8 +3374,8 @@
       "source_size": 3640
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/acceptance/TEN_MATCH_REPLAY_CORPUS.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/coach/TEN_MATCH_REPLAY_CORPUS.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/TEN_MATCH_REPLAY_CORPUS.md",
@@ -3135,8 +3394,8 @@
       "source_size": 5225
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/contracts/aim_weapon.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/contracts/aim_weapon.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/aim_weapon.md",
@@ -3145,8 +3404,8 @@
       "source_size": 761
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/contracts/core_combat.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/contracts/core_combat.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/core_combat.md",
@@ -3155,8 +3414,8 @@
       "source_size": 1637
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/contracts/round_participation.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/contracts/round_participation.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/round_participation.md",
@@ -3165,8 +3424,8 @@
       "source_size": 1125
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/contracts/temporal_survival.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/contracts/temporal_survival.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/temporal_survival.md",
@@ -3175,8 +3434,8 @@
       "source_size": 995
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/contracts/utility.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/contracts/utility.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "canonical_project_documentation",
       "r02a1_recommended_destination": "project_docs/utility.md",
@@ -3185,8 +3444,8 @@
       "source_size": 1007
     },
     {
-      "destination_basis": "task human-documentation category mapping",
-      "planned_destination": "project_docs/metrics/generated/METRIC_CATALOG.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/metrics/generated/METRIC_CATALOG.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "generated_status_or_catalog",
       "r02a1_recommended_destination": "project_docs/reference/METRIC_CATALOG.md",
@@ -3285,8 +3544,8 @@
       "source_size": 11430
     },
     {
-      "destination_basis": "task runtime-contract mapping",
-      "planned_destination": "project_control/manifests/DOCS_MAP.md",
+      "destination_basis": "original archived before canonical path or runtime-contract update",
+      "planned_destination": "_legacy_archive/r02a2-2026-07-11/docs/project_management/DOCS_MAP.md",
       "preservation": "byte_identical",
       "r02a1_primary_class": "runtime_manifest_or_registry",
       "r02a1_recommended_destination": "app/contracts/coach/DOCS_MAP.md",

@@ -8,6 +8,7 @@ from app.services.coach_domain_model import (
     METRIC_GROUPS,
     canonical_domain_for_family,
     canonicalize_domain_key,
+    runtime_coach_domain_contract,
 )
 from app.services.mission_domain import (
     generate_rolling_mission_candidates,
@@ -18,10 +19,11 @@ from app.services.mission_domain import (
 
 
 def test_machine_model_matches_runtime_canonical_domains():
-    model = json.loads(Path("docs/coach/coach-domain-model.json").read_text(encoding="utf-8"))
+    model = json.loads(Path("app/contracts/coach/coach-domain-model.json").read_text(encoding="utf-8"))
+    assert model == runtime_coach_domain_contract()
     assert tuple(item["key"] for item in model["coach_domains"]) == CANONICAL_COACH_DOMAINS
     assert tuple(model["metric_groups"]) == METRIC_GROUPS
-    assert model["active_mission_model"] == "at_most_one_globally_per_owner"
+    assert model["active_mission_model"] == "at_most_one_per_domain_per_owner"
 
 
 def test_family_mapping_is_explicit_and_utility_fails_closed():

@@ -5,14 +5,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-REGISTRY = ROOT / "docs/metrics/registry/metrics.json"
-SCHEMA = ROOT / "docs/metrics/registry/metric-registry.schema.json"
-CATALOG = ROOT / "docs/metrics/generated/METRIC_CATALOG.md"
+REGISTRY = ROOT / "app/contracts/metrics/registry/metrics.json"
+SCHEMA = ROOT / "app/contracts/metrics/registry/metric-registry.schema.json"
+CATALOG = ROOT / "project_docs/metrics/generated/METRIC_CATALOG.md"
 GROUND_TRUTH = {"verified", "partially_verified", "disputed", "unknown", "not_applicable"}
 STATUSES = {"active", "experimental", "deprecated", "blocked"}
 CLASSIFICATIONS = {
@@ -77,7 +78,7 @@ def render_catalog(registry: dict[str, Any]) -> str:
     lines = [
         "# Metric Catalog",
         "",
-        "Generated from `docs/metrics/registry/metrics.json`; do not edit by hand.",
+        "Generated from `app/contracts/metrics/registry/metrics.json`; do not edit by hand.",
         "",
         f"Registry version: `{registry['registry_version']}`. Metrics: `{len(registry['metrics'])}`.",
         "",
@@ -106,6 +107,16 @@ def render_catalog(registry: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def atomic_write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    with temporary.open("w", encoding="utf-8") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="also require the generated catalog to be current")
@@ -118,8 +129,7 @@ def main() -> int:
         raise SystemExit("registry validation failed:\n- " + "\n- ".join(errors))
     rendered = render_catalog(registry)
     if args.write:
-        CATALOG.parent.mkdir(parents=True, exist_ok=True)
-        CATALOG.write_text(rendered)
+        atomic_write_text(CATALOG, rendered)
     if args.check and (not CATALOG.exists() or CATALOG.read_text() != rendered):
         raise SystemExit("generated metric catalog is stale")
     print(f"METRIC_REGISTRY_VALID metrics={len(registry['metrics'])} version={registry['registry_version']}")
