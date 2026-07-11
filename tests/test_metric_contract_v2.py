@@ -5,20 +5,20 @@ import sys
 from pathlib import Path
 
 from app.db.models import Match, MetricSnapshot, SteamAccount, User
-from app.services.core_combat_metrics import calculate_core_combat_metrics
-from app.services.metric_downstream_state import (
+from app.services.metrics.combat import calculate_core_combat_metrics
+from app.services.metrics.downstream import (
     MATCH_124_DISPOSITIONS,
     match_124_downstream_plan,
     stale_evidence_marker,
 )
-from app.services.metric_snapshots import (
+from app.services.metrics.snapshots import (
     MetricSnapshotAnalysisScope,
     create_metric_snapshot,
     deterministic_input_hash,
     metric_snapshot_payload,
-    process_persisted_match_metric_snapshots_for_coach_loop,
     select_metric_snapshots_for_analysis_scope,
 )
+from app.services.owner.match_processing import process_persisted_match_metric_snapshots_for_coach_loop
 from app.services.parsing.artifact_reader import normalized_events_from_parser_artifact
 from app.services.parsing.match_phase import accepted_events, accepted_match_phase, player_participation_rounds
 from app.services.shared.weapon_names import canonical_weapon_name

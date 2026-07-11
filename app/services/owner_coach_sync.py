@@ -36,9 +36,12 @@ from app.services.ingestion.discovery import PERSISTED_DRY_RUN_REASON
 from app.services.ingestion.jobs import IMPORT_JOB_ACTIVE_STATUSES, IMPORT_JOB_COMPLETED
 from app.services.ingestion.orchestration import run_demo_import_orchestration
 from app.services.ingestion.steam import queue_match_history_sync, sync_match_history_job
-from app.services.match_processing import ACCEPTED_PARSER_ARTIFACT_STATUSES, process_owner_match_after_parser_artifact
-from app.services.metric_snapshots import owner_player_metric_snapshot_scope
+from app.services.metrics.snapshots import owner_player_metric_snapshot_scope
 from app.services.mission_domain import active_mission_context_for_owner, list_mission_criteria
+from app.services.owner.match_processing import (
+    ACCEPTED_PARSER_ARTIFACT_STATUSES,
+    process_owner_match_after_parser_artifact,
+)
 from app.services.parsing.demo_parser import import_demo_file
 
 OWNER_COACH_SYNC_RESULT_SCHEMA_VERSION = "owner-coach-sync-result-v1"

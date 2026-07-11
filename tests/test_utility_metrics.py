@@ -1,13 +1,13 @@
 from pathlib import Path
 
 from app.db.models import Match
-from app.services.metric_snapshots import metric_snapshot_payload
-from app.services.parsing.artifact_reader import read_normalized_events_from_artifact_file
-from app.services.utility_metrics import (
+from app.services.metrics.snapshots import metric_snapshot_payload
+from app.services.metrics.utility import (
     UTILITY_METRICS_VERSION,
     calculate_and_store_utility_metrics,
     calculate_utility_metrics,
 )
+from app.services.parsing.artifact_reader import read_normalized_events_from_artifact_file
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "parser"
 C05_SUPPORTED_PATH = FIXTURE_DIR / "parser_artifact_c05_utility_supported.json"

@@ -49,7 +49,7 @@ TARGET_PACKAGE_BY_LEGACY_MODULE = {
     "import_orchestration": "ingestion",
     "importer": "ingestion",
     "match_phase": "parsing",
-    "match_processing": "metrics",
+    "match_processing": "owner",
     "match_queries": "shared",
     "metric_confidence": "metrics",
     "metric_downstream_state": "metrics",
@@ -82,7 +82,11 @@ CANONICAL_MODULE_BY_LEGACY_MODULE.update(
     {
         "app_settings": "app.services.ingestion.settings",
         "artifact_integrity": "app.services.ingestion.artifact_integrity",
+        "aim_stats": "app.services.metrics.aim",
+        "analytics": "app.services.metrics.analytics",
+        "coach_metric_pack": "app.services.metrics.coach_pack",
         "combat_event_derivation": "app.services.parsing.combat_events",
+        "core_combat_metrics": "app.services.metrics.combat",
         "demo_parser": "app.services.parsing.demo_parser",
         "demo_retention": "app.services.shared.demo_retention",
         "demo_storage": "app.services.ingestion.demo_storage",
@@ -92,6 +96,12 @@ CANONICAL_MODULE_BY_LEGACY_MODULE.update(
         "import_orchestration": "app.services.ingestion.orchestration",
         "importer": "app.services.ingestion.structured_import",
         "match_phase": "app.services.parsing.match_phase",
+        "match_processing": "app.services.owner.match_processing",
+        "match_queries": "app.services.shared.match_queries",
+        "metric_confidence": "app.services.metrics.confidence",
+        "metric_downstream_state": "app.services.metrics.downstream",
+        "metric_snapshots": "app.services.metrics.snapshots",
+        "metric_truth": "app.services.shared.metric_policy",
         "parser_artifact_reader": "app.services.parsing.artifact_reader",
         "parser_evidence": "app.services.parsing.evidence",
         "steam_demo_acquisition": "app.services.ingestion.demo_acquisition",
@@ -99,12 +109,14 @@ CANONICAL_MODULE_BY_LEGACY_MODULE.update(
         "steam_integration": "app.services.ingestion.steam",
         "steam_match_metadata": "app.services.ingestion.match_metadata",
         "steam_storage_guard": "app.services.ingestion.storage_guard",
+        "utility_metrics": "app.services.metrics.utility",
         "weapon_names": "app.services.shared.weapon_names",
     }
 )
 
 COMPATIBILITY_FACADES = {
     "app.services.demo_parser": "app.services.parsing.demo_parser",
+    "app.services.metric_snapshots": "app.services.metrics.snapshots",
     "app.services.steam_demo_downloader": "app.services.ingestion.demo_downloader",
     "app.services.steam_integration": "app.services.ingestion.steam",
     "app.services.steam_match_metadata": "app.services.ingestion.match_metadata",

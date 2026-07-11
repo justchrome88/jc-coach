@@ -1,3 +1,5 @@
+"""Canonical Coach Metric Pack computation and persistence."""
+
 from __future__ import annotations
 
 import hashlib
@@ -13,7 +15,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db.models import MetricSnapshot
-from app.services.metric_snapshots import deterministic_input_hash, upsert_metric_snapshot
+from app.services.metrics.snapshots import deterministic_input_hash, upsert_metric_snapshot
 from app.services.shared.weapon_names import canonical_weapon_name
 
 COACH_METRIC_PACK_VERSION = "coach-metric-pack-v1"

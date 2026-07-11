@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Any
 
 from app.db.models import Match
-from app.services.analytics import get_map_stats, get_summary
+from app.services.metrics.analytics import get_map_stats, get_summary
 
 MISTAKE_CATEGORIES = {
     "aim": "Aim",

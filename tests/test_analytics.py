@@ -1,9 +1,15 @@
 import json
 from datetime import datetime, timedelta
 
-from app.services import metric_confidence as metric_confidence_module
-from app.services.analytics import compare_periods, get_adr_profile, get_dashboard_status, get_map_stats, get_summary
-from app.services.metric_confidence import exact_date_window_metadata, metric_confidence_map, metric_context
+from app.services.metrics import confidence as metric_confidence_module
+from app.services.metrics.analytics import (
+    compare_periods,
+    get_adr_profile,
+    get_dashboard_status,
+    get_map_stats,
+    get_summary,
+)
+from app.services.metrics.confidence import exact_date_window_metadata, metric_confidence_map, metric_context
 from tests.conftest import make_match
 
 

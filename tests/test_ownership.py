@@ -12,7 +12,7 @@ from app.services.auth import (
     owner_user,
     register_user,
 )
-from app.services.metric_snapshots import create_metric_snapshot
+from app.services.metrics.snapshots import create_metric_snapshot
 from app.services.ownership import (
     get_owned_coach_report,
     get_owned_import_job,

@@ -1,3 +1,5 @@
+"""Metric aggregation and analytics read models."""
+
 from __future__ import annotations
 
 import json
@@ -6,8 +8,8 @@ from collections.abc import Iterable
 from typing import Any
 
 from app.db.models import Match
-from app.services.aim_stats import match_aim_profile
-from app.services.metric_confidence import (
+from app.services.metrics.aim import match_aim_profile
+from app.services.metrics.confidence import (
     MetricContext,
     exact_date_window_metadata,
     exact_period_windows,

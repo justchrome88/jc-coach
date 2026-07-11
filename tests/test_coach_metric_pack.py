@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app.services.coach_metric_pack import calculate_coach_metric_pack
+from app.services.metrics.coach_pack import calculate_coach_metric_pack
 
 OWNER = "76561198056634139"
 TEAMMATE = "76561198000000001"

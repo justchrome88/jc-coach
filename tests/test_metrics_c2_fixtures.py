@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from app.services.analytics import compare_periods, get_map_stats, get_summary, match_detail
-from app.services.metric_confidence import exact_date_window_metadata, metric_confidence_map, metric_context
-from app.services.metric_truth import METRIC_REGISTRY, metric_definition
+from app.services.metrics.analytics import compare_periods, get_map_stats, get_summary, match_detail
+from app.services.metrics.confidence import exact_date_window_metadata, metric_confidence_map, metric_context
+from app.services.shared.metric_policy import METRIC_REGISTRY, metric_definition
 from tests.conftest import make_match
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures"

@@ -115,7 +115,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -186,7 +186,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -257,7 +257,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -315,7 +315,7 @@
       "rounding_display": "suppressed",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/metric_truth.py"
+        "app/services/shared/metric_policy.py"
       ],
       "persistence_targets": [],
       "ui_consumers": [],
@@ -364,7 +364,7 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py"
+        "app/services/metrics/combat.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -420,8 +420,8 @@
       "rounding_display": "integer",
       "semantic_version": "2.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_player_stats",
-        "app/services/core_combat_metrics.py"
+        "app/services/parsing/demo_parser.py::_player_stats",
+        "app/services/metrics/combat.py"
       ],
       "persistence_targets": [
         "matches.assists",
@@ -544,7 +544,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -602,7 +602,7 @@
       "rounding_display": "suppressed",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/metric_truth.py"
+        "app/services/shared/metric_policy.py"
       ],
       "persistence_targets": [],
       "ui_consumers": [],
@@ -659,8 +659,8 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_player_stats",
-        "app/services/core_combat_metrics.py"
+        "app/services/parsing/demo_parser.py::_player_stats",
+        "app/services/metrics/combat.py"
       ],
       "persistence_targets": [
         "demo_damage_events",
@@ -724,7 +724,7 @@
       "rounding_display": "2 decimals",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_player_stats"
+        "app/services/parsing/demo_parser.py::_player_stats"
       ],
       "persistence_targets": [
         "matches.raw_json"
@@ -789,7 +789,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -855,7 +855,7 @@
       "rounding_display": "integer or n/a",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_early_deaths_from_timing"
+        "app/services/parsing/demo_parser.py::_early_deaths_from_timing"
       ],
       "persistence_targets": [
         "matches.early_deaths"
@@ -918,8 +918,8 @@
       "rounding_display": "integer",
       "semantic_version": "2.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py",
-        "app/services/utility_metrics.py"
+        "app/services/metrics/combat.py",
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -980,7 +980,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -1051,7 +1051,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -1122,7 +1122,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -1193,7 +1193,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -1259,8 +1259,8 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/utility_metrics.py",
-        "app/services/demo_parser.py"
+        "app/services/metrics/utility.py",
+        "app/services/parsing/demo_parser.py"
       ],
       "persistence_targets": [
         "matches.enemies_flashed",
@@ -1330,7 +1330,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -1401,7 +1401,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -1466,8 +1466,8 @@
       "rounding_display": "integer",
       "semantic_version": "2.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py",
-        "app/services/utility_metrics.py"
+        "app/services/metrics/combat.py",
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -1528,7 +1528,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -1593,8 +1593,8 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_player_stats",
-        "app/services/core_combat_metrics.py"
+        "app/services/parsing/demo_parser.py::_player_stats",
+        "app/services/metrics/combat.py"
       ],
       "persistence_targets": [
         "matches.entry_deaths",
@@ -1660,8 +1660,8 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_player_stats",
-        "app/services/core_combat_metrics.py"
+        "app/services/parsing/demo_parser.py::_player_stats",
+        "app/services/metrics/combat.py"
       ],
       "persistence_targets": [
         "matches.entry_kills",
@@ -1730,7 +1730,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -1801,7 +1801,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -1872,7 +1872,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -1943,7 +1943,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2014,7 +2014,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2085,7 +2085,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2156,7 +2156,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2227,7 +2227,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2285,8 +2285,8 @@
       "rounding_display": "suppressed",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/metric_truth.py",
-        "app/services/utility_metrics.py"
+        "app/services/shared/metric_policy.py",
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [],
       "ui_consumers": [],
@@ -2339,7 +2339,7 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/utility_metrics.py"
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2407,7 +2407,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2478,7 +2478,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2549,7 +2549,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2620,7 +2620,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2684,8 +2684,8 @@
       "rounding_display": "percent",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::parse_demo",
-        "app/services/aim_stats.py"
+        "app/services/parsing/demo_parser.py::parse_demo",
+        "app/services/metrics/aim.py"
       ],
       "persistence_targets": [
         "matches.headshot_percent",
@@ -2756,7 +2756,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2819,7 +2819,7 @@
       "rounding_display": "source value",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/metric_truth.py"
+        "app/services/shared/metric_policy.py"
       ],
       "persistence_targets": [
         "matches.rating"
@@ -2884,7 +2884,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -2955,7 +2955,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3026,7 +3026,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3097,7 +3097,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3159,7 +3159,7 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/utility_metrics.py"
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3215,7 +3215,7 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/utility_metrics.py"
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3280,7 +3280,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3351,7 +3351,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3422,7 +3422,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3493,7 +3493,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3564,7 +3564,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3635,7 +3635,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3706,7 +3706,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3777,7 +3777,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3848,7 +3848,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -3912,7 +3912,7 @@
       "rounding_display": "percent",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_player_stats"
+        "app/services/parsing/demo_parser.py::_player_stats"
       ],
       "persistence_targets": [
         "matches.raw_json"
@@ -3977,7 +3977,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -4048,7 +4048,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -4111,7 +4111,7 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py"
+        "app/services/metrics/combat.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -4176,7 +4176,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -4241,8 +4241,8 @@
       "rounding_display": "integer",
       "semantic_version": "2.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py",
-        "app/services/utility_metrics.py"
+        "app/services/metrics/combat.py",
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -4297,8 +4297,8 @@
       "rounding_display": "integer",
       "semantic_version": "2.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py",
-        "app/services/utility_metrics.py"
+        "app/services/metrics/combat.py",
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -4351,8 +4351,8 @@
       "rounding_display": "none",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py",
-        "app/services/analytics.py"
+        "app/services/parsing/demo_parser.py",
+        "app/services/metrics/analytics.py"
       ],
       "persistence_targets": [
         "matches.result"
@@ -4417,7 +4417,7 @@
       "rounding_display": "integer pair",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_score_for_player"
+        "app/services/parsing/demo_parser.py::_score_for_player"
       ],
       "persistence_targets": [
         "matches.rounds_for",
@@ -4484,8 +4484,8 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_rounds_count",
-        "app/services/core_combat_metrics.py::_player_rounds"
+        "app/services/parsing/demo_parser.py::_rounds_count",
+        "app/services/metrics/combat.py::_player_rounds"
       ],
       "persistence_targets": [
         "demo_player_rounds",
@@ -4556,7 +4556,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -4621,8 +4621,8 @@
       "rounding_display": "integer",
       "semantic_version": "2.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py",
-        "app/services/utility_metrics.py"
+        "app/services/metrics/combat.py",
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -4677,8 +4677,8 @@
       "rounding_display": "integer",
       "semantic_version": "2.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py",
-        "app/services/utility_metrics.py"
+        "app/services/metrics/combat.py",
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -4739,7 +4739,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -4804,7 +4804,7 @@
       "rounding_display": "integer/percent",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/metric_truth.py"
+        "app/services/shared/metric_policy.py"
       ],
       "persistence_targets": [
         "matches.side_*"
@@ -4869,7 +4869,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -4940,7 +4940,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5011,7 +5011,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5082,7 +5082,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5146,7 +5146,7 @@
       "rounding_display": "stored value",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_swing_summary"
+        "app/services/parsing/demo_parser.py::_swing_summary"
       ],
       "persistence_targets": [
         "matches.swing_score",
@@ -5209,8 +5209,8 @@
       "rounding_display": "integer",
       "semantic_version": "2.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py",
-        "app/services/utility_metrics.py"
+        "app/services/metrics/combat.py",
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5265,8 +5265,8 @@
       "rounding_display": "integer",
       "semantic_version": "2.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py",
-        "app/services/utility_metrics.py"
+        "app/services/metrics/combat.py",
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5327,7 +5327,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5398,7 +5398,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5463,8 +5463,8 @@
       "rounding_display": "ratio",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/combat_event_derivation.py",
-        "app/services/core_combat_metrics.py"
+        "app/services/parsing/combat_events.py",
+        "app/services/metrics/combat.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5532,7 +5532,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5603,7 +5603,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5674,7 +5674,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5745,7 +5745,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5810,8 +5810,8 @@
       "rounding_display": "integer",
       "semantic_version": "2.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py",
-        "app/services/utility_metrics.py"
+        "app/services/metrics/combat.py",
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5866,8 +5866,8 @@
       "rounding_display": "integer",
       "semantic_version": "2.0.0",
       "implementation_entrypoints": [
-        "app/services/core_combat_metrics.py",
-        "app/services/utility_metrics.py"
+        "app/services/metrics/combat.py",
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5928,7 +5928,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -5999,7 +5999,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -6064,7 +6064,7 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/utility_metrics.py"
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "matches.utility_damage",
@@ -6137,7 +6137,7 @@
       "rounding_display": "metric-specific documented unit",
       "semantic_version": "3.0.0",
       "implementation_entrypoints": [
-        "app/services/coach_metric_pack.py"
+        "app/services/metrics/coach_pack.py"
       ],
       "persistence_targets": [
         "metric_snapshots.metrics_json"
@@ -6207,7 +6207,7 @@
       "rounding_display": "integer",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/utility_metrics.py"
+        "app/services/metrics/utility.py"
       ],
       "persistence_targets": [
         "metric_snapshots metrics: flash/smoke/he/molotov_detonations"
@@ -6267,7 +6267,7 @@
       "rounding_display": "percent",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_weapon_stats"
+        "app/services/parsing/demo_parser.py::_weapon_stats"
       ],
       "persistence_targets": [
         "demo_weapon_stats.accuracy"
@@ -6331,7 +6331,7 @@
       "rounding_display": "table values",
       "semantic_version": "1.0.0",
       "implementation_entrypoints": [
-        "app/services/demo_parser.py::_weapon_stats"
+        "app/services/parsing/demo_parser.py::_weapon_stats"
       ],
       "persistence_targets": [
         "demo_weapon_stats"

@@ -10,16 +10,16 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.models import CoachReport, Match
-from app.services.analytics import compare_periods, detect_weaknesses, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
-from app.services.match_queries import playable_match_select
-from app.services.metric_confidence import (
+from app.services.metrics.analytics import compare_periods, detect_weaknesses, get_map_stats, get_summary
+from app.services.metrics.confidence import (
     exact_date_matches,
     exact_date_window_metadata,
     metric_confidence_map,
     metric_context,
 )
 from app.services.recommendation_tracking import get_active_recommendation_progress
+from app.services.shared.match_queries import playable_match_select
 
 
 def generate_report(db: Session) -> CoachReport:

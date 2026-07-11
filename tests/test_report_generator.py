@@ -5,8 +5,8 @@ from app.services.report_generator import generate_report, markdown_to_html, ren
 
 def test_render_markdown_report(sample_rows):
     matches = [Match(**row, source="test", external_match_id=f"id-{index}") for index, row in enumerate(sample_rows)]
-    from app.services.analytics import compare_periods, detect_weaknesses, get_map_stats, get_summary
     from app.services.coach_rules import build_coach_focus
+    from app.services.metrics.analytics import compare_periods, detect_weaknesses, get_map_stats, get_summary
 
     summary = get_summary(matches)
     comparison = compare_periods(matches)

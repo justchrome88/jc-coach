@@ -1,4 +1,4 @@
-from app.services.metric_truth import (
+from app.services.shared.metric_policy import (
     METRIC_REGISTRY,
     is_metric_allowed,
     is_metric_allowed_for_hard_claim,

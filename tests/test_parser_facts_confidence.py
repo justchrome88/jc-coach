@@ -1,10 +1,10 @@
-from app.services.metric_truth import (
+from app.services.parsing.demo_parser import _early_deaths_from_timing, _metric_confidence, _parser_warnings
+from app.services.shared.metric_policy import (
     is_metric_allowed,
     is_metric_allowed_for_hard_claim,
     metric_definition,
     metric_reliability,
 )
-from app.services.parsing.demo_parser import _early_deaths_from_timing, _metric_confidence, _parser_warnings
 
 
 def test_early_deaths_requires_timing_anchor_and_never_falls_back_to_entry_deaths():

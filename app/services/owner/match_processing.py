@@ -1,3 +1,5 @@
+"""Application orchestration from parser artifact through coach feedback."""
+
 from __future__ import annotations
 
 import hashlib
@@ -10,19 +12,53 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import DemoParseArtifact, Match, MetricSnapshot
-from app.services.core_combat_metrics import CORE_COMBAT_SNAPSHOT_SOURCE, calculate_and_store_core_combat_metrics
-from app.services.metric_snapshots import (
+from app.services import ai_coach as ai_coach_service
+from app.services.metrics.combat import CORE_COMBAT_SNAPSHOT_SOURCE, calculate_and_store_core_combat_metrics
+from app.services.metrics.snapshots import (
+    ACCEPTED_SEMANTIC_VERSIONS,
+    TRUSTED_VALIDATION_STATES,
     list_metric_snapshots,
     metric_snapshot_payload,
     owner_player_metric_snapshot_scope,
-    process_persisted_match_metric_snapshots_for_coach_loop,
 )
+from app.services.metrics.utility import UTILITY_SNAPSHOT_SOURCE, calculate_and_store_utility_metrics
 from app.services.parsing.artifact_reader import ParserArtifactReaderError, normalized_events_from_parser_artifact
-from app.services.utility_metrics import UTILITY_SNAPSHOT_SOURCE, calculate_and_store_utility_metrics
 
 MATCH_PROCESSING_BOUNDARY = "owner_match_after_parser_artifact"
 MATCH_PROCESSING_VERSION = "owner-match-processing-orchestrator-v1"
 ACCEPTED_PARSER_ARTIFACT_STATUSES = {"completed", "accepted", "success", "parsed"}
+
+
+def process_persisted_match_metric_snapshots_for_coach_loop(
+    db: Session,
+    *,
+    user_id: int,
+    match_id: int,
+    metric_snapshots: Sequence[MetricSnapshot],
+    evaluation_window_start: datetime | None = None,
+    evaluation_window_end: datetime | None = None,
+) -> dict[str, Any]:
+    """Hand trusted persisted metrics upward to the owner-scoped coach loop."""
+    mismatched = [snapshot.id for snapshot in metric_snapshots if snapshot.match_id != match_id]
+    if mismatched:
+        raise ValueError("Post-metrics coach loop received snapshots for a different match.")
+    owner_scope = owner_player_metric_snapshot_scope(db, user_id=user_id)
+    metric_snapshot_ids = [
+        snapshot.id
+        for snapshot in metric_snapshots
+        if snapshot.validation_status in TRUSTED_VALIDATION_STATES
+        and snapshot.owner_user_id == user_id
+        and snapshot.semantic_version in ACCEPTED_SEMANTIC_VERSIONS
+        and snapshot.player_key == owner_scope.player_key
+    ]
+    return ai_coach_service.process_owner_match_metric_snapshots_for_coach_loop(
+        db,
+        user_id=user_id,
+        match_id=match_id,
+        metric_snapshot_ids=metric_snapshot_ids,
+        evaluation_window_start=evaluation_window_start,
+        evaluation_window_end=evaluation_window_end,
+    )
 
 
 def process_owner_match_after_parser_artifact(

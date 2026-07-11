@@ -25,8 +25,9 @@ from app.db.models import (
 )
 from app.services.ai_coach import configured_model_route_identity, invoke_configured_structured_model
 from app.services.coach_domain_model import CANONICAL_COACH_DOMAINS, require_canonical_domain
-from app.services.metric_snapshots import upsert_metric_snapshot
+from app.services.metrics.snapshots import upsert_metric_snapshot
 from app.services.mission_domain import list_active_coach_missions, mission_domain_key, serialize_coach_mission
+from app.services.shared.runtime_contracts import metric_registry_contract
 
 BASELINE_VERSION = "coach-domain-baseline-v1"
 TEMPORAL_SEMANTIC_VERSION = "3.1.0"
@@ -864,9 +865,7 @@ def _observation_score(domain: str, observation: Mapping[str, Any]) -> float:
 
 
 def _registered_metric_keys() -> set[str]:
-    registry = json.loads(
-        (BASE_DIR / "app/contracts/metrics/registry/metrics.json").read_text(encoding="utf-8")
-    )
+    registry = metric_registry_contract()
     return {row["metric_key"] for row in registry["metrics"]} | {
         "average_survival_time_seconds",
         "median_survival_time_seconds",

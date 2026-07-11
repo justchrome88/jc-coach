@@ -1,3 +1,5 @@
+"""Canonical core-combat metric computation."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
@@ -7,8 +9,8 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db.models import Match, MetricSnapshot
-from app.services.metric_confidence import confidence_record
-from app.services.metric_snapshots import deterministic_input_hash, upsert_metric_snapshot
+from app.services.metrics.confidence import confidence_record
+from app.services.metrics.snapshots import deterministic_input_hash, upsert_metric_snapshot
 from app.services.parsing.match_phase import (
     accepted_events,
     accepted_match_phase,

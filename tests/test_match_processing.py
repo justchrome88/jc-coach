@@ -11,8 +11,8 @@ from app.db.models import (
     SteamAccount,
     User,
 )
-from app.services.match_processing import process_owner_match_after_parser_artifact
 from app.services.mission_domain import activate_coach_mission, create_analysis_run, create_coach_hypothesis
+from app.services.owner.match_processing import process_owner_match_after_parser_artifact
 
 OWNER_STEAM_ID = "76561198000000076"
 OTHER_STEAM_ID = "76561198000009999"

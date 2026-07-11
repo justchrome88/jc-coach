@@ -1,5 +1,5 @@
-from app.services.analytics import compare_periods, detect_weaknesses, get_map_stats, get_summary
 from app.services.coach_rules import build_coach_focus
+from app.services.metrics.analytics import compare_periods, detect_weaknesses, get_map_stats, get_summary
 from tests.conftest import make_match
 
 

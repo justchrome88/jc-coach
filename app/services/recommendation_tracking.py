@@ -9,15 +9,15 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import CoachRecommendation, Match, MatchRecommendationEvaluation
-from app.services.match_queries import NON_PLAYABLE_MATCH_SOURCES, is_playable_match, playable_match_select
-from app.services.metric_confidence import (
+from app.services.metrics.confidence import (
     exact_date_window_metadata,
     exact_recent_matches,
     metric_confidence_map,
     metric_context,
     sort_matches,
 )
-from app.services.metric_truth import is_metric_allowed_for_hard_claim, metric_warning
+from app.services.shared.match_queries import NON_PLAYABLE_MATCH_SOURCES, is_playable_match, playable_match_select
+from app.services.shared.metric_policy import is_metric_allowed_for_hard_claim, metric_warning
 
 DEFAULT_TITLE = "Снизить первые смерти"
 TARGET_PERIOD_MATCHES = 10

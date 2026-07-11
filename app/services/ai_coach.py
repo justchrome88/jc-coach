@@ -21,8 +21,6 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db.models import AnalysisRun, CoachHypothesis, CoachReport, Match, MissionProgressEvaluation
 from app.services.ai_validator import render_ai_output_markdown, validate_ai_coach_output
-from app.services.aim_stats import get_aim_profile
-from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
 from app.services.coach_domain_model import CANONICAL_COACH_DOMAINS, METRIC_GROUPS
 from app.services.coach_insights import (
     MAX_PRIORITIZED_COACH_INSIGHTS,
@@ -31,24 +29,26 @@ from app.services.coach_insights import (
     serialize_insight_cards,
 )
 from app.services.coach_rules import build_coach_focus
-from app.services.match_queries import playable_match_select
-from app.services.metric_confidence import (
+from app.services.metrics.aim import get_aim_profile
+from app.services.metrics.analytics import (
+    compare_periods,
+    detect_weaknesses,
+    get_dashboard_status,
+    get_map_stats,
+    get_summary,
+)
+from app.services.metrics.confidence import (
     exact_date_window_metadata,
     exact_recent_matches,
     metric_confidence_map,
     metric_context,
 )
-from app.services.metric_snapshots import (
+from app.services.metrics.snapshots import (
     MetricSnapshotAnalysisScope,
     default_owner_player_metric_snapshot_scope,
     metric_snapshot_payload,
     owner_player_metric_snapshot_scope,
     select_metric_snapshots_for_analysis_scope,
-)
-from app.services.metric_truth import (
-    METRIC_REGISTRY_VERSION,
-    metric_truth_payload,
-    suppressed_metrics_for_usage,
 )
 from app.services.mission_domain import (
     active_mission_context_for_owner,
@@ -69,6 +69,12 @@ from app.services.ownership import get_owned_metric_snapshot
 from app.services.recommendation_tracking import get_active_recommendation_progress, get_all_recommendation_progress
 from app.services.report_generator import _serialize_recommendation_progress
 from app.services.shared.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, artifact_retention_metadata
+from app.services.shared.match_queries import playable_match_select
+from app.services.shared.metric_policy import (
+    METRIC_REGISTRY_VERSION,
+    metric_truth_payload,
+    suppressed_metrics_for_usage,
+)
 
 AI_COACH_PROMPT_VERSION = "ai-coach-prompt-v1"
 AI_COACH_PAYLOAD_SCHEMA_VERSION = "ai-coach-payload-v1"

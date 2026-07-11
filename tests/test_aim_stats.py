@@ -1,7 +1,7 @@
 import json
 
 from app.db.models import Match
-from app.services.aim_stats import get_aim_profile, match_aim_profile
+from app.services.metrics.aim import get_aim_profile, match_aim_profile
 
 
 def test_get_aim_profile_aggregates_match_and_weapon_data():

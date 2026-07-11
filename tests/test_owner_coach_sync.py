@@ -24,8 +24,8 @@ from app.db.models import (
     User,
 )
 from app.services import owner_coach_sync, steam_integration
-from app.services.match_processing import process_owner_match_after_parser_artifact
 from app.services.mission_domain import activate_coach_mission, create_analysis_run, create_coach_hypothesis
+from app.services.owner.match_processing import process_owner_match_after_parser_artifact
 from app.services.owner_coach_sync import OWNER_COACH_SYNC_RESULT_SCHEMA_VERSION, run_owner_coach_sync
 
 OWNER_STEAM_ID = "76561198000000101"

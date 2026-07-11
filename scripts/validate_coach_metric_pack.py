@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = ROOT / "app/contracts/metrics/registry/metrics.json"
 DOMAIN_PATH = ROOT / "app/contracts/metrics/coach-domain-metric-requirements.json"
 GOLDEN_PATH = ROOT / "tests/fixtures/metrics/coach_metric_real_demo_corpus.json"
-IMPLEMENTATION_PATH = ROOT / "app/services/coach_metric_pack.py"
+IMPLEMENTATION_PATH = ROOT / "app/services/metrics/coach_pack.py"
 VERSION = "3.0.0"
 FORBIDDEN_HARD_KEYS = {"damage", "utility_damage", "headshot_rate", "latest_snapshot"}
 
@@ -78,7 +78,7 @@ def main() -> int:
         if item.get("validation_status") != "validated" or item.get("consumer_policy") != "trusted":
             errors.append(f"{key}: not trusted/validated")
         paths = item.get("implementation_entrypoints") or []
-        if not any("coach_metric_pack.py" in str(path) for path in paths):
+        if not any("app/services/metrics/coach_pack.py" in str(path) for path in paths):
             errors.append(f"{key}: authoritative implementation path missing")
 
     families = manifest.get("families") or []

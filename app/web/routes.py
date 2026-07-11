@@ -35,15 +35,6 @@ from app.services.ai_coach import (
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
-from app.services.aim_stats import get_aim_profile
-from app.services.analytics import (
-    chart_series,
-    compare_periods,
-    get_dashboard_status,
-    get_map_stats,
-    get_summary,
-    match_detail,
-)
 from app.services.auth import authenticate_user, current_user_from_session, login_user, logout_user, register_user
 from app.services.coach_rules import build_coach_focus
 from app.services.i18n import normalize_locale
@@ -76,15 +67,22 @@ from app.services.ingestion.steam import (
     validate_openid_callback,
 )
 from app.services.ingestion.structured_import import import_csv, import_json
-from app.services.match_queries import is_playable_match, playable_match_select
-from app.services.metric_confidence import (
+from app.services.metrics.aim import get_aim_profile
+from app.services.metrics.analytics import (
+    chart_series,
+    compare_periods,
+    get_dashboard_status,
+    get_map_stats,
+    get_summary,
+    match_detail,
+)
+from app.services.metrics.confidence import (
     exact_date_matches,
     exact_recent_matches,
     is_exact_date_match,
     metric_context,
     sort_matches,
 )
-from app.services.metric_truth import metric_definition, metric_warning, usage_decision
 from app.services.mistake_detection import (
     category_scorecard,
     detect_structured_mistakes,
@@ -110,6 +108,8 @@ from app.services.recommendation_tracking import (
     update_recommendation_status,
 )
 from app.services.report_generator import generate_report, latest_report, markdown_to_html
+from app.services.shared.match_queries import is_playable_match, playable_match_select
+from app.services.shared.metric_policy import metric_definition, metric_warning, usage_decision
 
 router = APIRouter()
 

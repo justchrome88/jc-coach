@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from app.services.metric_truth import (
+from app.services.shared.metric_policy import (
     USAGES,
     MetricUsage,
     is_metric_allowed_for_hard_claim,

@@ -1,3 +1,5 @@
+"""Aim-profile metric read models."""
+
 from __future__ import annotations
 
 import json
@@ -5,7 +7,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from app.db.models import Match
-from app.services.metric_confidence import (
+from app.services.metrics.confidence import (
     MetricContext,
     exact_period_windows,
     metric_confidence_map,

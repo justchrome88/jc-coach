@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.analytics import detect_weaknesses
+from app.services.metrics.analytics import detect_weaknesses
 
 
 def build_coach_focus(

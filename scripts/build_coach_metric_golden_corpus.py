@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from app.services.coach_metric_pack import parse_coach_metric_evidence
+from app.services.metrics.coach_pack import parse_coach_metric_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_ROOT = ROOT / "tests/fixtures/metrics/coach_metric_real_demo_corpus"

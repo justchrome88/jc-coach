@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from app.db.models import CoachRecommendation, Match, MatchRecommendationEvaluation
 from app.services.ingestion.structured_import import import_rows
-from app.services.metric_confidence import is_exact_date_match, metric_context
+from app.services.metrics.confidence import is_exact_date_match, metric_context
 from app.services.recommendation_tracking import (
     ensure_default_recommendation,
     evaluate_new_matches,

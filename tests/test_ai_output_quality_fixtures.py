@@ -15,7 +15,7 @@ from app.services.ai_coach import (
 )
 from app.services.ai_validator import validate_ai_coach_output
 from app.services.ingestion.structured_import import import_rows
-from app.services.metric_truth import METRIC_REGISTRY_VERSION
+from app.services.shared.metric_policy import METRIC_REGISTRY_VERSION
 from tests.semantic_ai_eval import evaluate_semantic_ai_output, issue_codes
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "ai_semantic_eval" / "output_quality_cases.json"

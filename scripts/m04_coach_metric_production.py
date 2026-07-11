@@ -11,7 +11,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.db.models import CoachMission, DemoParseArtifact, Match, MetricSnapshot, MissionProgressEvaluation
-from app.services.coach_metric_pack import (
+from app.services.metrics.coach_pack import (
     AIM_SOURCE,
     COACH_METRIC_SEMANTIC_VERSION,
     PERFORMANCE_SOURCE,

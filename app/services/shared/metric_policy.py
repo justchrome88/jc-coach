@@ -1,3 +1,5 @@
+"""Immutable metric truth and allowed-usage policy."""
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass

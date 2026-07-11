@@ -53,13 +53,13 @@ from app.services.ingestion.steam import (
     validate_openid_callback,
 )
 from app.services.ingestion.storage_guard import SteamImportStorageBudget
-from app.services.match_queries import playable_match_select
 from app.services.recommendation_tracking import ensure_default_recommendation, evaluate_recommendations_for_match
 from app.services.shared.demo_retention import (
     DEMO_RETENTION_POLICY_RETAIN_RAW,
     DEMO_RETENTION_STATUS_RETAINED_AFTER_FAILURE,
     DEMO_RETENTION_STATUS_RETAINED_FOR_DEV,
 )
+from app.services.shared.match_queries import playable_match_select
 
 
 def test_steam_login_url_contains_openid_fields(monkeypatch):

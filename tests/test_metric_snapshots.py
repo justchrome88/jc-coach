@@ -3,7 +3,7 @@ import json
 import pytest
 
 from app.db.models import DemoParseArtifact, Match, MetricSnapshot, SteamAccount, User
-from app.services.metric_snapshots import (
+from app.services.metrics.snapshots import (
     MetricSnapshotAnalysisScope,
     admin_debug_all_metric_snapshots_scope,
     create_metric_snapshot,
@@ -11,11 +11,11 @@ from app.services.metric_snapshots import (
     get_metric_snapshot,
     list_metric_snapshots,
     metric_snapshot_payload,
-    process_persisted_match_metric_snapshots_for_coach_loop,
     select_metric_snapshots_for_analysis_scope,
     update_metric_snapshot,
     upsert_metric_snapshot,
 )
+from app.services.owner.match_processing import process_persisted_match_metric_snapshots_for_coach_loop
 from app.services.shared.demo_retention import ARTIFACT_CATEGORY_METRIC_SNAPSHOT, RETENTION_CLASS_DERIVED_REBUILDABLE
 
 

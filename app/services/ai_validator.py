@@ -10,7 +10,7 @@ from app.services.coach_insights import (
     serialize_insight_cards,
     validate_insight_cards,
 )
-from app.services.metric_truth import metric_definition, usage_decision
+from app.services.shared.metric_policy import metric_definition, usage_decision
 
 AIConfidence = Literal["low", "medium", "high"]
 

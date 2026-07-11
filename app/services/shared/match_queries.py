@@ -1,3 +1,5 @@
+"""Shared persistence queries for playable matches."""
+
 from __future__ import annotations
 
 from sqlalchemy import Select, select

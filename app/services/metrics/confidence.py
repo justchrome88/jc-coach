@@ -1,3 +1,5 @@
+"""Metric confidence context and date-window policy."""
+
 from __future__ import annotations
 
 import json
@@ -6,8 +8,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.db.models import Match
-from app.services.match_queries import is_playable_match
-from app.services.metric_truth import metric_definition, usage_decision
+from app.services.shared.match_queries import is_playable_match
+from app.services.shared.metric_policy import metric_definition, usage_decision
 
 EXACT_DATE_STATUS = "exact_match_date_available"
 EXACT_DATE_SOURCE = "steam_gc_match_time"

@@ -25,12 +25,11 @@ from app.services.ai_coach import (
     serialize_ai_coach_report,
 )
 from app.services.ingestion.structured_import import import_rows
-from app.services.metric_snapshots import (
+from app.services.metrics.snapshots import (
     MetricSnapshotAnalysisScope,
     admin_debug_all_metric_snapshots_scope,
     create_metric_snapshot,
 )
-from app.services.metric_truth import METRIC_REGISTRY_VERSION
 from app.services.mission_domain import (
     activate_coach_mission,
     activate_draft_coach_mission,
@@ -42,6 +41,7 @@ from app.services.mission_domain import (
     record_mission_progress_evaluation,
 )
 from app.services.shared.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, RETENTION_CLASS_FINAL_OUTPUT
+from app.services.shared.metric_policy import METRIC_REGISTRY_VERSION
 
 
 def test_build_ai_coach_payload_uses_structured_match_data(db, sample_rows):

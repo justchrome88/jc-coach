@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-from app.services.metric_truth import metric_definition, usage_decision
 from app.services.parsing.event_dictionary import (
     EVENT_METRIC_DICTIONARY,
     NORMALIZED_EVENT_SCHEMA,
@@ -10,6 +9,7 @@ from app.services.parsing.event_dictionary import (
     event_types,
     parser_source_event_names,
 )
+from app.services.shared.metric_policy import metric_definition, usage_decision
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "parser"
 

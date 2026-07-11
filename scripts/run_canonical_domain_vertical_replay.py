@@ -24,7 +24,7 @@ from app.db.models import (
     MissionProgressEvaluation,
 )
 from app.services.coach_domain_model import CANONICAL_COACH_DOMAINS, METRIC_GROUPS
-from app.services.coach_metric_pack import (
+from app.services.metrics.coach_pack import (
     AIM_SOURCE,
     COACH_METRIC_SEMANTIC_VERSION,
     PERFORMANCE_SOURCE,

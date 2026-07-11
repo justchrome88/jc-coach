@@ -34,27 +34,27 @@ from app.db.models import (  # noqa: E402
     MissionProgressEvaluation,
     SteamAccount,
 )
-from app.services.core_combat_metrics import (  # noqa: E402
+from app.services.metrics.combat import (  # noqa: E402
     CORE_COMBAT_METRICS_VERSION,
     CORE_COMBAT_SEMANTIC_VERSION,
     CORE_COMBAT_SNAPSHOT_SOURCE,
     CoreCombatMetricsResult,
     calculate_core_combat_metrics,
 )
-from app.services.metric_downstream_state import (  # noqa: E402
+from app.services.metrics.downstream import (  # noqa: E402
     MATCH_124_DISPOSITIONS,
     DownstreamDisposition,
     stale_evidence_marker,
 )
-from app.services.metric_snapshots import upsert_metric_snapshot  # noqa: E402
-from app.services.parsing.artifact_reader import normalized_events_from_parser_artifact  # noqa: E402
-from app.services.utility_metrics import (  # noqa: E402
+from app.services.metrics.snapshots import upsert_metric_snapshot  # noqa: E402
+from app.services.metrics.utility import (  # noqa: E402
     UTILITY_METRICS_VERSION,
     UTILITY_SEMANTIC_VERSION,
     UTILITY_SNAPSHOT_SOURCE,
     UtilityMetricsResult,
     calculate_utility_metrics,
 )
+from app.services.parsing.artifact_reader import normalized_events_from_parser_artifact  # noqa: E402
 
 PRODUCTION_DB = (ROOT / "data/cs2_coach.db").resolve()
 OWNER_USER_ID = 17
