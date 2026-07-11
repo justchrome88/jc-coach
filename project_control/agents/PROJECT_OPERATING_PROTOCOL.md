@@ -126,9 +126,11 @@ when no WP-level report is requested.
 
 ## 10. Commit Policy
 
-Codex never commits unless explicitly instructed. User reviews the report and
-diff. ChatGPT PM may review the report and recommend a commit. User performs
-`git add`, commit and push.
+Commit authority is mode-dependent and defined by root `AGENTS.md`, the current
+explicit task, and PM `AGENTS.md`. Manual task-authorized local Product and PM
+commits are allowed after required checks and report review; autonomous runner
+work follows the runner/PM review protocol. Push always requires a separate
+explicit user request.
 
 ## 11. Audit / Compaction Cadence
 

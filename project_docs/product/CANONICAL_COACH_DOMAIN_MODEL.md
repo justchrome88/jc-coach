@@ -12,7 +12,8 @@ sources. They are not product domains. A hypothesis family is an implementation
 classification, not a domain, and a mission id is historical identity, not a
 domain key.
 
-The machine-readable authority is [coach-domain-model.json](coach-domain-model.json).
+The machine-readable authority is
+[coach-domain-model.json](../../app/contracts/coach/coach-domain-model.json).
 It records each domain's purpose, evidence boundary, forbidden claims, families,
 metrics, sample/confidence floor, missing-data behavior, and suppression policy.
 

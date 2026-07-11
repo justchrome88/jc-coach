@@ -10,7 +10,9 @@ are `impact_leak` and `bad_fight_selection`.
 
 ## Authority map
 
-- `registry/metrics.json`: machine-readable inventory, identity, semantics, versions, persistence, consumers, truth status, and discrepancies.
+- `app/contracts/metrics/registry/metrics.json`: machine-readable inventory,
+  identity, semantics, versions, persistence, consumers, truth status, and
+  discrepancies.
 - `contracts/*.md`: normative domain rules and boundaries shared by multiple metrics.
 - `METRIC_DATA_LINEAGE.md`: identities and joins from retained demo through UI and coach.
 - `METRIC_GOVERNANCE.md`: authority, confidence, validation, and quarantine rules.

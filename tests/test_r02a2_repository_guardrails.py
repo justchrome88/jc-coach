@@ -120,3 +120,24 @@ def test_domain_guard_rejects_third_domain_and_global_suppression(tmp_path):
 def test_domain_guard_accepts_two_domains_and_per_domain_suppression(tmp_path):
     _write(tmp_path, "app/services/coach_domain_model.py", _domain_source())
     assert guardrails.domain_policy_errors(tmp_path) == []
+
+
+def test_agent_principle_guard_rejects_incomplete_matrix_and_stale_commit_policy(tmp_path):
+    _write(
+        tmp_path,
+        "project_control/manifests/AGENT_PRINCIPLE_PARITY.md",
+        "| Principle | Old source | New canonical source | Disposition |\n"
+        "|---|---|---|---|\n"
+        "| no push | old | new | same |\n\n"
+        "Parity result: `PASS`.\n",
+    )
+    _write(
+        tmp_path,
+        "project_control/agents/PROJECT_OPERATING_PROTOCOL.md",
+        "User performs\n`git add`, commit and push.\n",
+    )
+    errors = guardrails.agent_principle_parity_errors(tmp_path)
+    assert {error.code for error in errors} == {
+        "agent_principle_matrix_incomplete",
+        "conflicting_active_agent_principle",
+    }

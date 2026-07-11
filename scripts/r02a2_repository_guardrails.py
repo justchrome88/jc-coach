@@ -78,6 +78,23 @@ ROOT_SERVICE_MODULE_ALLOWLIST = frozenset(
 CANONICAL_COACH_DOMAINS = ("impact_leak", "bad_fight_selection")
 ACTIVE_MISSION_MODEL = "at_most_one_per_domain_per_owner"
 DOMAIN_SUPPRESSION_INVARIANT = "an active mission suppresses only the same canonical domain"
+REQUIRED_AGENT_PRINCIPLES = frozenset(
+    {
+        "branch/worktree",
+        "no push",
+        "commit authority",
+        "production mutation authorization",
+        "backup/restore",
+        "source priority",
+        "artifact/report paths",
+        "status/checklist update",
+        "current/next routing",
+        "quality gates",
+        "token economy",
+        "stop/block conditions",
+        "historical evidence preservation",
+    }
+)
 
 REQUIRED_CANONICAL_PATHS = frozenset(
     {
@@ -385,6 +402,57 @@ def domain_policy_errors(root: Path) -> list[GuardrailError]:
     return errors
 
 
+def agent_principle_parity_errors(root: Path) -> list[GuardrailError]:
+    parity_path = root / "project_control/manifests/AGENT_PRINCIPLE_PARITY.md"
+    protocol_path = root / "project_control/agents/PROJECT_OPERATING_PROTOCOL.md"
+    errors: list[GuardrailError] = []
+    if not parity_path.is_file():
+        return [
+            GuardrailError(
+                "agent_principle_parity_missing",
+                parity_path.relative_to(root).as_posix(),
+                "the canonical 13-principle matrix is absent",
+            )
+        ]
+    content = parity_path.read_text(encoding="utf-8")
+    principles = []
+    for line in content.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if not cells or cells[0] in {"Principle", "---"}:
+            continue
+        principles.append(cells[0])
+    found = set(principles)
+    if found != REQUIRED_AGENT_PRINCIPLES or len(principles) != len(REQUIRED_AGENT_PRINCIPLES):
+        errors.append(
+            GuardrailError(
+                "agent_principle_matrix_incomplete",
+                parity_path.relative_to(root).as_posix(),
+                f"expected 13 unique principles; found {len(principles)} rows and {len(found)} unique labels",
+            )
+        )
+    if "Parity result: `PASS`" not in content:
+        errors.append(
+            GuardrailError(
+                "agent_principle_parity_not_pass",
+                parity_path.relative_to(root).as_posix(),
+                "the canonical matrix does not declare PASS",
+            )
+        )
+    if protocol_path.is_file():
+        protocol = protocol_path.read_text(encoding="utf-8")
+        if "User performs\n`git add`, commit and push." in protocol:
+            errors.append(
+                GuardrailError(
+                    "conflicting_active_agent_principle",
+                    protocol_path.relative_to(root).as_posix(),
+                    "superseded user-only commit/push policy remains active",
+                )
+            )
+    return errors
+
+
 def collect_errors(root: Path = ROOT, *, paths: set[str] | None = None) -> list[GuardrailError]:
     active_paths = repository_paths(root) if paths is None else paths
     return sorted(
@@ -393,6 +461,7 @@ def collect_errors(root: Path = ROOT, *, paths: set[str] | None = None) -> list[
             *source_of_truth_errors(root),
             *python_io_errors(root, active_paths),
             *domain_policy_errors(root),
+            *agent_principle_parity_errors(root),
         ]
     )
 
@@ -409,6 +478,7 @@ def main() -> int:
     print("ARCHIVE_RUNTIME_DEPENDENCIES=0")
     print("ACTIVE_WRITERS_TO_DOCS_STUBS=0")
     print("CANONICAL_DOMAIN_POLICY=PASS")
+    print("AGENT_PRINCIPLE_PARITY=PASS")
     print("SOURCE_OF_TRUTH_PATHS=PASS")
     print("R02A2_REPOSITORY_GUARDRAILS=PASS")
     return 0

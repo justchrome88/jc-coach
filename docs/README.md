@@ -1,12 +1,8 @@
-# Temporary Documentation Compatibility Shell
+# Compatibility Stub: Documentation
 
-This is a temporary compatibility shell.
+Canonical file: `README.md`.
 
-- Current human docs are in `project_docs/`.
-- Current control/state is in `project_control/`.
-- Runtime contracts are in `app/contracts/`.
-- Old material is in `_legacy_archive/`.
-
-DO NOT WRITE CURRENT FACTS HERE. Active writers target canonical paths only.
+DO NOT WRITE HERE. This compatibility-only file contains no independent current
+facts.
 
 Remove this shell after accepted R03 or explicit cleanup approval.

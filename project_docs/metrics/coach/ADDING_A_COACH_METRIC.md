@@ -2,7 +2,8 @@
 
 # Adding a Coach Metric
 
-1. Register the explicit leaf key in `registry/metrics.json`; never introduce a
+1. Register the explicit leaf key in
+   `app/contracts/metrics/registry/metrics.json`; never introduce a
    generic alias such as `damage`, `utility_damage`, `headshot_rate` or “latest”.
 2. Write the contract: numerator, denominator, phase, participation, team,
    rounding, zero-denominator and aggregation behavior.
