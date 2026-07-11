@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import DemoParseArtifact, Match, MetricSnapshot
-from app.services import ai_coach as ai_coach_service
+from app.services.coach import ai as ai_coach_service
 from app.services.metrics.combat import CORE_COMBAT_SNAPSHOT_SOURCE, calculate_and_store_core_combat_metrics
 from app.services.metrics.snapshots import (
     ACCEPTED_SEMANTIC_VERSIONS,
