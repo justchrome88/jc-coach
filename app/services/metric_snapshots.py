@@ -18,7 +18,7 @@ AnalysisScopeSource = Literal["steam", "faceit", "unknown"]
 AnalysisScopeMode = Literal["personal", "admin_debug_all_snapshots"]
 VALIDATION_STATES = {"pending", "validated", "rejected", "quarantined", "superseded", "legacy_unverified"}
 TRUSTED_VALIDATION_STATES = {"validated"}
-ACCEPTED_SEMANTIC_VERSIONS = ("2.0.0",)
+ACCEPTED_SEMANTIC_VERSIONS = ("3.0.0",)
 
 
 @dataclass(frozen=True)
@@ -525,10 +525,17 @@ def _metric_numerators(metrics: MetricPayload) -> dict[str, Any]:
         "kd_ratio": metrics.get("kills"),
         "headshot_kill_rate": metrics.get("headshot_kills"),
         "survival_rate": metrics.get("survived_rounds"),
+        "kills_per_round": metrics.get("kills"),
+        "adr": metrics.get("effective_enemy_damage"),
         "opening_duel_win_rate": metrics.get("opening_duel_wins"),
         "opening_death_rate": metrics.get("opening_deaths"),
         "traded_death_rate": metrics.get("traded_deaths"),
         "untraded_death_rate": metrics.get("untraded_deaths"),
+        "trade_success_rate": metrics.get("trade_kills"),
+        "utility_damage_per_round": metrics.get("effective_enemy_utility_damage"),
+        "shot_accuracy": metrics.get("accepted_hits"),
+        "hit_based_headshot_rate": metrics.get("head_hits"),
+        "first_bullet_accuracy": metrics.get("first_shot_hits"),
     }
     numerators.update({key: item for key, item in derived.items() if key in metrics and item is not None})
     return numerators
@@ -538,11 +545,19 @@ def _metric_denominators(metrics: MetricPayload) -> dict[str, Any]:
     candidates = {
         "kd_ratio": metrics.get("deaths"),
         "headshot_kill_rate": metrics.get("kills"),
-        "survival_rate": metrics.get("rounds"),
-        "opening_duel_win_rate": metrics.get("opening_duels"),
-        "opening_death_rate": metrics.get("rounds"),
+        "survival_rate": metrics.get("rounds_played"),
+        "kills_per_round": metrics.get("rounds_played"),
+        "adr": metrics.get("rounds_played"),
+        "kast": metrics.get("rounds_played"),
+        "opening_duel_win_rate": metrics.get("opening_duel_attempts"),
+        "opening_death_rate": metrics.get("rounds_played"),
+        "utility_damage_per_round": metrics.get("rounds_played"),
+        "shot_accuracy": metrics.get("accepted_shots"),
+        "hit_based_headshot_rate": metrics.get("accepted_hits"),
+        "first_bullet_accuracy": metrics.get("first_shots"),
         "traded_death_rate": metrics.get("deaths"),
         "untraded_death_rate": metrics.get("deaths"),
+        "trade_success_rate": metrics.get("trade_opportunities"),
     }
     return {key: item for key, item in candidates.items() if key in metrics and item is not None}
 

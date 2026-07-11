@@ -13,6 +13,7 @@ data/incoming_demos/*
 data/reports/*
 data/ai_handoffs/*
 data/steam_bot_credentials/*
+data/coach_metric_event_sets/*
 !data/uploads/.gitkeep
 !data/incoming_demos/.gitkeep
 !data/reports/.gitkeep

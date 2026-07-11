@@ -58,7 +58,14 @@ MISSION_PAYLOAD_SCHEMA_VERSION = "coach-mission-payload-v1"
 REQUIRED_MISSION_PAYLOAD_FIELDS = ("title", "goal", "rules", "duration", "success_metric", "failure_condition")
 SURVIVAL_OPENING_MISSION_METRICS = {"opening_death_rate", "survival_rate"}
 BAD_FIGHT_TRADE_MISSION_METRICS = {"untraded_death_rate"}
-UTILITY_VALUE_MISSION_METRICS = {"utility_damage", "he_damage", "flash_assists", "enemies_flashed"}
+EFFECTIVE_UTILITY_METRIC = "effective_enemy_utility_damage"
+UTILITY_VALUE_MISSION_METRICS = {
+    EFFECTIVE_UTILITY_METRIC,
+    "utility_damage_per_round",
+    "enemy_he_damage",
+    "enemy_fire_damage",
+    "effective_enemy_flash_duration",
+}
 UTILITY_NEGATIVE_TREND_MATERIALITY = 0.10
 MAX_UTILITY_TREND_SUPPORTED_MATCHES = 30
 MIN_UTILITY_TREND_SUPPORTED_MATCHES = 10
@@ -70,23 +77,25 @@ ROLLING_MISSION_METRICS = {
     "opening_duel_win_rate",
     "untraded_death_rate",
     "traded_death_rate",
-    "utility_damage",
+    EFFECTIVE_UTILITY_METRIC,
 }
 MIN_ROLLING_WINDOW_MATCHES = 3
 MIN_ROLLING_WINDOW_ROUNDS = 8
-CORE_COMBAT_SNAPSHOT_SOURCE = "core_combat_metrics"
-UTILITY_SNAPSHOT_SOURCE = "utility_metrics"
+CORE_COMBAT_SNAPSHOT_SOURCE = "coach_metric_performance"
+UTILITY_SNAPSHOT_SOURCE = "coach_metric_utility"
 UTILITY_SNAPSHOT_METRICS = {
-    "enemies_flashed",
+    "enemies_effectively_flashed",
+    "effective_enemy_flash_duration",
     "flash_assists",
     "flash_detonations",
-    "grenade_rating",
-    "he_damage",
+    "enemy_he_damage",
     "he_detonations",
-    "molotov_damage",
-    "molotov_detonations",
+    "enemy_fire_damage",
+    "fire_grenade_detonations",
     "smoke_detonations",
-    "utility_damage",
+    "smokes_used",
+    EFFECTIVE_UTILITY_METRIC,
+    "utility_damage_per_round",
 }
 
 
@@ -724,9 +733,15 @@ def add_mission_criteria(
     return criteria
 
 
-def list_mission_criteria(db: Session, *, user_id: int, mission_id: int) -> list[MissionCriteria]:
+def list_mission_criteria(
+    db: Session,
+    *,
+    user_id: int,
+    mission_id: int,
+    include_superseded: bool = False,
+) -> list[MissionCriteria]:
     _require_owned_mission(db, user_id=user_id, mission_id=mission_id)
-    return list(
+    rows = list(
         db.scalars(
             select(MissionCriteria)
             .where(MissionCriteria.mission_id == mission_id)
@@ -734,6 +749,13 @@ def list_mission_criteria(db: Session, *, user_id: int, mission_id: int) -> list
             .order_by(MissionCriteria.id.asc())
         ).all()
     )
+    if include_superseded:
+        return rows
+    return [
+        criteria
+        for criteria in rows
+        if _mapping(_json_load_mapping(criteria.rule_json).get("lifecycle")).get("state") != "superseded"
+    ]
 
 
 def record_mission_progress_evaluation(
@@ -925,7 +947,7 @@ def generate_rolling_mission_candidates(
     )
     return {
         "window": window.to_dict(),
-        "diagnostics": {"utility_damage": window.utility_trend.to_dict()},
+        "diagnostics": {EFFECTIVE_UTILITY_METRIC: window.utility_trend.to_dict()},
         "active_mission_context": active_context,
         "candidates": [candidate.to_dict() for candidate in candidates],
     }
@@ -1373,6 +1395,8 @@ def _select_owner_metric_snapshots_for_window(
         .join(Match, Match.id == MetricSnapshot.match_id)
         .where(Match.user_id == user_id)
         .where(identity_filter)
+        .where(MetricSnapshot.semantic_version == "3.0.0")
+        .where(MetricSnapshot.validation_status == "validated")
         .order_by(Match.played_at.desc().nullslast(), Match.id.desc(), MetricSnapshot.id.desc())
     )
     if window_type == "custom_match_set":
@@ -1405,10 +1429,10 @@ def _utility_trend_evidence_from_snapshots(
     for raw_snapshot in snapshots:
         snapshot = _snapshot_to_mapping(raw_snapshot)
         metrics = _snapshot_payload_mapping(snapshot, "metrics", "metrics_json")
-        if "utility_damage" not in metrics:
+        if EFFECTIVE_UTILITY_METRIC not in metrics:
             continue
         metric_seen = True
-        value = _metric_numeric_value(metrics.get("utility_damage"))
+        value = _metric_numeric_value(metrics.get(EFFECTIVE_UTILITY_METRIC))
         if value is None:
             continue
         match_id = _optional_positive_int(snapshot.get("match_id"))
@@ -1424,7 +1448,7 @@ def _utility_trend_evidence_from_snapshots(
             "confidence_baseline",
             "confidence_baseline_json",
         )
-        confidence = _metric_confidence_metadata(confidence_payload, "utility_damage")
+        confidence = _metric_confidence_metadata(confidence_payload, EFFECTIVE_UTILITY_METRIC)
         candidates_by_match.setdefault(match_id, []).append(
             {
                 "match_id": match_id,
@@ -1444,7 +1468,7 @@ def _utility_trend_evidence_from_snapshots(
     supported_observations: list[dict[str, Any]] = []
     for match_id in reversed(match_ids_descending):
         resolution = _resolve_metric_observation(
-            "utility_damage",
+            EFFECTIVE_UTILITY_METRIC,
             match_id,
             candidates_by_match[match_id],
         )
@@ -1464,14 +1488,14 @@ def _utility_trend_evidence_from_snapshots(
         supported_observations.append(canonical)
         if resolution["deduplicated_snapshot_ids"]:
             caveats.append(
-                "Duplicate utility_damage source observations were canonically resolved without increasing "
+                "Duplicate effective utility damage observations were canonically resolved without increasing "
                 "the supported match count."
             )
 
     if invalid_sample_identity_seen:
         blocking_reason_codes.add("invalid_sample_identity")
     if not metric_seen:
-        blocking_reason_codes.add("utility_damage_unavailable")
+        blocking_reason_codes.add("effective_enemy_utility_damage_unavailable")
     elif not accepted_source_seen:
         blocking_reason_codes.add("utility_source_not_accepted")
     if insufficient_confidence_seen and not supported_observations:
@@ -1595,7 +1619,7 @@ def _rolling_window_from_snapshots(
             "confidence_baseline_json",
         )
         for metric_name in ROLLING_MISSION_METRICS:
-            if metric_name == "utility_damage":
+            if metric_name == EFFECTIVE_UTILITY_METRIC:
                 continue
             if metric_name not in metrics:
                 continue
@@ -1629,9 +1653,9 @@ def _rolling_window_from_snapshots(
     }
     utility_trend = _utility_trend_evidence_from_snapshots(utility_snapshots)
     if utility_trend.recent_value is not None:
-        metrics["utility_damage"] = utility_trend.recent_value
+        metrics[EFFECTIVE_UTILITY_METRIC] = utility_trend.recent_value
     if utility_trend.supported_match_ids:
-        metric_samples["utility_damage"] = {
+        metric_samples[EFFECTIVE_UTILITY_METRIC] = {
             "snapshot_count": len(utility_trend.supported_snapshot_ids),
             "sample_matches": len(utility_trend.supported_match_ids),
             "sample_rounds": 0,
@@ -1676,7 +1700,7 @@ def _rolling_candidates_from_window(
     for family, metric_order in (
         ("survival_opening", ("opening_death_rate", "survival_rate")),
         ("bad_fight_trade", ("untraded_death_rate",)),
-        ("utility_value", ("utility_damage",)),
+        ("utility_value", (EFFECTIVE_UTILITY_METRIC,)),
     ):
         candidate = _rolling_candidate_for_family(
             window,
@@ -1780,7 +1804,7 @@ def _rolling_candidate_for_family(
         "sample_rounds": window.sample_rounds,
         "confidence": confidence_level,
         "caveats": list(window.caveats),
-        "utility_trend": window.utility_trend.to_dict() if primary_metric == "utility_damage" else None,
+        "utility_trend": window.utility_trend.to_dict() if primary_metric == EFFECTIVE_UTILITY_METRIC else None,
     }
     explanation = _rolling_candidate_explanation(primary_metric, primary, window)
     return RollingMissionCandidate(
@@ -1810,12 +1834,12 @@ def _rolling_evidence_for_family(
 ) -> list[dict[str, Any]]:
     if family == "utility_value":
         trend = window.utility_trend
-        if primary_metric != "utility_damage" or not trend.mission_ready:
+        if primary_metric != EFFECTIVE_UTILITY_METRIC or not trend.mission_ready:
             return []
         return [
             {
-                "metric_id": "utility_damage",
-                "metric_name": "utility_damage",
+                "metric_id": EFFECTIVE_UTILITY_METRIC,
+                "metric_name": EFFECTIVE_UTILITY_METRIC,
                 "value": trend.recent_value,
                 "personal_baseline_value": trend.baseline_value,
                 "materiality_threshold": trend.materiality_threshold,
@@ -1879,15 +1903,17 @@ def _rolling_insight_card(
         "opening_death_rate": "Rolling owner window shows too many opening deaths.",
         "survival_rate": "Rolling owner window shows low round survival.",
         "untraded_death_rate": "Rolling owner window shows too many untraded deaths.",
-        "utility_damage": "Recent utility damage has materially declined from the preceding personal baseline.",
+        EFFECTIVE_UTILITY_METRIC: (
+            "Recent effective enemy utility damage has materially declined from the preceding personal baseline."
+        ),
     }.get(primary_metric, f"Rolling owner window supports a {primary_metric} mission.")
     caveats = list(window.caveats)
-    if primary_metric == "utility_damage":
+    if primary_metric == EFFECTIVE_UTILITY_METRIC:
         caveats.extend(
             [
                 "Utility damage supports personal damage-trend review only; it does not prove grenade quality, "
                 "lineup quality, flash value, or an exact tactical cause.",
-                "The recovery target is the player's preceding owner-scoped utility_damage baseline segment.",
+                "The recovery target is the player's preceding owner-scoped effective enemy utility damage segment.",
             ]
         )
     readiness: dict[str, Any] = {
@@ -1905,13 +1931,13 @@ def _rolling_insight_card(
         "family": family,
         "window": window.to_dict(),
     }
-    if primary_metric == "utility_damage":
+    if primary_metric == EFFECTIVE_UTILITY_METRIC:
         trend = window.utility_trend
         readiness["baseline_value"] = trend.recent_value
         readiness["trend_evidence"] = trend.to_dict()
         readiness["criteria"] = [
             {
-                "metric_name": "utility_damage",
+                "metric_name": EFFECTIVE_UTILITY_METRIC,
                 "role": "primary",
                 "direction": "higher_is_better",
                 "baseline_value": trend.recent_value,
@@ -1924,7 +1950,7 @@ def _rolling_insight_card(
                 },
             },
             {
-                "metric_name": "utility_damage",
+                "metric_name": EFFECTIVE_UTILITY_METRIC,
                 "role": "guardrail",
                 "direction": "stay_above",
                 "baseline_value": trend.recent_value,
@@ -1949,7 +1975,7 @@ def _rolling_insight_card(
 
 
 def _rolling_metric_is_mission_ready(window: RollingMissionWindow, metric_name: str) -> bool:
-    if metric_name == "utility_damage":
+    if metric_name == EFFECTIVE_UTILITY_METRIC:
         return window.utility_trend.mission_ready
     sample = window.metric_samples.get(metric_name)
     if sample is None:
@@ -1980,7 +2006,7 @@ def _rolling_metric_severity(
         return round(max(0.0, value - 0.2), 3)
     if metric_name == "survival_rate":
         return round(max(0.0, 0.6 - value), 3)
-    if metric_name == "utility_damage":
+    if metric_name == EFFECTIVE_UTILITY_METRIC:
         return utility_trend.severity if utility_trend is not None else 0.0
     return 0.0
 
@@ -2007,7 +2033,7 @@ def _sample_rounds_for_metric(metric_name: str, metrics: Mapping[str, Any], snap
         known_deaths = _optional_int(metrics.get("trade_status_known_deaths"))
         if known_deaths is not None:
             return known_deaths
-    rounds = _optional_int(metrics.get("rounds"))
+    rounds = _optional_int(metrics.get("rounds_played"))
     if rounds is not None:
         return rounds
     return _sample_count(snapshot, "rounds")
@@ -2026,10 +2052,10 @@ def _rolling_candidate_explanation(
     primary: Mapping[str, Any],
     window: RollingMissionWindow,
 ) -> str:
-    if primary_metric == "utility_damage":
+    if primary_metric == EFFECTIVE_UTILITY_METRIC:
         trend = window.utility_trend
         return (
-            f"Generated from deterministic owner utility trend segments because recent utility_damage was "
+            f"Generated from deterministic owner utility trend segments because recent {EFFECTIVE_UTILITY_METRIC} was "
             f"{_format_metric_value(trend.recent_value)} versus the preceding personal baseline of "
             f"{_format_metric_value(trend.baseline_value)} ({trend.relative_drop:.1%} decline)."
         )
@@ -2048,7 +2074,7 @@ def _rolling_recommended_focus(primary_metric: str) -> str:
         return "Delay first contact and take opening fights only with trade support."
     if primary_metric == "survival_rate":
         return "Prioritize staying alive through early fights before taking isolated space."
-    if primary_metric == "utility_damage":
+    if primary_metric == EFFECTIVE_UTILITY_METRIC:
         return (
             "Recover supported utility damage toward the preceding personal baseline without inferring tactical cause."
         )
@@ -2996,7 +3022,7 @@ def _confidence_value(value: Any) -> float | None:
 
 
 def _metric_sample_rounds(snapshot: Mapping[str, Any], metrics: Mapping[str, Any]) -> int:
-    rounds = _optional_int(metrics.get("rounds")) if metrics.get("rounds") is not None else None
+    rounds = _optional_int(metrics.get("rounds_played")) if metrics.get("rounds_played") is not None else None
     if rounds is not None and rounds > 0:
         return rounds
     return _sample_count(snapshot, "rounds")
@@ -3355,7 +3381,7 @@ def _mission_title(*, problem: str, primary_metric: str) -> str:
         return "Reduce opening deaths"
     if primary_metric == "survival_rate":
         return "Improve round survival"
-    if primary_metric == "utility_damage":
+    if primary_metric == EFFECTIVE_UTILITY_METRIC:
         return "Recover utility damage toward personal baseline"
     cleaned_problem = problem.strip().rstrip(".")
     if cleaned_problem:
@@ -3383,9 +3409,10 @@ def _mission_goal(*, problem: str, primary: Mapping[str, Any]) -> str:
                 f"Raise survival_rate from {float(baseline):.3f} to {float(target):.3f} "
                 "over upcoming owner matches using supported metric snapshots."
             )
-        if metric_name == "utility_damage":
+        if metric_name == EFFECTIVE_UTILITY_METRIC:
             return (
-                f"Recover recent utility_damage from {float(baseline):.3f} toward the player's preceding "
+                f"Recover recent effective enemy utility damage from {float(baseline):.3f} toward the player's "
+                "preceding "
                 f"personal baseline of {float(target):.3f} using supported owner metric snapshots."
             )
         return (
@@ -3429,9 +3456,9 @@ def _mission_rules(
                 "evaluated with supported metrics."
             ),
         ]
-    elif metric_name == "utility_damage":
+    elif metric_name == EFFECTIVE_UTILITY_METRIC:
         rules = [
-            "Measure recovery only with canonical owner-scoped utility_damage observations.",
+            "Measure recovery only with canonical owner-scoped effective_enemy_utility_damage observations.",
             (
                 "Recover toward the preceding personal baseline without treating an absolute utility value "
                 "as universally good or bad."
@@ -3755,7 +3782,7 @@ def _target_value(metric_name: str, baseline: float | None, direction: str) -> f
 
 def _mission_min_sample_rounds(metric_name: str, evidence: Mapping[str, Any]) -> int | None:
     if metric_name in BAD_FIGHT_TRADE_MISSION_METRICS:
-        rounds = _optional_int(evidence.get("rounds"))
+        rounds = _optional_int(evidence.get("rounds_played"))
         if rounds is not None and rounds > 0:
             return rounds
         return None
@@ -3792,8 +3819,11 @@ def _failure_reason(source: Mapping[str, Any]) -> str:
             "Mission fails if survival_rate drops below the activation baseline or cannot be evaluated "
             "with supported metrics."
         )
-    if metric_name == "utility_damage":
-        return "Mission guardrail triggers if utility_damage drops below the recent personal-segment baseline."
+    if metric_name == EFFECTIVE_UTILITY_METRIC:
+        return (
+            "Mission guardrail triggers if effective_enemy_utility_damage drops below the recent "
+            "personal-segment baseline."
+        )
     return "Mission fails if this condition regresses or cannot be evaluated with supported metrics."
 
 

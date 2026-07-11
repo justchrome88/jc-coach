@@ -306,6 +306,112 @@ METRIC_REGISTRY: dict[str, MetricDefinition] = {
     ),
 }
 
+
+def _validated_pack_metric(metric_id: str, display_name: str, formula: str) -> MetricDefinition:
+    return MetricDefinition(
+        metric_id,
+        display_name,
+        "Coach Metric Pack v1 / retained demo event set / semantic version 3.0.0.",
+        formula,
+        "trusted",
+        (
+            "Trusted only with validated v3 owner/player/demo/event-set provenance.",
+            "Aim timing metrics use the documented local engagement contract, not an external product formula.",
+        ),
+        _usage(),
+    )
+
+
+_COACH_METRIC_PACK_TRUTH = {
+    "rounds_played": ("Rounds played", "count of completed regulation/overtime rounds with proven participation"),
+    "kills": ("Kills", "accepted enemy kills"),
+    "deaths": ("Deaths", "accepted owner victim deaths"),
+    "kd_ratio": ("K/D", "kills / deaths; null for zero deaths"),
+    "kills_per_round": ("Kills per round", "kills / rounds_played"),
+    "ordinary_assists": ("Ordinary assists", "accepted non-flash assists"),
+    "flash_assists": ("Flash assists", "accepted assistedflash assists"),
+    "combined_assists": ("Combined assists", "ordinary_assists + flash_assists"),
+    "headshot_kills": ("Headshot kills", "accepted kills with headshot=true"),
+    "headshot_kill_rate": ("Headshot-kill rate", "headshot_kills / kills * 100"),
+    "survival_rate": ("Survival rate", "survived participated rounds / rounds_played"),
+    "survived_rounds": ("Survived rounds", "participated rounds without accepted owner death"),
+    "effective_enemy_damage": ("Effective enemy damage", "enemy health damage capped at remaining health"),
+    "adr": ("ADR", "effective_enemy_damage / rounds_played"),
+    "kast": ("KAST", "rounds with kill, assist, survival or traded death / rounds_played * 100"),
+    "opening_duel_attempts": ("Opening duel attempts", "opening_duel_wins + opening_duel_losses"),
+    "opening_duel_wins": ("Opening duel wins", "first accepted enemy kill in a round by owner"),
+    "opening_duel_losses": ("Opening duel losses", "first accepted enemy kill in a round against owner"),
+    "opening_duel_win_rate": ("Opening duel win rate", "opening_duel_wins / opening_duel_attempts"),
+    "opening_deaths": ("Opening deaths", "opening_duel_losses"),
+    "opening_death_rate": ("Opening death rate", "opening_deaths / rounds_played"),
+    "multi_kill_rounds": ("Multi-kill rounds", "rounds with at least two accepted owner kills"),
+    "multi_kill_2_rounds": ("2K rounds", "rounds with exactly two accepted owner kills"),
+    "multi_kill_3_rounds": ("3K rounds", "rounds with exactly three accepted owner kills"),
+    "multi_kill_4_rounds": ("4K rounds", "rounds with exactly four accepted owner kills"),
+    "multi_kill_5_plus_rounds": ("5K+ rounds", "rounds with at least five accepted owner kills"),
+    "trade_opportunities": ("Trade opportunities", "same-round teammate-death lineages"),
+    "trade_kills": ("Trade kills", "owner refrag of teammate killer inside five seconds in the same round"),
+    "traded_deaths": ("Traded deaths", "owner deaths refragged by teammate inside five seconds"),
+    "untraded_deaths": ("Untraded deaths", "owner deaths not refragged inside five seconds"),
+    "trade_status_known_deaths": ("Deaths with known trade status", "traded_deaths + untraded_deaths"),
+    "trade_success_rate": ("Trade success rate", "trade_kills / deterministic trade opportunities"),
+    "traded_death_rate": ("Traded-death rate", "traded_deaths / deaths"),
+    "untraded_death_rate": ("Untraded-death rate", "untraded_deaths / deaths"),
+    "he_detonations": ("HE detonations", "accepted owner HE detonation identities"),
+    "smoke_detonations": ("Smoke detonations", "accepted owner smoke detonation identities"),
+    "flash_detonations": ("Flash detonations", "accepted owner flash detonation identities"),
+    "fire_grenade_detonations": ("Fire grenade detonations", "accepted owner fire start identities"),
+    "enemy_he_damage": ("Enemy HE damage", "effective enemy health damage caused by owner HE"),
+    "enemy_fire_damage": ("Enemy fire damage", "effective enemy health damage caused by owner fire utility"),
+    "effective_enemy_utility_damage": (
+        "Effective enemy utility damage",
+        "enemy_he_damage + enemy_fire_damage",
+    ),
+    "utility_damage_per_round": ("Utility damage per round", "effective_enemy_utility_damage / rounds_played"),
+    "enemies_effectively_flashed": ("Enemy flash effects", "accepted enemy player_blind events caused by owner"),
+    "effective_enemy_flash_duration": (
+        "Effective enemy flash duration",
+        "sum enemy blind duration clipped to accepted round end",
+    ),
+    "smokes_used": ("Smokes used", "accepted owner smoke detonations"),
+    "accepted_shots": ("Accepted shots", "accepted owner firearm weapon_fire events"),
+    "accepted_hits": ("Accepted hits", "accepted enemy firearm player_hurt events"),
+    "shot_accuracy": ("Shot accuracy", "accepted_hits / accepted_shots * 100"),
+    "head_hits": ("Head hits", "accepted hits with hitgroup=head"),
+    "hit_based_headshot_rate": ("Hit-based headshot rate", "head_hits / accepted_hits * 100"),
+    "first_shots": ("First shots", "first shot of each deterministic engagement"),
+    "first_shot_hits": ("First-shot hits", "first shots followed by an enemy hit before the second shot"),
+    "first_bullet_accuracy": ("First-bullet accuracy", "first_shot_hits / first_shots * 100"),
+    "engagements_with_kill": ("Engagements with kill", "deterministic firing engagements ending in owner kill"),
+    "first_shot_to_kill_ms": ("First shot to kill", "mean first-shot-to-kill time for killed engagements"),
+    "first_damage_to_kill_ms": ("First damage to kill", "mean first-damage-to-kill time for killed engagements"),
+}
+for _key, (_display_name, _formula) in _COACH_METRIC_PACK_TRUTH.items():
+    # The generic truth layer continues to describe unversioned legacy inputs.
+    # Pack consumers establish trust with source + semantic-version provenance,
+    # while genuinely new explicit keys can be trusted here without upgrading a
+    # legacy alias from a CSV/parser source by accident.
+    METRIC_REGISTRY.setdefault(
+        _key,
+        _validated_pack_metric(_key, _display_name, _formula),
+    )
+
+# These identifiers also exist in the pre-pack derived round pipeline, whose
+# payloads carry no v3 provenance. Keep that unversioned path fail-closed; the
+# Coach Metric Pack consumers trust the same keys only after their explicit
+# source/event-set/semantic-version gate.
+for _legacy_derived_key in ("traded_death_rate", "untraded_death_rate"):
+    _definition = METRIC_REGISTRY[_legacy_derived_key]
+    METRIC_REGISTRY[_legacy_derived_key] = MetricDefinition(
+        _definition.metric_id,
+        _definition.display_name,
+        _definition.source,
+        _definition.formula,
+        "low",
+        _definition.limitations + ("Unversioned derived-round payloads are not Coach Metric Pack v3 evidence.",),
+        _usage(display="suppressed", diagnosis="suppressed", recommendation="suppressed", ai="warn"),
+    )
+
 _ALIASES = {
     alias: definition.metric_id
     for definition in METRIC_REGISTRY.values()

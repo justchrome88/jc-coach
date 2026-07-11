@@ -18,11 +18,22 @@ def test_disputed_metrics_do_not_claim_verified_ground_truth() -> None:
     registry = json.loads((ROOT / "docs/metrics/registry/metrics.json").read_text())
     by_key = {metric["metric_key"]: metric for metric in registry["metrics"]}
 
-    for key in ("damage", "adr", "rounds", "kast", "survival_rate"):
+    for key in ("damage", "rounds"):
         assert by_key[key]["ground_truth_status"] == "disputed"
 
-    for key in ("kills", "deaths", "kd_ratio", "ordinary_assists", "flash_assists", "combined_assists"):
+    for key in (
+        "kills",
+        "deaths",
+        "kd_ratio",
+        "ordinary_assists",
+        "flash_assists",
+        "combined_assists",
+        "adr",
+        "kast",
+        "survival_rate",
+    ):
         assert by_key[key]["validation_status"] == "validated"
+        assert by_key[key]["semantic_version"] == "3.0.0"
 
 
 def test_every_critical_metric_has_explicit_terminal_validation_and_identity() -> None:

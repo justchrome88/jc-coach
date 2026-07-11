@@ -1,5 +1,14 @@
 # Metric Data Lineage
 
+## Coach Metric Pack v1 / semantic version 3.0.0
+
+H01A-M04 appends compact `coach-metric-events-v1` files derived from retained
+demos. Each v3 performance, utility and aim snapshot retains owner user, owner
+Steam ID, measured player, match, original parser artifact, retained demo SHA,
+event-set content hash, implementation version and metric semantic version.
+Trusted owner/coach selectors accept validated v3 only. Prior parser artifacts,
+event sets and v1/v2 snapshots remain immutable historical evidence.
+
 ## Version 2 snapshot identity
 
 New critical snapshots constrain `owner_user_id`, match/scope, player identity,

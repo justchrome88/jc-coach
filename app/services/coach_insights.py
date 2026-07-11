@@ -19,13 +19,16 @@ MIN_TRADE_STATUS_KNOWN_DEATHS = 2
 MIN_UNTRADED_DEATHS = 2
 UNTRADED_DEATH_RATE_THRESHOLD = 0.60
 MIN_UTILITY_DAMAGE_FOR_POSITIVE_ACTIVITY_SIGNAL = 40
+EFFECTIVE_UTILITY_METRIC = "effective_enemy_utility_damage"
 UTILITY_CONTEXT_ONLY_METRICS = {
-    "enemies_flashed",
+    "enemies_effectively_flashed",
+    "effective_enemy_flash_duration",
     "flash_assists",
     "flash_detonations",
     "smoke_detonations",
     "he_detonations",
-    "molotov_detonations",
+    "fire_grenade_detonations",
+    "smokes_used",
     "grenade_rating",
 }
 MAX_PRIORITIZED_COACH_INSIGHTS = 2
@@ -159,7 +162,7 @@ def survival_opening_death_insight_from_snapshot(snapshot: Mapping[str, Any]) ->
     metrics = _mapping(snapshot.get("metrics"))
     confidence_baseline = _mapping(snapshot.get("confidence_baseline"))
     metric_confidence = _mapping(confidence_baseline.get("metrics"))
-    rounds = _number(metrics.get("rounds"))
+    rounds = _number(metrics.get("rounds_played"))
     if rounds is None or rounds < MIN_SURVIVAL_OPENING_ROUNDS:
         return None
 
@@ -212,7 +215,7 @@ def bad_fight_trade_insight_from_snapshot(snapshot: Mapping[str, Any]) -> dict[s
     if trade_evidence is None:
         return _ambiguous_trade_insight_from_snapshot(snapshot, metrics)
 
-    rounds = _number(metrics.get("rounds"))
+    rounds = _number(metrics.get("rounds_played"))
     opening_evidence = (
         _opening_death_evidence(snapshot, metrics, metric_confidence, rounds)
         if rounds is not None and rounds >= MIN_SURVIVAL_OPENING_ROUNDS
@@ -366,7 +369,7 @@ def mission_readiness_for_card(
         missing_requirements.append("metric_confidence_baseline")
         blocking_reason_codes.append("missing_metric_confidence_baseline")
 
-    if target_metric == "utility_damage":
+    if target_metric == EFFECTIVE_UTILITY_METRIC:
         missing_requirements.append("personal_utility_trend_evidence")
         blocking_reason_codes.append("utility_trend_evidence_required")
     elif target_metric in UTILITY_CONTEXT_ONLY_METRICS:
@@ -560,7 +563,7 @@ def _untraded_death_evidence(
     untraded_deaths = _number(metrics.get("untraded_deaths"))
     untraded_rate = _number(metrics.get("untraded_death_rate"))
     known_deaths = _number(metrics.get("trade_status_known_deaths"))
-    rounds = _number(metrics.get("rounds"))
+    rounds = _number(metrics.get("rounds_played"))
     confidence = _metric_confidence_level(metric_confidence.get("untraded_death_rate"))
     if (
         untraded_deaths is None
@@ -588,7 +591,7 @@ def _untraded_death_evidence(
         ),
     }
     if rounds is not None:
-        evidence["rounds"] = int(rounds)
+        evidence["rounds_played"] = int(rounds)
     return evidence
 
 
@@ -635,8 +638,8 @@ def _utility_damage_evidence(
     metrics: Mapping[str, Any],
     metric_confidence: Mapping[str, Any],
 ) -> dict[str, Any] | None:
-    utility_damage = _number(metrics.get("utility_damage"))
-    confidence_record = metric_confidence.get("utility_damage")
+    utility_damage = _number(metrics.get(EFFECTIVE_UTILITY_METRIC))
+    confidence_record = metric_confidence.get(EFFECTIVE_UTILITY_METRIC)
     confidence = _metric_confidence_level(confidence_record)
     match_ids = _match_ids(snapshot)
     if (
@@ -655,7 +658,7 @@ def _utility_damage_evidence(
     )
 
     evidence: dict[str, Any] = {
-        "metric_id": "utility_damage",
+        "metric_id": EFFECTIVE_UTILITY_METRIC,
         "value": int(utility_damage),
         "positive_activity_signal": positive_activity_signal,
         "positive_activity_signal_threshold": MIN_UTILITY_DAMAGE_FOR_POSITIVE_ACTIVITY_SIGNAL,
@@ -739,13 +742,13 @@ def _unsupported_utility_caveats(
     metric_confidence: Mapping[str, Any],
 ) -> list[str]:
     caveats = [
-        "No supported utility_damage evidence was available for a descriptive utility insight.",
+        "No supported effective_enemy_utility_damage evidence was available for a descriptive utility insight.",
         (
             "Weak flash and detonation facts cannot be converted into grenade value, flash assists, lineups, "
             "or grenade_rating."
         ),
     ]
-    utility_confidence = _mapping(metric_confidence.get("utility_damage"))
+    utility_confidence = _mapping(metric_confidence.get(EFFECTIVE_UTILITY_METRIC))
     caveats.extend(_string_list(utility_confidence.get("reasons")))
     caveats.extend(_string_list(snapshot.get("caveats")))
     return _ordered_unique(caveats)
@@ -776,21 +779,21 @@ def _looks_like_utility_snapshot(
 ) -> bool:
     metadata = _mapping(snapshot.get("metadata"))
     confidence_baseline = _mapping(snapshot.get("confidence_baseline"))
-    if snapshot.get("source") == "utility_metrics":
+    if snapshot.get("source") in {"utility_metrics", "coach_metric_utility"}:
         return True
     if str(metadata.get("schema_version") or "").startswith("utility-metrics"):
         return True
     if str(confidence_baseline.get("source") or "").startswith("utility-metrics"):
         return True
     utility_metric_ids = {
-        "utility_damage",
-        "he_damage",
-        "molotov_damage",
+        EFFECTIVE_UTILITY_METRIC,
+        "enemy_he_damage",
+        "enemy_fire_damage",
         "enemies_flashed",
         "flash_detonations",
         "smoke_detonations",
         "he_detonations",
-        "molotov_detonations",
+        "fire_grenade_detonations",
         "flash_assists",
         "grenade_rating",
     }
@@ -804,12 +807,12 @@ def _weak_utility_evidence(
 ) -> list[dict[str, Any]]:
     evidence = []
     for metric_id in (
-        "utility_damage",
-        "enemies_flashed",
+        EFFECTIVE_UTILITY_METRIC,
+        "enemies_effectively_flashed",
         "flash_detonations",
         "smoke_detonations",
         "he_detonations",
-        "molotov_detonations",
+        "fire_grenade_detonations",
     ):
         value = _number(metrics.get(metric_id))
         if value is None:
@@ -826,7 +829,7 @@ def _weak_utility_evidence(
                 "treat it as caveated context only."
             ),
         }
-        if metric_id == "utility_damage":
+        if metric_id == EFFECTIVE_UTILITY_METRIC:
             item["positive_activity_signal_threshold"] = MIN_UTILITY_DAMAGE_FOR_POSITIVE_ACTIVITY_SIGNAL
         evidence.append(item)
     return evidence[:3]
@@ -834,7 +837,7 @@ def _weak_utility_evidence(
 
 def _utility_damage_breakdown(metrics: Mapping[str, Any]) -> dict[str, int]:
     breakdown = {}
-    for metric_id in ("he_damage", "molotov_damage"):
+    for metric_id in ("enemy_he_damage", "enemy_fire_damage"):
         value = _number(metrics.get(metric_id))
         if value is not None and value > 0:
             breakdown[metric_id] = int(value)
@@ -842,13 +845,18 @@ def _utility_damage_breakdown(metrics: Mapping[str, Any]) -> dict[str, int]:
 
 
 def _utility_breakdown_description(breakdown: Mapping[str, int]) -> str:
-    return ", ".join(f"{metric_id}={value}" for metric_id, value in sorted(breakdown.items()))
+    order = ("enemy_he_damage", "enemy_fire_damage")
+    return ", ".join(f"{metric_id}={breakdown[metric_id]}" for metric_id in order if metric_id in breakdown)
 
 
 def _utility_damage_event_count(snapshot: Mapping[str, Any]) -> int | None:
     confidence_baseline = _mapping(snapshot.get("confidence_baseline"))
     event_coverage = _mapping(confidence_baseline.get("event_coverage"))
-    count = _number(event_coverage.get("utility_damage_events"))
+    count = _number(
+        event_coverage.get("effective_enemy_utility_damage_events")
+        or event_coverage.get("utility_damage_events")
+        or event_coverage.get("hurt_events")
+    )
     return int(count) if count is not None else None
 
 
@@ -888,11 +896,17 @@ def _insight_severity_score(metric_id: str, confidence: Any) -> int:
         return 90
     if metric_id == "survival_rate":
         return 80
-    if metric_id == "utility_damage" and confidence in USABLE_INSIGHT_CONFIDENCE:
+    if metric_id == EFFECTIVE_UTILITY_METRIC and confidence in USABLE_INSIGHT_CONFIDENCE:
         return 60
     if metric_id == "ambiguous_traded_deaths":
         return 20
-    if metric_id in {"utility_damage", "enemies_flashed", "flash_detonations", "smoke_detonations", "he_detonations"}:
+    if metric_id in {
+        EFFECTIVE_UTILITY_METRIC,
+        "enemies_effectively_flashed",
+        "flash_detonations",
+        "smoke_detonations",
+        "he_detonations",
+    }:
         return 10
     return 0
 
@@ -910,7 +924,7 @@ def _confidence_score(confidence: Any) -> int:
 def _evidence_strength_score(metric_id: str, evidence: Mapping[str, Any]) -> float:
     value = _number(evidence.get("value")) or 0.0
     threshold = _number(evidence.get("threshold"))
-    if metric_id == "utility_damage":
+    if metric_id == EFFECTIVE_UTILITY_METRIC:
         return 0.0
     if metric_id == "survival_rate":
         return max(0.0, (threshold if threshold is not None else SURVIVAL_RATE_THRESHOLD) - value)
@@ -924,7 +938,7 @@ def _metric_priority(metric_id: str) -> int:
         "untraded_death_rate": 0,
         "opening_death_rate": 1,
         "survival_rate": 2,
-        "utility_damage": 3,
+        EFFECTIVE_UTILITY_METRIC: 3,
         "ambiguous_traded_deaths": 4,
         "enemies_flashed": 5,
         "flash_detonations": 6,

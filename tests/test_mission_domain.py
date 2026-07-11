@@ -119,7 +119,7 @@ def test_survival_opening_insight_generates_actionable_opening_mission(db):
         [
             _e02_survival_snapshot(
                 metrics={
-                    "rounds": 12,
+                    "rounds_played": 12,
                     "opening_deaths": 4,
                     "opening_death_rate": 0.333,
                     "survived_rounds": 6,
@@ -198,7 +198,7 @@ def test_survival_opening_insight_generates_survival_mission_payload():
         [
             _e02_survival_snapshot(
                 metrics={
-                    "rounds": 10,
+                    "rounds_played": 10,
                     "opening_deaths": 1,
                     "opening_death_rate": 0.1,
                     "survived_rounds": 5,
@@ -252,7 +252,7 @@ def test_bad_fight_trade_insight_generates_trade_discipline_mission(db):
         [
             _e02_survival_snapshot(
                 metrics={
-                    "rounds": 10,
+                    "rounds_played": 10,
                     "opening_deaths": 3,
                     "opening_death_rate": 0.3,
                     "untraded_deaths": 3,
@@ -335,7 +335,7 @@ def test_trade_discipline_mission_progress_uses_trade_and_opening_metrics(db):
         [
             _e02_survival_snapshot(
                 metrics={
-                    "rounds": 10,
+                    "rounds_played": 10,
                     "opening_deaths": 3,
                     "opening_death_rate": 0.3,
                     "untraded_deaths": 3,
@@ -373,7 +373,7 @@ def test_trade_discipline_mission_progress_uses_trade_and_opening_metrics(db):
                     "match_id": 10,
                     "user_id": owner.id,
                     "owner_steam_id": mission.owner_steam_id,
-                    "source": "core_combat_metrics",
+                    "source": "coach_metric_performance",
                     "metrics": {
                         "untraded_death_rate": 0.65,
                         "opening_death_rate": 0.22,
@@ -407,7 +407,7 @@ def test_ambiguous_trade_evidence_does_not_generate_mission_payload():
         [
             _e02_survival_snapshot(
                 metrics={
-                    "rounds": 10,
+                    "rounds_played": 10,
                     "ambiguous_traded_deaths": 2,
                     "trade_status_known_deaths": 0,
                 },
@@ -1018,7 +1018,7 @@ def test_evaluate_mission_progress_distinguishes_not_following(db):
                 owner,
                 owner_steam_id=mission.owner_steam_id,
                 metrics={
-                    "utility_damage": 98,
+                    "effective_enemy_utility_damage": 98,
                     "utility_uses_per_match": 1,
                 },
                 sample_matches=1,
@@ -1033,7 +1033,7 @@ def test_evaluate_mission_progress_distinguishes_not_following(db):
     assert evaluation.status == "not_following"
     assert result["components"][0]["outcome"] == "not_following"
     assert "not_following" in result["components"][0]["reason_codes"]
-    assert json.loads(evaluation.caveats_json) == ["utility_damage:not_following"]
+    assert json.loads(evaluation.caveats_json) == ["effective_enemy_utility_damage:not_following"]
 
 
 def test_evaluate_mission_progress_guardrail_blocks_harmful_success(db):
@@ -1118,7 +1118,7 @@ def test_mission_progress_counts_unique_metric_matches_and_preserves_snapshot_li
                 mission,
                 snapshot_id=501,
                 match_id=41,
-                source="core_combat_metrics",
+                source="coach_metric_performance",
                 metrics={"opening_death_rate": 0.24},
             )
         ],
@@ -1134,7 +1134,7 @@ def test_mission_progress_counts_unique_metric_matches_and_preserves_snapshot_li
         mission,
         snapshot_id=502,
         match_id=42,
-        source="core_combat_metrics",
+        source="coach_metric_performance",
         metrics={"opening_death_rate": 0.24},
     )
     missing_identity_snapshot.pop("match_id")
@@ -1158,16 +1158,16 @@ def test_mission_progress_counts_unique_metric_matches_and_preserves_snapshot_li
                 mission,
                 snapshot_id=1119,
                 match_id=122,
-                source="core_combat_metrics",
-                metrics={"opening_death_rate": 0.24, "rounds": 20},
+                source="coach_metric_performance",
+                metrics={"opening_death_rate": 0.24, "rounds_played": 20},
             ),
             _canonical_snapshot(
                 owner,
                 mission,
                 snapshot_id=1130,
                 match_id=122,
-                source="utility_metrics",
-                metrics={"utility_damage": 61},
+                source="coach_metric_utility",
+                metrics={"effective_enemy_utility_damage": 61},
             ),
         ],
     )
@@ -1196,9 +1196,9 @@ def test_duplicate_snapshot_sources_cannot_satisfy_match_requirement(db):
             snapshot_id=600 + index,
             match_id=51,
             source=source,
-            metrics={"utility_damage": 98, "utility_uses_per_match": 3},
+            metrics={"effective_enemy_utility_damage": 98, "utility_uses_per_match": 3},
         )
-        for index, source in enumerate(("utility_metrics", "core_combat_metrics", "legacy_owner_metrics"))
+        for index, source in enumerate(("coach_metric_utility", "coach_metric_performance", "legacy_owner_metrics"))
     ]
 
     insufficient = evaluate_mission_progress(
@@ -1219,8 +1219,8 @@ def test_duplicate_snapshot_sources_cannot_satisfy_match_requirement(db):
             mission,
             snapshot_id=700 + match_id,
             match_id=match_id,
-            source="utility_metrics",
-            metrics={"utility_damage": 98, "utility_uses_per_match": 3},
+            source="coach_metric_utility",
+            metrics={"effective_enemy_utility_damage": 98, "utility_uses_per_match": 3},
         )
         for match_id in (61, 62, 63)
     ]
@@ -1255,7 +1255,7 @@ def test_metric_observation_resolution_deduplicates_and_surfaces_conflicts(db):
                 mission,
                 snapshot_id=801,
                 match_id=71,
-                source="core_combat_metrics",
+                source="coach_metric_performance",
                 metrics={"opening_death_rate": 0.24},
             ),
             _canonical_snapshot(
@@ -1279,7 +1279,7 @@ def test_metric_observation_resolution_deduplicates_and_surfaces_conflicts(db):
     assert "duplicate_metric_source_deduplicated" in component["reason_codes"]
     assert identical_metric_sample["observations"][0]["source_parser_artifact_id"] == 10801
     assert {item["source_event_set_id"] for item in identical_metric_sample["source_lineage"]} == {
-        "fixture:71:core_combat_metrics",
+        "fixture:71:coach_metric_performance",
         "fixture:71:legacy_owner_metrics",
     }
 
@@ -1293,7 +1293,7 @@ def test_metric_observation_resolution_deduplicates_and_surfaces_conflicts(db):
                 mission,
                 snapshot_id=803,
                 match_id=72,
-                source="core_combat_metrics",
+                source="coach_metric_performance",
                 metrics={"opening_death_rate": 0.24},
             ),
             _canonical_snapshot(
@@ -1320,7 +1320,7 @@ def test_metric_observation_resolution_deduplicates_and_surfaces_conflicts(db):
                 mission,
                 snapshot_id=805,
                 match_id=73,
-                source="core_combat_metrics",
+                source="coach_metric_performance",
                 metrics={"opening_death_rate": 0.24},
             ),
             _canonical_snapshot(
@@ -1328,7 +1328,7 @@ def test_metric_observation_resolution_deduplicates_and_surfaces_conflicts(db):
                 mission,
                 snapshot_id=806,
                 match_id=73,
-                source="core_combat_metrics",
+                source="coach_metric_performance",
                 metrics={"opening_death_rate": 0.9},
             ),
         ],
@@ -1348,7 +1348,7 @@ def test_metric_observation_resolution_deduplicates_and_surfaces_conflicts(db):
                 mission,
                 snapshot_id=807,
                 match_id=74,
-                source="core_combat_metrics",
+                source="coach_metric_performance",
                 metrics={"opening_death_rate": 0.24},
             )
         ]
@@ -1381,16 +1381,16 @@ def test_round_samples_are_metric_specific_and_missing_rounds_fail_closed(db):
                 mission,
                 snapshot_id=901,
                 match_id=81,
-                source="core_combat_metrics",
-                metrics={"opening_death_rate": 0.24, "rounds": 12},
+                source="coach_metric_performance",
+                metrics={"opening_death_rate": 0.24, "rounds_played": 12},
             ),
             _canonical_snapshot(
                 owner,
                 mission,
                 snapshot_id=902,
                 match_id=81,
-                source="utility_metrics",
-                metrics={"opening_death_rate": 0.24, "rounds": 12},
+                source="coach_metric_utility",
+                metrics={"opening_death_rate": 0.24, "rounds_played": 12},
             ),
         ],
     )
@@ -1408,7 +1408,7 @@ def test_round_samples_are_metric_specific_and_missing_rounds_fail_closed(db):
                 mission,
                 snapshot_id=903,
                 match_id=82,
-                source="core_combat_metrics",
+                source="coach_metric_performance",
                 metrics={"opening_death_rate": 0.24},
             )
         ],
@@ -1444,18 +1444,18 @@ def test_criterion_confidence_uses_only_canonical_metric_observations(db):
                     utility_mission,
                     snapshot_id=1000 + match_id,
                     match_id=match_id,
-                    source="utility_metrics",
-                    metrics={"utility_damage": 98, "utility_uses_per_match": 3},
-                    confidence={"utility_damage": "low", "utility_uses_per_match": "low"},
+                    source="coach_metric_utility",
+                    metrics={"effective_enemy_utility_damage": 98, "utility_uses_per_match": 3},
+                    confidence={"effective_enemy_utility_damage": "low", "utility_uses_per_match": "low"},
                 ),
                 _canonical_snapshot(
                     utility_owner,
                     utility_mission,
                     snapshot_id=1100 + match_id,
                     match_id=match_id,
-                    source="core_combat_metrics",
-                    metrics={"utility_damage": 98, "opening_death_rate": 0.2},
-                    confidence={"utility_damage": "high", "opening_death_rate": "high"},
+                    source="coach_metric_performance",
+                    metrics={"effective_enemy_utility_damage": 98, "opening_death_rate": 0.2},
+                    confidence={"effective_enemy_utility_damage": "high", "opening_death_rate": "high"},
                 ),
             ]
         )
@@ -1466,7 +1466,7 @@ def test_criterion_confidence_uses_only_canonical_metric_observations(db):
         evaluation_metric_snapshots=utility_snapshots,
     )
     utility_component = json.loads(utility_evaluation.result_json)["components"][0]
-    assert utility_component["canonical_source"] == "utility_metrics"
+    assert utility_component["canonical_source"] == "coach_metric_utility"
     assert utility_component["confidence"] == 0.25
     assert "insufficient_confidence" in utility_component["reason_codes"]
 
@@ -1487,7 +1487,7 @@ def test_criterion_confidence_uses_only_canonical_metric_observations(db):
                 combat_mission,
                 snapshot_id=1201,
                 match_id=94,
-                source="core_combat_metrics",
+                source="coach_metric_performance",
                 metrics={"opening_death_rate": 0.24},
                 confidence={"opening_death_rate": "high"},
             ),
@@ -1496,9 +1496,9 @@ def test_criterion_confidence_uses_only_canonical_metric_observations(db):
                 combat_mission,
                 snapshot_id=1202,
                 match_id=94,
-                source="utility_metrics",
-                metrics={"utility_damage": 10},
-                confidence={"utility_damage": "low"},
+                source="coach_metric_utility",
+                metrics={"effective_enemy_utility_damage": 10},
+                confidence={"effective_enemy_utility_damage": "low"},
             ),
         ],
     )
@@ -1515,7 +1515,7 @@ def test_criterion_confidence_uses_only_canonical_metric_observations(db):
                 combat_mission,
                 snapshot_id=1203,
                 match_id=95,
-                source="core_combat_metrics",
+                source="coach_metric_performance",
                 metrics={"opening_death_rate": 0.24},
                 confidence={},
             )
@@ -1537,13 +1537,13 @@ def test_active_mission_requires_ready_metric_confidence_and_persists_explicit_c
         analysis_run_id=run.id,
         insight_card={
             "problem": "Utility damage can become a measurable mission.",
-            "evidence": [{"metric_id": "utility_damage", "value": 94, "metric_confidence": "medium"}],
+            "evidence": [{"metric_id": "effective_enemy_utility_damage", "value": 94, "metric_confidence": "medium"}],
             "confidence": "medium",
             "caveats": [],
             "recommended_focus": "Review damage-producing grenade rounds.",
             "mission_readiness": {
                 "can_become_mission": True,
-                "target_metric_candidate": "utility_damage",
+                "target_metric_candidate": "effective_enemy_utility_damage",
                 "baseline_value": 94,
                 "confidence_eligibility": {
                     "level": "medium",
@@ -1554,7 +1554,7 @@ def test_active_mission_requires_ready_metric_confidence_and_persists_explicit_c
                 "blocking_reason_codes": [],
                 "criteria": [
                     {
-                        "metric_name": "utility_damage",
+                        "metric_name": "effective_enemy_utility_damage",
                         "role": "primary",
                         "direction": "higher_is_better",
                         "baseline_value": 94,
@@ -1562,14 +1562,14 @@ def test_active_mission_requires_ready_metric_confidence_and_persists_explicit_c
                         "min_sample_matches": 3,
                     },
                     {
-                        "metric_name": "he_damage",
+                        "metric_name": "enemy_he_damage",
                         "role": "secondary",
                         "direction": "higher_is_better",
                         "baseline_value": 20,
                         "target_value": 25,
                     },
                     {
-                        "metric_name": "utility_damage",
+                        "metric_name": "effective_enemy_utility_damage",
                         "role": "guardrail",
                         "direction": "stay_above",
                         "baseline_value": 94,
@@ -1593,9 +1593,9 @@ def test_active_mission_requires_ready_metric_confidence_and_persists_explicit_c
 
     assert activated.status == "active"
     assert [(row.metric_name, row.role, row.direction, row.baseline_value, row.target_value) for row in criteria] == [
-        ("utility_damage", "primary", "higher_is_better", 94, 110),
-        ("he_damage", "secondary", "higher_is_better", 20, 25),
-        ("utility_damage", "guardrail", "stay_above", 94, 80),
+        ("effective_enemy_utility_damage", "primary", "higher_is_better", 94, 110),
+        ("enemy_he_damage", "secondary", "higher_is_better", 20, 25),
+        ("effective_enemy_utility_damage", "guardrail", "stay_above", 94, 80),
     ]
     assert criteria[0].min_sample_matches == 3
 
@@ -1609,13 +1609,13 @@ def test_activation_blocks_low_or_mission_ineligible_metrics(db):
         analysis_run_id=run.id,
         insight_card={
             "problem": "Low-confidence utility context is not a hard mission.",
-            "evidence": [{"metric_id": "utility_damage", "value": 90, "metric_confidence": "low"}],
+            "evidence": [{"metric_id": "effective_enemy_utility_damage", "value": 90, "metric_confidence": "low"}],
             "confidence": "low",
             "caveats": ["Utility events are incomplete."],
             "recommended_focus": "Collect stronger utility evidence first.",
             "mission_readiness": {
                 "can_become_mission": False,
-                "target_metric_candidate": "utility_damage",
+                "target_metric_candidate": "effective_enemy_utility_damage",
                 "baseline_value": 90,
                 "confidence_eligibility": {
                     "level": "low",
@@ -1681,7 +1681,7 @@ def test_rolling_last_30_window_generates_ranked_owner_mission_candidates(db):
     for index, metrics in enumerate(
         (
             {
-                "rounds": 10,
+                "rounds_played": 10,
                 "survival_rate": 0.5,
                 "opening_death_rate": 0.3,
                 "untraded_death_rate": 0.8,
@@ -1689,7 +1689,7 @@ def test_rolling_last_30_window_generates_ranked_owner_mission_candidates(db):
                 "trade_status_known_deaths": 5,
             },
             {
-                "rounds": 12,
+                "rounds_played": 12,
                 "survival_rate": 0.55,
                 "opening_death_rate": 0.35,
                 "untraded_death_rate": 0.7,
@@ -1697,7 +1697,7 @@ def test_rolling_last_30_window_generates_ranked_owner_mission_candidates(db):
                 "trade_status_known_deaths": 5,
             },
             {
-                "rounds": 14,
+                "rounds_played": 14,
                 "survival_rate": 0.45,
                 "opening_death_rate": 0.34,
                 "untraded_death_rate": 0.75,
@@ -1715,7 +1715,7 @@ def test_rolling_last_30_window_generates_ranked_owner_mission_candidates(db):
         match=other_match,
         owner_steam_id=other_steam_id,
         metrics={
-            "rounds": 16,
+            "rounds_played": 16,
             "survival_rate": 0.1,
             "opening_death_rate": 0.8,
             "untraded_death_rate": 1.0,
@@ -1755,7 +1755,7 @@ def test_rolling_custom_match_set_uses_only_requested_owner_matches(db):
             match=match,
             owner_steam_id=owner_steam_id,
             metrics={
-                "rounds": 10,
+                "rounds_played": 10,
                 "survival_rate": 0.48,
                 "opening_death_rate": 0.33,
             },
@@ -1796,7 +1796,7 @@ def test_rolling_window_generates_and_suppresses_utility_value_candidate(db):
     )
 
     candidates = result["candidates"]
-    trend = result["diagnostics"]["utility_damage"]
+    trend = result["diagnostics"]["effective_enemy_utility_damage"]
     assert trend["evidence_available"] is True
     assert trend["deficiency_detected"] is True
     assert trend["mission_ready"] is True
@@ -1807,12 +1807,12 @@ def test_rolling_window_generates_and_suppresses_utility_value_candidate(db):
     assert trend["recent_value"] == 45
     assert trend["relative_drop"] == 0.1
     assert trend["severity"] == 0.1
-    assert [candidate["primary_metric"] for candidate in candidates] == ["utility_damage"]
+    assert [candidate["primary_metric"] for candidate in candidates] == ["effective_enemy_utility_damage"]
     assert candidates[0]["family"] == "utility_value"
     payload = candidates[0]["mission_payload"]
     assert payload["title"] == "Recover utility damage toward personal baseline"
     assert payload["success_metric"] == {
-        "metric_name": "utility_damage",
+        "metric_name": "effective_enemy_utility_damage",
         "direction": "higher_is_better",
         "baseline_value": 45,
         "target_value": 50,
@@ -1850,7 +1850,7 @@ def test_rolling_window_generates_and_suppresses_utility_value_candidate(db):
     )
 
     utility = suppressed["candidates"][0]
-    assert utility["primary_metric"] == "utility_damage"
+    assert utility["primary_metric"] == "effective_enemy_utility_damage"
     assert utility["suppressed_by_active_mission"] is True
     assert utility["suppression_reason_codes"] == ["active_mission_same_domain"]
     assert utility["suppression_key"]["domain_key"] == "utility_value"
@@ -1891,7 +1891,7 @@ def test_utility_trend_direction_and_materiality_gate(
         owner_steam_id=owner_steam_id,
     )
 
-    trend = result["diagnostics"]["utility_damage"]
+    trend = result["diagnostics"]["effective_enemy_utility_damage"]
     assert trend["severity"] == expected_severity
     assert bool(result["candidates"]) is candidate_expected
     if reason_code is None:
@@ -1916,7 +1916,7 @@ def test_utility_trend_windows_are_chronological_deterministic_and_bounded(db):
         user_id=owner_21.id,
         owner_steam_id=owner_21_steam_id,
     )
-    trend_21 = result_21["diagnostics"]["utility_damage"]
+    trend_21 = result_21["diagnostics"]["effective_enemy_utility_damage"]
     assert trend_21["ignored_oldest_match_ids"] == [matches_21[0].id]
     assert trend_21["baseline_match_ids"] == [match.id for match in matches_21[1:11]]
     assert trend_21["recent_match_ids"] == [match.id for match in matches_21[11:]]
@@ -1936,7 +1936,7 @@ def test_utility_trend_windows_are_chronological_deterministic_and_bounded(db):
         user_id=owner_31.id,
         owner_steam_id=owner_31_steam_id,
     )
-    trend_31 = result_31["diagnostics"]["utility_damage"]
+    trend_31 = result_31["diagnostics"]["effective_enemy_utility_damage"]
     assert trend_31["supported_match_count"] == 30
     assert matches_31[0].id not in trend_31["supported_match_ids"]
     assert trend_31["ignored_oldest_match_ids"] == [matches_31[0].id]
@@ -1962,8 +1962,8 @@ def test_utility_trend_deduplicates_sources_and_excludes_non_owner_snapshots(db)
                 db,
                 match=match,
                 owner_steam_id=owner_steam_id,
-                metrics={"utility_damage": value},
-                source="core_combat_metrics",
+                metrics={"effective_enemy_utility_damage": value},
+                source="coach_metric_performance",
             ).id
         )
     _utility_trend_snapshots(
@@ -1980,11 +1980,11 @@ def test_utility_trend_deduplicates_sources_and_excludes_non_owner_snapshots(db)
         owner_steam_id=owner_steam_id,
     )
 
-    trend = result["diagnostics"]["utility_damage"]
+    trend = result["diagnostics"]["effective_enemy_utility_damage"]
     assert trend["supported_match_count"] == 10
     assert trend["supported_snapshot_ids"] == [snapshot.id for snapshot in canonical_snapshots]
     assert set(duplicate_snapshot_ids).isdisjoint(trend["supported_snapshot_ids"])
-    assert "Duplicate utility_damage source observations" in " ".join(trend["caveats"])
+    assert "Duplicate effective utility damage observations" in " ".join(trend["caveats"])
 
 
 def test_utility_trend_fails_closed_for_insufficient_confidence_conflict_and_invalid_baseline(db):
@@ -2004,7 +2004,10 @@ def test_utility_trend_fails_closed_for_insufficient_confidence_conflict_and_inv
     )
     assert insufficient["candidates"] == []
     assert insufficient["coach_hypothesis_ids"] == []
-    assert "insufficient_supported_matches" in insufficient["diagnostics"]["utility_damage"]["reason_codes"]
+    assert (
+        "insufficient_supported_matches"
+        in insufficient["diagnostics"]["effective_enemy_utility_damage"]["reason_codes"]
+    )
 
     low_owner = _user(db, "utility-low-confidence")
     low_steam_id = "76561198000000202"
@@ -2019,7 +2022,7 @@ def test_utility_trend_fails_closed_for_insufficient_confidence_conflict_and_inv
     )
     low = generate_rolling_mission_candidates(db, user_id=low_owner.id, owner_steam_id=low_steam_id)
     assert low["candidates"] == []
-    assert "insufficient_confidence" in low["diagnostics"]["utility_damage"]["reason_codes"]
+    assert "insufficient_confidence" in low["diagnostics"]["effective_enemy_utility_damage"]["reason_codes"]
 
     zero_owner = _user(db, "utility-zero-baseline")
     zero_steam_id = "76561198000000203"
@@ -2032,7 +2035,7 @@ def test_utility_trend_fails_closed_for_insufficient_confidence_conflict_and_inv
     )
     zero = generate_rolling_mission_candidates(db, user_id=zero_owner.id, owner_steam_id=zero_steam_id)
     assert zero["candidates"] == []
-    assert "invalid_baseline" in zero["diagnostics"]["utility_damage"]["reason_codes"]
+    assert "invalid_baseline" in zero["diagnostics"]["effective_enemy_utility_damage"]["reason_codes"]
 
     conflict_owner = _user(db, "utility-conflict")
     conflict_steam_id = "76561198000000204"
@@ -2044,14 +2047,14 @@ def test_utility_trend_fails_closed_for_insufficient_confidence_conflict_and_inv
             db,
             match=match,
             owner_steam_id=conflict_steam_id,
-            metrics={"utility_damage": value},
-            source="core_combat_metrics",
+            metrics={"effective_enemy_utility_damage": value},
+            source="coach_metric_performance",
         )
     _rolling_metric_snapshot(
         db,
         match=conflict_matches[-1],
         owner_steam_id=conflict_steam_id,
-        metrics={"utility_damage": 1},
+        metrics={"effective_enemy_utility_damage": 1},
         source="legacy_owner_metrics",
     )
     conflict = generate_rolling_mission_candidates(
@@ -2060,7 +2063,7 @@ def test_utility_trend_fails_closed_for_insufficient_confidence_conflict_and_inv
         owner_steam_id=conflict_steam_id,
     )
     assert conflict["candidates"] == []
-    assert "conflicting_metric_sources" in conflict["diagnostics"]["utility_damage"]["reason_codes"]
+    assert "conflicting_metric_sources" in conflict["diagnostics"]["effective_enemy_utility_damage"]["reason_codes"]
 
 
 def test_valid_utility_candidate_persists_trend_evidence_and_recovers_in_progress(db):
@@ -2080,7 +2083,7 @@ def test_valid_utility_candidate_persists_trend_evidence_and_recovers_in_progres
         owner_steam_id=owner_steam_id,
     )
 
-    trend = result["diagnostics"]["utility_damage"]
+    trend = result["diagnostics"]["effective_enemy_utility_damage"]
     assert len(result["coach_hypothesis_ids"]) == 1
     analysis_run = get_analysis_run(db, user_id=owner.id, analysis_run_id=result["analysis_run_id"])
     hypothesis = get_coach_hypothesis(
@@ -2109,9 +2112,9 @@ def test_valid_utility_candidate_persists_trend_evidence_and_recovers_in_progres
             mission,
             snapshot_id=4100 + match_id,
             match_id=match_id,
-            source="utility_metrics",
-            metrics={"utility_damage": 50},
-            confidence={"utility_damage": "high"},
+            source="coach_metric_utility",
+            metrics={"effective_enemy_utility_damage": 50},
+            confidence={"effective_enemy_utility_damage": "high"},
         )
         for match_id in (401, 402, 403)
     ]
@@ -2127,9 +2130,9 @@ def test_valid_utility_candidate_persists_trend_evidence_and_recovers_in_progres
             mission,
             snapshot_id=4200 + match_id,
             match_id=match_id,
-            source="utility_metrics",
-            metrics={"utility_damage": 45},
-            confidence={"utility_damage": "high"},
+            source="coach_metric_utility",
+            metrics={"effective_enemy_utility_damage": 45},
+            confidence={"effective_enemy_utility_damage": "high"},
         )
         for match_id in (411, 412, 413)
     ]
@@ -2159,11 +2162,11 @@ def test_active_utility_mission_suppresses_only_equivalent_domain(db):
             match=match,
             owner_steam_id=owner_steam_id,
             metrics={
-                "rounds": 10,
+                "rounds_played": 10,
                 "untraded_death_rate": 0.8,
                 "trade_status_known_deaths": 5,
             },
-            source="core_combat_metrics",
+            source="coach_metric_performance",
         )
     active_utility = _active_mission_from_card(
         db,
@@ -2188,7 +2191,7 @@ def test_active_utility_mission_suppresses_only_equivalent_domain(db):
         "owner_steam_id": owner_steam_id,
         "domain_key": "utility_value",
         "problem_key": "utility_value",
-        "target_metric": "utility_damage",
+        "target_metric": "effective_enemy_utility_damage",
         "mission_payload_type": "utility_value_mission",
     }
     assert trade["suppressed_by_active_mission"] is False
@@ -2205,7 +2208,7 @@ def test_rolling_window_weak_or_unavailable_evidence_generates_no_candidate(db):
             match=match,
             owner_steam_id=owner_steam_id,
             metrics={
-                "rounds": 10,
+                "rounds_played": 10,
                 "survival_rate": 0.58,
                 "opening_death_rate": 0.22,
                 "ambiguous_traded_deaths": 2,
@@ -2236,7 +2239,7 @@ def test_rolling_window_non_owner_snapshots_do_not_generate_candidate(db):
             match=match,
             owner_steam_id="76561198000000999",
             metrics={
-                "rounds": 12,
+                "rounds_played": 12,
                 "opening_death_rate": 0.7,
                 "survival_rate": 0.2,
             },
@@ -2271,7 +2274,7 @@ def test_rolling_candidates_suppress_active_duplicate_and_persist_hypotheses(db)
             match=match,
             owner_steam_id=owner_steam_id,
             metrics={
-                "rounds": 10,
+                "rounds_played": 10,
                 "survival_rate": 0.5,
                 "opening_death_rate": 0.34,
                 "untraded_death_rate": 0.75,
@@ -2519,7 +2522,7 @@ def _rolling_metric_snapshot(
     metrics: dict,
     confidence_level: str = "high",
     usable_for_missions: bool = True,
-    source: str = "core_combat_metrics",
+    source: str = "coach_metric_performance",
 ) -> MetricSnapshot:
     confidence = {
         "source": "rolling-test",
@@ -2536,15 +2539,20 @@ def _rolling_metric_snapshot(
                 "opening_duel_win_rate",
                 "untraded_death_rate",
                 "traded_death_rate",
-                "utility_damage",
+                "effective_enemy_utility_damage",
             )
         },
     }
     snapshot = MetricSnapshot(
+        owner_user_id=match.user_id,
         match_id=match.id,
         player_key=f"steam:{owner_steam_id}",
         player_steamid=owner_steam_id,
         source=source,
+        metric_domain="coach_utility" if source == "coach_metric_utility" else "coach_performance",
+        semantic_version="3.0.0",
+        validation_status="validated",
+        source_event_set_id=f"fixture:{match.id}:{source}",
         metrics_json=json.dumps(metrics),
         confidence_baseline_json=json.dumps(confidence),
         caveats_json=json.dumps([]),
@@ -2575,10 +2583,10 @@ def _utility_trend_snapshots(
                 db,
                 match=match,
                 owner_steam_id=owner_steam_id,
-                metrics={"utility_damage": value},
+                metrics={"effective_enemy_utility_damage": value},
                 confidence_level=confidence_level,
                 usable_for_missions=usable_for_missions,
-                source="utility_metrics",
+                source="coach_metric_utility",
             )
         )
     return matches, snapshots
@@ -2609,13 +2617,13 @@ def _ready_opening_death_card() -> dict:
 def _ready_utility_card_with_follow_rule() -> dict:
     return {
         "problem": "Utility damage needs repeatable usage.",
-        "evidence": [{"metric_id": "utility_damage", "value": 94, "metric_confidence": "medium"}],
+        "evidence": [{"metric_id": "effective_enemy_utility_damage", "value": 94, "metric_confidence": "medium"}],
         "confidence": "medium",
         "caveats": [],
         "recommended_focus": "Use planned utility before taking space.",
         "mission_readiness": {
             "can_become_mission": True,
-            "target_metric_candidate": "utility_damage",
+            "target_metric_candidate": "effective_enemy_utility_damage",
             "baseline_value": 94,
             "confidence_eligibility": {
                 "level": "medium",
@@ -2626,7 +2634,7 @@ def _ready_utility_card_with_follow_rule() -> dict:
             "blocking_reason_codes": [],
             "criteria": [
                 {
-                    "metric_name": "utility_damage",
+                    "metric_name": "effective_enemy_utility_damage",
                     "role": "primary",
                     "direction": "higher_is_better",
                     "baseline_value": 94,
@@ -2712,7 +2720,7 @@ def _snapshot(
         "match_id": resolved_match_id,
         "user_id": owner.id,
         "owner_steam_id": owner_steam_id,
-        "source": "core_combat_metrics",
+        "source": "coach_metric_performance",
         "metrics": metrics,
         "confidence_baseline": {
             "metrics": {metric_name: {"level": "medium"} for metric_name in metrics}
@@ -2766,7 +2774,7 @@ def _e02_survival_snapshot(
         "id": 100 + match_id,
         "match_id": match_id,
         "player_key": "steam:76561198000000001",
-        "source": "core_combat_metrics",
+        "source": "coach_metric_performance",
         "source_event_set_id": "fixture:e02",
         "metrics": metrics,
         "confidence_baseline": {"source": "core-combat-metrics-v1", "metrics": confidence},

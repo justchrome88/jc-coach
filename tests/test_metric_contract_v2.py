@@ -201,7 +201,7 @@ def test_versioned_snapshot_identity_and_trusted_payload_fail_closed(db, monkeyp
     process_persisted_match_metric_snapshots_for_coach_loop(
         db, user_id=owner.id, match_id=match.id, metric_snapshots=[legacy, accepted]
     )
-    assert called["metric_snapshot_ids"] == [accepted.id]
+    assert called["metric_snapshot_ids"] == []
 
 
 def test_contract_provenance_records_rate_numerators_and_denominators(db) -> None:

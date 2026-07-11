@@ -105,7 +105,7 @@ def test_survival_opening_death_insight_uses_exact_metric_snapshot_evidence():
     card = survival_opening_death_insight_from_snapshot(
         _snapshot(
             metrics={
-                "rounds": 10,
+                "rounds_played": 10,
                 "opening_deaths": 3,
                 "opening_death_rate": 0.3,
                 "survived_rounds": 5,
@@ -133,7 +133,7 @@ def test_survival_opening_death_insight_uses_exact_metric_snapshot_evidence():
             "metric_confidence": "medium",
             "sample_count": 10,
             "match_ids": [42],
-            "source": "core_combat_metrics",
+            "source": "coach_metric_performance",
             "description": "Opening deaths are 3 over 10 rounds (0.300), meeting the 0.220 insight threshold.",
         },
         {
@@ -143,7 +143,7 @@ def test_survival_opening_death_insight_uses_exact_metric_snapshot_evidence():
             "metric_confidence": "high",
             "sample_count": 10,
             "match_ids": [42],
-            "source": "core_combat_metrics",
+            "source": "coach_metric_performance",
             "description": (
                 "Survival rate is 0.500: 5 survived rounds and 5 death rounds over 10 rounds, "
                 "at or below the 0.550 insight threshold."
@@ -159,7 +159,7 @@ def test_survival_opening_death_insight_can_use_survival_without_opening_deaths(
     card = survival_opening_death_insight_from_snapshot(
         _snapshot(
             metrics={
-                "rounds": 12,
+                "rounds_played": 12,
                 "opening_deaths": 1,
                 "opening_death_rate": 0.083,
                 "survived_rounds": 6,
@@ -185,7 +185,7 @@ def test_survival_opening_death_insight_can_use_survival_without_opening_deaths(
 def test_survival_opening_death_insight_returns_none_for_weak_evidence():
     low_confidence = _snapshot(
         metrics={
-            "rounds": 10,
+            "rounds_played": 10,
             "opening_deaths": 3,
             "opening_death_rate": 0.3,
             "survived_rounds": 5,
@@ -198,7 +198,7 @@ def test_survival_opening_death_insight_returns_none_for_weak_evidence():
     )
     low_sample = _snapshot(
         metrics={
-            "rounds": 7,
+            "rounds_played": 7,
             "opening_deaths": 3,
             "opening_death_rate": 0.429,
             "survived_rounds": 3,
@@ -218,7 +218,7 @@ def test_survival_opening_death_insights_are_deterministically_prioritized():
     opening = _snapshot(
         match_id=2,
         metrics={
-            "rounds": 10,
+            "rounds_played": 10,
             "opening_deaths": 3,
             "opening_death_rate": 0.3,
             "survived_rounds": 8,
@@ -231,7 +231,7 @@ def test_survival_opening_death_insights_are_deterministically_prioritized():
     )
     survival = _snapshot(
         match_id=1,
-        metrics={"rounds": 10, "survived_rounds": 4, "survival_rate": 0.4},
+        metrics={"rounds_played": 10, "survived_rounds": 4, "survival_rate": 0.4},
         confidence={"survival_rate": {"level": "high"}},
     )
 
@@ -244,7 +244,7 @@ def test_bad_fight_trade_insight_uses_untraded_death_evidence_with_counts_and_ra
     card = bad_fight_trade_insight_from_snapshot(
         _snapshot(
             metrics={
-                "rounds": 10,
+                "rounds_played": 10,
                 "opening_deaths": 3,
                 "opening_death_rate": 0.3,
                 "untraded_deaths": 3,
@@ -273,10 +273,10 @@ def test_bad_fight_trade_insight_uses_untraded_death_evidence_with_counts_and_ra
             "metric_confidence": "high",
             "sample_count": 4,
             "match_ids": [42],
-            "source": "core_combat_metrics",
+            "source": "coach_metric_performance",
             "count": 3,
             "known_trade_status_deaths": 4,
-            "rounds": 10,
+            "rounds_played": 10,
             "description": (
                 "Untraded deaths are 3 of 4 deaths with known trade status (0.750), meeting the 0.600 "
                 "insight threshold."
@@ -289,7 +289,7 @@ def test_bad_fight_trade_insight_uses_untraded_death_evidence_with_counts_and_ra
             "metric_confidence": "high",
             "sample_count": 10,
             "match_ids": [42],
-            "source": "core_combat_metrics",
+            "source": "coach_metric_performance",
             "description": "Opening deaths are 3 over 10 rounds (0.300), meeting the 0.220 insight threshold.",
         },
     ]
@@ -301,7 +301,7 @@ def test_bad_fight_trade_insight_caveats_ambiguous_trade_data_without_hard_claim
     card = bad_fight_trade_insight_from_snapshot(
         _snapshot(
             metrics={
-                "rounds": 10,
+                "rounds_played": 10,
                 "ambiguous_traded_deaths": 2,
                 "trade_status_known_deaths": 0,
             },
@@ -324,7 +324,7 @@ def test_bad_fight_trade_insight_caveats_ambiguous_trade_data_without_hard_claim
             "metric_confidence": "low",
             "sample_count": 2,
             "match_ids": [42],
-            "source": "core_combat_metrics",
+            "source": "coach_metric_performance",
             "description": (
                 "2 death(s) have ambiguous trade status and were excluded from traded/untraded death rates."
             ),
@@ -338,7 +338,7 @@ def test_combined_coach_insights_select_top_two_prioritized_cards():
     trade = _snapshot(
         match_id=7,
         metrics={
-            "rounds": 10,
+            "rounds_played": 10,
             "opening_deaths": 3,
             "opening_death_rate": 0.3,
             "untraded_deaths": 3,
@@ -352,7 +352,7 @@ def test_combined_coach_insights_select_top_two_prioritized_cards():
     )
     survival = _snapshot(
         match_id=8,
-        metrics={"rounds": 10, "survived_rounds": 4, "survival_rate": 0.4},
+        metrics={"rounds_played": 10, "survived_rounds": 4, "survival_rate": 0.4},
         confidence={"survival_rate": {"level": "high"}},
     )
 
@@ -369,7 +369,7 @@ def test_coach_insight_candidates_preserve_full_ranked_candidate_list_for_diagno
     trade = _snapshot(
         match_id=7,
         metrics={
-            "rounds": 10,
+            "rounds_played": 10,
             "opening_deaths": 3,
             "opening_death_rate": 0.3,
             "untraded_deaths": 3,
@@ -383,7 +383,7 @@ def test_coach_insight_candidates_preserve_full_ranked_candidate_list_for_diagno
     )
     survival = _snapshot(
         match_id=8,
-        metrics={"rounds": 10, "survived_rounds": 4, "survival_rate": 0.4},
+        metrics={"rounds_played": 10, "survived_rounds": 4, "survival_rate": 0.4},
         confidence={"survival_rate": {"level": "high"}},
     )
 
@@ -400,15 +400,15 @@ def test_prioritizer_uses_confidence_before_evidence_strength_within_same_severi
     high_confidence = utility_value_insight_from_snapshot(
         _utility_snapshot(
             match_id=10,
-            metrics={"utility_damage": 45},
-            confidence={"utility_damage": {"level": "high", "usable_for_insights": True}},
+            metrics={"effective_enemy_utility_damage": 45},
+            confidence={"effective_enemy_utility_damage": {"level": "high", "usable_for_insights": True}},
         )
     )
     medium_confidence_with_more_damage = utility_value_insight_from_snapshot(
         _utility_snapshot(
             match_id=11,
-            metrics={"utility_damage": 120},
-            confidence={"utility_damage": {"level": "medium", "usable_for_insights": True}},
+            metrics={"effective_enemy_utility_damage": 120},
+            confidence={"effective_enemy_utility_damage": {"level": "medium", "usable_for_insights": True}},
         )
     )
 
@@ -423,7 +423,7 @@ def test_prioritizer_uses_evidence_strength_then_sample_count_as_tie_breakers():
         _snapshot(
             match_id=12,
             metrics={
-                "rounds": 10,
+                "rounds_played": 10,
                 "opening_deaths": 3,
                 "opening_death_rate": 0.3,
                 "survived_rounds": 8,
@@ -436,7 +436,7 @@ def test_prioritizer_uses_evidence_strength_then_sample_count_as_tie_breakers():
         _snapshot(
             match_id=13,
             metrics={
-                "rounds": 10,
+                "rounds_played": 10,
                 "opening_deaths": 4,
                 "opening_death_rate": 0.4,
                 "survived_rounds": 8,
@@ -449,7 +449,7 @@ def test_prioritizer_uses_evidence_strength_then_sample_count_as_tie_breakers():
         _snapshot(
             match_id=14,
             metrics={
-                "rounds": 14,
+                "rounds_played": 14,
                 "opening_deaths": 4,
                 "opening_death_rate": 0.3,
                 "survived_rounds": 10,
@@ -468,7 +468,7 @@ def test_low_confidence_context_cannot_outrank_high_confidence_critical_problem(
     low_confidence_context = bad_fight_trade_insight_from_snapshot(
         _snapshot(
             match_id=15,
-            metrics={"rounds": 10, "ambiguous_traded_deaths": 9, "trade_status_known_deaths": 0},
+            metrics={"rounds_played": 10, "ambiguous_traded_deaths": 9, "trade_status_known_deaths": 0},
             confidence={"untraded_death_rate": {"level": "low"}},
         )
     )
@@ -476,7 +476,7 @@ def test_low_confidence_context_cannot_outrank_high_confidence_critical_problem(
         _snapshot(
             match_id=16,
             metrics={
-                "rounds": 10,
+                "rounds_played": 10,
                 "untraded_deaths": 2,
                 "trade_status_known_deaths": 3,
                 "untraded_death_rate": 0.667,
@@ -495,19 +495,19 @@ def test_utility_value_insight_uses_supported_damage_without_grenade_rating_clai
     card = utility_value_insight_from_snapshot(
         _utility_snapshot(
             metrics={
-                "utility_damage": 49,
-                "he_damage": 42,
-                "molotov_damage": 7,
-                "enemies_flashed": 1,
+                "effective_enemy_utility_damage": 49,
+                "enemy_he_damage": 42,
+                "enemy_fire_damage": 7,
+                "enemies_effectively_flashed": 1,
                 "flash_detonations": 1,
             },
             confidence={
-                "utility_damage": {
+                "effective_enemy_utility_damage": {
                     "level": "medium",
                     "usable_for_insights": True,
                     "hard_recommendation_eligible": True,
                 },
-                "enemies_flashed": {"level": "low", "usable_for_insights": False},
+                "enemies_effectively_flashed": {"level": "low", "usable_for_insights": False},
                 "grenade_rating": {"level": "unavailable", "usable_for_insights": False},
             },
             caveats=["Utility damage is inferred from parser weapon name on player_hurt."],
@@ -520,19 +520,19 @@ def test_utility_value_insight_uses_supported_damage_without_grenade_rating_clai
     assert card["confidence"] == "medium"
     assert card["evidence"] == [
         {
-            "metric_id": "utility_damage",
+            "metric_id": "effective_enemy_utility_damage",
             "value": 49,
             "positive_activity_signal": True,
             "positive_activity_signal_threshold": 40,
             "metric_confidence": "medium",
             "match_ids": [42],
-            "source": "utility_metrics",
+            "source": "coach_metric_utility",
             "description": (
                 "Utility damage is 49 in this snapshot, meeting the 40 descriptive positive-activity signal. "
                 "This descriptive single-match signal does not establish a rolling deficiency. "
-                "Supported damage breakdown: he_damage=42, molotov_damage=7."
+                "Supported damage breakdown: enemy_he_damage=42, enemy_fire_damage=7."
             ),
-            "breakdown": {"he_damage": 42, "molotov_damage": 7},
+            "breakdown": {"enemy_he_damage": 42, "enemy_fire_damage": 7},
             "source_event_count": 2,
         }
     ]
@@ -546,11 +546,12 @@ def test_unsupported_utility_data_produces_low_confidence_no_claim_with_caveat()
         _utility_snapshot(
             metrics={},
             confidence={
-                "utility_damage": {
+                "effective_enemy_utility_damage": {
                     "level": "unavailable",
                     "reasons": [
                         (
-                            "No supported utility_damage events for this player; utility damage is omitted "
+                            "No supported effective_enemy_utility_damage events for this player; "
+                            "utility damage is omitted "
                             "instead of set to zero."
                         )
                     ],
@@ -570,7 +571,10 @@ def test_unsupported_utility_data_produces_low_confidence_no_claim_with_caveat()
     assert card["problem"] == "Utility value cannot be judged confidently from this match snapshot."
     assert card["confidence"] == "low"
     assert card["evidence"] == []
-    assert "No supported utility_damage evidence was available for a descriptive utility insight." in card["caveats"]
+    assert (
+        "No supported effective_enemy_utility_damage evidence was available for a descriptive utility insight."
+        in card["caveats"]
+    )
     assert (
         "Downstream coach and metrics layers must not infer grenade quality from missing utility data."
         in card["caveats"]
@@ -579,11 +583,11 @@ def test_unsupported_utility_data_produces_low_confidence_no_claim_with_caveat()
 
 def test_weak_flash_utility_data_stays_low_confidence_context_only():
     snapshot = _utility_snapshot(
-        metrics={"enemies_flashed": 1, "flash_detonations": 1},
+        metrics={"enemies_effectively_flashed": 1, "flash_detonations": 1},
         confidence={
-            "enemies_flashed": {"level": "low", "usable_for_insights": False},
+            "enemies_effectively_flashed": {"level": "low", "usable_for_insights": False},
             "flash_detonations": {"level": "low", "usable_for_insights": False},
-            "utility_damage": {"level": "unavailable", "usable_for_insights": False},
+            "effective_enemy_utility_damage": {"level": "unavailable", "usable_for_insights": False},
         },
         caveats=["Source row omitted blind duration; flash value must remain low-confidence."],
     )
@@ -592,7 +596,7 @@ def test_weak_flash_utility_data_stays_low_confidence_context_only():
     assert card is not None
     assert validate_insight_cards([card]) == ()
     assert card["confidence"] == "low"
-    assert [item["metric_id"] for item in card["evidence"]] == ["enemies_flashed", "flash_detonations"]
+    assert [item["metric_id"] for item in card["evidence"]] == ["enemies_effectively_flashed", "flash_detonations"]
     assert all(item["metric_confidence"] == "low" for item in card["evidence"])
     assert UTILITY_WEAK_DATA_CAVEAT in card["caveats"]
     assert "Source row omitted blind duration; flash value must remain low-confidence." in card["caveats"]
@@ -611,7 +615,7 @@ def test_high_confidence_detonation_proxy_cannot_become_utility_mission():
                 "usable_for_missions": True,
                 "hard_recommendation_eligible": True,
             },
-            "utility_damage": {"level": "unavailable", "usable_for_insights": False},
+            "effective_enemy_utility_damage": {"level": "unavailable", "usable_for_insights": False},
         },
     )
 
@@ -625,9 +629,9 @@ def test_high_confidence_detonation_proxy_cannot_become_utility_mission():
 def test_utility_value_confidence_gate_blocks_hard_claim_from_low_confidence_damage():
     card = utility_value_insight_from_snapshot(
         _utility_snapshot(
-            metrics={"utility_damage": 90},
+            metrics={"effective_enemy_utility_damage": 90},
             confidence={
-                "utility_damage": {
+                "effective_enemy_utility_damage": {
                     "level": "low",
                     "reasons": ["Utility damage source events are incomplete."],
                     "usable_for_insights": False,
@@ -642,13 +646,13 @@ def test_utility_value_confidence_gate_blocks_hard_claim_from_low_confidence_dam
     assert card["confidence"] == "low"
     assert card["evidence"] == [
         {
-            "metric_id": "utility_damage",
+            "metric_id": "effective_enemy_utility_damage",
             "value": 90,
             "metric_confidence": "low",
             "match_ids": [42],
-            "source": "utility_metrics",
+            "source": "coach_metric_utility",
             "description": (
-                "utility_damage is present but did not pass the supported utility insight gate; "
+                "effective_enemy_utility_damage is present but did not pass the supported utility insight gate; "
                 "treat it as caveated context only."
             ),
             "positive_activity_signal_threshold": 40,
@@ -659,9 +663,9 @@ def test_utility_value_confidence_gate_blocks_hard_claim_from_low_confidence_dam
 
 def test_single_match_utility_insight_is_descriptive_but_not_mission_ready():
     utility = _utility_snapshot(
-        metrics={"utility_damage": 94, "molotov_damage": 93},
+        metrics={"effective_enemy_utility_damage": 94, "enemy_fire_damage": 93},
         confidence={
-            "utility_damage": {
+            "effective_enemy_utility_damage": {
                 "level": "medium",
                 "usable_for_insights": True,
                 "usable_for_missions": True,
@@ -674,7 +678,7 @@ def test_single_match_utility_insight_is_descriptive_but_not_mission_ready():
 
     readiness = cards[0]["mission_readiness"]
     assert readiness["can_become_mission"] is False
-    assert readiness["target_metric_candidate"] == "utility_damage"
+    assert readiness["target_metric_candidate"] == "effective_enemy_utility_damage"
     assert readiness["baseline_value"] == 94
     assert readiness["confidence_eligibility"] == {
         "level": "medium",
@@ -687,9 +691,9 @@ def test_single_match_utility_insight_is_descriptive_but_not_mission_ready():
 
 def test_low_supported_utility_value_remains_descriptive_evidence_without_mission_readiness():
     utility = _utility_snapshot(
-        metrics={"utility_damage": 12},
+        metrics={"effective_enemy_utility_damage": 12},
         confidence={
-            "utility_damage": {
+            "effective_enemy_utility_damage": {
                 "level": "high",
                 "usable_for_insights": True,
                 "usable_for_missions": True,
@@ -711,7 +715,7 @@ def test_low_supported_utility_value_remains_descriptive_evidence_without_missio
 
 def test_mission_readiness_blocks_suppressed_snapshot_metric_with_reason_codes():
     survival = _snapshot(
-        metrics={"rounds": 14, "survived_rounds": 5, "survival_rate": 0.357},
+        metrics={"rounds_played": 14, "survived_rounds": 5, "survival_rate": 0.357},
         confidence={
             "survival_rate": {
                 "level": "medium",
@@ -738,9 +742,9 @@ def test_mission_readiness_blocks_suppressed_snapshot_metric_with_reason_codes()
 
 def test_low_or_unavailable_confidence_cannot_become_hard_mission():
     low_confidence_utility = _utility_snapshot(
-        metrics={"utility_damage": 90},
+        metrics={"effective_enemy_utility_damage": 90},
         confidence={
-            "utility_damage": {
+            "effective_enemy_utility_damage": {
                 "level": "low",
                 "usable_for_insights": False,
                 "usable_for_missions": False,
@@ -754,7 +758,7 @@ def test_low_or_unavailable_confidence_cannot_become_hard_mission():
 
     readiness = cards[0]["mission_readiness"]
     assert readiness["can_become_mission"] is False
-    assert readiness["target_metric_candidate"] == "utility_damage"
+    assert readiness["target_metric_candidate"] == "effective_enemy_utility_damage"
     assert readiness["confidence_eligibility"]["level"] == "low"
     assert "mission_eligible_confidence" in readiness["missing_requirements"]
     assert "low_or_unavailable_confidence" in readiness["blocking_reason_codes"]
@@ -772,7 +776,7 @@ def _snapshot(
         "id": 100 + match_id,
         "match_id": match_id,
         "player_key": "steam:76561198000000001",
-        "source": "core_combat_metrics",
+        "source": "coach_metric_performance",
         "source_event_set_id": "fixture:e02",
         "metrics": metrics,
         "confidence_baseline": {"source": "core-combat-metrics-v1", "metrics": confidence},
@@ -792,14 +796,14 @@ def _utility_snapshot(
         "id": 200 + match_id,
         "match_id": match_id,
         "player_key": "steam:76561198000000001",
-        "source": "utility_metrics",
+        "source": "coach_metric_utility",
         "source_event_set_id": "fixture:c05:utility",
         "metrics": metrics,
         "confidence_baseline": {
             "source": "utility-metrics-v1",
             "metrics": confidence,
             "event_coverage": {
-                "utility_damage_events": 2,
+                "effective_enemy_utility_damage_events": 2,
                 "flash_effect_events": 1,
                 "utility_detonation_events": 4,
                 "utility_data_gap_events": 1,

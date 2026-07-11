@@ -5,10 +5,11 @@ truth. Validation requires source evidence independent of the calculation under
 test. External comparator values are evidence only and must not be fitted.
 
 Match 124 independently accepts rounds, kills, deaths, K/D, ordinary/flash/
-combined assists, headshot kills, and headshot-kill rate. Effective enemy damage,
-ADR, KAST trade state, and three quiet-round participation states remain
-disputed. Their values are quarantined, unavailable to trusted owner UI, and
-removed from coach/hypothesis/mission inputs until evidence closure.
+combined assists, headshot kills, and headshot-kill rate. H01A-M04 additionally
+accepts effective enemy damage, ADR, KAST, quiet-round participation, explicit
+trade state, enemy-only utility damage, flash effectiveness and local aim
+primitives under Coach Metric Pack v1. Earlier ambiguous v1/v2 observations
+remain historical and quarantined; trusted consumers select v3 only.
 
 Evidence priority for demo-derived metrics:
 

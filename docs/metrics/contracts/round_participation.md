@@ -4,4 +4,8 @@ Accepted rounds are completed regulation or overtime rounds between valid start/
 
 The shared `AcceptedMatchPhase` implementation owns completed-round discovery, the inclusive final round-end tick, and warmup/post-match exclusion. Match 124 has 20 accepted rounds; the event at tick 115232 is later than the final round-end tick 114168 and is excluded. The 17 activity rows are never a participation denominator.
 
-When explicit roster/connect/disconnect participation evidence is incomplete, quiet rounds are provisionally retained in the ledger but `participation_complete=false`. ADR, KAST, survival, and participation-derived opening rates then remain quarantined. KAST requires a per-round K/A/S/T ledger and explicit trade evidence; missing trade evidence is unknown rather than false.
+Version `3.0.0` reparses retained roster, spawn, connect/disconnect and team
+state. Quiet rounds are accepted when roster membership persists and no
+in-round disconnect contradicts it. Match 124 has 20 participated rounds and a
+complete K/A/S/T ledger. If this evidence is incomplete on another demo, the
+affected match is blocked rather than partially trusted.

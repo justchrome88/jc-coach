@@ -14,6 +14,14 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - H01A_M01_STATUS: PASS_WITH_WARNINGS.
 - H01A_M02_STATUS: PASS_WITH_WARNINGS.
 - H01A_M03_STATUS: PASS_WITH_WARNINGS.
+- H01A_M04_STATUS: PASS_WITH_WARNINGS.
+- COACH_DOMAIN_REQUIREMENTS_MAPPED: true.
+- COACH_METRIC_PACK_V1_IMPLEMENTED: true.
+- COACH_METRIC_PACK_V1_PRODUCTION_ACCEPTED: true.
+- CURRENT_COACH_DOMAIN_METRICS_VALIDATED: true.
+- ADR_VALIDATED: true.
+- KAST_VALIDATED: true.
+- EFFECTIVE_UTILITY_METRICS_VALIDATED: true.
 - METRIC_CONTRACTS_VERSIONED: true.
 - METRIC_VALIDATION_GATE_IMPLEMENTED: true.
 - MATCH_124_GOLDEN_FIXTURE_PASS: true.
@@ -23,14 +31,14 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - METRIC_TRUSTED_SUBSET_ACCEPTED: true.
 - GLOBAL_METRIC_CORRECTNESS_ACCEPTED: false.
 - COACH_VALIDATED_INPUT_GATE_ACTIVE: true.
-- ACTIVE_MISSION_INPUTS_VALIDATED: false.
+- ACTIVE_MISSION_INPUTS_VALIDATED: true.
 - MATCH_124_GROUND_TRUTH_ACCEPTED: true.
 - METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
 - METRIC_DOCUMENTATION_CANONICALIZED: true.
 - MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
 - METRIC_CORRECTNESS_ACCEPTED: false.
-- COACH_INPUTS_TRUSTED: false.
-- H01B_STATUS: BLOCKED_PENDING_METRIC_ASSURANCE.
+- COACH_INPUTS_TRUSTED: true.
+- H01B_STATUS: READY.
 - H01A_R02_STATUS: BLOCKED.
 - H01A_R02A_STATUS: PASS_WITH_WARNINGS.
 - FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
@@ -61,8 +69,13 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01A-M04_ACTIVE_MISSION_VALIDATED_METRIC_REBIND.
+- NEXT_TASK: H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A-M04 accepted Coach Metric Pack v1 for the current performance and
+  utility domains. Production now has 55 immutable enriched event sets and 165
+  validated v3 snapshots. Mission 3 criteria 7/8 and its latest three-match
+  progress use `effective_enemy_utility_damage@3.0.0`; historical criteria 5/6
+  and evaluation 9 remain preserved. H01B is ready.
 - H01A-M03 migrated production to append-only metric contract v2, retained
   1,153 legacy rows, appended 110 owner rows, accepted the trusted match-124
   subset, and reconciled stale evidence without deletion. H01B stays blocked

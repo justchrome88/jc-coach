@@ -10,6 +10,14 @@ Last updated: 2026-07-11.
 - H01A_M01_STATUS: PASS_WITH_WARNINGS.
 - H01A_M02_STATUS: PASS_WITH_WARNINGS.
 - H01A_M03_STATUS: PASS_WITH_WARNINGS.
+- H01A_M04_STATUS: PASS_WITH_WARNINGS.
+- COACH_DOMAIN_REQUIREMENTS_MAPPED: true.
+- COACH_METRIC_PACK_V1_IMPLEMENTED: true.
+- COACH_METRIC_PACK_V1_PRODUCTION_ACCEPTED: true.
+- CURRENT_COACH_DOMAIN_METRICS_VALIDATED: true.
+- ADR_VALIDATED: true.
+- KAST_VALIDATED: true.
+- EFFECTIVE_UTILITY_METRICS_VALIDATED: true.
 - METRIC_CONTRACTS_VERSIONED: true.
 - METRIC_VALIDATION_GATE_IMPLEMENTED: true.
 - MATCH_124_GOLDEN_FIXTURE_PASS: true.
@@ -19,14 +27,14 @@ Last updated: 2026-07-11.
 - METRIC_TRUSTED_SUBSET_ACCEPTED: true.
 - GLOBAL_METRIC_CORRECTNESS_ACCEPTED: false.
 - COACH_VALIDATED_INPUT_GATE_ACTIVE: true.
-- ACTIVE_MISSION_INPUTS_VALIDATED: false.
+- ACTIVE_MISSION_INPUTS_VALIDATED: true.
 - MATCH_124_GROUND_TRUTH_ACCEPTED: true.
 - METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
 - METRIC_DOCUMENTATION_CANONICALIZED: true.
 - MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
 - METRIC_CORRECTNESS_ACCEPTED: false.
-- COACH_INPUTS_TRUSTED: false.
-- H01B_STATUS: BLOCKED_PENDING_METRIC_ASSURANCE.
+- COACH_INPUTS_TRUSTED: true.
+- H01B_STATUS: READY.
 - H01A_R02_STATUS: BLOCKED.
 - H01A_R02A_STATUS: PASS_WITH_WARNINGS.
 - FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
@@ -57,8 +65,15 @@ Last updated: 2026-07-11.
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01A-M04_ACTIVE_MISSION_VALIDATED_METRIC_REBIND.
+- NEXT_TASK: H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A-M04 mapped the performance and utility coach domains, appended 55
+  immutable enriched event sets and 165 validated v3 performance/utility/aim
+  snapshots, accepted a five-demo golden corpus, and proved repeat no-op.
+  Mission 3 remains the sole active mission; historical criteria 5/6 are
+  superseded by validated criteria 7/8 on
+  `effective_enemy_utility_damage@3.0.0`. A three-match v3 progress evaluation
+  is active, so H01B is released.
 - H01A-M03 preserved 1,153 legacy snapshots, appended 110 owner-only v2
   snapshots across 55 retained artifacts/event sets, accepted the trusted
   match-124 subset, and reconciled historical evidence idempotently. Mission

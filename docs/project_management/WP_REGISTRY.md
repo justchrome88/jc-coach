@@ -58,6 +58,7 @@ Allowed statuses: `planned`, `not_started`, `active`, `in_progress`, `done`,
 | H01A-M01_METRIC_SOURCE_OF_TRUTH_AND_REAL_MATCH_FORENSIC_AUDIT | accepted_with_warnings | Canonical `docs/metrics/`, deterministic match-124 ledger/test, PM report/artifact | Metric lineage and discrepancies localized; metric correctness/coach inputs remain unaccepted; H01B blocked pending M02. |
 | H01A-M02_METRIC_CONTRACT_REGISTRY_VALIDATION_AND_REPAIR | accepted_with_warnings | Versioned registry/snapshots, shared phase/core repair, consumer gates, match-124 golden, isolated migration tests | Validated-only selection enforced; ADR/KAST and ambiguous damage/utility remain quarantined; H01B blocked pending M03. |
 | H01A-M03_PRODUCTION_METRIC_MIGRATION_TRUSTED_SUBSET_ACCEPTANCE_AND_H01B_RELEASE_DECISION | accepted_with_warnings | Production v2 migration/backfill, trusted match-124 acceptance, PM report/artifact | 1,153 legacy + 110 owner v2 rows; mission 3 still uses quarantined utility_damage, so H01B remains blocked. |
+| H01A-M04_COACH_METRIC_PACK_V1_COMPLETION | accepted_with_warnings | Product v3 pack/event sets/golden corpus/validator; PM M04 report/artifact | 55 enriched event sets + 165 validated v3 snapshots; mission 3 uses validated effective enemy utility damage; H01B READY. |
 
 CURRENT_LANE: METRICS_ASSURANCE. CURRENT_TASK: none. Mission backend status:
 ACCEPTED_FOR_UI_API. H01A_STATUS: PASS_WITH_WARNINGS.
@@ -66,13 +67,17 @@ H01A_M01_STATUS: PASS_WITH_WARNINGS. METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
 H01A_M02_STATUS: PASS_WITH_WARNINGS. METRIC_CONTRACTS_VERSIONED: true.
 H01A_M03_STATUS: PASS_WITH_WARNINGS. METRIC_PRODUCTION_MIGRATION_COMPLETE: true.
 METRIC_TRUSTED_SUBSET_ACCEPTED: true. GLOBAL_METRIC_CORRECTNESS_ACCEPTED: false.
-COACH_VALIDATED_INPUT_GATE_ACTIVE: true. ACTIVE_MISSION_INPUTS_VALIDATED: false.
+H01A_M04_STATUS: PASS_WITH_WARNINGS. COACH_DOMAIN_REQUIREMENTS_MAPPED: true.
+COACH_METRIC_PACK_V1_IMPLEMENTED: true. COACH_METRIC_PACK_V1_PRODUCTION_ACCEPTED: true.
+CURRENT_COACH_DOMAIN_METRICS_VALIDATED: true. ADR_VALIDATED: true. KAST_VALIDATED: true.
+EFFECTIVE_UTILITY_METRICS_VALIDATED: true.
+COACH_VALIDATED_INPUT_GATE_ACTIVE: true. ACTIVE_MISSION_INPUTS_VALIDATED: true.
 MATCH_124_GROUND_TRUTH_ACCEPTED: true.
 METRIC_VALIDATION_GATE_IMPLEMENTED: true. MATCH_124_GOLDEN_FIXTURE_PASS: true.
 COACH_REJECTS_UNVALIDATED_METRICS: true. PRODUCTION_BACKFILL_PERFORMED: true.
 METRIC_DOCUMENTATION_CANONICALIZED: true. MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
-METRIC_CORRECTNESS_ACCEPTED: false. COACH_INPUTS_TRUSTED: false.
-H01B_STATUS: BLOCKED_PENDING_METRIC_ASSURANCE.
+METRIC_CORRECTNESS_ACCEPTED: false. COACH_INPUTS_TRUSTED: true.
+H01B_STATUS: READY.
 FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
 AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILED: true.
 OWNER_SCOPE_CONSISTENT: true. FRESH_MATCH_PRESERVED_FOR_H01A: false.
@@ -85,7 +90,7 @@ ORDINARY_BASELINE_NO_OP_RESTORED: true.
 FRESH_MATCH_DISCOVERY_PRESERVED: true.
 DEEPER_HISTORY_TRAVERSAL_PRESERVED: true.
 BATCH_31_COMPATIBILITY_PRESERVED: true. NEXT_TASK:
-H01A-M04_ACTIVE_MISSION_VALIDATED_METRIC_REBIND.
+H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE.
 Owner-only personal scope, fail-closed weak evidence, no public/friends
 readiness and no v1.0 claim remain mandatory.
 
