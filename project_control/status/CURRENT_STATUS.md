@@ -11,25 +11,28 @@ Original sources preserved at:
 ## Current route
 
 - CURRENT_LANE: `H01B_DOCUMENTATION_AND_CODEBASE_CONSOLIDATION`
-- CURRENT_TASK: `H01B-R02A4_POST_REFACTOR_STEAM_TO_COACH_FULL_VERTICAL_ACCEPTANCE_AND_STAGE_OBSERVABILITY`
+- CURRENT_TASK: `none`
 - NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`
-- NEXT_TASK_GATED: `true`
+- NEXT_TASK_GATED: `false`
 - R02A3_MAY_START: `false`
 - THEN: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`
 
-R02A4 is an inserted acceptance gate proving the consolidated architecture as
-one observable Steam-to-coach vertical chain. It is not a permanent Product
-feature. R03 remains next but gated until R02A4 closes.
+R02A4 is an accepted one-time acceptance gate proving the consolidated
+architecture as one observable Steam-to-coach vertical chain. It is not a
+permanent Product feature. R03 is released as the next task.
 
-- H01B_R02A4_STATUS: `BLOCKED`.
-- R02A4_BLOCKER: `BLOCKED_STORAGE_PREFLIGHT_CAPACITY` — the isolated run
-  filesystem had 2,249,969,664 bytes free, below the canonical 8,589,934,592
-  byte minimum and 5,368,709,120 byte preserve-free floor. No Steam or model
-  call was attempted and the storage guard was not weakened.
+- H01B_R02A4_STATUS: `PASS_WITH_WARNINGS`.
+- H01B_R02A4R_STATUS: `PASS_WITH_WARNINGS`.
+- STORAGE_CAPACITY_REMEDIATED: `true`; the external filesystem expansion let
+  the unchanged 8 GiB minimum, 5 GiB preserve-free floor, and one-demo cap
+  pass. The first blocked attempt remains valid historical evidence.
 - R02A4_EVIDENCE:
   `/opt/jc-coach-pm/reports/H01B-R02A4_post_refactor_full_vertical_acceptance_report.md`,
   `/opt/jc-coach-pm/reports/H01B-R02A4_full_vertical_acceptance_artifact.json`,
-  and `/opt/jc-coach-pm/reports/H01B-R02A4_stage_trace.jsonl`.
+  `/opt/jc-coach-pm/reports/H01B-R02A4_stage_trace.jsonl`,
+  `/opt/jc-coach-pm/reports/H01B-R02A4R_storage_remediated_full_vertical_acceptance_report.md`,
+  `/opt/jc-coach-pm/reports/H01B-R02A4R_full_vertical_acceptance_artifact.json`,
+  and `/opt/jc-coach-pm/reports/H01B-R02A4R_stage_trace.jsonl`.
 
 ## Accepted Product state
 
@@ -42,6 +45,7 @@ feature. R03 remains next but gated until R02A4 closes.
 - H01B_R02A2C_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A2D_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A3_STATUS: `PASS_WITH_WARNINGS`.
+- H01B_R02A4_STATUS: `PASS_WITH_WARNINGS`.
 - Canonical coach domains: `impact_leak`, `bad_fight_selection`.
 - Performance, utility, and aim are metric groups, not coach domains.
 - Domain slots per owner: `2`; cross-domain proposals are allowed.

@@ -17,7 +17,7 @@ in `WP_REGISTRY.md`.
   ownership, no new root-level service sprawl, full technical gate PASS.
 - **Evidence/result:** `/opt/jc-coach-pm/reports/H01B-R02A3_codebase_service_boundary_consolidation_report.md`.
 
-## H01B-R02A4 — current inserted acceptance gate
+## H01B-R02A4 — completed with warnings
 
 - **Purpose:** prove the post-refactor owner-scoped Steam-to-coach pipeline as
   one complete observable Product chain before UI implementation.
@@ -33,13 +33,13 @@ in `WP_REGISTRY.md`.
 - **Acceptance summary:** every required vertical stage is real where mandated,
   owner-isolated, lineage-stable, observable, idempotent, and leaves production
   DB, artifacts, missions, and service untouched.
-- **Evidence/result:** blocked at the unchanged isolated storage preflight; see
+- **Evidence/result:** the first attempt remains valid blocked evidence; the
+  storage-remediated fresh continuation passed the complete gate. See
   `/opt/jc-coach-pm/reports/H01B-R02A4_post_refactor_full_vertical_acceptance_report.md`,
-  `/opt/jc-coach-pm/reports/H01B-R02A4_full_vertical_acceptance_artifact.json`,
-  and `/opt/jc-coach-pm/reports/H01B-R02A4_stage_trace.jsonl`. Rerun from a
-  fresh clone after safe capacity is available.
+  and
+  `/opt/jc-coach-pm/reports/H01B-R02A4R_storage_remediated_full_vertical_acceptance_report.md`.
 
-## H01B-R03 — pending
+## H01B-R03 — next, ungated
 
 - **Purpose:** deliver the minimal, complete two-mission functional MVP UI.
 - **Dependencies:** accepted R02A4 inserted acceptance gate.

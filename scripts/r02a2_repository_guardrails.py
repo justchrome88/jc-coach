@@ -476,7 +476,7 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
         "personal CS2 AI Coach",
         "exactly two canonical coaching domains",
         "## C. Completed milestone — R02A3",
-        "## D. Current inserted acceptance gate — R02A4",
+        "## D. Completed inserted acceptance gate — R02A4",
         "## E. Functional MVP milestone",
         "## F. End-to-end acceptance milestone",
         "## G. Live personal beta milestone",
@@ -526,8 +526,8 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
 
     backlog_markers = (
         "## H01B-R02A3 — completed with warnings",
-        "## H01B-R02A4 — current inserted acceptance gate",
-        "## H01B-R03 — pending",
+        "## H01B-R02A4 — completed with warnings",
+        "## H01B-R03 — next, ungated",
         "## H01B-R04 — pending",
         "## H01B-R05 — planned, not authorized",
         "## H01B-R06 — planned, not authorized",
@@ -546,12 +546,12 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
         )
 
     registry_markers = (
-        "CURRENT_TASK: `H01B-R02A4_POST_REFACTOR_STEAM_TO_COACH_FULL_VERTICAL_ACCEPTANCE_AND_STAGE_OBSERVABILITY`",
+        "CURRENT_TASK: `none`",
         "NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`",
-        "NEXT_TASK_GATED: `true`",
+        "NEXT_TASK_GATED: `false`",
         "| H01B-R02A3 | complete_with_warnings |",
-        "| H01B-R02A4 | current |",
-        "| H01B-R03 | gated |",
+        "| H01B-R02A4 | complete_with_warnings |",
+        "| H01B-R03 | next |",
         "| H01B-R04 | pending |",
         "| H01B-R05 | planned |",
         "| H01B-R06 | planned |",
@@ -574,8 +574,8 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
         "| Real LLM proposals | completed |",
         "| Documentation/control migration | completed |",
         "| Codebase architecture cleanup | completed_with_warnings |",
-        "| Post-refactor vertical acceptance | current |",
-        "| Functional mission UI | gated |",
+        "| Post-refactor vertical acceptance | completed_with_warnings |",
+        "| Functional mission UI | next |",
         "| 30+10 replay | pending |",
         "| Live personal beta | planned |",
         "| Visual polish | planned |",

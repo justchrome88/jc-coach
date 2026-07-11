@@ -37,7 +37,7 @@ Accepted outcome: bounded package ownership, reduced cross-service coupling,
 stable public behavior and imports, an updated package-level code map, and all
 focused plus full technical gates passing.
 
-## D. Current inserted acceptance gate — R02A4 full vertical observability
+## D. Completed inserted acceptance gate — R02A4 full vertical observability
 
 R02A4 is a one-time acceptance gate inserted before UI work. It proves that the
 consolidated architecture operates as one complete owner-scoped Steam-to-coach
@@ -47,11 +47,15 @@ progress, stable raw card serialization, and sanitized per-stage lineage.
 
 R02A4 does not add a permanent Product feature or expand domains, metrics,
 provider architecture, import capacity, schema, public readiness, or UI scope.
-R03 remains gated until this acceptance task closes.
+R03 remained gated until this acceptance task closed.
 
-Current execution status: blocked by the unchanged isolated Steam storage
-preflight capacity floor. The acceptance run must restart from a clean clone
-after safe capacity is available; the guard must not be reduced to force PASS.
+Accepted outcome: external storage expansion allowed the unchanged guard to
+pass, then a fresh isolated run proved the complete real vertical chain,
+two-domain clone activation, subsequent-match evaluation, two-card backend,
+repeat/concurrency/failure behavior, complete sanitized trace, and production
+no-mutation. Evidence:
+`/opt/jc-coach-pm/reports/H01B-R02A4R_storage_remediated_full_vertical_acceptance_report.md`.
+R03 is released.
 
 ## E. Functional MVP milestone — R03 minimal functional UI
 

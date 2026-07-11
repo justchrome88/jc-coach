@@ -240,7 +240,7 @@ def test_planning_contract_rejects_sequence_status_and_polish_regressions(tmp_pa
     registry = tmp_path / "project_control/planning/WP_REGISTRY.md"
     registry.write_text(
         registry.read_text(encoding="utf-8").replace(
-            "| H01B-R03 | gated |", "| H01B-R03 | completed |"
+            "| H01B-R03 | next |", "| H01B-R03 | completed |"
         ),
         encoding="utf-8",
     )
