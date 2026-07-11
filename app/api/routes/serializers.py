@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from app.db.models import ImportJob, Match
+from app.services.parsing.evidence import source_date_provenance
 
 
 def serialize_import_job(job: ImportJob) -> dict:
@@ -48,6 +49,10 @@ def serialize_match(match: Match) -> dict:
         "external_match_id": match.external_match_id,
         "played_at": match.played_at.isoformat() if match.played_at else None,
         "played_at_source": raw.get("played_at_source"),
+        "source_date_provenance": source_date_provenance(
+            raw,
+            date_value_present=match.played_at is not None,
+        ),
         "map_name": match.map_name,
         "mode": match.mode,
         "result": match.result,

@@ -15,6 +15,20 @@ PARSER_EVIDENCE_SCHEMA_VERSION = "parser-evidence-v1"
 CONFIDENCE_LEVELS = {"high", "medium", "low", "unavailable"}
 PARSER_CONFIDENCE_LEVELS = {"high", "medium", "low"}
 HARD_CLAIM_CONFIDENCE_LEVELS = {"high", "medium"}
+EXACT_SOURCE_DATE_PROVENANCE = {
+    "steam_gc_match_time": {
+        "source_system": "steam_history",
+        "source_field": "played_at",
+        "trust_class": "source_provided",
+        "timezone_semantics": "UTC instant normalized from the persisted Steam GC match time",
+    },
+    "demo_header": {
+        "source_system": "demo_parser",
+        "source_field": "header.played_at",
+        "trust_class": "source_provided",
+        "timezone_semantics": "parser-provided value; an offset is not persisted in the match row",
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -66,6 +80,7 @@ def parser_evidence_from_payload(
             "played_at_source": payload.get("played_at_source") or match.get("played_at_source"),
             "match_date_source": payload.get("match_date_source") or match.get("match_date_source"),
             "match_date_status": payload.get("match_date_status") or match.get("match_date_status"),
+            "source_date_provenance": source_date_provenance(payload),
         },
         "event_counts": _dict_or_empty(payload.get("event_counts")),
         "metric_confidence": metric_confidence,
@@ -73,6 +88,35 @@ def parser_evidence_from_payload(
         "warnings": _list_or_empty(payload.get("warnings")),
         "data_gaps": gaps,
         "hard_claim_support": hard_claim_support or {},
+    }
+
+
+def source_date_provenance(payload: dict[str, Any], *, date_value_present: bool | None = None) -> dict[str, Any]:
+    """Describe only the persisted source evidence for a match date."""
+    match = payload.get("match") if isinstance(payload.get("match"), dict) else {}
+    source = (
+        payload.get("played_at_source")
+        or payload.get("match_date_source")
+        or match.get("played_at_source")
+        or match.get("match_date_source")
+    )
+    played_at = payload.get("played_at") or match.get("played_at")
+    has_date = bool(played_at) if date_value_present is None else bool(date_value_present)
+    if source in EXACT_SOURCE_DATE_PROVENANCE:
+        return {"status": "available", **EXACT_SOURCE_DATE_PROVENANCE[str(source)]}
+    if source == "file_modified_fallback":
+        return {
+            "status": "available",
+            "source_system": "demo_storage",
+            "source_field": "file_modified_timestamp",
+            "trust_class": "approximate_fallback",
+            "timezone_semantics": "UTC-derived value persisted without an offset",
+        }
+    reason_code = "source_marker_unavailable" if source == "unavailable" else "source_marker_not_persisted"
+    return {
+        "status": "unavailable",
+        "reason_code": reason_code,
+        "date_value_preserved": has_date,
     }
 
 
