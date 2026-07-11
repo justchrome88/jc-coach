@@ -27,7 +27,11 @@ domains, two clone missions, dual insufficient-data evaluations, two-card API,
 repeat/concurrency/failure behavior, and production no-mutation. The first
 blocked artifacts remain valid history.
 
-R03 mission-card and activation UI work is released as the next task. Its
+R02A4T is the current narrow clone-only timed-observability, source-provenance,
+and two-card semantic closure. It temporarily gates R03 and must not repeat the
+accepted external Steam, parser, or configured-model run.
+
+R03 mission-card and activation UI work remains the next task. Its
 backend can use the authenticated `coach-domain-slots-v1` two-card read model
 and explicit idempotent proposal activation boundary accepted in R02A4R. R04
 replay follows R03, then planned R05 personal beta, R06 polish, and deferred

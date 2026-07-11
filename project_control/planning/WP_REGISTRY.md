@@ -6,10 +6,10 @@ This is the concise authoritative status registry. Detailed scope belongs in
 `WORK_PACKAGE_BACKLOG.md`; the human milestone view belongs in
 `../checklists/MASTER_WP_CHECKLIST.md`.
 
-- CURRENT_TASK: `none`
+- CURRENT_TASK: `H01B-R02A4T_TRUE_TIMED_OBSERVABILITY_PROVENANCE_AND_TWO_CARD_SEMANTIC_CLOSURE`
 - NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`
-- NEXT_TASK_GATED: `false`
-- CANONICAL_SEQUENCE: `R02A4 inserted acceptance gate → R03 → R04 → R05 planned → R06 planned → R07 deferred/planned`
+- NEXT_TASK_GATED: `true`
+- CANONICAL_SEQUENCE: `R02A4R accepted → R02A4T timed evidence closure → R03 → R04 → R05 planned → R06 planned → R07 deferred/planned`
 
 | Task/milestone | Status | Gate / dependency | Evidence |
 |---|---|---|---|
@@ -21,7 +21,8 @@ This is the concise authoritative status registry. Detailed scope belongs in
 | H01B-R02A2D | complete_with_warnings | R02A2C | `/opt/jc-coach-pm/reports/H01B-R02A2D_final_docs_shell_and_roadmap_reconstruction_report.md` |
 | H01B-R02A3 | complete_with_warnings | R02A2D | `/opt/jc-coach-pm/reports/H01B-R02A3_codebase_service_boundary_consolidation_report.md` |
 | H01B-R02A4 | complete_with_warnings | accepted by storage-remediated R02A4R continuation; first blocked evidence preserved | `/opt/jc-coach-pm/reports/H01B-R02A4R_storage_remediated_full_vertical_acceptance_report.md` |
-| H01B-R03 | next | accepted R02A4 gate; ungated | add accepted R03 report |
+| H01B-R02A4T | current | clone-only timed observability, source provenance, and semantic closure; no external rerun | add accepted R02A4T report |
+| H01B-R03 | next_gated | temporarily gated by R02A4T evidence closure | add accepted R03 report |
 | H01B-R04 | pending | requires accepted R03 | add accepted R04 report |
 | H01B-R05 | planned | requires accepted R04 and live-action authority | none |
 | H01B-R06 | planned | follows Product validation, including R05 findings | none |

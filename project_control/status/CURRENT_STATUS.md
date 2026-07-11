@@ -11,15 +11,16 @@ Original sources preserved at:
 ## Current route
 
 - CURRENT_LANE: `H01B_DOCUMENTATION_AND_CODEBASE_CONSOLIDATION`
-- CURRENT_TASK: `none`
+- CURRENT_TASK: `H01B-R02A4T_TRUE_TIMED_OBSERVABILITY_PROVENANCE_AND_TWO_CARD_SEMANTIC_CLOSURE`
 - NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`
-- NEXT_TASK_GATED: `false`
+- NEXT_TASK_GATED: `true`
 - R02A3_MAY_START: `false`
 - THEN: `H01B-R04_30_PLUS_10_PRODUCT_REPLAY`
 
 R02A4 is an accepted one-time acceptance gate proving the consolidated
-architecture as one observable Steam-to-coach vertical chain. It is not a
-permanent Product feature. R03 is released as the next task.
+architecture as one observable Steam-to-coach vertical chain. R02A4T is the
+current narrow clone-only observability and provenance closure; it temporarily
+gates R03 without reopening R02A4R or repeating external acceptance.
 
 - H01B_R02A4_STATUS: `PASS_WITH_WARNINGS`.
 - H01B_R02A4R_STATUS: `PASS_WITH_WARNINGS`.
