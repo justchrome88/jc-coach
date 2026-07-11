@@ -230,14 +230,17 @@ def test_planning_contract_rejects_sequence_status_and_polish_regressions(tmp_pa
     roadmap = tmp_path / "project_control/planning/VERSION_ROADMAP.md"
     roadmap.write_text(
         roadmap.read_text(encoding="utf-8")
-        .replace("## D. Functional MVP milestone", "## Z. Functional milestone")
-        .replace("R02A3 → R03 → R04", "R03 → R02A3 → R04"),
+        .replace("## E. Functional MVP milestone", "## Z. Functional milestone")
+        .replace(
+            "R02A4 inserted acceptance gate → R03 → R04",
+            "R03 → R02A4 inserted acceptance gate → R04",
+        ),
         encoding="utf-8",
     )
     registry = tmp_path / "project_control/planning/WP_REGISTRY.md"
     registry.write_text(
         registry.read_text(encoding="utf-8").replace(
-            "| H01B-R03 | pending |", "| H01B-R03 | completed |"
+            "| H01B-R03 | gated |", "| H01B-R03 | completed |"
         ),
         encoding="utf-8",
     )

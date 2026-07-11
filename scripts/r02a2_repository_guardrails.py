@@ -475,13 +475,14 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
     roadmap_markers = (
         "personal CS2 AI Coach",
         "exactly two canonical coaching domains",
-        "## C. Current milestone",
-        "## D. Functional MVP milestone",
-        "## E. End-to-end acceptance milestone",
-        "## F. Live personal beta milestone",
-        "## G. Visual Product milestone",
-        "## H. Operational hardening milestone",
-        "## I. Later/public scope",
+        "## C. Completed milestone — R02A3",
+        "## D. Current inserted acceptance gate — R02A4",
+        "## E. Functional MVP milestone",
+        "## F. End-to-end acceptance milestone",
+        "## G. Live personal beta milestone",
+        "## H. Visual Product milestone",
+        "## I. Operational hardening milestone",
+        "## J. Later/public scope",
         "30-match immutable baseline",
         "10 subsequent matches",
         "no third coach domain",
@@ -494,9 +495,11 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
                 "Product goal, R02A3-R07 milestones, two-domain boundary, or 30+10 acceptance is missing",
             )
         )
-    sequence = ("R02A3", "R03", "R04", "R05", "R06", "R07")
+    sequence = ("R02A3", "R02A4", "R03", "R04", "R05", "R06", "R07")
     positions = [roadmap.find(marker) for marker in sequence]
-    canonical_sequence = "R02A3 → R03 → R04 → R05 planned → R06 planned → R07 deferred/planned"
+    canonical_sequence = (
+        "R02A4 inserted acceptance gate → R03 → R04 → R05 planned → R06 planned → R07 deferred/planned"
+    )
     normalized_roadmap = " ".join(roadmap.split())
     if roadmap and (
         any(position < 0 for position in positions)
@@ -507,11 +510,11 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
             GuardrailError(
                 "roadmap_sequence_invalid",
                 roadmap_path,
-                "required sequence is R02A3 -> R03 -> R04 -> R05 -> R06 -> R07",
+                "required sequence is R02A3 -> R02A4 -> R03 -> R04 -> R05 -> R06 -> R07",
             )
         )
-    functional = roadmap.find("## D. Functional MVP milestone")
-    visual = roadmap.find("## G. Visual Product milestone")
+    functional = roadmap.find("## E. Functional MVP milestone")
+    visual = roadmap.find("## H. Visual Product milestone")
     if roadmap and (functional < 0 or visual < 0 or functional >= visual):
         errors.append(
             GuardrailError(
@@ -522,7 +525,8 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
         )
 
     backlog_markers = (
-        "## H01B-R02A3 — next",
+        "## H01B-R02A3 — completed with warnings",
+        "## H01B-R02A4 — current inserted acceptance gate",
         "## H01B-R03 — pending",
         "## H01B-R04 — pending",
         "## H01B-R05 — planned, not authorized",
@@ -542,11 +546,12 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
         )
 
     registry_markers = (
-        "CURRENT_TASK: `none`",
-        "NEXT_TASK: `H01B-R02A3_CODEBASE_SERVICE_BOUNDARY_CONSOLIDATION`",
-        "NEXT_TASK_GATED: `false`",
-        "| H01B-R02A3 | next |",
-        "| H01B-R03 | pending |",
+        "CURRENT_TASK: `H01B-R02A4_POST_REFACTOR_STEAM_TO_COACH_FULL_VERTICAL_ACCEPTANCE_AND_STAGE_OBSERVABILITY`",
+        "NEXT_TASK: `H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI`",
+        "NEXT_TASK_GATED: `true`",
+        "| H01B-R02A3 | complete_with_warnings |",
+        "| H01B-R02A4 | current |",
+        "| H01B-R03 | gated |",
         "| H01B-R04 | pending |",
         "| H01B-R05 | planned |",
         "| H01B-R06 | planned |",
@@ -568,8 +573,9 @@ def planning_contract_errors(root: Path) -> list[GuardrailError]:
         "| Two-domain backend | completed |",
         "| Real LLM proposals | completed |",
         "| Documentation/control migration | completed |",
-        "| Codebase architecture cleanup | next |",
-        "| Functional mission UI | pending |",
+        "| Codebase architecture cleanup | completed_with_warnings |",
+        "| Post-refactor vertical acceptance | current |",
+        "| Functional mission UI | gated |",
         "| 30+10 replay | pending |",
         "| Live personal beta | planned |",
         "| Visual polish | planned |",
