@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -439,7 +439,10 @@ def test_real_baseline_shape_classifies_54_complete_and_9_legacy_pending_as_noop
 def test_deeper_fresh_identity_is_selected_past_stale_terminal_and_cooling_retry(db, monkeypatch, tmp_path):
     owner, account = _owner(db)
     fresh = _history_match(db, owner=owner, account=account, sharecode=f"{SHARE_CODE}-fresh")
-    retry_time = datetime(2026, 7, 10, 12, 0)
+    now = datetime(2026, 7, 10, 18, 0)
+    retry_time = now - timedelta(hours=6)
+    next_eligible_at = now + timedelta(hours=18)
+    monkeypatch.setattr(owner_coach_sync, "_utcnow", lambda: now)
     retryable = _history_match(
         db,
         owner=owner,
@@ -454,7 +457,7 @@ def test_deeper_fresh_identity_is_selected_past_stale_terminal_and_cooling_retry
                 "retryable": True,
                 "attempt_count": 1,
                 "failed_at": retry_time.isoformat(),
-                "next_eligible_at": (retry_time + timedelta(days=1)).isoformat(),
+                "next_eligible_at": next_eligible_at.isoformat(),
             },
         },
     )
@@ -777,9 +780,11 @@ def test_strict_mode_stops_after_failure_without_touching_later_match(db, monkey
     assert db.scalar(select(MetricSnapshot).where(MetricSnapshot.match_id == older.id)) is None
 
 
-def test_owner_keyed_lock_blocks_same_owner_allows_other_owner_and_recovers_stale(db):
+def test_owner_keyed_lock_blocks_same_owner_allows_other_owner_and_recovers_stale(db, monkeypatch):
     owner, _ = _owner(db)
     other, _ = _owner(db, steam_id=OTHER_STEAM_ID, email="lock-other@example.test")
+    now = datetime(2026, 7, 10, 18, 0)
+    monkeypatch.setattr(owner_coach_sync, "_utcnow", lambda: now)
     live = owner_coach_sync._acquire_owner_sync_lock(db, owner_user_id=owner.id)
     assert live is not None
 
@@ -790,7 +795,6 @@ def test_owner_keyed_lock_blocks_same_owner_allows_other_owner_and_recovers_stal
     assert other_result["run"]["status"] == "success_no_changes"
     assert owner_coach_sync._release_owner_sync_lock(db, live) is True
 
-    now = datetime.now(UTC).replace(tzinfo=None)
     stale_value = json.dumps(
         {
             "operation": "owner_coach_sync",
