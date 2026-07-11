@@ -15,6 +15,17 @@ from app.services.owner.sync_types import (
     _OwnerContext,
     logger,
 )
+from app.services.shared.stage_observer import emit_stage_event
+
+_TRACE_STAGE_BY_OWNER_PHASE = {
+    "owner_resolved": "owner_resolution",
+    "discovery_complete": "target_discovery",
+    "acquisition_complete": "demo_acquisition",
+    "parse_complete": "parser",
+    "metrics_complete": "metric_computation",
+    "coach_complete": "mission_progress",
+    "result_written": "final_acceptance",
+}
 
 
 def _match_belongs_to_owner(match: Match, owner: _OwnerContext) -> bool:
@@ -131,6 +142,24 @@ def _parse_datetime(value: Any) -> datetime | None:
 def _log_phase(phase: str, **identifiers: Any) -> None:
     details = " ".join(f"{key}={value}" for key, value in identifiers.items() if value is not None)
     logger.info("owner_coach_sync phase=%s %s", phase, details)
+    trace_stage = _TRACE_STAGE_BY_OWNER_PHASE.get(phase)
+    if trace_stage is not None:
+        trace_fields = dict(identifiers)
+        runtime_status = trace_fields.pop("status", None)
+        trace_status = {
+            "already_running": "reused",
+            "blocked": "blocked",
+            "failed": "failed_retryable",
+            "success_no_changes": "reused",
+        }.get(str(runtime_status), "success")
+        emit_stage_event(
+            stage=trace_stage,
+            event="state_transition",
+            status=trace_status,
+            implementation_version="owner-coach-sync-result-v1",
+            runtime_status=runtime_status,
+            **trace_fields,
+        )
 
 def _log_no_mutation_phases(owner_user_id: int) -> None:
     for phase in ("acquisition_complete", "parse_complete", "metrics_complete", "coach_complete"):
