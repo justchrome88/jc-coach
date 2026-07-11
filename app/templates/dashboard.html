@@ -11,6 +11,8 @@
   </div>
 </section>
 
+{% include "_dashboard_coach_summary.html" %}
+
 <section class="metric-grid">
   <div class="metric"><span>Матчи</span><strong>{{ summary.matches_count }}</strong></div>
   <div class="metric"><span>Winrate</span><strong>{{ summary.winrate or 0 }}%</strong></div>
@@ -79,11 +81,8 @@
 </section>
 
 {% if recommendation_progress %}
-<section class="panel coach-preview">
-  <div class="panel-head">
-    <h2>Главная цель тренера</h2>
-    <a href="/coach">Все детали</a>
-  </div>
+<details class="panel coach-preview legacy-tools">
+  <summary><strong>Историческая tracked recommendation</strong> — не текущая Product truth</summary>
   <div class="coach-preview-row">
     <div>
       <h3>{{ recommendation_progress.recommendation.title }}</h3>
@@ -97,7 +96,7 @@
     <span class="goal-badge yellow">Yellow {{ recommendation_progress.counts.yellow }}</span>
     <span class="goal-badge red">Red {{ recommendation_progress.counts.red }}</span>
   </div>
-</section>
+</details>
 {% endif %}
 
 <section class="layout-two">

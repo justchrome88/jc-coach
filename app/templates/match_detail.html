@@ -15,6 +15,14 @@
   </div>
 </section>
 
+<section class="panel match-coach-feedback">
+  <div class="panel-head">
+    <h2>Обратная связь тренера по двум доменам</h2>
+    <a class="button ghost compact" href="/coach">Все миссии</a>
+  </div>
+  {% include "_coach_match_feedback.html" %}
+</section>
+
 <section class="metric-grid">
   <div class="metric"><span>Результат</span><strong>{{ match.result or "n/a" }}</strong></div>
   <div class="metric"><span>K/D</span><strong>{{ match.kd or "n/a" }}</strong></div>

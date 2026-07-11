@@ -1,0 +1,15 @@
+<section class="panel coach-dashboard-summary">
+  <div class="panel-head">
+    <h2>Две миссии тренера</h2>
+    <a class="button ghost compact" href="/coach">Открыть тренера</a>
+  </div>
+  <div class="dashboard-domain-list">
+    {% for card in coach_summary.cards %}
+    <div>
+      <strong>{{ card.domain_label }}</strong>
+      <span>{{ card.state_label }}</span>
+      <small>Прогресс: {{ card.progress_label }}</small>
+    </div>
+    {% endfor %}
+  </div>
+</section>

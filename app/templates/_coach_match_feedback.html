@@ -1,0 +1,24 @@
+<div class="coach-feedback-grid">
+  {% for item in coach_match_feedback.cards %}
+  <article class="feedback-card" data-domain="{{ item.domain_key }}">
+    <header>
+      <h3>{{ item.domain_label }}</h3>
+      <span class="status-badge state-label">{{ item.status_label }}</span>
+    </header>
+    <p>{{ item.explanation }}</p>
+    <div class="coach-metric-grid compact-grid">
+      <div><span>Значение матча</span><strong>{{ item.match_value if item.match_value is not none else "—" }}</strong></div>
+      <div><span>Базовая линия</span><strong>{{ item.baseline_value if item.baseline_value is not none else "—" }}</strong></div>
+      <div><span>Цель</span><strong>{{ item.target_value if item.target_value is not none else "—" }}</strong></div>
+      <div><span>Выборка</span><strong>{{ item.sample_matches or 0 }}{% if item.minimum_matches %} / {{ item.minimum_matches }}{% endif %}</strong></div>
+    </div>
+    <p><strong>В окне прогресса:</strong> {{ "да" if item.included_in_progress_window else "нет" }}</p>
+    {% for reason in item.reason_labels %}<p class="muted">{{ reason }}</p>{% endfor %}
+    {% if item.confidence is not none %}<p class="muted">Уверенность данных: {{ item.confidence }}</p>{% endif %}
+    {% if item.caveats %}
+    <details class="card-details"><summary>Ограничения</summary><ul>{% for caveat in item.caveats %}<li>{{ caveat }}</li>{% endfor %}</ul></details>
+    {% endif %}
+    <a class="button ghost compact" href="{{ item.coach_href }}">Открыть миссию</a>
+  </article>
+  {% endfor %}
+</div>
