@@ -81,7 +81,7 @@ def render_catalog(registry: dict[str, Any]) -> str:
         "",
         f"Registry version: `{registry['registry_version']}`. Metrics: `{len(registry['metrics'])}`.",
         "",
-        "| Metric | Domain / scope | Unit | Semantics | Truth | Validation | Status | Persistence | Consumers |",
+        "| Metric | Metric group / scope | Unit | Semantics | Truth | Validation | Status | Persistence | Consumers |",
         "|---|---|---|---|---|---|---|---|---|",
     ]
     for metric in sorted(registry["metrics"], key=lambda item: (item["domain"], item["metric_key"])):

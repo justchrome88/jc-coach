@@ -18,6 +18,7 @@ from app.db.models import AnalysisRun, CoachHypothesis, CoachReport, Match, Miss
 from app.services.ai_validator import render_ai_output_markdown, validate_ai_coach_output
 from app.services.aim_stats import get_aim_profile
 from app.services.analytics import compare_periods, detect_weaknesses, get_dashboard_status, get_map_stats, get_summary
+from app.services.coach_domain_model import CANONICAL_COACH_DOMAINS, METRIC_GROUPS
 from app.services.coach_insights import (
     MAX_PRIORITIZED_COACH_INSIGHTS,
     coach_insights_with_mission_readiness_from_snapshots,
@@ -836,6 +837,8 @@ def build_ai_coach_payload(
     return {
         "product": "CS2 Personal Coach",
         "ai_role": "AI coach over structured CS2 analytics, not raw demo parser",
+        "canonical_coach_domains": list(CANONICAL_COACH_DOMAINS),
+        "metric_groups": list(METRIC_GROUPS),
         "contract_snapshot": _ai_coach_contract_snapshot(),
         **domain_contract,
         "summary": summary,
@@ -1041,6 +1044,8 @@ _UNVALIDATED_CONSUMER_KEYS = {
 
 
 def _redact_unvalidated_metrics(value: Any) -> Any:
+    if isinstance(value, Match):
+        return _redact_unvalidated_metrics(_serialize_match(value))
     if isinstance(value, Mapping):
         return {
             str(key): None if str(key) in _UNVALIDATED_CONSUMER_KEYS else _redact_unvalidated_metrics(item)

@@ -73,6 +73,10 @@ def run(
     apply: bool,
     rebind_mission: bool,
 ) -> dict[str, Any]:
+    if rebind_mission:
+        raise ValueError(
+            "H01A-M04 mission rebind is retired by H01B-R01; utility_value is context-only and mission 3 is historical."
+        )
     started = time.monotonic()
     engine = create_engine(f"sqlite:///{database.resolve()}", future=True)
     output: dict[str, Any] = {
@@ -166,6 +170,9 @@ def run(
 
 
 def rebind_active_mission(db: Session) -> dict[str, Any]:
+    raise ValueError(
+        "Retired by H01B-R01: utility_value is context-only and mission 3 must remain historical."
+    )
     mission = db.get(CoachMission, MISSION_ID)
     if mission is None or mission.status != "active":
         raise ValueError("mission 3 is not the active mission")
@@ -298,8 +305,9 @@ def rebind_active_mission(db: Session) -> dict[str, Any]:
         "Do not infer lineup quality, flash value, or tactical cause from utility health damage.",
     ]
     source["mission_payload"] = mission_payload
-    source["mission_domain_key"] = "utility_value"
-    source["problem_key"] = "utility_value"
+    source["legacy_mission_domain_key"] = "utility_value"
+    source["mission_domain_key"] = None
+    source["problem_key"] = None
     mission.source_payload_json = json.dumps(source, ensure_ascii=False, sort_keys=True)
     db.commit()
 

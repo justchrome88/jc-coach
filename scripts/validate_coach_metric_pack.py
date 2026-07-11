@@ -82,11 +82,16 @@ def main() -> int:
             errors.append(f"{key}: authoritative implementation path missing")
 
     families = manifest.get("families") or []
-    if manifest.get("current_coach_domains") != ["performance", "utility"]:
-        errors.append("current coach domain freeze is not performance+utility")
+    if manifest.get("current_coach_domains") != ["impact_leak", "bad_fight_selection"]:
+        errors.append("canonical coach domain freeze is not impact_leak+bad_fight_selection")
+    if manifest.get("metric_groups") != ["performance", "utility", "aim"]:
+        errors.append("metric groups are not performance+utility+aim")
     family_names = {item.get("hypothesis_family") for item in families}
-    if family_names != {"survival_opening", "bad_fight_trade", "utility_value"}:
+    if family_names != {"impact_leak", "survival_opening", "bad_fight_trade", "utility_value"}:
         errors.append(f"unexpected hypothesis families: {sorted(family_names)}")
+    utility_family = next((item for item in families if item.get("hypothesis_family") == "utility_value"), {})
+    if utility_family.get("domain_key") is not None or utility_family.get("classification") != "context-only":
+        errors.append("utility_value must be context-only and have no coach domain")
     domain_leaf_keys = {
         key
         for item in families
@@ -97,8 +102,8 @@ def main() -> int:
     forbidden = sorted(domain_leaf_keys & FORBIDDEN_HARD_KEYS)
     if forbidden:
         errors.append(f"forbidden generic domain leaf keys: {forbidden}")
-    if manifest.get("active_mission_required_metrics") != ["effective_enemy_utility_damage"]:
-        errors.append("active mission dependency is not the explicit validated utility key")
+    if manifest.get("active_mission_required_metrics") != []:
+        errors.append("noncanonical active mission dependency remains")
 
     if not IMPLEMENTATION_PATH.exists():
         errors.append("authoritative implementation file missing")

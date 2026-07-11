@@ -34,7 +34,17 @@ Last updated: 2026-07-11.
 - MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
 - METRIC_CORRECTNESS_ACCEPTED: false.
 - COACH_INPUTS_TRUSTED: true.
-- H01B_STATUS: READY.
+- H01B_STATUS: PASS_WITH_WARNINGS.
+- H01B_R01_STATUS: PASS_WITH_WARNINGS.
+- CANONICAL_COACH_DOMAINS: impact_leak, bad_fight_selection.
+- COACH_METRIC_GROUPS: performance, utility, aim.
+- THIRD_DOMAIN_BLOCKED: true.
+- MISSION_3_RECONCILED: true.
+- TEN_MATCH_REPLAY_ACCEPTED: true.
+- TEN_STATE_RECOVERY_MATRIX_ACCEPTED: true.
+- IMPACT_LEAK_ACCEPTED: true.
+- BAD_FIGHT_SELECTION_ACCEPTED: true.
+- FULL_VERTICAL_CYCLE_ACCEPTED: true.
 - H01A_R02_STATUS: BLOCKED.
 - H01A_R02A_STATUS: PASS_WITH_WARNINGS.
 - FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
@@ -65,15 +75,20 @@ Last updated: 2026-07-11.
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE.
+- NEXT_TASK: derive from canonical Hot route.
 - ACTIVE_OUTBOX_TASK: none.
-- H01A-M04 mapped the performance and utility coach domains, appended 55
-  immutable enriched event sets and 165 validated v3 performance/utility/aim
-  snapshots, accepted a five-demo golden corpus, and proved repeat no-op.
-  Mission 3 remains the sole active mission; historical criteria 5/6 are
-  superseded by validated criteria 7/8 on
-  `effective_enemy_utility_damage@3.0.0`. A three-match v3 progress evaluation
-  is active, so H01B is released.
+- H01B-R01 corrected the M04 naming drift: `impact_leak` and
+  `bad_fight_selection` are the only coach domains, while performance/utility/
+  aim remain metric groups. `utility_value` is context-only. Mission 3 and all
+  of its lineage remain preserved but it is cancelled with
+  `noncanonical_domain_reconciliation`; production honestly has zero active
+  missions. The ten-match isolated replay, S1-S10 recovery matrix, both-domain
+  fixtures, mission selection/progress, full stack, and repeat idempotency pass.
+  The accepted Starlette TestClient warning remains.
+- H01A-M04 preserved 55 immutable enriched event sets and 165 validated v3
+  performance/utility/aim metric-group snapshots, a five-demo golden corpus,
+  and repeat no-op. Its historical product-domain and mission-3 conclusions are
+  superseded by H01B-R01; its metric-pack evidence remains accepted.
 - H01A-M03 preserved 1,153 legacy snapshots, appended 110 owner-only v2
   snapshots across 55 retained artifacts/event sets, accepted the trusted
   match-124 subset, and reconciled historical evidence idempotently. Mission

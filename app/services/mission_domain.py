@@ -18,6 +18,12 @@ from app.db.models import (
     MissionCriteria,
     MissionProgressEvaluation,
 )
+from app.services.coach_domain_model import (
+    CANONICAL_COACH_DOMAINS,
+    canonical_domain_for_family,
+    canonicalize_domain_key,
+    require_canonical_domain,
+)
 
 MISSION_PROGRESS_STATUSES = {
     "improving",
@@ -72,6 +78,10 @@ MIN_UTILITY_TREND_SUPPORTED_MATCHES = 10
 MIN_UTILITY_TREND_SEGMENT_MATCHES = 5
 ROLLING_MISSION_WINDOW_TYPES = {"last_30", "last_60", "custom_match_set"}
 ROLLING_MISSION_METRICS = {
+    "adr",
+    "deaths",
+    "kast",
+    "kills_per_round",
     "survival_rate",
     "opening_death_rate",
     "opening_duel_win_rate",
@@ -557,6 +567,74 @@ def list_active_coach_missions(
     )
 
 
+def reconcile_noncanonical_active_missions(
+    db: Session,
+    *,
+    user_id: int,
+    owner_steam_id: str,
+    apply: bool,
+) -> dict[str, Any]:
+    decisions: list[dict[str, Any]] = []
+    for mission in list_active_coach_missions(db, user_id=user_id, owner_steam_id=owner_steam_id):
+        source_payload = _json_load_mapping(mission.source_payload_json)
+        legacy_domain_key = _optional_str(
+            source_payload.get("mission_domain_key") or source_payload.get("domain_key")
+        )
+        canonical_domain_key = canonicalize_domain_key(legacy_domain_key)
+        if canonical_domain_key is not None:
+            decisions.append(
+                {
+                    "mission_id": mission.id,
+                    "action": "preserve",
+                    "legacy_domain_key": legacy_domain_key,
+                    "canonical_domain_key": canonical_domain_key,
+                }
+            )
+            continue
+        decision = {
+            "mission_id": mission.id,
+            "action": "cancel_noncanonical" if apply else "would_cancel_noncanonical",
+            "legacy_domain_key": legacy_domain_key,
+            "canonical_domain_key": None,
+            "reason": "noncanonical_domain_reconciliation",
+        }
+        decisions.append(decision)
+        if not apply:
+            continue
+        source_payload["canonical_domain_reconciliation"] = {
+            "schema_version": "canonical-domain-reconciliation-v1",
+            "task": "H01B-R01",
+            "decision": "supersede",
+            "reason": "noncanonical_domain_reconciliation",
+            "legacy_domain_key": legacy_domain_key,
+            "canonical_domain_key": None,
+            "historical_payload_preserved": True,
+        }
+        mission.source_payload_json = _json_object(source_payload)
+        cancel_coach_mission(
+            db,
+            user_id=user_id,
+            mission_id=mission.id,
+            reason="noncanonical_domain_reconciliation",
+        )
+    db.flush()
+    return {
+        "schema_version": "canonical-domain-reconciliation-v1",
+        "apply": apply,
+        "owner_user_id": user_id,
+        "owner_steam_id": owner_steam_id,
+        "decisions": decisions,
+        "active_mission_ids_after": [
+            mission.id
+            for mission in list_active_coach_missions(
+                db,
+                user_id=user_id,
+                owner_steam_id=owner_steam_id,
+            )
+        ],
+    }
+
+
 def update_coach_mission_status(
     db: Session,
     *,
@@ -941,13 +1019,25 @@ def generate_rolling_mission_candidates(
         match_ids=match_ids,
     )
     active_context = active_mission_context_for_owner(db, user_id=user_id, owner_steam_id=owner_steam_id)
+    outcome_context = _match_outcome_context(db, user_id=user_id, match_ids=window.match_ids)
     candidates = _rolling_candidates_from_window(
         window,
+        outcome_context=outcome_context,
         active_mission_summaries=active_context["active_missions"],
     )
     return {
         "window": window.to_dict(),
-        "diagnostics": {EFFECTIVE_UTILITY_METRIC: window.utility_trend.to_dict()},
+        "diagnostics": {
+            EFFECTIVE_UTILITY_METRIC: {
+                **window.utility_trend.to_dict(),
+                "classification": "context-only",
+                "mission_eligible": False,
+                "reason_codes": sorted(
+                    set(window.utility_trend.reason_codes) | {"noncanonical_utility_value_family"}
+                ),
+            },
+            "impact_leak": _impact_leak_diagnostics(window, outcome_context),
+        },
         "active_mission_context": active_context,
         "candidates": [candidate.to_dict() for candidate in candidates],
     }
@@ -970,48 +1060,106 @@ def persist_rolling_mission_candidates(
     )
     window = _mapping(result.get("window"))
     utility_trend = _mapping(window.get("utility_trend"))
-    analysis_run = create_analysis_run(
+    selected_snapshot_ids = _ordered_ints(
+        [
+            *_int_list(window.get("metric_snapshot_ids")),
+            *_int_list(utility_trend.get("baseline_snapshot_ids")),
+            *_int_list(utility_trend.get("recent_snapshot_ids")),
+        ]
+    )
+    analysis_scope = {
+        "mode": "personal",
+        "owner_user_id": user_id,
+        "owner_steam_id": owner_steam_id,
+        "window_type": window_type,
+        "match_ids": list(match_ids or []),
+        "source": "metric_snapshots",
+    }
+    analysis_run = _equivalent_rolling_analysis_run(
         db,
         user_id=user_id,
         owner_steam_id=owner_steam_id,
-        mode="personal",
-        status="candidate_generated",
-        source="rolling_mission_window",
-        selected_metric_snapshot_ids=_ordered_ints(
-            [
-                *_int_list(window.get("metric_snapshot_ids")),
-                *_int_list(utility_trend.get("baseline_snapshot_ids")),
-                *_int_list(utility_trend.get("recent_snapshot_ids")),
-            ]
-        ),
-        analysis_scope={
-            "mode": "personal",
-            "owner_user_id": user_id,
-            "owner_steam_id": owner_steam_id,
-            "window_type": window_type,
-            "match_ids": list(match_ids or []),
-            "source": "metric_snapshots",
-        },
-        source_payload={"rolling_window": window},
+        selected_snapshot_ids=selected_snapshot_ids,
+        analysis_scope=analysis_scope,
     )
+    reused_analysis_run = analysis_run is not None
+    if analysis_run is None:
+        analysis_run = create_analysis_run(
+            db,
+            user_id=user_id,
+            owner_steam_id=owner_steam_id,
+            mode="personal",
+            status="candidate_generated",
+            source="rolling_mission_window",
+            selected_metric_snapshot_ids=selected_snapshot_ids,
+            analysis_scope=analysis_scope,
+            source_payload={"rolling_window": window},
+        )
+    existing_card_ids = {
+        hypothesis.source_insight_card_id
+        for hypothesis in list_coach_hypotheses(db, user_id=user_id, analysis_run_id=analysis_run.id)
+        if hypothesis.source_insight_card_id
+    }
     hypotheses: list[CoachHypothesis] = []
     for candidate in result["candidates"]:
         candidate_payload = _mapping(candidate)
         if candidate_payload.get("suppressed_by_active_mission") is True:
             continue
+        insight_card = _mapping(candidate_payload.get("insight_card"))
+        card_id = _optional_str(insight_card.get("id") or insight_card.get("card_id"))
+        if card_id and card_id in existing_card_ids:
+            continue
         hypothesis = create_coach_hypothesis(
             db,
             user_id=user_id,
             analysis_run_id=analysis_run.id,
-            insight_card=_mapping(candidate_payload.get("insight_card")),
+            insight_card=insight_card,
         )
         hypotheses.append(hypothesis)
+        if card_id:
+            existing_card_ids.add(card_id)
     db.flush()
+    all_hypotheses = list_coach_hypotheses(db, user_id=user_id, analysis_run_id=analysis_run.id)
     return {
         **result,
         "analysis_run_id": analysis_run.id,
-        "coach_hypothesis_ids": [hypothesis.id for hypothesis in hypotheses],
+        "coach_hypothesis_ids": [hypothesis.id for hypothesis in all_hypotheses],
+        "idempotency": {
+            "reused_analysis_run": reused_analysis_run,
+            "created_hypothesis_ids": [hypothesis.id for hypothesis in hypotheses],
+        },
     }
+
+
+def _equivalent_rolling_analysis_run(
+    db: Session,
+    *,
+    user_id: int,
+    owner_steam_id: str,
+    selected_snapshot_ids: Sequence[int],
+    analysis_scope: Mapping[str, Any],
+) -> AnalysisRun | None:
+    candidates = list(
+        db.scalars(
+            select(AnalysisRun)
+            .where(AnalysisRun.user_id == user_id)
+            .where(AnalysisRun.owner_steam_id == owner_steam_id)
+            .where(AnalysisRun.source == "rolling_mission_window")
+            .order_by(AnalysisRun.id.desc())
+        ).all()
+    )
+    for run in candidates:
+        if _ordered_ints(_json_load_sequence(run.selected_metric_snapshot_ids_json)) != list(selected_snapshot_ids):
+            continue
+        persisted_scope = _json_load_mapping(run.analysis_scope_json)
+        if persisted_scope.get("window_type") != analysis_scope.get("window_type"):
+            continue
+        if _ordered_ints(persisted_scope.get("match_ids") or []) != _ordered_ints(
+            analysis_scope.get("match_ids") or []
+        ):
+            continue
+        return run
+    return None
 
 
 def active_mission_context_for_owner(
@@ -1070,29 +1218,17 @@ def mission_suppression_decision_for_payload(
     key = dict(candidate_key)
     candidate_owner = key.get("owner_user_id")
     candidate_steam = key.get("owner_steam_id")
-    candidate_domain = _optional_str(key.get("domain_key"))
-    candidate_problem = _optional_str(key.get("problem_key"))
-    candidate_metric = _optional_str(key.get("target_metric"))
-    candidate_payload_type = _optional_str(key.get("mission_payload_type"))
     for summary in active_mission_summaries:
         active_key = _mapping(summary.get("suppression_key"))
         if active_key.get("owner_user_id") != candidate_owner:
             continue
         if active_key.get("owner_steam_id") != candidate_steam:
             continue
-        same_domain = candidate_domain and candidate_domain == active_key.get("domain_key")
-        same_problem = candidate_problem and candidate_problem == active_key.get("problem_key")
-        same_payload_target = (
-            candidate_metric
-            and candidate_metric == active_key.get("target_metric")
-            and candidate_payload_type
-            and candidate_payload_type == active_key.get("mission_payload_type")
-        )
-        if same_domain or same_problem or same_payload_target:
+        if summary.get("mission_status") == "active":
             return MissionSuppressionDecision(
                 suppressed=True,
-                reason="active_mission_same_domain",
-                reason_codes=("active_mission_same_domain",),
+                reason="active_mission_global_owner",
+                reason_codes=("active_mission_global_owner",),
                 active_mission_id=_optional_int(summary.get("mission_id")),
                 active_mission_title=_optional_str(summary.get("title")),
                 active_mission_status=_optional_str(summary.get("mission_status")),
@@ -1333,6 +1469,7 @@ def serialize_mission_payload(raw_payload: Any) -> dict[str, Any]:
 
 def serialize_coach_mission(mission: CoachMission) -> dict[str, Any]:
     source_payload = _json_load_mapping(mission.source_payload_json)
+    legacy_domain_key = source_payload.get("mission_domain_key") or source_payload.get("domain_key")
     return {
         "mission_id": mission.id,
         "hypothesis_id": mission.hypothesis_id,
@@ -1341,6 +1478,7 @@ def serialize_coach_mission(mission: CoachMission) -> dict[str, Any]:
         "status": mission.status,
         "domain_key": mission_domain_key(mission),
         "problem_key": mission_problem_key(mission),
+        "legacy_domain_key": legacy_domain_key if legacy_domain_key != mission_domain_key(mission) else None,
         "title": mission.title,
         "focus": mission.focus,
         "mission_payload": serialize_mission_payload(source_payload.get("mission_payload")),
@@ -1354,7 +1492,7 @@ def mission_domain_key(mission: CoachMission) -> str | None:
     source_payload = _json_load_mapping(mission.source_payload_json)
     domain_key = source_payload.get("mission_domain_key") or source_payload.get("domain_key")
     if domain_key:
-        return str(domain_key)
+        return canonicalize_domain_key(str(domain_key))
     mission_payload = _mapping(source_payload.get("mission_payload"))
     success_metric = _mapping(mission_payload.get("success_metric"))
     metric_name = success_metric.get("metric_name")
@@ -1367,7 +1505,7 @@ def mission_problem_key(mission: CoachMission) -> str | None:
     source_payload = _json_load_mapping(mission.source_payload_json)
     problem_key = source_payload.get("problem_key")
     if problem_key:
-        return str(problem_key)
+        return canonicalize_domain_key(str(problem_key))
     return mission_domain_key(mission)
 
 
@@ -1694,13 +1832,20 @@ def _rolling_window_from_snapshots(
 def _rolling_candidates_from_window(
     window: RollingMissionWindow,
     *,
+    outcome_context: Mapping[str, Any],
     active_mission_summaries: Sequence[Mapping[str, Any]],
 ) -> list[RollingMissionCandidate]:
     candidates: list[RollingMissionCandidate] = []
+    impact_candidate = _impact_leak_candidate(
+        window,
+        outcome_context=outcome_context,
+        active_mission_summaries=active_mission_summaries,
+    )
+    if impact_candidate is not None:
+        candidates.append(impact_candidate)
     for family, metric_order in (
         ("survival_opening", ("opening_death_rate", "survival_rate")),
         ("bad_fight_trade", ("untraded_death_rate",)),
-        ("utility_value", (EFFECTIVE_UTILITY_METRIC,)),
     ):
         candidate = _rolling_candidate_for_family(
             window,
@@ -1740,6 +1885,279 @@ def _rolling_candidates_from_window(
         )
         for index, candidate in enumerate(candidates, start=1)
     ]
+
+
+def _match_outcome_context(
+    db: Session,
+    *,
+    user_id: int,
+    match_ids: Sequence[int],
+) -> dict[str, Any]:
+    requested = {int(match_id) for match_id in match_ids}
+    rows = list(
+        db.scalars(
+            select(Match)
+            .where(Match.user_id == user_id)
+            .where(Match.id.in_(requested))
+            .order_by(Match.played_at.asc().nulls_last(), Match.id.asc())
+        ).all()
+    )
+    accepted = [match for match in rows if str(match.result or "").lower() in {"win", "loss", "draw"}]
+    wins = sum(str(match.result).lower() == "win" for match in accepted)
+    round_differential = sum((match.rounds_for or 0) - (match.rounds_against or 0) for match in accepted)
+    metric_rows = list(
+        db.scalars(
+            select(MetricSnapshot)
+            .where(MetricSnapshot.owner_user_id == user_id)
+            .where(MetricSnapshot.match_id.in_([match.id for match in accepted]))
+            .where(MetricSnapshot.source == "coach_metric_performance")
+            .where(MetricSnapshot.semantic_version == "3.0.0")
+            .where(MetricSnapshot.validation_status == "validated")
+        ).all()
+    )
+    by_match = {snapshot.match_id: _json_load_mapping(snapshot.metrics_json) for snapshot in metric_rows}
+    observations = [
+        {
+            "match_id": match.id,
+            "result": str(match.result).lower(),
+            "adr": _optional_number(by_match.get(match.id, {}).get("adr")),
+            "kills_per_round": _optional_number(by_match.get(match.id, {}).get("kills_per_round")),
+            "survival_rate": _optional_number(by_match.get(match.id, {}).get("survival_rate")),
+        }
+        for match in accepted
+    ]
+    high_impact_non_wins = [
+        item
+        for item in observations
+        if item["result"] != "win"
+        and (
+            (item["adr"] is not None and item["adr"] >= 80.0)
+            or (item["kills_per_round"] is not None and item["kills_per_round"] >= 0.75)
+        )
+    ]
+    return {
+        "match_ids": [match.id for match in accepted],
+        "sample_matches": len(accepted),
+        "wins": wins,
+        "losses": sum(str(match.result).lower() == "loss" for match in accepted),
+        "draws": sum(str(match.result).lower() == "draw" for match in accepted),
+        "win_rate": round(wins / len(accepted), 3) if accepted else None,
+        "non_win_rate": round((len(accepted) - wins) / len(accepted), 3) if accepted else None,
+        "round_differential": round_differential,
+        "chronology": [match.played_at.isoformat() if match.played_at else None for match in accepted],
+        "observations": observations,
+        "high_impact_non_win_match_ids": [item["match_id"] for item in high_impact_non_wins],
+        "high_impact_non_win_count": len(high_impact_non_wins),
+    }
+
+
+def _impact_leak_diagnostics(
+    window: RollingMissionWindow,
+    outcome_context: Mapping[str, Any],
+) -> dict[str, Any]:
+    reasons: list[str] = []
+    sample_matches = _optional_int(outcome_context.get("sample_matches")) or 0
+    adr = _optional_number(window.metrics.get("adr"))
+    kast = _optional_number(window.metrics.get("kast"))
+    survival_rate = _optional_number(window.metrics.get("survival_rate"))
+    win_rate = _optional_number(outcome_context.get("win_rate"))
+    if sample_matches < 5:
+        reasons.append("insufficient_supported_matches")
+    if window.sample_rounds < 40:
+        reasons.append("insufficient_supported_rounds")
+    if adr is None or kast is None or survival_rate is None or win_rate is None:
+        reasons.append("required_metric_missing")
+    if (_optional_int(outcome_context.get("high_impact_non_win_count")) or 0) < 2:
+        reasons.append("outcome_vs_impact_mismatch_not_repeated")
+    if win_rate is not None and win_rate > 0.5:
+        reasons.append("outcome_conversion_leak_not_detected")
+    if survival_rate is not None and survival_rate > 0.55:
+        reasons.append("death_cost_signal_not_detected")
+    for metric_name in ("adr", "kast", "survival_rate"):
+        sample = window.metric_samples.get(metric_name) or {}
+        if sample.get("confidence") not in MISSION_ELIGIBLE_CONFIDENCE_LEVELS:
+            reasons.append(f"{metric_name}_confidence_insufficient")
+        if sample.get("usable_for_missions") is not True:
+            reasons.append(f"{metric_name}_not_mission_usable")
+    return {
+        "canonical_domain_key": "impact_leak",
+        "family": "impact_leak",
+        "claim_supported": not reasons,
+        "reason_codes": sorted(set(reasons)),
+        "outcomes": dict(outcome_context),
+        "metrics": {
+            "adr": adr,
+            "kast": kast,
+            "survival_rate": survival_rate,
+            "kills_per_round": window.metrics.get("kills_per_round"),
+            "deaths": window.metrics.get("deaths"),
+        },
+        "minimums": {
+            "matches": 5,
+            "rounds": 40,
+            "high_impact_non_wins": 2,
+            "high_impact_adr": 80.0,
+            "high_impact_kpr": 0.75,
+            "max_win_rate": 0.5,
+        },
+    }
+
+
+def _impact_leak_candidate(
+    window: RollingMissionWindow,
+    *,
+    outcome_context: Mapping[str, Any],
+    active_mission_summaries: Sequence[Mapping[str, Any]],
+) -> RollingMissionCandidate | None:
+    diagnostics = _impact_leak_diagnostics(window, outcome_context)
+    if diagnostics["claim_supported"] is not True:
+        return None
+    adr = float(window.metrics["adr"])
+    kast = float(window.metrics["kast"])
+    survival_rate = float(window.metrics["survival_rate"])
+    confidence_level = _lowest_confidence_level(
+        [str(window.metric_samples[name]["confidence"]) for name in ("adr", "kast", "survival_rate")]
+    )
+    outcome_evidence = dict(outcome_context)
+    outcome_evidence.update(
+        {
+            "metric_id": "match_outcome_window",
+            "metric_name": "match_outcome_window",
+            "source": "matches",
+            "metric_confidence": confidence_level,
+        }
+    )
+    readiness = {
+        "can_become_mission": True,
+        "canonical_domain_key": "impact_leak",
+        "family": "impact_leak",
+        "target_metric_candidate": "survival_rate",
+        "baseline_value": survival_rate,
+        "confidence_eligibility": {
+            "level": confidence_level,
+            "usable_for_missions": True,
+            "hard_recommendation_eligible": True,
+        },
+        "missing_requirements": [],
+        "blocking_reason_codes": [],
+        "source": "canonical_domain_window",
+        "window": window.to_dict(),
+        "outcome_context": dict(outcome_context),
+        "criteria": [
+            {
+                "metric_name": "survival_rate",
+                "role": "primary",
+                "direction": "higher_is_better",
+                "baseline_value": survival_rate,
+                "target_value": round(min(1.0, survival_rate + 0.05), 3),
+                "min_sample_matches": 3,
+                "min_sample_rounds": 24,
+                "confidence_required": INSIGHT_CONFIDENCE_SCORES[confidence_level],
+                "rule": {"source": "impact_leak_conversion", "claim": "death_cost_with_outcome_context"},
+            },
+            {
+                "metric_name": "adr",
+                "role": "guardrail",
+                "direction": "stay_above",
+                "baseline_value": adr,
+                "target_value": round(adr * 0.9, 3),
+                "min_sample_matches": 3,
+                "confidence_required": INSIGHT_CONFIDENCE_SCORES[confidence_level],
+                "rule": {"source": "impact_preservation_guardrail"},
+            },
+            {
+                "metric_name": "kast",
+                "role": "guardrail",
+                "direction": "stay_above",
+                "baseline_value": kast,
+                "target_value": round(kast * 0.95, 3),
+                "min_sample_matches": 3,
+                "confidence_required": INSIGHT_CONFIDENCE_SCORES[confidence_level],
+                "rule": {"source": "participation_guardrail"},
+            },
+        ],
+    }
+    insight_card = {
+        "id": f"rolling:{window.window_type}:impact_leak:survival_rate",
+        "canonical_domain_key": "impact_leak",
+        "family": "impact_leak",
+        "problem": (
+            "Supported impact is not consistently converting into match outcomes, with repeated death-cost evidence."
+        ),
+        "evidence": [
+            {
+                "metric_id": "survival_rate",
+                "metric_name": "survival_rate",
+                "value": survival_rate,
+                "metric_confidence": confidence_level,
+                "sample_matches": window.sample_matches,
+                "rounds": window.sample_rounds,
+                "match_ids": list(window.match_ids),
+                "metric_snapshot_ids": list(window.metric_snapshot_ids),
+                "source": "coach_metric_performance",
+            },
+            {
+                "metric_id": "adr",
+                "metric_name": "adr",
+                "value": adr,
+                "metric_confidence": confidence_level,
+                "source": "coach_metric_performance",
+            },
+            {
+                "metric_id": "kast",
+                "metric_name": "kast",
+                "value": kast,
+                "metric_confidence": confidence_level,
+                "source": "coach_metric_performance",
+            },
+            outcome_evidence,
+        ],
+        "confidence": confidence_level,
+        "caveats": [
+            "This is a bounded outcome-versus-impact pattern, not an economy, positioning, clutch, "
+            "or tactical-cause diagnosis.",
+            "Utility and aim remain supporting context only.",
+        ],
+        "recommended_focus": "Reduce low-value deaths while preserving ADR and KAST participation.",
+        "target_metric_candidates": ["survival_rate"],
+        "mission_readiness": readiness,
+    }
+    mission_payload = mission_payload_from_insight_card(insight_card)
+    if mission_payload is None:
+        return None
+    suppression_key = mission_suppression_key_from_payload(
+        owner_user_id=window.user_id,
+        owner_steam_id=window.owner_steam_id,
+        mission_payload=mission_payload,
+        domain_key="impact_leak",
+        problem_key="impact_leak",
+    )
+    suppression = mission_suppression_decision_for_payload(
+        candidate_key=suppression_key,
+        active_mission_summaries=active_mission_summaries,
+    )
+    non_win_rate = float(outcome_context.get("non_win_rate") or 0.0)
+    severity = round(non_win_rate * max(0.0, 0.55 - survival_rate) + max(0.0, adr - 85.0) / 500.0, 6)
+    return RollingMissionCandidate(
+        rank=0,
+        candidate_id=f"{window.window_type}:impact_leak:survival_rate",
+        family="impact_leak",
+        primary_metric="survival_rate",
+        severity=severity,
+        confidence_score=INSIGHT_CONFIDENCE_SCORES[confidence_level],
+        sample_size=window.sample_rounds,
+        suppressed_by_active_mission=suppression.suppressed,
+        suppression_reason=suppression.reason,
+        explanation=(
+            "Impact and participation are supported, but the outcome window and death-cost signal do not "
+            "convert consistently."
+        ),
+        insight_card=insight_card,
+        mission_payload=mission_payload,
+        window_evidence={"metric_window": window.to_dict(), "outcome_context": dict(outcome_context)},
+        suppression_key=suppression_key,
+        suppression_reason_codes=suppression.reason_codes,
+    )
 
 
 def _rolling_candidate_for_family(
@@ -1832,34 +2250,6 @@ def _rolling_evidence_for_family(
     family: str,
     primary_metric: str,
 ) -> list[dict[str, Any]]:
-    if family == "utility_value":
-        trend = window.utility_trend
-        if primary_metric != EFFECTIVE_UTILITY_METRIC or not trend.mission_ready:
-            return []
-        return [
-            {
-                "metric_id": EFFECTIVE_UTILITY_METRIC,
-                "metric_name": EFFECTIVE_UTILITY_METRIC,
-                "value": trend.recent_value,
-                "personal_baseline_value": trend.baseline_value,
-                "materiality_threshold": trend.materiality_threshold,
-                "relative_change": trend.relative_change,
-                "relative_drop": trend.relative_drop,
-                "absolute_change": trend.absolute_change,
-                "absolute_gap": trend.absolute_gap,
-                "metric_confidence": trend.confidence,
-                "sample_count": len(trend.supported_match_ids),
-                "sample_matches": len(trend.supported_match_ids),
-                "source": trend.source,
-                "window_type": window.window_type,
-                "metric_snapshot_ids": [
-                    *trend.baseline_snapshot_ids,
-                    *trend.recent_snapshot_ids,
-                ],
-                "match_ids": [*trend.baseline_match_ids, *trend.recent_match_ids],
-                "trend_evidence": trend.to_dict(),
-            }
-        ]
     if family == "bad_fight_trade":
         metrics = (primary_metric, "opening_death_rate", "traded_death_rate")
     else:
@@ -1898,6 +2288,9 @@ def _rolling_insight_card(
     evidence: Sequence[Mapping[str, Any]],
     confidence_level: str,
 ) -> dict[str, Any]:
+    canonical_domain_key = canonical_domain_for_family(family)
+    if canonical_domain_key not in CANONICAL_COACH_DOMAINS:
+        raise ValueError(f"Rolling family is not mission-eligible: {family}")
     primary_value = _optional_number(evidence[0].get("value")) if evidence else None
     problem = {
         "opening_death_rate": "Rolling owner window shows too many opening deaths.",
@@ -1918,6 +2311,7 @@ def _rolling_insight_card(
         )
     readiness: dict[str, Any] = {
         "can_become_mission": True,
+        "canonical_domain_key": canonical_domain_key,
         "target_metric_candidate": primary_metric,
         "baseline_value": primary_value,
         "confidence_eligibility": {
@@ -1964,6 +2358,8 @@ def _rolling_insight_card(
         ]
     return {
         "id": f"rolling:{window.window_type}:{family}:{primary_metric}",
+        "canonical_domain_key": canonical_domain_key,
+        "family": family,
         "problem": problem,
         "evidence": [dict(item) for item in evidence],
         "confidence": confidence_level,
@@ -2120,15 +2516,13 @@ def _handle_duplicate_active_mission(
     replacement_reason: str,
     exclude_mission_id: int | None = None,
 ) -> None:
-    if not domain_key:
-        return
+    require_canonical_domain(domain_key)
     duplicates = [
         mission
         for mission in list_active_coach_missions(
             db,
             user_id=user_id,
             owner_steam_id=owner_steam_id,
-            domain_key=domain_key,
         )
         if mission.id != exclude_mission_id and mission.owner_steam_id == owner_steam_id
     ]
@@ -2137,7 +2531,7 @@ def _handle_duplicate_active_mission(
     if duplicate_policy == "allow":
         return
     if duplicate_policy == "reject":
-        raise ValueError(f"Duplicate active mission for owner/domain: {domain_key}")
+        raise ValueError(f"Duplicate active mission for owner: {user_id}/{owner_steam_id}")
     ended_at = datetime.now(UTC)
     for duplicate in duplicates:
         previous_status = duplicate.status
@@ -3101,6 +3495,13 @@ def _validate_hypothesis_can_activate(
             )
     if not criteria_specs:
         raise ValueError("Coach hypothesis cannot become an active mission: missing_mission_criteria")
+    family = _optional_str(readiness.get("family"))
+    domain_key = _optional_str(readiness.get("canonical_domain_key")) or canonical_domain_for_family(family)
+    if domain_key is None:
+        primary = _primary_criteria_spec(criteria_specs)
+        if primary is not None:
+            domain_key = _domain_key_for_metric(str(primary.get("metric_name") or ""))
+    require_canonical_domain(domain_key)
 
 
 def _readiness_allows_mission_payload(readiness: Mapping[str, Any]) -> bool:
@@ -3204,24 +3605,20 @@ def _mission_domain_key_from_parts(
     return None
 
 
-def _domain_key_for_metric(metric_name: str, *, family: str | None = None) -> str:
+def _domain_key_for_metric(metric_name: str, *, family: str | None = None) -> str | None:
     if family:
         return _domain_key_for_family(family)
     if metric_name in BAD_FIGHT_TRADE_MISSION_METRICS or metric_name == "traded_death_rate":
-        return "trade_discipline"
+        return "bad_fight_selection"
     if metric_name in SURVIVAL_OPENING_MISSION_METRICS or metric_name == "opening_duel_win_rate":
-        return "survival_opening"
+        return "bad_fight_selection"
     if metric_name in UTILITY_VALUE_MISSION_METRICS or metric_name.startswith(("utility_", "flash_", "he_")):
-        return "utility_value"
-    return metric_name.strip().lower().replace(" ", "_")
+        return None
+    return canonicalize_domain_key(metric_name)
 
 
-def _domain_key_for_family(family: str) -> str:
-    if family == "bad_fight_trade":
-        return "trade_discipline"
-    if family == "survival_opening":
-        return "survival_opening"
-    return family.strip().lower().replace(" ", "_")
+def _domain_key_for_family(family: str) -> str | None:
+    return canonical_domain_for_family(family)
 
 
 def _criteria_values_by_metric(criteria_specs: Sequence[Mapping[str, Any]], field: str) -> dict[str, Any]:

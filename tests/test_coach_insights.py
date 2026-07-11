@@ -263,7 +263,10 @@ def test_bad_fight_trade_insight_uses_untraded_death_evidence_with_counts_and_ra
 
     assert card is not None
     assert validate_insight_cards([card]) == ()
-    assert card["problem"] == "Untraded deaths show bad fight selection or poor trade spacing in this match snapshot."
+    assert card["problem"] == (
+        "Known untraded deaths support a bounded bad-fight-selection review in this match snapshot."
+    )
+    assert card["canonical_domain_key"] == "bad_fight_selection"
     assert card["confidence"] == "high"
     assert card["evidence"] == [
         {

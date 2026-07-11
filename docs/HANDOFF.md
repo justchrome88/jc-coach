@@ -38,7 +38,17 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
 - METRIC_CORRECTNESS_ACCEPTED: false.
 - COACH_INPUTS_TRUSTED: true.
-- H01B_STATUS: READY.
+- H01B_STATUS: PASS_WITH_WARNINGS.
+- H01B_R01_STATUS: PASS_WITH_WARNINGS.
+- CANONICAL_COACH_DOMAINS: impact_leak, bad_fight_selection.
+- COACH_METRIC_GROUPS: performance, utility, aim.
+- THIRD_DOMAIN_BLOCKED: true.
+- MISSION_3_RECONCILED: true.
+- TEN_MATCH_REPLAY_ACCEPTED: true.
+- TEN_STATE_RECOVERY_MATRIX_ACCEPTED: true.
+- IMPACT_LEAK_ACCEPTED: true.
+- BAD_FIGHT_SELECTION_ACCEPTED: true.
+- FULL_VERTICAL_CYCLE_ACCEPTED: true.
 - H01A_R02_STATUS: BLOCKED.
 - H01A_R02A_STATUS: PASS_WITH_WARNINGS.
 - FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
@@ -69,13 +79,18 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE.
+- NEXT_TASK: derive from canonical Hot route.
 - ACTIVE_OUTBOX_TASK: none.
-- H01A-M04 accepted Coach Metric Pack v1 for the current performance and
-  utility domains. Production now has 55 immutable enriched event sets and 165
-  validated v3 snapshots. Mission 3 criteria 7/8 and its latest three-match
-  progress use `effective_enemy_utility_damage@3.0.0`; historical criteria 5/6
-  and evaluation 9 remain preserved. H01B is ready.
+- H01B-R01 freezes `impact_leak` and `bad_fight_selection` as the only coach
+  domains. Performance, utility and aim are metric groups; `utility_value` is
+  context-only. Mission 3 and all criteria/progress remain historical evidence,
+  cancelled with `noncanonical_domain_reconciliation`; production has zero
+  active missions. Ten-match replay, S1-S10 recovery, domain fixtures,
+  full-stack owner flow and repeat idempotency pass with the accepted Starlette
+  warning only.
+- H01A-M04's 55 immutable enriched event sets, 165 validated v3 metric-group
+  snapshots and five-demo golden corpus remain accepted. Its historical domain
+  labels and mission-3 conclusion are superseded by H01B-R01.
 - H01A-M03 migrated production to append-only metric contract v2, retained
   1,153 legacy rows, appended 110 owner rows, accepted the trusted match-124
   subset, and reconciled stale evidence without deletion. H01B stays blocked

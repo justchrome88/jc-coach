@@ -143,7 +143,11 @@ def serialize_insight_cards(raw_cards: Any) -> list[dict[str, Any]]:
             continue
         model = _insight_card_model(card)
         if model is not None:
-            serialized.append(model.to_dict())
+            item = model.to_dict()
+            for key in ("canonical_domain_key", "family", "classification"):
+                if card.get(key) is not None:
+                    item[key] = card[key]
+            serialized.append(item)
     return serialized
 
 
@@ -185,13 +189,15 @@ def survival_opening_death_insight_from_snapshot(snapshot: Mapping[str, Any]) ->
         recommended_focus = (
             "Review the death rounds represented by this snapshot before changing broader coach goals."
         )
-    return InsightCard(
+    card = InsightCard(
         problem=problem,
         evidence=tuple(evidence),
         confidence=confidence,
         caveats=tuple(caveats),
         recommended_focus=recommended_focus,
     ).to_dict()
+    card.update({"canonical_domain_key": "bad_fight_selection", "family": "survival_opening"})
+    return card
 
 
 def survival_opening_death_insights_from_snapshots(
@@ -224,15 +230,17 @@ def bad_fight_trade_insight_from_snapshot(snapshot: Mapping[str, Any]) -> dict[s
     evidence = [item for item in (trade_evidence, opening_evidence) if item is not None]
     confidence = _card_confidence(evidence)
     caveats = _bad_fight_trade_caveats(snapshot, metrics, evidence, confidence)
-    return InsightCard(
-        problem="Untraded deaths show bad fight selection or poor trade spacing in this match snapshot.",
+    card = InsightCard(
+        problem="Known untraded deaths support a bounded bad-fight-selection review in this match snapshot.",
         evidence=tuple(evidence),
         confidence=confidence,
         caveats=tuple(caveats),
         recommended_focus=(
-            "Review the listed death rounds as trade-spacing evidence before turning this into a broader goal."
+            "Review the listed death rounds as bounded trade context without inferring spacing or position."
         ),
     ).to_dict()
+    card.update({"canonical_domain_key": "bad_fight_selection", "family": "bad_fight_trade"})
+    return card
 
 
 def bad_fight_trade_insights_from_snapshots(
@@ -255,7 +263,7 @@ def utility_value_insight_from_snapshot(snapshot: Mapping[str, Any]) -> dict[str
     if utility_evidence is not None:
         confidence = _metric_confidence_level(utility_evidence.get("metric_confidence"))
         card_confidence: Literal["medium", "high"] = "medium" if confidence == "medium" else "high"
-        return InsightCard(
+        card = InsightCard(
             problem="Utility damage is the only supported utility value signal in this match snapshot.",
             evidence=(utility_evidence,),
             confidence=card_confidence,
@@ -264,6 +272,8 @@ def utility_value_insight_from_snapshot(snapshot: Mapping[str, Any]) -> dict[str
                 "Review the damage-producing grenade rounds before making broader utility or lineup changes."
             ),
         ).to_dict()
+        card.update({"canonical_domain_key": None, "family": "utility_value", "classification": "context-only"})
+        return card
 
     return _unsupported_utility_insight_from_snapshot(snapshot, metrics, metric_confidence)
 
@@ -339,6 +349,8 @@ def mission_readiness_for_card(
     )
     missing_requirements: list[str] = []
     blocking_reason_codes: list[str] = []
+    family = str(card.get("family") or "").strip() or None
+    canonical_domain_key = str(card.get("canonical_domain_key") or "").strip() or None
 
     if target_metric is None:
         missing_requirements.append("target_metric")
@@ -379,6 +391,8 @@ def mission_readiness_for_card(
     blocking_reason_codes = _ordered_unique(blocking_reason_codes)
     return {
         "can_become_mission": not blocking_reason_codes,
+        "canonical_domain_key": canonical_domain_key,
+        "family": family,
         "target_metric_candidate": target_metric,
         "baseline_value": baseline,
         "confidence_eligibility": {

@@ -578,9 +578,9 @@ def test_create_read_list_update_mission_domain_flow(db):
     mission_source_payload = json.loads(mission.source_payload_json)
     mission_payload = mission_source_payload["mission_payload"]
     assert mission_source_payload["baseline_source"] == "coach_hypothesis_mission_readiness"
-    assert mission_source_payload["mission_domain_key"] == "survival_opening"
-    assert mission_source_payload["problem_key"] == "survival_opening"
-    assert mission_domain_key(mission) == "survival_opening"
+    assert mission_source_payload["mission_domain_key"] == "bad_fight_selection"
+    assert mission_source_payload["problem_key"] == "bad_fight_selection"
+    assert mission_domain_key(mission) == "bad_fight_selection"
     assert mission_source_payload["activation_metadata"]["primary_metric"] == "opening_death_rate"
     assert mission_source_payload["activation_metadata"]["baseline_values"]["opening_death_rate"] == 0.31
     assert mission_source_payload["activation_metadata"]["target_values"]["opening_death_rate"] == 0.26
@@ -1018,8 +1018,8 @@ def test_evaluate_mission_progress_distinguishes_not_following(db):
                 owner,
                 owner_steam_id=mission.owner_steam_id,
                 metrics={
-                    "effective_enemy_utility_damage": 98,
-                    "utility_uses_per_match": 1,
+                    "opening_death_rate": 0.28,
+                    "opening_duel_attempts": 1,
                 },
                 sample_matches=1,
                 sample_rounds=32,
@@ -1033,7 +1033,7 @@ def test_evaluate_mission_progress_distinguishes_not_following(db):
     assert evaluation.status == "not_following"
     assert result["components"][0]["outcome"] == "not_following"
     assert "not_following" in result["components"][0]["reason_codes"]
-    assert json.loads(evaluation.caveats_json) == ["effective_enemy_utility_damage:not_following"]
+    assert json.loads(evaluation.caveats_json) == ["opening_death_rate:not_following"]
 
 
 def test_evaluate_mission_progress_guardrail_blocks_harmful_success(db):
@@ -1196,7 +1196,7 @@ def test_duplicate_snapshot_sources_cannot_satisfy_match_requirement(db):
             snapshot_id=600 + index,
             match_id=51,
             source=source,
-            metrics={"effective_enemy_utility_damage": 98, "utility_uses_per_match": 3},
+            metrics={"opening_death_rate": 0.24, "opening_duel_attempts": 3},
         )
         for index, source in enumerate(("coach_metric_utility", "coach_metric_performance", "legacy_owner_metrics"))
     ]
@@ -1219,8 +1219,8 @@ def test_duplicate_snapshot_sources_cannot_satisfy_match_requirement(db):
             mission,
             snapshot_id=700 + match_id,
             match_id=match_id,
-            source="coach_metric_utility",
-            metrics={"effective_enemy_utility_damage": 98, "utility_uses_per_match": 3},
+            source="coach_metric_performance",
+            metrics={"opening_death_rate": 0.24, "opening_duel_attempts": 3},
         )
         for match_id in (61, 62, 63)
     ]
@@ -1421,12 +1421,12 @@ def test_round_samples_are_metric_specific_and_missing_rounds_fail_closed(db):
 
 
 def test_criterion_confidence_uses_only_canonical_metric_observations(db):
-    utility_owner = _user(db, "owner-utility-confidence")
+    utility_owner = _user(db, "owner-opening-confidence")
     utility_mission = _active_mission_from_card(
         db,
         owner=utility_owner,
         card=_ready_utility_card_with_follow_rule(),
-        title="Utility confidence",
+        title="Opening confidence",
     )
     utility_criteria = list_mission_criteria(
         db,
@@ -1444,18 +1444,18 @@ def test_criterion_confidence_uses_only_canonical_metric_observations(db):
                     utility_mission,
                     snapshot_id=1000 + match_id,
                     match_id=match_id,
-                    source="coach_metric_utility",
-                    metrics={"effective_enemy_utility_damage": 98, "utility_uses_per_match": 3},
-                    confidence={"effective_enemy_utility_damage": "low", "utility_uses_per_match": "low"},
+                    source="coach_metric_performance",
+                    metrics={"opening_death_rate": 0.24, "opening_duel_attempts": 3},
+                    confidence={"opening_death_rate": "low", "opening_duel_attempts": "low"},
                 ),
                 _canonical_snapshot(
                     utility_owner,
                     utility_mission,
                     snapshot_id=1100 + match_id,
                     match_id=match_id,
-                    source="coach_metric_performance",
-                    metrics={"effective_enemy_utility_damage": 98, "opening_death_rate": 0.2},
-                    confidence={"effective_enemy_utility_damage": "high", "opening_death_rate": "high"},
+                    source="legacy_owner_metrics",
+                    metrics={"opening_death_rate": 0.24},
+                    confidence={"opening_death_rate": "high"},
                 ),
             ]
         )
@@ -1466,7 +1466,7 @@ def test_criterion_confidence_uses_only_canonical_metric_observations(db):
         evaluation_metric_snapshots=utility_snapshots,
     )
     utility_component = json.loads(utility_evaluation.result_json)["components"][0]
-    assert utility_component["canonical_source"] == "coach_metric_utility"
+    assert utility_component["canonical_source"] == "coach_metric_performance"
     assert utility_component["confidence"] == 0.25
     assert "insufficient_confidence" in utility_component["reason_codes"]
 
@@ -1588,16 +1588,9 @@ def test_active_mission_requires_ready_metric_confidence_and_persists_explicit_c
         "guardrail",
     }
 
-    activated = activate_draft_coach_mission(db, user_id=owner.id, mission_id=draft.id)
-    criteria = list_mission_criteria(db, user_id=owner.id, mission_id=activated.id)
-
-    assert activated.status == "active"
-    assert [(row.metric_name, row.role, row.direction, row.baseline_value, row.target_value) for row in criteria] == [
-        ("effective_enemy_utility_damage", "primary", "higher_is_better", 94, 110),
-        ("enemy_he_damage", "secondary", "higher_is_better", 20, 25),
-        ("effective_enemy_utility_damage", "guardrail", "stay_above", 94, 80),
-    ]
-    assert criteria[0].min_sample_matches == 3
+    with pytest.raises(ValueError, match="Noncanonical coach domain"):
+        activate_draft_coach_mission(db, user_id=owner.id, mission_id=draft.id)
+    assert draft.status == "draft"
 
 
 def test_activation_blocks_low_or_mission_ineligible_metrics(db):
@@ -1776,7 +1769,7 @@ def test_rolling_custom_match_set_uses_only_requested_owner_matches(db):
     assert result["candidates"][0]["primary_metric"] == "opening_death_rate"
 
 
-def test_rolling_window_generates_and_suppresses_utility_value_candidate(db):
+def test_rolling_window_keeps_utility_value_context_only(db):
     owner = _user(db, "owner")
     owner_steam_id = "76561198000000001"
     matches, _ = _utility_trend_snapshots(
@@ -1795,7 +1788,6 @@ def test_rolling_window_generates_and_suppresses_utility_value_candidate(db):
         window_type="last_30",
     )
 
-    candidates = result["candidates"]
     trend = result["diagnostics"]["effective_enemy_utility_damage"]
     assert trend["evidence_available"] is True
     assert trend["deficiency_detected"] is True
@@ -1807,54 +1799,18 @@ def test_rolling_window_generates_and_suppresses_utility_value_candidate(db):
     assert trend["recent_value"] == 45
     assert trend["relative_drop"] == 0.1
     assert trend["severity"] == 0.1
-    assert [candidate["primary_metric"] for candidate in candidates] == ["effective_enemy_utility_damage"]
-    assert candidates[0]["family"] == "utility_value"
-    payload = candidates[0]["mission_payload"]
-    assert payload["title"] == "Recover utility damage toward personal baseline"
-    assert payload["success_metric"] == {
-        "metric_name": "effective_enemy_utility_damage",
-        "direction": "higher_is_better",
-        "baseline_value": 45,
-        "target_value": 50,
-        "min_sample_matches": 3,
-        "min_sample_rounds": None,
-        "confidence_required": 0.6,
-    }
-    assert payload["duration"]["min_matches"] == 3
-    assert payload["duration"]["max_matches"] == 5
-    assert payload["linked_insight"]["trend_evidence"] == trend
-    assert validate_mission_payload(payload) == ()
-    payload_text = json.dumps(payload).lower()
-    assert "grenade quality" in payload_text
-    assert "lineup quality" in payload_text
-    assert "flash value" in payload_text
-    assert "exact tactical cause" in payload_text
-    assert all(
-        unsupported_claim not in payload["goal"].lower()
-        for unsupported_claim in ("grenade quality", "lineup quality", "flash value", "exact tactical cause")
-    )
+    assert trend["classification"] == "context-only"
+    assert trend["mission_eligible"] is False
+    assert "noncanonical_utility_value_family" in trend["reason_codes"]
+    assert result["candidates"] == []
 
-    active_mission = _active_mission_from_card(
-        db,
-        owner=owner,
-        card=_ready_utility_card_with_follow_rule(),
-        title="Utility damage",
-    )
-    active_mission.owner_steam_id = owner_steam_id
-
-    suppressed = persist_rolling_mission_candidates(
+    persisted = persist_rolling_mission_candidates(
         db,
         user_id=owner.id,
         owner_steam_id=owner_steam_id,
         window_type="last_30",
     )
-
-    utility = suppressed["candidates"][0]
-    assert utility["primary_metric"] == "effective_enemy_utility_damage"
-    assert utility["suppressed_by_active_mission"] is True
-    assert utility["suppression_reason_codes"] == ["active_mission_same_domain"]
-    assert utility["suppression_key"]["domain_key"] == "utility_value"
-    assert suppressed["coach_hypothesis_ids"] == []
+    assert persisted["coach_hypothesis_ids"] == []
 
 
 @pytest.mark.parametrize(
@@ -1864,8 +1820,8 @@ def test_rolling_window_generates_and_suppresses_utility_value_candidate(db):
         (50, False, "utility_trend_not_negative", 0.0),
         (46, False, "utility_drop_below_materiality_gate", 0.08),
         (45.5, False, "utility_drop_below_materiality_gate", 0.09),
-        (45, True, None, 0.1),
-        (40, True, None, 0.2),
+        (45, False, None, 0.1),
+        (40, False, None, 0.2),
     ],
 )
 def test_utility_trend_direction_and_materiality_gate(
@@ -1895,7 +1851,7 @@ def test_utility_trend_direction_and_materiality_gate(
     assert trend["severity"] == expected_severity
     assert bool(result["candidates"]) is candidate_expected
     if reason_code is None:
-        assert trend["reason_codes"] == []
+        assert trend["reason_codes"] == ["noncanonical_utility_value_family"]
     else:
         assert reason_code in trend["reason_codes"]
 
@@ -2066,7 +2022,7 @@ def test_utility_trend_fails_closed_for_insufficient_confidence_conflict_and_inv
     assert "conflicting_metric_sources" in conflict["diagnostics"]["effective_enemy_utility_damage"]["reason_codes"]
 
 
-def test_valid_utility_candidate_persists_trend_evidence_and_recovers_in_progress(db):
+def test_valid_utility_trend_persists_context_without_hypothesis_or_mission(db):
     owner = _user(db, "utility-persistence")
     owner_steam_id = "76561198000000301"
     _utility_trend_snapshots(
@@ -2084,69 +2040,19 @@ def test_valid_utility_candidate_persists_trend_evidence_and_recovers_in_progres
     )
 
     trend = result["diagnostics"]["effective_enemy_utility_damage"]
-    assert len(result["coach_hypothesis_ids"]) == 1
+    assert result["coach_hypothesis_ids"] == []
     analysis_run = get_analysis_run(db, user_id=owner.id, analysis_run_id=result["analysis_run_id"])
-    hypothesis = get_coach_hypothesis(
-        db,
-        user_id=owner.id,
-        hypothesis_id=result["coach_hypothesis_ids"][0],
-    )
     assert analysis_run is not None
-    assert hypothesis is not None
-    assert json.loads(analysis_run.source_payload_json)["rolling_window"]["utility_trend"] == trend
-    source_card = json.loads(hypothesis.source_card_json)
-    assert source_card["mission_readiness"]["trend_evidence"] == trend
-    payload = mission_payload_from_insight_card(source_card)
-    assert payload is not None
-    assert payload["linked_insight"]["trend_evidence"] == trend
-
-    mission = activate_coach_mission(
-        db,
-        user_id=owner.id,
-        hypothesis_id=hypothesis.id,
-        title=payload["title"],
-    )
-    recovering_snapshots = [
-        _canonical_snapshot(
-            owner,
-            mission,
-            snapshot_id=4100 + match_id,
-            match_id=match_id,
-            source="coach_metric_utility",
-            metrics={"effective_enemy_utility_damage": 50},
-            confidence={"effective_enemy_utility_damage": "high"},
-        )
-        for match_id in (401, 402, 403)
-    ]
-    recovering = evaluate_mission_progress(
-        db,
-        user_id=owner.id,
-        mission_id=mission.id,
-        evaluation_metric_snapshots=recovering_snapshots,
-    )
-    unchanged_snapshots = [
-        _canonical_snapshot(
-            owner,
-            mission,
-            snapshot_id=4200 + match_id,
-            match_id=match_id,
-            source="coach_metric_utility",
-            metrics={"effective_enemy_utility_damage": 45},
-            confidence={"effective_enemy_utility_damage": "high"},
-        )
-        for match_id in (411, 412, 413)
-    ]
-    unchanged = evaluate_mission_progress(
-        db,
-        user_id=owner.id,
-        mission_id=mission.id,
-        evaluation_metric_snapshots=unchanged_snapshots,
-    )
-    assert recovering.status == "improving"
-    assert unchanged.status == "unchanged"
+    persisted_trend = json.loads(analysis_run.source_payload_json)["rolling_window"]["utility_trend"]
+    assert persisted_trend["baseline_value"] == trend["baseline_value"]
+    assert persisted_trend["recent_value"] == trend["recent_value"]
+    assert trend["classification"] == "context-only"
+    assert trend["mission_eligible"] is False
+    assert list_coach_hypotheses(db, user_id=owner.id) == []
+    assert list_coach_missions(db, user_id=owner.id) == []
 
 
-def test_active_utility_mission_suppresses_only_equivalent_domain(db):
+def test_global_active_mission_suppresses_canonical_candidates_and_utility_stays_context(db):
     owner = _user(db, "utility-domain-suppression")
     owner_steam_id = "76561198000000302"
     matches, _ = _utility_trend_snapshots(
@@ -2168,13 +2074,13 @@ def test_active_utility_mission_suppresses_only_equivalent_domain(db):
             },
             source="coach_metric_performance",
         )
-    active_utility = _active_mission_from_card(
+    active_mission = _active_mission_from_card(
         db,
         owner=owner,
-        card=_ready_utility_card_with_follow_rule(),
-        title="Existing utility mission",
+        card=_ready_opening_death_card(),
+        title="Existing duel mission",
     )
-    active_utility.owner_steam_id = owner_steam_id
+    active_mission.owner_steam_id = owner_steam_id
     db.flush()
 
     result = persist_rolling_mission_candidates(
@@ -2183,19 +2089,11 @@ def test_active_utility_mission_suppresses_only_equivalent_domain(db):
         owner_steam_id=owner_steam_id,
     )
 
-    utility = next(candidate for candidate in result["candidates"] if candidate["family"] == "utility_value")
     trade = next(candidate for candidate in result["candidates"] if candidate["family"] == "bad_fight_trade")
-    assert utility["suppressed_by_active_mission"] is True
-    assert utility["suppression_key"] == {
-        "owner_user_id": owner.id,
-        "owner_steam_id": owner_steam_id,
-        "domain_key": "utility_value",
-        "problem_key": "utility_value",
-        "target_metric": "effective_enemy_utility_damage",
-        "mission_payload_type": "utility_value_mission",
-    }
-    assert trade["suppressed_by_active_mission"] is False
-    assert len(result["coach_hypothesis_ids"]) == 1
+    assert all(candidate["family"] != "utility_value" for candidate in result["candidates"])
+    assert trade["suppressed_by_active_mission"] is True
+    assert trade["suppression_reason"] == "active_mission_global_owner"
+    assert result["coach_hypothesis_ids"] == []
 
 
 def test_rolling_window_weak_or_unavailable_evidence_generates_no_candidate(db):
@@ -2293,16 +2191,13 @@ def test_rolling_candidates_suppress_active_duplicate_and_persist_hypotheses(db)
         candidate for candidate in result["candidates"] if candidate["primary_metric"] == "opening_death_rate"
     )
     assert opening["suppressed_by_active_mission"] is True
-    assert opening["suppression_reason"] == "active_mission_same_domain"
-    assert opening["suppression_reason_codes"] == ["active_mission_same_domain"]
-    assert opening["suppression_key"]["domain_key"] == "survival_opening"
-    assert len(result["coach_hypothesis_ids"]) == 1
+    assert opening["suppression_reason"] == "active_mission_global_owner"
+    assert opening["suppression_reason_codes"] == ["active_mission_global_owner"]
+    assert opening["suppression_key"]["domain_key"] == "bad_fight_selection"
+    assert result["coach_hypothesis_ids"] == []
     persisted = get_analysis_run(db, user_id=owner.id, analysis_run_id=result["analysis_run_id"])
     assert persisted is not None
     assert json.loads(persisted.analysis_scope_json)["window_type"] == "last_30"
-    hypothesis = get_coach_hypothesis(db, user_id=owner.id, hypothesis_id=result["coach_hypothesis_ids"][0])
-    assert hypothesis is not None
-    assert json.loads(hypothesis.source_card_json)["mission_readiness"]["source"] == "rolling_metric_window"
 
 
 def test_pause_and_cancel_mission_status_helpers(db):
@@ -2389,8 +2284,8 @@ def test_fail_and_expire_helpers_are_terminal_and_duration_checked(db):
     failed_mission = _active_mission_from_card(
         db,
         owner=owner,
-        card=_ready_utility_card_with_follow_rule(),
-        title="Utility discipline",
+        card=_ready_survival_with_adr_guardrail_card(),
+        title="Survival discipline",
     )
     failed = fail_coach_mission(db, user_id=owner.id, mission_id=failed_mission.id)
     assert failed.status == "failed"
@@ -2406,12 +2301,6 @@ def test_active_mission_listing_filters_by_owner_and_domain(db):
         card=_ready_opening_death_card(),
         title="Opening deaths",
     )
-    utility = _active_mission_from_card(
-        db,
-        owner=owner,
-        card=_ready_utility_card_with_follow_rule(),
-        title="Utility discipline",
-    )
     other_opening = _active_mission_from_card(
         db,
         owner=other_owner,
@@ -2423,14 +2312,14 @@ def test_active_mission_listing_filters_by_owner_and_domain(db):
         db,
         user_id=owner.id,
         owner_steam_id=opening.owner_steam_id,
-        domain_key="survival_opening",
+        domain_key="bad_fight_selection",
     ) == [opening]
     assert list_active_coach_missions(
         db,
         user_id=owner.id,
-        owner_steam_id=utility.owner_steam_id,
-        domain_key="utility_value",
-    ) == [utility]
+        owner_steam_id=opening.owner_steam_id,
+        domain_key="impact_leak",
+    ) == []
     assert list_active_coach_missions(db, user_id=other_owner.id) == [other_opening]
 
 
@@ -2450,7 +2339,7 @@ def test_duplicate_active_mission_same_owner_domain_is_rejected_or_replaced(db):
         insight_card=_ready_survival_with_adr_guardrail_card(),
     )
 
-    with pytest.raises(ValueError, match="Duplicate active mission for owner/domain: survival_opening"):
+    with pytest.raises(ValueError, match="Duplicate active mission for owner:"):
         activate_coach_mission(
             db,
             user_id=owner.id,
@@ -2472,7 +2361,7 @@ def test_duplicate_active_mission_same_owner_domain_is_rejected_or_replaced(db):
         db,
         user_id=owner.id,
         owner_steam_id=first.owner_steam_id,
-        domain_key="survival_opening",
+        domain_key="bad_fight_selection",
     ) == [replacement]
 
 
@@ -2616,15 +2505,17 @@ def _ready_opening_death_card() -> dict:
 
 def _ready_utility_card_with_follow_rule() -> dict:
     return {
-        "problem": "Utility damage needs repeatable usage.",
-        "evidence": [{"metric_id": "effective_enemy_utility_damage", "value": 94, "metric_confidence": "medium"}],
+        "problem": "Opening deaths need repeatable duel discipline.",
+        "evidence": [{"metric_id": "opening_death_rate", "value": 0.31, "metric_confidence": "medium"}],
         "confidence": "medium",
         "caveats": [],
-        "recommended_focus": "Use planned utility before taking space.",
+        "recommended_focus": "Use bounded opening-duel discipline.",
         "mission_readiness": {
             "can_become_mission": True,
-            "target_metric_candidate": "effective_enemy_utility_damage",
-            "baseline_value": 94,
+            "canonical_domain_key": "bad_fight_selection",
+            "family": "bad_fight_selection",
+            "target_metric_candidate": "opening_death_rate",
+            "baseline_value": 0.31,
             "confidence_eligibility": {
                 "level": "medium",
                 "usable_for_missions": True,
@@ -2634,15 +2525,15 @@ def _ready_utility_card_with_follow_rule() -> dict:
             "blocking_reason_codes": [],
             "criteria": [
                 {
-                    "metric_name": "effective_enemy_utility_damage",
+                    "metric_name": "opening_death_rate",
                     "role": "primary",
-                    "direction": "higher_is_better",
-                    "baseline_value": 94,
-                    "target_value": 110,
+                    "direction": "lower_is_better",
+                    "baseline_value": 0.31,
+                    "target_value": 0.26,
                     "min_sample_matches": 3,
                     "rule": {
                         "follow_rule": {
-                            "metric_name": "utility_uses_per_match",
+                            "metric_name": "opening_duel_attempts",
                             "operator": ">=",
                             "value": 3,
                         }

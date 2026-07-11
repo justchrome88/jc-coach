@@ -2,6 +2,10 @@
 
 This directory is the canonical metric knowledge base. Code remains executable behavior; disagreements between code and these contracts are defects or explicitly documented legacy semantics, not permission to guess.
 
+The registry's legacy `domain` field means **metric group/source
+classification**. It does not define a coach domain. The only MVP coach domains
+are `impact_leak` and `bad_fight_selection`.
+
 ## Authority map
 
 - `registry/metrics.json`: machine-readable inventory, identity, semantics, versions, persistence, consumers, truth status, and discrepancies.
@@ -17,7 +21,7 @@ This directory is the canonical metric knowledge base. Code remains executable b
 
 ## Change workflow
 
-1. Identify the metric and domain contract; preserve identity and current semantic version.
+1. Identify the metric, metric-group contract, and any canonical coach-domain consumer; preserve identity and current semantic version.
 2. Add independent evidence and an acceptance fixture. A test that repeats the implementation formula is insufficient.
 3. For changed meaning, increment the semantic version and decide whether old snapshots are retained, quarantined, or backfilled into a new version.
 4. Update registry, contract, tests, golden evidence, and catalog together.

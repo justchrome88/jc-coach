@@ -4,7 +4,7 @@ Generated from `docs/metrics/registry/metrics.json`; do not edit by hand.
 
 Registry version: `3.0.0`. Metrics: `95`.
 
-| Metric | Domain / scope | Unit | Semantics | Truth | Validation | Status | Persistence | Consumers |
+| Metric | Metric group / scope | Unit | Semantics | Truth | Validation | Status | Persistence | Consumers |
 |---|---|---|---|---|---|---|---|---|
 | `accepted_hits` — Accepted hits | aim / player_match | hits | accepted enemy firearm hurt events | verified | validated / trusted | active (`3.0.0`) | metric_snapshots.metrics_json | trusted coach/API snapshot payload, coach insights, hypotheses, missions, progress evaluation |
 | `accepted_shots` — Accepted shots | aim / player_match | shots | accepted firearm weapon_fire events | verified | validated / trusted | active (`3.0.0`) | metric_snapshots.metrics_json | trusted coach/API snapshot payload, coach insights, hypotheses, missions, progress evaluation |

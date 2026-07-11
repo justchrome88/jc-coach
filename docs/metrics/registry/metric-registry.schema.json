@@ -24,7 +24,11 @@
         "properties": {
           "metric_key": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
           "display_name": {"type": "string", "minLength": 1},
-          "domain": {"type": "string", "minLength": 1},
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Legacy registry field name for a metric group/source classification; never a coach domain."
+          },
           "scope": {"enum": ["match", "player_match", "player_round", "player_weapon_match", "aggregate_window"]},
           "unit": {"type": "string"},
           "value_type": {"enum": ["integer", "number", "percentage", "ratio", "string", "nullable_number"]},

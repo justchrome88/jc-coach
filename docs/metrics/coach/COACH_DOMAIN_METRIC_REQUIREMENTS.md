@@ -1,27 +1,24 @@
 # Coach Domain Metric Requirements
 
-H01A-M04 freezes two current production metric domains: `performance` and
-`utility`. Three hypothesis families consume them: `survival_opening` and
-`bad_fight_trade` from performance, and `utility_value` from utility. The
-machine-readable freeze is
-`coach-domain-metric-requirements.json`.
+H01B-R01 corrects the M04 naming drift. The coach domains are
+`impact_leak` and `bad_fight_selection`. `performance`, `utility`, and `aim`
+remain the three Coach Metric Pack v1 metric groups/snapshot sources; none is a
+product domain.
 
-The performance domain answers only bounded survival, opening-duel and trade
-discipline questions. Its leaf inputs are `rounds_played`, survival/opening
-facts, and explicit five-second trade-lineage facts. The utility domain answers
-whether effective enemy utility damage changed relative to the player's own
-preceding segment. Its primary leaf is `effective_enemy_utility_damage`, with
-HE/fire components and `utility_damage_per_round` as transparent context.
+The machine-readable requirements are in
+`coach-domain-metric-requirements.json`, while the complete product boundary is
+in `docs/coach/coach-domain-model.json`.
 
-Mission 3 must use `effective_enemy_utility_damage` version `3.0.0`. The legacy
-`utility_damage` observation is historical raw attribution with ambiguous
-enemy/team meaning; it is not an alias and cannot enter current coach logic.
+`impact_leak` requires both persisted outcome context and validated impact/death
+evidence. `bad_fight_selection` consumes bounded opening, survival, and explicit
+trade-lineage facts. Utility and aim may support context, but cannot create a
+domain or mission independently.
 
-All current consumers select owner/player-bound, validated v3 snapshots. Missing
-leaf data produces no hard claim. Single-match thresholds remain descriptive;
-rolling mission eligibility additionally requires the minimum sample and
-confidence recorded in the manifest.
+`utility_value` remains a useful descriptive/context family. Its validated v3
+metric work is preserved, including `effective_enemy_utility_damage`, but the
+family is not mission-eligible. Historical missions, hypotheses, criteria, and
+progress remain evidence and are not silently renamed.
 
-Other code paths—legacy recommendation analytics, map/economy/swing context,
-and opaque composite ratings—were inventoried but are not current production
-hypothesis/mission domains for this task.
+All trusted consumers select owner/player-bound, validated v3 snapshots.
+Missing leaf data, weak confidence, unsupported outcome context, or a
+noncanonical family produces no hard claim and no mission.

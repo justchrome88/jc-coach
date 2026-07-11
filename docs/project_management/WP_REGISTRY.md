@@ -59,6 +59,7 @@ Allowed statuses: `planned`, `not_started`, `active`, `in_progress`, `done`,
 | H01A-M02_METRIC_CONTRACT_REGISTRY_VALIDATION_AND_REPAIR | accepted_with_warnings | Versioned registry/snapshots, shared phase/core repair, consumer gates, match-124 golden, isolated migration tests | Validated-only selection enforced; ADR/KAST and ambiguous damage/utility remain quarantined; H01B blocked pending M03. |
 | H01A-M03_PRODUCTION_METRIC_MIGRATION_TRUSTED_SUBSET_ACCEPTANCE_AND_H01B_RELEASE_DECISION | accepted_with_warnings | Production v2 migration/backfill, trusted match-124 acceptance, PM report/artifact | 1,153 legacy + 110 owner v2 rows; mission 3 still uses quarantined utility_damage, so H01B remains blocked. |
 | H01A-M04_COACH_METRIC_PACK_V1_COMPLETION | accepted_with_warnings | Product v3 pack/event sets/golden corpus/validator; PM M04 report/artifact | 55 enriched event sets + 165 validated v3 snapshots; mission 3 uses validated effective enemy utility damage; H01B READY. |
+| H01B-R01_CANONICAL_TWO_DOMAIN_RECONCILIATION_AND_TEN_MATCH_REPLAY | accepted_with_warnings | Canonical model/runtime/tests/harness; PM report/artifact | Exactly two coach domains; mission 3 superseded; ten-match/S1-S10/full-stack/idempotency accepted; known Starlette warning only. |
 
 CURRENT_LANE: METRICS_ASSURANCE. CURRENT_TASK: none. Mission backend status:
 ACCEPTED_FOR_UI_API. H01A_STATUS: PASS_WITH_WARNINGS.
@@ -77,7 +78,12 @@ METRIC_VALIDATION_GATE_IMPLEMENTED: true. MATCH_124_GOLDEN_FIXTURE_PASS: true.
 COACH_REJECTS_UNVALIDATED_METRICS: true. PRODUCTION_BACKFILL_PERFORMED: true.
 METRIC_DOCUMENTATION_CANONICALIZED: true. MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
 METRIC_CORRECTNESS_ACCEPTED: false. COACH_INPUTS_TRUSTED: true.
-H01B_STATUS: READY.
+H01B_STATUS: PASS_WITH_WARNINGS. H01B_R01_STATUS: PASS_WITH_WARNINGS.
+CANONICAL_COACH_DOMAINS: impact_leak, bad_fight_selection.
+COACH_METRIC_GROUPS: performance, utility, aim. THIRD_DOMAIN_BLOCKED: true.
+MISSION_3_RECONCILED: true. TEN_MATCH_REPLAY_ACCEPTED: true.
+TEN_STATE_RECOVERY_MATRIX_ACCEPTED: true. IMPACT_LEAK_ACCEPTED: true.
+BAD_FIGHT_SELECTION_ACCEPTED: true. FULL_VERTICAL_CYCLE_ACCEPTED: true.
 FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
 AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILED: true.
 OWNER_SCOPE_CONSISTENT: true. FRESH_MATCH_PRESERVED_FOR_H01A: false.
@@ -90,7 +96,7 @@ ORDINARY_BASELINE_NO_OP_RESTORED: true.
 FRESH_MATCH_DISCOVERY_PRESERVED: true.
 DEEPER_HISTORY_TRAVERSAL_PRESERVED: true.
 BATCH_31_COMPATIBILITY_PRESERVED: true. NEXT_TASK:
-H01B_THREE_MATCH_MISSION_PROGRESS_USER_ACCEPTANCE.
+derive from canonical Hot route.
 Owner-only personal scope, fail-closed weak evidence, no public/friends
 readiness and no v1.0 claim remain mandatory.
 

@@ -1040,16 +1040,18 @@ def _active_mission(db, *, owner: User, steam_id: str) -> CoachMission:
         user_id=owner.id,
         analysis_run_id=run.id,
         insight_card={
-            "id": "g01-utility-mission",
-            "problem": "Utility damage needs a measurable owner mission.",
-            "evidence": [{"metric_id": "utility_damage", "value": 50, "metric_confidence": "medium"}],
+            "id": "g01-duel-mission",
+            "problem": "Opening deaths need a measurable owner mission.",
+            "evidence": [{"metric_id": "opening_death_rate", "value": 0.3, "metric_confidence": "medium"}],
             "confidence": "medium",
             "caveats": [],
-            "recommended_focus": "Review damage-producing grenade rounds.",
+            "recommended_focus": "Review bounded opening-death evidence.",
             "mission_readiness": {
                 "can_become_mission": True,
-                "target_metric_candidate": "utility_damage",
-                "baseline_value": 50,
+                "canonical_domain_key": "bad_fight_selection",
+                "family": "bad_fight_selection",
+                "target_metric_candidate": "opening_death_rate",
+                "baseline_value": 0.3,
                 "confidence_eligibility": {
                     "level": "medium",
                     "usable_for_missions": True,
@@ -1063,7 +1065,7 @@ def _active_mission(db, *, owner: User, steam_id: str) -> CoachMission:
         db,
         user_id=owner.id,
         hypothesis_id=hypothesis.id,
-        title="Improve utility",
+        title="Improve opening duel discipline",
     )
 
 

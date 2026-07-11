@@ -1,157 +1,73 @@
 {
-  "schema_version": "coach-domain-metric-requirements-v1",
-  "frozen_at_task": "H01A-M04",
-  "current_coach_domains": [
-    "performance",
-    "utility"
-  ],
-  "current_hypothesis_families": [
-    "survival_opening",
-    "bad_fight_trade",
-    "utility_value"
-  ],
+  "schema_version": "coach-domain-metric-requirements-v2",
+  "reconciled_at_task": "H01B-R01",
+  "current_coach_domains": ["impact_leak", "bad_fight_selection"],
+  "metric_groups": ["performance", "utility", "aim"],
+  "current_hypothesis_families": ["impact_leak", "survival_opening", "bad_fight_trade", "bad_fight_selection"],
+  "context_only_families": ["utility_value"],
   "required_domain_metrics": {
-    "performance": [
-      "rounds_played",
-      "survival_rate",
-      "opening_duel_attempts",
-      "opening_duel_wins",
-      "opening_duel_losses",
-      "opening_duel_win_rate",
-      "opening_deaths",
-      "opening_death_rate",
-      "trade_opportunities",
-      "trade_kills",
-      "traded_deaths",
-      "untraded_deaths",
-      "trade_status_known_deaths",
-      "trade_success_rate",
-      "traded_death_rate",
-      "untraded_death_rate"
-    ],
-    "utility": [
-      "rounds_played",
-      "effective_enemy_utility_damage",
-      "utility_damage_per_round",
-      "enemy_he_damage",
-      "enemy_fire_damage"
-    ]
+    "impact_leak": ["rounds_played", "adr", "kast", "deaths", "survival_rate", "kills_per_round"],
+    "bad_fight_selection": ["rounds_played", "survival_rate", "opening_duel_attempts", "opening_duel_losses", "opening_deaths", "opening_death_rate"]
   },
-  "active_mission_required_metrics": [
-    "effective_enemy_utility_damage"
-  ],
+  "metric_group_metrics": {
+    "performance": ["rounds_played", "adr", "kast", "deaths", "survival_rate", "kills_per_round", "opening_duel_attempts", "opening_duel_losses", "opening_deaths", "opening_death_rate", "untraded_deaths", "untraded_death_rate"],
+    "utility": ["effective_enemy_utility_damage", "utility_damage_per_round", "enemy_he_damage", "enemy_fire_damage"],
+    "aim": ["shot_accuracy", "first_bullet_accuracy", "hit_based_headshot_rate"]
+  },
+  "active_mission_required_metrics": [],
   "families": [
     {
-      "domain_key": "performance",
-      "hypothesis_family": "survival_opening",
-      "question_decision": "Are low survival or repeated opening losses strong enough for a bounded review or mission?",
-      "required_leaf_metric_keys": [
-        "rounds_played",
-        "survival_rate",
-        "opening_duel_attempts",
-        "opening_duel_wins",
-        "opening_duel_losses",
-        "opening_duel_win_rate",
-        "opening_deaths",
-        "opening_death_rate"
-      ],
-      "optional_context_metric_keys": [
-        "kills",
-        "deaths",
-        "kast",
-        "multi_kill_rounds"
-      ],
-      "scope_window": "validated owner/player match snapshots; single-match insight or rolling owner window",
-      "minimum_sample": {
-        "single_match_rounds": 8,
-        "rolling_matches": 3,
-        "rolling_rounds": 8
-      },
-      "confidence_policy": "validated semantic version 3.0.0; medium/high metric confidence; mission requires hard-recommendation eligibility",
+      "domain_key": "impact_leak",
+      "hypothesis_family": "impact_leak",
+      "required_leaf_metric_keys": ["rounds_played", "adr", "kast", "deaths", "survival_rate", "kills_per_round"],
+      "optional_context_metric_keys": ["opening_deaths", "opening_death_rate", "effective_enemy_utility_damage", "multi_kill_rounds"],
+      "scope_window": "at least five chronological validated owner matches plus persisted result/round outcome context",
+      "minimum_sample": {"rolling_matches": 5, "rolling_rounds": 40},
+      "confidence_policy": "validated v3 medium/high metrics; outcome and impact evidence are both mandatory",
       "missing_data_behavior": "No claim and no mission candidate.",
-      "consumer_entrypoints": [
-        "app.services.coach_insights.survival_opening_death_insight_from_snapshot",
-        "app.services.mission_domain.generate_rolling_mission_candidates"
-      ],
-      "current_implementation": "Coach Metric Pack v1 performance snapshot",
+      "consumer_entrypoints": ["app.services.mission_domain.generate_rolling_mission_candidates"],
+      "current_implementation": "Coach Metric Pack v1 performance metric group plus Match outcome context",
       "ground_truth_state": "validated"
     },
     {
-      "domain_key": "performance",
-      "hypothesis_family": "bad_fight_trade",
-      "question_decision": "Do known untraded deaths support a trade-discipline review or mission?",
-      "required_leaf_metric_keys": [
-        "rounds_played",
-        "trade_opportunities",
-        "trade_kills",
-        "traded_deaths",
-        "untraded_deaths",
-        "trade_status_known_deaths",
-        "trade_success_rate",
-        "traded_death_rate",
-        "untraded_death_rate"
-      ],
-      "optional_context_metric_keys": [
-        "opening_death_rate",
-        "opening_duel_win_rate"
-      ],
+      "domain_key": "bad_fight_selection",
+      "hypothesis_family": "survival_opening",
+      "required_leaf_metric_keys": ["rounds_played", "survival_rate", "opening_duel_attempts", "opening_duel_losses", "opening_deaths", "opening_death_rate"],
+      "optional_context_metric_keys": ["adr", "kast", "deaths", "multi_kill_rounds"],
       "scope_window": "validated owner/player match snapshots; single-match insight or rolling owner window",
-      "minimum_sample": {
-        "known_trade_status_deaths": 2,
-        "untraded_deaths": 2,
-        "rolling_matches": 3,
-        "rolling_rounds": 8
-      },
-      "confidence_policy": "explicit team identity and five-second same-round lineage; no spatial opportunity claim",
-      "missing_data_behavior": "Emit a low-confidence non-claim only when ambiguity itself is evidenced; otherwise omit.",
-      "consumer_entrypoints": [
-        "app.services.coach_insights.bad_fight_trade_insight_from_snapshot",
-        "app.services.mission_domain.generate_rolling_mission_candidates"
-      ],
-      "current_implementation": "Coach Metric Pack v1 performance snapshot",
+      "minimum_sample": {"single_match_rounds": 8, "rolling_matches": 3, "rolling_rounds": 8},
+      "confidence_policy": "validated v3 medium/high facts; no spatial or tactical-cause inference",
+      "missing_data_behavior": "No claim and no mission candidate.",
+      "consumer_entrypoints": ["app.services.coach_insights.survival_opening_death_insight_from_snapshot", "app.services.mission_domain.generate_rolling_mission_candidates"],
+      "current_implementation": "Coach Metric Pack v1 performance metric group",
       "ground_truth_state": "validated"
     },
     {
-      "domain_key": "utility",
-      "hypothesis_family": "utility_value",
-      "question_decision": "Has effective enemy utility damage materially declined from the player's preceding personal segment?",
-      "required_leaf_metric_keys": [
-        "rounds_played",
-        "effective_enemy_utility_damage",
-        "utility_damage_per_round",
-        "enemy_he_damage",
-        "enemy_fire_damage"
-      ],
-      "optional_context_metric_keys": [
-        "he_detonations",
-        "fire_grenade_detonations",
-        "flash_detonations",
-        "smoke_detonations",
-        "enemies_effectively_flashed",
-        "effective_enemy_flash_duration",
-        "smokes_used"
-      ],
-      "scope_window": "latest 30 validated owner/player observations split into equal preceding/recent segments",
-      "minimum_sample": {
-        "supported_matches": 10,
-        "segment_matches": 5,
-        "mission_progress_matches": 3
-      },
-      "confidence_policy": "validated semantic version 3.0.0, explicit owner/victim teams, effective-health cap, medium/high confidence",
-      "missing_data_behavior": "No hard value claim, trend, mission activation, or progress evaluation.",
-      "consumer_entrypoints": [
-        "app.services.coach_insights.utility_value_insight_from_snapshot",
-        "app.services.mission_domain._utility_trend_evidence_from_snapshots",
-        "app.services.mission_domain.evaluate_mission_progress"
-      ],
-      "current_implementation": "Coach Metric Pack v1 utility snapshot; mission 3 rebind target",
+      "domain_key": "bad_fight_selection",
+      "hypothesis_family": "bad_fight_trade",
+      "required_leaf_metric_keys": ["rounds_played", "untraded_deaths", "untraded_death_rate"],
+      "optional_context_metric_keys": ["opening_death_rate", "opening_duel_win_rate", "adr", "kast"],
+      "scope_window": "validated owner/player facts with explicit same-round five-second lineage",
+      "minimum_sample": {"known_trade_status_deaths": 2, "untraded_deaths": 2, "rolling_matches": 3},
+      "confidence_policy": "bounded trade context only; no spacing, position, or exact tactical cause",
+      "missing_data_behavior": "No hard claim; ambiguous evidence remains a caveated non-claim.",
+      "consumer_entrypoints": ["app.services.coach_insights.bad_fight_trade_insight_from_snapshot", "app.services.mission_domain.generate_rolling_mission_candidates"],
+      "current_implementation": "Coach Metric Pack v1 performance metric group",
       "ground_truth_state": "validated"
+    },
+    {
+      "domain_key": null,
+      "classification": "context-only",
+      "hypothesis_family": "utility_value",
+      "required_leaf_metric_keys": ["effective_enemy_utility_damage", "utility_damage_per_round", "enemy_he_damage", "enemy_fire_damage"],
+      "optional_context_metric_keys": ["he_detonations", "fire_grenade_detonations", "flash_detonations", "smoke_detonations", "enemies_effectively_flashed", "effective_enemy_flash_duration", "smokes_used"],
+      "scope_window": "validated owner/player utility context",
+      "minimum_sample": {"descriptive_matches": 1},
+      "confidence_policy": "validated v3 evidence may add context but cannot independently become a mission",
+      "missing_data_behavior": "Omit context.",
+      "consumer_entrypoints": ["app.services.coach_insights.utility_value_insight_from_snapshot", "app.services.mission_domain._utility_trend_evidence_from_snapshots"],
+      "current_implementation": "Coach Metric Pack v1 utility metric group; mission generation blocked",
+      "ground_truth_state": "validated_context_only"
     }
-  ],
-  "inventoried_non_production_domains": [
-    "legacy recommendation analytics",
-    "map context",
-    "economy/swing context",
-    "opaque aim/grenade/rating composites"
   ]
 }

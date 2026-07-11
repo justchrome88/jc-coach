@@ -50,11 +50,14 @@ def test_build_ai_coach_payload_uses_structured_match_data(db, sample_rows):
     payload = build_ai_coach_payload(db, analysis_scope=admin_debug_all_metric_snapshots_scope())
 
     assert payload["product"] == "CS2 Personal Coach"
+    assert payload["canonical_coach_domains"] == ["impact_leak", "bad_fight_selection"]
+    assert payload["metric_groups"] == ["performance", "utility", "aim"]
     assert payload["summary"]["matches_count"] == 2
     assert payload["rules"]["do_not_invent_facts"] is True
     assert len(payload["recent_matches"]) == 2
     assert payload["metric_confidence"]["metrics"]["grenade_rating"]["level"] == "unavailable"
     assert payload["metric_confidence"]["metrics"]["traded_deaths"]["level"] == "unavailable"
+    assert json.loads(json.dumps(payload, ensure_ascii=False))["dashboard_status"]["adr_profile"]["best_match"]
 
 
 def test_ai_coach_payload_includes_deterministic_contract_snapshot(db, sample_rows):

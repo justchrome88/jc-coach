@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from sqlalchemy import select
 
 from app.db.models import (
@@ -103,30 +104,11 @@ def test_process_owner_match_after_parser_artifact_evaluates_active_mission_with
     assert first["mission_status_summaries"] == []
 
 
-def test_process_owner_match_after_parser_artifact_evaluates_multiple_active_owner_missions(db):
+def test_owner_global_active_mission_policy_rejects_multiple_active_missions(db):
     owner = _owner(db)
-    utility_mission = _active_utility_mission(db, owner=owner, baseline=10)
-    survival_mission = _active_survival_mission(db, owner=owner, baseline=0.25)
-    match = _match(db, "m05-multiple-active-missions")
-    artifact = _artifact(db, match=match, owner_utility_damage=60, other_utility_damage=300)
-
-    result = process_owner_match_after_parser_artifact(
-        db,
-        user_id=owner.id,
-        match_id=match.id,
-        parser_artifact_id=artifact.id,
-    )
-
-    assert set(result["active_mission_ids"]) == {utility_mission.id, survival_mission.id}
-    assert set(result["considered_mission_ids"]) == {utility_mission.id, survival_mission.id}
-    assert result["mission_progress_evaluation_ids"] == []
-    assert {item["mission_id"] for item in result["mission_evaluation_summary"]} == {
-        utility_mission.id,
-        survival_mission.id,
-    }
-    assert {item["action"] for item in result["mission_evaluation_summary"]} == {"skipped"}
-    assert {item["skip_reason"] for item in result["mission_evaluation_summary"]} == {"insufficient_metric_data"}
-    assert db.query(MissionProgressEvaluation).count() == 0
+    _active_utility_mission(db, owner=owner, baseline=0.3)
+    with pytest.raises(ValueError, match="Duplicate active mission for owner"):
+        _active_survival_mission(db, owner=owner, baseline=0.25)
 
 
 def test_process_owner_match_after_parser_artifact_skips_inactive_and_cross_owner_missions(db):
@@ -157,25 +139,10 @@ def test_process_owner_match_after_parser_artifact_skips_inactive_and_cross_owne
     assert summary_by_reason["no_active_missions"]["mission_id"] is None
 
 
-def test_process_owner_match_after_parser_artifact_skips_active_mission_without_match_metric(db):
+def test_noncanonical_unsupported_metric_mission_is_rejected(db):
     owner = _owner(db)
-    mission = _active_custom_metric_mission(db, owner=owner, metric_name="unsupported_metric", baseline=1)
-    match = _match(db, "m05-insufficient-metric-data")
-    artifact = _artifact(db, match=match, owner_utility_damage=20, other_utility_damage=300)
-
-    result = process_owner_match_after_parser_artifact(
-        db,
-        user_id=owner.id,
-        match_id=match.id,
-        parser_artifact_id=artifact.id,
-    )
-
-    assert result["active_mission_ids"] == [mission.id]
-    assert result["mission_progress_evaluation_ids"] == []
-    assert result["mission_evaluation_summary"][0]["mission_id"] == mission.id
-    assert result["mission_evaluation_summary"][0]["skip_reason"] == "insufficient_metric_data"
-    assert result["mission_evaluation_summary"][0]["counted"] is False
-    assert db.query(MissionProgressEvaluation).count() == 0
+    with pytest.raises(ValueError, match="Noncanonical coach domain"):
+        _active_custom_metric_mission(db, owner=owner, metric_name="unsupported_metric", baseline=1)
 
 
 def test_process_owner_match_after_parser_artifact_blocks_missing_artifact(db):
@@ -333,12 +300,12 @@ def _active_utility_mission(
     return _active_custom_metric_mission(
         db,
         owner=owner,
-        metric_name="utility_damage",
-        baseline=baseline,
+        metric_name="opening_death_rate",
+        baseline=float(baseline) if float(baseline) <= 1 else 0.3,
         status=status,
         owner_steam_id=owner_steam_id,
-        title="Improve utility",
-        recommended_focus="Review damage-producing grenade rounds.",
+        title="Improve duel discipline",
+        recommended_focus="Review bounded opening-death evidence.",
     )
 
 
