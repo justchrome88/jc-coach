@@ -15,11 +15,11 @@ DB_PATH = ROOT / "data" / "cs2_coach.db"
 DB_DISPLAY_PATH = "data/cs2_coach.db"
 GOVERNANCE_FILES = (
     "AGENTS.md",
-    "docs/CURRENT_STATUS.md",
-    "docs/HANDOFF.md",
-    "docs/project_management/WP_REGISTRY.md",
-    "docs/project_management/AGENT_WORKFLOW.md",
-    "docs/TESTING.md",
+    "project_control/status/CURRENT_STATUS.md",
+    "project_control/status/HANDOFF.md",
+    "project_control/planning/WP_REGISTRY.md",
+    "project_control/agents/AGENT_WORKFLOW.md",
+    "project_docs/operations/TESTING.md",
 )
 
 
@@ -44,6 +44,9 @@ GUARDIAN_RULES = [
             "AGENTS.md",
             "AGENT.md",
             "docs/*",
+            "project_docs/*",
+            "project_control/*",
+            "_legacy_archive/*",
         ),
         (),
     ),
@@ -64,8 +67,9 @@ GUARDIAN_RULES = [
         (
             "app/services/metric_truth.py",
             "app/services/ai_coach.py",
-            "docs/METRICS",
-            "docs/RECOMMENDATIONS",
+            "project_docs/metrics/*",
+            "project_docs/product/RECOMMENDATIONS.md",
+            "app/contracts/metrics/*",
             "tests/test_metric",
             "tests/test_ai",
             "tests/test_recommendation",

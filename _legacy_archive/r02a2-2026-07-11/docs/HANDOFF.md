@@ -1,0 +1,294 @@
+# Handoff
+
+Last updated: 2026-07-11.
+
+## Purpose
+
+This file is the compact new-session bootstrap for JC Coach. It is not the full project history and must not duplicate `AGENTS.md`.
+
+## Current H01 User Acceptance Handoff
+
+- CURRENT_LANE: AI_COACH_PRODUCT_COMPLETION.
+- CURRENT_TASK: none.
+- H01A_STATUS: PASS_WITH_WARNINGS.
+- H01A_M01_STATUS: PASS_WITH_WARNINGS.
+- H01A_M02_STATUS: PASS_WITH_WARNINGS.
+- H01A_M03_STATUS: PASS_WITH_WARNINGS.
+- H01A_M04_STATUS: PASS_WITH_WARNINGS.
+- COACH_DOMAIN_REQUIREMENTS_MAPPED: true.
+- COACH_METRIC_PACK_V1_IMPLEMENTED: true.
+- COACH_METRIC_PACK_V1_PRODUCTION_ACCEPTED: true.
+- CURRENT_COACH_DOMAIN_METRICS_VALIDATED: true.
+- ADR_VALIDATED: true.
+- KAST_VALIDATED: true.
+- EFFECTIVE_UTILITY_METRICS_VALIDATED: true.
+- METRIC_CONTRACTS_VERSIONED: true.
+- METRIC_VALIDATION_GATE_IMPLEMENTED: true.
+- MATCH_124_GOLDEN_FIXTURE_PASS: true.
+- COACH_REJECTS_UNVALIDATED_METRICS: true.
+- PRODUCTION_BACKFILL_PERFORMED: true.
+- METRIC_PRODUCTION_MIGRATION_COMPLETE: true.
+- METRIC_TRUSTED_SUBSET_ACCEPTED: true.
+- GLOBAL_METRIC_CORRECTNESS_ACCEPTED: false.
+- COACH_VALIDATED_INPUT_GATE_ACTIVE: true.
+- ACTIVE_MISSION_INPUTS_VALIDATED: true.
+- MATCH_124_GROUND_TRUTH_ACCEPTED: true.
+- METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
+- METRIC_DOCUMENTATION_CANONICALIZED: true.
+- MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
+- METRIC_CORRECTNESS_ACCEPTED: false.
+- COACH_INPUTS_TRUSTED: true.
+- H01B_STATUS: PASS_WITH_WARNINGS.
+- H01B_R01_STATUS: PASS_WITH_WARNINGS.
+- H01B_R02_STATUS: PASS_WITH_WARNINGS.
+- AI_HYPOTHESIS_ENGINE_ACTIVE: true.
+- REAL_MODEL_PATH_ACCEPTED: true.
+- DOMAIN_SLOT_COUNT_PER_OWNER: 2.
+- AUTO_ACTIVATION_PERFORMED: false.
+- CANONICAL_COACH_DOMAINS: impact_leak, bad_fight_selection.
+- COACH_METRIC_GROUPS: performance, utility, aim.
+- THIRD_DOMAIN_BLOCKED: true.
+- MISSION_3_RECONCILED: true.
+- TEN_MATCH_REPLAY_ACCEPTED: true.
+- TEN_STATE_RECOVERY_MATRIX_ACCEPTED: true.
+- IMPACT_LEAK_ACCEPTED: true.
+- BAD_FIGHT_SELECTION_ACCEPTED: true.
+- FULL_VERTICAL_CYCLE_ACCEPTED: true.
+- H01A_R02_STATUS: BLOCKED.
+- H01A_R02A_STATUS: PASS_WITH_WARNINGS.
+- FRESH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILED: true.
+- AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILED: true.
+- OWNER_SCOPE_CONSISTENT: true.
+- FRESH_MATCH_READY_AND_UNCONSUMED: false.
+- FRESH_MATCH_PRESERVED_FOR_H01A: false.
+- FRESH_MATCH_VERTICAL_CYCLE_ACCEPTED: true.
+- SINGLE_MATCH_REPEAT_IDEMPOTENT: true.
+- H01A_R01_STATUS: PASS_WITH_WARNINGS.
+- LEGACY_PENDING_BASELINE_CLASSIFICATION_REPAIRED: true.
+- ORDINARY_BASELINE_NO_OP_RESTORED: true.
+- FRESH_MATCH_DISCOVERY_PRESERVED: true.
+- DEEPER_HISTORY_TRAVERSAL_PRESERVED: true.
+- BATCH_31_COMPATIBILITY_PRESERVED: true.
+- MISSION_BACKEND_STATUS: ACCEPTED_FOR_UI_API.
+- MISSION_BACKEND_ACCEPTED_FOR_UI_API: true.
+- F10D_STATUS: PASS_WITH_WARNINGS.
+- G01_STATUS: PASS_WITH_WARNINGS.
+- HEADLESS_OWNER_COACH_SYNC_CONTRACT_ACCEPTED: true.
+- OWNER_SYNC_IDEMPOTENT: true.
+- OWNER_SYNC_CONCURRENCY_GUARDED: true.
+- G02_STATUS: PASS_WITH_WARNINGS.
+- OWNER_SYNC_BATCH_COORDINATOR_ACCEPTED: true.
+- SUCCESSFUL_TARGET_31_SUPPORTED: true.
+- EXACT_STOP_AT_TARGET_PROVEN: true.
+- BATCH_RESTART_RECOVERY_PROVEN: true.
+- THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
+- WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
+- DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
+- NEXT_TASK: H01B-R03_TWO_MISSION_CARDS_ACTIVATION_AND_MATCH_FEEDBACK_UI.
+- ACTIVE_OUTBOX_TASK: none.
+- H01B-R02 freezes one immutable 30-match evidence baseline for owner 17 and
+  exposes two validated `proposal_ready` domain slots from the real configured
+  model. Production has zero active missions; activation remains R03 scope.
+- H01B-R01 freezes `impact_leak` and `bad_fight_selection` as the only coach
+  domains. Performance, utility and aim are metric groups; `utility_value` is
+  context-only. Mission 3 and all criteria/progress remain historical evidence,
+  cancelled with `noncanonical_domain_reconciliation`; production has zero
+  active missions. Ten-match replay, S1-S10 recovery, domain fixtures,
+  full-stack owner flow and repeat idempotency pass with the accepted Starlette
+  warning only.
+- H01A-M04's 55 immutable enriched event sets, 165 validated v3 metric-group
+  snapshots and five-demo golden corpus remain accepted. Its historical domain
+  labels and mission-3 conclusion are superseded by H01B-R01.
+- H01A-M03 migrated production to append-only metric contract v2, retained
+  1,153 legacy rows, appended 110 owner rows, accepted the trusted match-124
+  subset, and reconciled stale evidence without deletion. H01B stays blocked
+  because mission 3 depends on quarantined `utility_damage`.
+- H01A-M02 accepted the versioned registry, append-only snapshot/provenance
+  contract, shared accepted phase, core-combat repairs, weapon aliases, and
+  validated-only owner/coach gates. ADR/KAST and ambiguous damage/utility
+  semantics remain unavailable; M03 must migrate/reprocess without parser rerun.
+- H01A accepted the real owner fresh-match vertical cycle. G02 discovered and
+  processed one fresh match through retained demo, owner import, real parser,
+  combat/utility snapshots, coach hypotheses and honest one-match
+  `insufficient_data` progress. Web/headless repeats and rapid double-submit
+  preserved one durable domain lineage. A narrow temp-cleanup fix was rerun
+  from the verified backup; only the accepted Starlette warning remains.
+- H01A-R02A accepted separate remote-preview and persisted-dry-run evidence.
+  Real G01 performs the remote refresh; dry-run does not. Canonical user `17`
+  owns Steam account `1` and the complete historical lineage, while one fresh
+  remote identity remains visible and unconsumed for H01A.
+- H01A-R01 now derives the nine historical pending rows as diagnostic
+  `legacy_stale_pending`, restores the production baseline to
+  `success_no_changes`, preserves fresh/deeper accepted-sync identities and
+  keeps G02 target-31 accounting compatible. H01A is now accepted.
+- G01 accepted `run_owner_coach_sync(...)` as the canonical owner-scoped
+  headless application operation and `scripts/run_owner_coach_sync.py` as its
+  thin CLI adapter. G02 accepted a durable owner batch coordinator and thin
+  technical adapter that invokes only G01. No scheduler/login sync or
+  multi-owner batch is accepted.
+- F10D accepted the repaired mission backend on real owner data. F09 remains
+  historical lifecycle evidence only; F10A/F10B semantics are current truth.
+- The accepted warning is the known Starlette/TestClient deprecation warning.
+  Owner-only personal scope, fail-closed weak evidence, no public/friends
+  readiness, and no v1.0 claim remain mandatory.
+
+## Historical Pre-F10 Handoff
+
+- Project: JC Coach, a personal AI coach for CS2.
+- Primary workspace convention: start future Codex sessions from
+  `/opt/jc-coach`.
+- JC Forge is not the active product and must not be built unless a future
+  explicit task changes product scope.
+- Current organizational mini-phase: `LEAN_DOCS_CLEANUP` /
+  `CODEX_NATIVE_SIMPLIFICATION`, closed by `LEAN-DOCS-06`; do not return to
+  docs cleanup unless explicitly scoped.
+- Current product version: `v0.9`.
+- Current lane:
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE`, authorized by user decision after
+  GATE-001.
+- The scoped WP-018 coach quality/calibration/output-quality lane remains
+  available, but it is no longer the only authorized post-foundation product
+  lane.
+- Current active WP: `WP-018 Coach Quality Calibration` remains open and is
+  not complete; the preparation/prelude layer is closed.
+- Next scoped task:
+  `MVP-001_AUTH_STEAM_IDENTITY_FOUNDATION_AND_GUARDRAILS`.
+- WP-018 targets `v0.10`, but `v0.10` is not promoted. Work remains authorized
+  only for narrow AI coach quality, calibration and output-quality scope. This
+  is not a broad product expansion.
+- Runtime: FastAPI / Uvicorn service `jc-coach.service` on `127.0.0.1:8010`.
+- Production DB: `data/cs2_coach.db`.
+
+## Bootstrap For A New Codex Or ChatGPT Session
+
+1. Read `AGENTS.md`.
+2. Read `docs/CURRENT_STATUS.md`.
+3. Read `docs/project_management/WP_REGISTRY.md`.
+4. For a new long session or chat handoff, also read this file.
+5. Use `/opt/jc-coach-pm` only as legacy archive/reference when the active
+   task explicitly needs that context. It is not the primary Codex launch
+   workspace.
+6. Treat Codex PM, Executor, Reviewer and Documentation Steward as prompt
+   roles, not mandatory separate Codex windows.
+7. Read Warm docs only when the task requires them, and state which files are needed and why before reading them.
+8. Treat old audit reports, prompts, stage reports and generated data reports as evidence/history only.
+9. For governance, planning, task routing, prompt contract or WP role workflow scope, `docs/project_management/PROJECT_OPERATING_PROTOCOL.md`, `docs/project_management/MASTER_WP_CHECKLIST.md`, `docs/project_management/AGENT_WORKFLOW.md` and invoked `docs/agents/roles/*` role cards are Warm references, not per-task Hot context.
+10. For future ChatGPT-generated Codex prompts, use `docs/project_management/PROMPT_PLAYBOOK.md` as the prompt-template guide after Hot docs.
+11. Prompt language policy: use `docs/project_management/PROMPT_PLAYBOOK.md`; Codex prompts/reports may be English, while direct ChatGPT user discussion remains Russian.
+
+## Historical Pre-F10 State Summary
+
+- `v0.8` Recommendation Loop Acceptance is promoted for controlled personal use.
+- `v0.9` is promoted with warnings by WP-017K.
+- WP-017G accepted data integrity with warnings.
+- WP-017H accepted post-batch performance with warnings.
+- WP-017I diagnosed exact playlist mode as unrecoverable from current persisted data.
+- WP-017J accepted explicit deferral: `v0.9` must not claim exact Premier, Competitive, Wingman, Casual, Deathmatch, FACEIT or custom playlist labels.
+- WP-017S repaired documentation/governance entrypoints and documented that `docs/audit/WP_018_DOCUMENTATION_GOVERNANCE_AUDIT_REPORT.md` is out-of-band evidence, not the planned WP-018 product block.
+- WP-017T compacted the active current-state and handoff layer before WP-017K.
+- WP-017U added the project operating protocol and master WP checklist before WP-017K.
+- WP-017V added the repo-native agent workflow and Documentation Steward / Docs Currency Agent before WP-017K.
+- WP-017W added task type profiles, role invocation shortcuts and the short Task Card prompt contract before WP-017K.
+- WP-017X produced a legacy documentation currency snapshot and conservative cleanup plan without moving, deleting or archiving files.
+- WP-017Y completed no-risk legacy pointer cleanup without moving, deleting or archiving files.
+- WP-017Z added Warm workflow role cards and role handoff protocol without
+  creating runtime agents or automation.
+- WP-017K promoted Real Data Onboarding / Bulk Demo Usage to `v0.9` with
+  warnings carried forward.
+- WP-017Z1 added invocation modes and output modes so future prompts can stay
+  short and long role outputs can be file-backed.
+- WP-017Z2 added control-plane protection so ordinary product/code/DB/import/
+  runtime/UI/recommendation tasks do not edit governance rules to make work
+  easier.
+- POST-FOUNDATION-01 completed the defect/warning audit and stabilization plan
+  with `PASS_WITH_WARNINGS`.
+- PF-STAB-01 closed the restart authorization/scope-lock gate for narrow
+  WP-018 AI coach quality/calibration/output-quality work only.
+- WP-018-01 through WP-018-05 plus
+  `WP-018-PRELUDE-CLOSE_QUALITY_INFRASTRUCTURE_READY` closed the WP-018
+  preparation/prelude layer.
+- Runtime AI coach quality infrastructure now available: version/snapshot
+  metadata, runtime CS2 domain constraints, semantic validator checks, safe
+  fallback behavior and accepted/rejected output-quality fixtures.
+- GATE-002 records the user decision to authorize
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` for controlled implementation WPs
+  across auth / Steam identity, import, demo storage, parser, normalized
+  events, derived context, metric snapshots, AI Scout, Evidence Validator,
+  missions and coach UI.
+
+## Data And Product Facts To Carry Forward
+
+- Recommendation `#5` is the only accepted active recommendation for hard progress.
+- Recommendation `#5` has three real evaluations with `metric_confidence`; progress is `3/10`.
+- Legacy recommendations `#1`, `#3` and `#4` are not accepted for new hard evaluations unless a future WP explicitly refreshes them.
+- Post-WP-017H evidence is about 76 total matches, 22 playable demo matches, 20 exact playable dates and 22 parser artifacts.
+- Steam/import cap remains `1`.
+- Shell service calls that touch Steam/import temp storage need `TMPDIR/TEMP/TMP=/opt/jc-coach/data/tmp` when explicitly authorized.
+- Match mode labels accepted for `v0.9`: `mode_unknown`, `provenance_demo`, `provenance_valve_matchmaking`, `exact_date_source=steam_gc_match_time`.
+- Playlist-specific labels and recommendations are not accepted for `v0.9`.
+
+## Historical Pre-F10 Pause / Resume State
+
+- Project status: `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
+- `READY_FOR_MAJOR_CS2_FEATURE_WORK`: `NO`.
+- Foundation hardening H2 closed the recovery lane as
+  `FOUNDATION_HARDENING_CLOSED_PENDING_POST_FOUNDATION_AUDIT`.
+- FH-124R-03 accepted H1 final-readiness rerun evidence: full-suite pytest and
+  the local quality gate passed.
+- Unrestricted major WP-018 / CS2 feature expansion remains paused.
+- The old broad pause language no longer blocks scoped work inside
+  `MVP_AUTH_IMPORT_PARSER_AI_COACH_LANE` when the future WP explicitly defines
+  scope, allowed files, mutation/job authorization and evidence requirements.
+- Narrow WP-018 AI coach quality, calibration, output-quality, evidence,
+  caveat, docs or tests work may proceed only when explicitly scoped and when
+  it improves readiness without adding unsupported claims.
+- Can-carry warnings: Starlette/TestClient deprecation warning remains known;
+  provider-specific structured response enforcement remains shallow;
+  deterministic semantic checks are not a full entailment proof; wording
+  calibration remains future WP-018 work.
+- Docs-only roadmap edits, H1 PASS evidence and H2 closure do not change the
+  readiness flag; `READY_FOR_MAJOR_CS2_FEATURE_WORK` remains `NO`.
+
+## Current Next Safe Step
+
+Run H01A-M02_METRIC_CONTRACT_REGISTRY_VALIDATION_AND_REPAIR under its explicit
+task card. H01B remains blocked pending metric assurance. H01A accepted the
+single fresh-match vertical cycle and idempotent
+repeat; G02's thin adapter still does not authorize scheduler/login sync,
+public/friends scope or v1.0 claims.
+
+## Historical Pre-F10 Next Safe Step
+
+Proceed to the first MVP lane WP:
+`MVP-001_AUTH_STEAM_IDENTITY_FOUNDATION_AND_GUARDRAILS`.
+
+That task should define and implement only the first scoped auth / Steam
+identity foundation slice named by its Task Card. It must preserve owner-only
+identity boundaries, avoid public/friends readiness claims, and must not run
+live Steam/Valve import, parser, evaluator, manual evaluator, service/deploy
+changes or production DB/schema/data mutation unless the Task Card explicitly
+authorizes that risk and includes the required evidence contract.
+
+`WP-018A_COACH_OUTPUT_QUALITY_DIAGNOSIS` remains a valid scoped WP-018 next
+task if the user chooses the coach-quality lane instead of the MVP auth/import
+lane.
+
+## Forbidden Without Explicit WP Authorization
+
+- Do not mutate production DB or schema.
+- Do not run live Steam/Valve import.
+- Do not download demos.
+- Do not run parser, evaluator or manual evaluator jobs.
+- Do not delete, move or compress raw demo files.
+- Do not raise `STEAM_IMPORT_MAX_DEMOS_PER_RUN`.
+- Do not generate persistent app reports.
+- Do not restart service, change systemd/nginx or deploy runtime config unless the active WP requires it.
+- Do not make product logic changes during governance cleanup.
+- Do not run `git add`, commit or push without explicit user approval.
+
+## Reporting Back
+
+- Write long WP reports to `docs/audit/WP_*.md`.
+- Keep console output short: report path, changed files, checks, risks and whether git status is dirty.
+- Update only relevant canonical docs. Do not create new docs if an existing canonical doc should be updated.
+- Do not silently renumber WPs, close blockers or mark deferred/failed features as implemented.
