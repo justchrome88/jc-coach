@@ -131,15 +131,7 @@ CANONICAL_MODULE_BY_LEGACY_MODULE.update(
 )
 
 COMPATIBILITY_FACADES = {
-    "app.services.ai_coach": "app.services.coach.ai",
-    "app.services.coach_domain_ai": "app.services.coach.domain_analysis",
-    "app.services.demo_parser": "app.services.parsing.demo_parser",
-    "app.services.metric_snapshots": "app.services.metrics.snapshots",
     "app.services.mission_domain": "app.services.missions.lifecycle",
-    "app.services.owner_coach_sync": "app.services.owner.sync",
-    "app.services.steam_demo_downloader": "app.services.ingestion.demo_downloader",
-    "app.services.steam_integration": "app.services.ingestion.steam",
-    "app.services.steam_match_metadata": "app.services.ingestion.match_metadata",
 }
 
 
