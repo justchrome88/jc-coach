@@ -1,5 +1,18 @@
 # Metric Data Lineage
 
+## Version 2 snapshot identity
+
+New critical snapshots constrain `owner_user_id`, match/scope, player identity,
+metric domain, semantic version, parser artifact, event-set identity, and
+validation state. Input event hashes are deterministic. Version `1.0.0` rows
+remain readable as `legacy_unverified`; a version `2.0.0` computation appends a
+row and never rewrites the old meaning. Personal selectors require the owner,
+player, accepted semantic version when specified, and `validated` state.
+
+Within a domain snapshot, `metadata.metric_validation` records each metric key,
+status, and reason codes. Trusted payload serialization removes quarantined or
+rejected keys before coach, hypothesis, or mission code sees them.
+
 ## H01A concrete chain
 
 `match 123 (owner 17/account 1/import job 101)` → retained demo SHA-1 `fc3aac…6aa` → `match 124` → parser artifact `91`, demoparser2 `0.41.3`, payload `2026-07-02.1` → normalized event set `parser-artifact:91:events:8285d8fafd78be0f` → owner player `steam:76561198056634139` → snapshots `1138` and `1149` → analysis run `59` → hypotheses `110/111`; snapshot `1149` also enters mission `3` progress evaluation `9`.

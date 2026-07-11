@@ -36,6 +36,7 @@ from app.services.recommendation_tracking import (
     recommendation_evaluation_metadata,
 )
 from app.services.steam_match_metadata import apply_steam_metadata_to_parsed_demo
+from app.services.weapon_names import canonical_weapon_name
 
 PARSER_PAYLOAD_VERSION = "2026-07-02.1"
 EARLY_DEATH_WINDOW_TICKS = 64 * 30
@@ -266,8 +267,14 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         raise DemoParseError("Demo parsed, but no kill/damage events were found.")
 
     player = _select_player(death_events, hurt_events, player_info, player_identifier)
-    stats = _player_stats(player, death_events, hurt_events)
-    early_deaths = _early_deaths_from_timing(player, death_events, round_start_events, round_freeze_end_events)
+    accepted_rounds, final_round_end_tick = _accepted_round_boundary(round_end_events)
+    stats = _player_stats(player, death_events, hurt_events, final_round_end_tick=final_round_end_tick)
+    early_deaths = _early_deaths_from_timing(
+        player,
+        _events_through_tick(death_events, final_round_end_tick),
+        round_start_events,
+        round_freeze_end_events,
+    )
     swing_summary = _swing_summary(
         player,
         player_info,
@@ -293,7 +300,7 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         grenade_trajectories=grenade_trajectories,
     )
     score = _score_for_player(player, player_info, player_team_events, round_end_events)
-    rounds_count = _rounds_count(death_events, hurt_events)
+    rounds_count = len(accepted_rounds)
     event_counts = {
         "player_info": len(_records(player_info)),
         "player_death": len(_records(death_events)),
@@ -310,7 +317,7 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "grenade_trajectories": len(grenade_trajectories),
         "rounds": rounds_count,
     }
-    adr = round(stats["damage"] / rounds_count, 2) if rounds_count else None
+    adr = None
     map_name = _header_value(header, ("map_name", "map", "mapName"))
     header_played_at = _header_datetime(header)
     played_at_source = "demo_header" if header_played_at else "file_modified_fallback"
@@ -328,9 +335,9 @@ def parse_demo(path: Path, player_identifier: str | None = None) -> dict[str, An
         "kills": stats["kills"],
         "deaths": stats["deaths"],
         "assists": stats["assists"],
-        "kd": round(stats["kills"] / (stats["deaths"] or 1), 2),
+        "kd": round(stats["kills"] / stats["deaths"], 2) if stats["deaths"] else None,
         "adr": adr,
-        "kast": stats["kast"],
+        "kast": None,
         "rating": None,
         "swing_score": swing_summary["score"],
         "headshot_percent": round(stats["headshots"] / stats["kills"] * 100, 2) if stats["kills"] else 0,
@@ -384,13 +391,13 @@ def _metric_confidence(
 ) -> dict[str, str]:
     confidence = {
         "kills_deaths_assists": "high" if event_counts["player_death"] else "low",
-        "adr": "high" if adr is not None and event_counts["player_hurt"] and event_counts["rounds"] else "low",
+        "adr": "unavailable",
         "entry_duels": "medium" if event_counts["player_death"] else "low",
-        "kast": "medium" if stats.get("kast") is not None and event_counts["player_death"] else "low",
-        "kast_trade_component": "low",
+        "kast": "unavailable",
+        "kast_trade_component": "unavailable",
         "trade_kills": "low" if event_counts["player_death"] else "unavailable",
         "traded_deaths": "unavailable",
-        "utility": "medium" if event_counts["player_hurt"] else "low",
+        "utility": "unavailable",
         "flash": "medium" if event_counts.get("player_blind") else "low",
         "weapon_accuracy": "medium" if event_counts.get("weapon_fire") and event_counts.get("player_hurt") else "low",
         "grenades": "high" if event_counts.get("grenade_events") and event_counts.get("player_blind") else "medium"
@@ -427,8 +434,8 @@ def _parser_warnings(metric_confidence: dict[str, str]) -> list[str]:
         warnings.append("Score/result are best-effort until more demos validate side switching.")
     if metric_confidence.get("early_deaths") == "low":
         warnings.append("Early deaths are unavailable unless round timing anchors are parsed.")
-    if metric_confidence.get("kast_trade_component") == "low":
-        warnings.append("KAST trade component is incomplete; KAST is best-effort.")
+    if metric_confidence.get("kast_trade_component") == "unavailable":
+        warnings.append("KAST is quarantined until participation and trade evidence are complete.")
     if metric_confidence.get("traded_deaths") == "unavailable":
         warnings.append("Traded/untraded death facts are not available yet.")
     if metric_confidence.get("side_stats") == "low":
@@ -604,7 +611,13 @@ def _available_players(player_info, deaths, hurts) -> list[dict[str, Any]]:
     return sorted(by_key.values(), key=lambda item: item.get("activity", 0), reverse=True)
 
 
-def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, Any]:
+def _player_stats(
+    player: dict[str, str | None],
+    deaths,
+    hurts,
+    *,
+    final_round_end_tick: int | None = None,
+) -> dict[str, Any]:
     player_name = player.get("name")
     player_steamid = player.get("steamid")
     kills = deaths_count = assists = headshots = flash_assists = 0
@@ -616,7 +629,7 @@ def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, Any
     first_death_by_round: dict[Any, dict[str, Any]] = {}
     weapon_breakdown: dict[str, dict[str, Any]] = {}
 
-    for row in _records(deaths):
+    for row in _records(_events_through_tick(deaths, final_round_end_tick)):
         round_id = _round_id(row)
         weapon = _weapon(row)
         attacker_match = _matches_player(
@@ -658,7 +671,7 @@ def _player_stats(player: dict[str, str | None], deaths, hurts) -> dict[str, Any
                 "victim_match": victim_match,
             }
 
-    for row in _records(hurts):
+    for row in _records(_events_through_tick(hurts, final_round_end_tick)):
         if not _matches_player(row, player_name, player_steamid, ("attacker_name", "attacker_steamid", "attacker")):
             continue
         amount = int(float(row.get("dmg_health") or row.get("health_damage") or row.get("damage") or 0))
@@ -741,7 +754,23 @@ def _round_anchor_ticks(events) -> dict[int, int]:
 
 def _weapon(row: dict[str, Any]) -> str:
     weapon = str(row.get("weapon") or row.get("weapon_name") or row.get("attacker_weapon") or "unknown").lower()
-    return weapon or "unknown"
+    return canonical_weapon_name(weapon) or "unknown"
+
+
+def _accepted_round_boundary(round_end_events) -> tuple[set[Any], int | None]:
+    rows = _records(round_end_events)
+    rounds = {_round_id(row) for row in rows}
+    rounds.discard(None)
+    ticks = [_tick_or_none(row) for row in rows]
+    accepted_ticks = [tick for tick in ticks if tick is not None]
+    return rounds, max(accepted_ticks) if accepted_ticks else None
+
+
+def _events_through_tick(events, final_round_end_tick: int | None) -> list[dict[str, Any]]:
+    rows = _records(events)
+    if final_round_end_tick is None:
+        return rows
+    return [row for row in rows if _tick_or_none(row) is None or _tick_or_none(row) <= final_round_end_tick]
 
 
 def _empty_weapon(weapon: str) -> dict[str, Any]:

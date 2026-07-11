@@ -44,12 +44,14 @@ def test_trusted_metric_can_be_used_for_hard_claims():
     assert is_metric_allowed_for_hard_claim("kd", "ai")
 
 
-def test_approximate_metric_requires_warning_not_full_trust():
+def test_disputed_kast_is_suppressed_from_trusted_consumers():
     definition = metric_definition("kast")
 
     assert definition.reliability == "approximate"
-    assert definition.usage["diagnosis"] == "warn"
-    assert is_metric_allowed("kast", "diagnosis")
+    assert definition.usage["diagnosis"] == "suppressed"
+    assert definition.usage["recommendation"] == "suppressed"
+    assert definition.usage["ai"] == "suppressed"
+    assert not is_metric_allowed("kast", "diagnosis")
     assert not is_metric_allowed_for_hard_claim("kast", "diagnosis")
     assert metric_warning("kast", "ai") is not None
 

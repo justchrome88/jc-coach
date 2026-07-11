@@ -79,15 +79,33 @@ class DemoParseArtifact(Base):
 class MetricSnapshot(Base):
     __tablename__ = "metric_snapshots"
     __table_args__ = (
-        UniqueConstraint("match_id", "player_key", "source", name="uq_metric_snapshot_match_player_source"),
+        UniqueConstraint(
+            "owner_user_id",
+            "match_id",
+            "player_key",
+            "metric_domain",
+            "semantic_version",
+            "source",
+            "source_event_set_id",
+            name="uq_metric_snapshot_semantic_identity",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
     match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"), nullable=False, index=True)
     player_key: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     player_name: Mapped[str | None] = mapped_column(String(255), index=True)
     player_steamid: Mapped[str | None] = mapped_column(String(32), index=True)
     source: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    metric_domain: Mapped[str] = mapped_column(String(80), default="legacy", nullable=False, index=True)
+    semantic_version: Mapped[str] = mapped_column(String(40), default="1.0.0", nullable=False, index=True)
+    scope: Mapped[str] = mapped_column(String(40), default="player_match", nullable=False, index=True)
+    validation_status: Mapped[str] = mapped_column(
+        String(40), default="legacy_unverified", nullable=False, index=True
+    )
+    implementation_version: Mapped[str | None] = mapped_column(String(120), index=True)
+    input_event_hash: Mapped[str | None] = mapped_column(String(64), index=True)
     source_parser_artifact_id: Mapped[int | None] = mapped_column(ForeignKey("demo_parse_artifacts.id"), index=True)
     source_event_set_id: Mapped[str | None] = mapped_column(String(255), index=True)
     metrics_json: Mapped[str] = mapped_column(Text, nullable=False)

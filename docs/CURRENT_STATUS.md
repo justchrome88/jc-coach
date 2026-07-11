@@ -8,6 +8,12 @@ Last updated: 2026-07-11.
 - CURRENT_TASK: none.
 - H01A_STATUS: PASS_WITH_WARNINGS.
 - H01A_M01_STATUS: PASS_WITH_WARNINGS.
+- H01A_M02_STATUS: PASS_WITH_WARNINGS.
+- METRIC_CONTRACTS_VERSIONED: true.
+- METRIC_VALIDATION_GATE_IMPLEMENTED: true.
+- MATCH_124_GOLDEN_FIXTURE_PASS: true.
+- COACH_REJECTS_UNVALIDATED_METRICS: true.
+- PRODUCTION_BACKFILL_PERFORMED: false.
 - METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
 - METRIC_DOCUMENTATION_CANONICALIZED: true.
 - MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
@@ -44,8 +50,12 @@ Last updated: 2026-07-11.
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01A-M02_METRIC_CONTRACT_REGISTRY_VALIDATION_AND_REPAIR.
+- NEXT_TASK: H01A-M03_METRIC_REPROCESSING_GROUND_TRUTH_ACCEPTANCE_AND_H01B_RELEASE.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A-M02 versioned critical contracts and append-only snapshot identity,
+  repaired phase/core-combat/alias root causes, and enforced validated-only
+  owner/coach selection. ADR, KAST, ambiguous damage and legacy utility
+  semantics remain explicitly quarantined; H01B remains blocked pending M03.
 - H01A-M01 established the canonical `docs/metrics/` registry/contracts and a
   deterministic read-only ledger for match 124. It confirmed post-match event,
   round-participation, raw-damage, snapshot-version and source-selection defects.

@@ -34,7 +34,7 @@ def test_accepted_parser_evidence_fixture_is_valid_and_complete():
     assert artifact.parser_confidence == "medium"
     assert artifact.warnings
     assert "traded_deaths" in artifact.data_gaps
-    assert artifact.hard_claim_support["diagnosis"] == ("adr",)
+    assert artifact.hard_claim_support["diagnosis"] == ()
 
 
 def test_parser_evidence_builder_preserves_sanitized_payload_metadata():
@@ -42,7 +42,7 @@ def test_parser_evidence_builder_preserves_sanitized_payload_metadata():
 
     evidence = parser_evidence_from_payload(
         payload,
-        hard_claim_support={"diagnosis": ["adr"]},
+        hard_claim_support={"diagnosis": []},
         data_gaps=["economy_model", "positioning_model", "clutch_model"],
     )
     artifact = validate_parser_evidence(evidence)

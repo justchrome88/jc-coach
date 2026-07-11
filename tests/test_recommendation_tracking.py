@@ -126,7 +126,7 @@ def test_evaluates_new_matches_green_yellow_red(db):
         )
     ]
 
-    assert statuses == ["green", "yellow", "red"]
+    assert statuses == ["gray", "gray", "gray"]
     evidence = json.loads(
         db.scalar(
             select(MatchRecommendationEvaluation.evidence_json)
@@ -165,7 +165,7 @@ def test_evaluate_recommendations_for_match_evaluates_eligible_match_after_ancho
     survival_evaluation = next(item for item in evaluations if item.recommendation_id == recommendation.id)
     evidence = json.loads(survival_evaluation.evidence_json)
     assert survival_evaluation.match_id == match.id
-    assert survival_evaluation.status == "green"
+    assert survival_evaluation.status == "gray"
     assert "metric_confidence" in evidence
 
 
@@ -241,8 +241,9 @@ def test_progress_summary_counts_statuses(db):
     progress = get_active_recommendation_progress(db)
 
     assert progress["completed_matches"] == 1
-    assert progress["counts"]["green"] == 1
-    assert progress["last_status"] == "green"
+    assert progress["counts"]["green"] == 0
+    assert progress["counts"]["gray"] == 1
+    assert progress["last_status"] == "gray"
 
 
 def test_legacy_progress_is_not_accepted_hard_progress(db):

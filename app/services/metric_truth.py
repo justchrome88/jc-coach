@@ -8,7 +8,7 @@ MetricUsage = Literal["display", "diagnosis", "recommendation", "ai"]
 UsageDecision = Literal["allowed", "warn", "suppressed"]
 
 USAGES: tuple[MetricUsage, ...] = ("display", "diagnosis", "recommendation", "ai")
-METRIC_REGISTRY_VERSION = "metric-truth-v1"
+METRIC_REGISTRY_VERSION = "metric-truth-v2"
 
 
 @dataclass(frozen=True)
@@ -119,7 +119,7 @@ METRIC_REGISTRY: dict[str, MetricDefinition] = {
         "total damage / played rounds.",
         "medium",
         ("Reliable when damage events and round counts exist; CSV/manual values rely on user/source input.",),
-        _usage(ai="warn"),
+        _usage(display="warn", diagnosis="suppressed", recommendation="suppressed", ai="suppressed"),
         aliases=("avg_adr",),
     ),
     "kast": MetricDefinition(
@@ -129,7 +129,7 @@ METRIC_REGISTRY: dict[str, MetricDefinition] = {
         "percent of rounds with kill, assist, survived or traded participation.",
         "approximate",
         ("Trade component is not fully reliable until traded-death facts are hardened.",),
-        _usage(diagnosis="warn", recommendation="warn", ai="warn"),
+        _usage(display="warn", diagnosis="suppressed", recommendation="suppressed", ai="suppressed"),
         aliases=("avg_kast",),
     ),
     "hltv_rating": MetricDefinition(
@@ -167,7 +167,7 @@ METRIC_REGISTRY: dict[str, MetricDefinition] = {
         "headshot kills / kills * 100.",
         "medium",
         ("Not a crosshair-placement metric; low sample sizes are noisy.",),
-        _usage(diagnosis="warn", recommendation="warn", ai="warn"),
+        _usage(display="suppressed", diagnosis="suppressed", recommendation="suppressed", ai="suppressed"),
         aliases=("headshot_percent", "avg_headshot_percent"),
     ),
     "entry_kills": MetricDefinition(
@@ -226,7 +226,7 @@ METRIC_REGISTRY: dict[str, MetricDefinition] = {
         "Damage attributed to grenade utility.",
         "medium",
         ("Attribution depends on parser support for utility weapon names and damage events.",),
-        _usage(ai="warn"),
+        _usage(display="warn", diagnosis="suppressed", recommendation="suppressed", ai="suppressed"),
         aliases=("avg_utility_damage",),
     ),
     "flash_assists": MetricDefinition(

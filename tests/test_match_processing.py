@@ -35,8 +35,8 @@ def test_process_owner_match_after_parser_artifact_persists_metrics_and_runs_own
     assert result["source_event_set_id"].startswith(f"parser-artifact:{artifact.id}:events:")
     assert result["metric_snapshot_ids"]["by_source"]["core_combat_metrics"]["all"]
     assert result["metric_snapshot_ids"]["by_source"]["utility_metrics"]["all"]
-    assert result["analysis_run"]["id"] is not None
-    assert result["coach_hypothesis_ids"]["all"]
+    assert result["analysis_run"]["id"] is None
+    assert result["coach_hypothesis_ids"]["all"] == []
     assert result["active_mission_ids"] == []
     assert result["mission_progress_evaluation_ids"] == []
     assert result["mission_evaluation_summary"] == [
@@ -90,45 +90,17 @@ def test_process_owner_match_after_parser_artifact_evaluates_active_mission_with
     )
 
     assert first["active_mission_ids"] == [mission.id]
-    assert first["mission_progress_evaluation_ids"]
+    assert first["mission_progress_evaluation_ids"] == []
     assert repeated["metric_snapshot_ids"]["created"] == []
     assert set(repeated["metric_snapshot_ids"]["reused"]) == set(first["metric_snapshot_ids"]["all"])
-    assert repeated["mission_progress_evaluation_ids"] == first["mission_progress_evaluation_ids"]
-    assert repeated["idempotency"]["post_metrics_coach_loop"]["reused_mission_progress_evaluation_ids"] == first[
-        "mission_progress_evaluation_ids"
-    ]
-    assert first["mission_evaluation_summary"][0]["action"] == "evaluated"
-    assert first["mission_evaluation_summary"][0]["skip_reason"] is None
+    assert repeated["mission_progress_evaluation_ids"] == []
+    assert first["mission_evaluation_summary"][0]["action"] == "skipped"
+    assert first["mission_evaluation_summary"][0]["skip_reason"] == "insufficient_metric_data"
     assert first["mission_evaluation_summary"][0]["counted"] is False
-    assert repeated["mission_evaluation_summary"][0]["reused"] is True
+    assert repeated["mission_evaluation_summary"][0]["reused"] is False
     assert db.query(MetricSnapshot).count() == len(first["metric_snapshot_ids"]["all"])
-    assert db.query(MissionProgressEvaluation).count() == 1
-
-    summary = first["mission_status_summaries"][0]
-    owner_utility_snapshot_id = _snapshot_id(
-        db,
-        match_id=match.id,
-        player_steamid=OWNER_STEAM_ID,
-        source="utility_metrics",
-    )
-    other_utility_snapshot_id = _snapshot_id(
-        db,
-        match_id=match.id,
-        player_steamid=OTHER_STEAM_ID,
-        source="utility_metrics",
-    )
-    assert owner_utility_snapshot_id in summary["source_metric_snapshot_ids"]
-    assert other_utility_snapshot_id not in summary["source_metric_snapshot_ids"]
-    assert summary["primary_metric_result"]["metric_name"] == "utility_damage"
-    assert summary["primary_metric_result"]["evaluation_value"] == 20
-    assert summary["primary_metric_result"]["metric_snapshot_ids"] == [owner_utility_snapshot_id]
-    assert summary["primary_metric_result"]["sample_matches"] == 1
-    assert summary["evaluated_window"]["snapshot_count"] == 2
-    assert summary["evaluated_window"]["match_ids"] == [match.id]
-    assert summary["evaluated_window"]["sample_matches"] == 1
-    assert summary["status"] == "regressing"
-    assert summary["confidence"] == 0.6
-    assert summary["primary_metric_result"]["reason_codes"] == ["regressing"]
+    assert db.query(MissionProgressEvaluation).count() == 0
+    assert first["mission_status_summaries"] == []
 
 
 def test_process_owner_match_after_parser_artifact_evaluates_multiple_active_owner_missions(db):
@@ -147,13 +119,14 @@ def test_process_owner_match_after_parser_artifact_evaluates_multiple_active_own
 
     assert set(result["active_mission_ids"]) == {utility_mission.id, survival_mission.id}
     assert set(result["considered_mission_ids"]) == {utility_mission.id, survival_mission.id}
-    assert len(result["mission_progress_evaluation_ids"]) == 2
+    assert result["mission_progress_evaluation_ids"] == []
     assert {item["mission_id"] for item in result["mission_evaluation_summary"]} == {
         utility_mission.id,
         survival_mission.id,
     }
-    assert {item["action"] for item in result["mission_evaluation_summary"]} == {"evaluated"}
-    assert db.query(MissionProgressEvaluation).count() == 2
+    assert {item["action"] for item in result["mission_evaluation_summary"]} == {"skipped"}
+    assert {item["skip_reason"] for item in result["mission_evaluation_summary"]} == {"insufficient_metric_data"}
+    assert db.query(MissionProgressEvaluation).count() == 0
 
 
 def test_process_owner_match_after_parser_artifact_skips_inactive_and_cross_owner_missions(db):
@@ -228,7 +201,8 @@ def _owner(db) -> User:
 
 
 def _match(db, external_match_id: str) -> Match:
-    match = Match(source="demo", external_match_id=external_match_id)
+    owner = db.query(User).filter(User.email == "m05-owner@example.test").one_or_none()
+    match = Match(user_id=owner.id if owner else None, source="demo", external_match_id=external_match_id)
     db.add(match)
     db.commit()
     db.refresh(match)

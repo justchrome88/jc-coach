@@ -32,7 +32,8 @@ def test_supported_c05_utility_metrics_are_calculated_without_grenade_rating():
         "molotov_damage": 7,
         "molotov_detonations": 1,
         "smoke_detonations": 1,
-        "utility_damage": 49,
+        "raw_utility_event_amount": 49,
+        "unknown_utility_damage": 49,
     }
     assert "flash_assists" not in player.metrics
     assert "grenade_rating" not in player.metrics
@@ -127,7 +128,9 @@ def test_utility_metrics_store_and_update_metric_snapshots(db):
     payload = metric_snapshot_payload(player)
     assert payload["source"] == "utility_metrics"
     assert payload["source_event_set_id"] == "fixture:c05:utility"
-    assert payload["metrics"]["utility_damage"] == 49
+    assert payload["metrics"]["raw_utility_event_amount"] == 49
+    assert "utility_damage" not in payload["metrics"]
+    assert payload["semantic_version"] == "2.0.0"
     assert "grenade_rating" not in payload["metrics"]
     assert payload["confidence_baseline"]["source"] == UTILITY_METRICS_VERSION
     assert payload["confidence_baseline"]["metrics"]["grenade_rating"]["level"] == "unavailable"

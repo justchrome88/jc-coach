@@ -15,6 +15,12 @@ SCHEMA = ROOT / "docs/metrics/registry/metric-registry.schema.json"
 CATALOG = ROOT / "docs/metrics/generated/METRIC_CATALOG.md"
 GROUND_TRUTH = {"verified", "partially_verified", "disputed", "unknown", "not_applicable"}
 STATUSES = {"active", "experimental", "deprecated", "blocked"}
+CLASSIFICATIONS = {
+    "validated_candidate", "confirmed_defect", "semantic_difference",
+    "disputed_missing_evidence", "experimental", "deprecated",
+}
+VALIDATION_STATUSES = {"validated", "quarantined", "rejected", "unavailable"}
+CONSUMER_POLICIES = {"trusted", "label_semantic_difference", "unavailable", "forbidden"}
 
 
 def validate_registry(registry: dict[str, Any], schema: dict[str, Any]) -> list[str]:
@@ -45,6 +51,20 @@ def validate_registry(registry: dict[str, Any], schema: dict[str, Any]) -> list[
             errors.append(f"{path}.ground_truth_status is invalid")
         if metric.get("status") not in STATUSES:
             errors.append(f"{path}.status is invalid")
+        if metric.get("classification") not in CLASSIFICATIONS:
+            errors.append(f"{path}.classification is invalid")
+        if metric.get("validation_status") not in VALIDATION_STATUSES:
+            errors.append(f"{path}.validation_status is invalid")
+        if metric.get("consumer_policy") not in CONSUMER_POLICIES:
+            errors.append(f"{path}.consumer_policy is invalid")
+        if not isinstance(metric.get("critical"), bool):
+            errors.append(f"{path}.critical must be boolean")
+        if metric.get("critical") and metric.get("validation_status") not in VALIDATION_STATUSES:
+            errors.append(f"{path} critical metric must be validated or quarantined")
+        if metric.get("critical") and "owner_user_id" not in metric.get("identity_keys", []):
+            errors.append(f"{path} critical metric identity must include owner_user_id")
+        if metric.get("critical") and "semantic_version" not in metric.get("identity_keys", []):
+            errors.append(f"{path} critical metric identity must include semantic_version")
         if not re.fullmatch(r"\d+\.\d+\.\d+", str(metric.get("semantic_version") or "")):
             errors.append(f"{path}.semantic_version must be x.y.z")
         for field, definition in schema["properties"]["metrics"]["items"]["properties"].items():
@@ -61,8 +81,8 @@ def render_catalog(registry: dict[str, Any]) -> str:
         "",
         f"Registry version: `{registry['registry_version']}`. Metrics: `{len(registry['metrics'])}`.",
         "",
-        "| Metric | Domain / scope | Unit | Semantics | Truth | Status | Persistence | Consumers |",
-        "|---|---|---|---|---|---|---|---|",
+        "| Metric | Domain / scope | Unit | Semantics | Truth | Validation | Status | Persistence | Consumers |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     for metric in sorted(registry["metrics"], key=lambda item: (item["domain"], item["metric_key"])):
         semantics = metric["numerator_definition"] or "source value / not applicable"
@@ -76,6 +96,7 @@ def render_catalog(registry: dict[str, Any]) -> str:
             metric["unit"],
             semantics,
             metric["ground_truth_status"],
+            f"{metric['validation_status']} / {metric['consumer_policy']}",
             f"{metric['status']} (`{metric['semantic_version']}`)",
             persistence,
             consumers,

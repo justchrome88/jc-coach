@@ -6,11 +6,18 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.db.models import MetricSnapshot
+from app.db.models import Match, MetricSnapshot
+from app.services.match_phase import (
+    accepted_events,
+    accepted_match_phase,
+    kast_round_ledger,
+    player_participation_rounds,
+)
 from app.services.metric_confidence import confidence_record
-from app.services.metric_snapshots import upsert_metric_snapshot
+from app.services.metric_snapshots import deterministic_input_hash, upsert_metric_snapshot
 
-CORE_COMBAT_METRICS_VERSION = "core-combat-metrics-v1"
+CORE_COMBAT_METRICS_VERSION = "core-combat-metrics-v2"
+CORE_COMBAT_SEMANTIC_VERSION = "2.0.0"
 CORE_COMBAT_SNAPSHOT_SOURCE = "core_combat_metrics"
 
 
@@ -31,34 +38,48 @@ def calculate_core_combat_metrics(
     players: Sequence[Mapping[str, Any]] | None = None,
 ) -> list[CoreCombatMetricsResult]:
     events = [dict(event) for event in normalized_events]
+    phase = accepted_match_phase(events)
+    phase_events = accepted_events(events, phase)
     known_players = _known_players(events, players=players)
     if not known_players:
         return []
 
-    round_numbers = _round_numbers(events)
+    round_numbers = set(phase.round_numbers)
     inferred_rounds = False
-    if not round_numbers:
-        round_numbers = _combat_round_numbers(events)
-        inferred_rounds = bool(round_numbers)
 
-    kill_events = [event for event in events if event.get("event_type") == "player_kill"]
-    death_events = [event for event in events if event.get("event_type") == "player_death"]
+    kill_events = [event for event in phase_events if event.get("event_type") == "player_kill"]
+    death_events = [event for event in phase_events if event.get("event_type") == "player_death"]
     kill_source_events = kill_events if kill_events else death_events
     kills_from_deaths = bool(death_events and not kill_events)
-    damage_events = [event for event in events if event.get("event_type") == "damage"]
-    survival_events = [event for event in events if event.get("event_type") == "round_survival"]
-    opening_duel_events = [event for event in events if event.get("event_type") == "opening_duel"]
-    traded_death_events = [event for event in events if event.get("event_type") == "traded_death"]
+    damage_events = [event for event in phase_events if event.get("event_type") == "damage"]
+    survival_events = [event for event in phase_events if event.get("event_type") == "round_survival"]
+    opening_duel_events = [event for event in phase_events if event.get("event_type") == "opening_duel"]
+    traded_death_events = [event for event in phase_events if event.get("event_type") == "traded_death"]
     assists_available = _assists_available(kill_source_events)
+    inferred_opponents = _inferred_opponents(kill_source_events)
 
     results = []
     for player_key, player in sorted(known_players.items()):
         metrics: dict[str, Any] = {}
         confidence: dict[str, dict[str, Any]] = {}
         caveats: list[str] = []
+        validation: dict[str, dict[str, Any]] = {}
+        player_kill_events: list[Mapping[str, Any]] = []
 
         if kill_source_events:
-            metrics["kills"] = sum(1 for event in kill_source_events if _player_key(event.get("actor")) == player_key)
+            player_kill_events = [
+                event
+                for event in kill_source_events
+                if _player_key(event.get("actor")) == player_key
+                and _player_key(event.get("victim")) not in {None, player_key}
+                and _relation(event.get("actor"), event.get("victim"), player_key, inferred_opponents)
+                != "team"
+            ]
+            kills_relation_proven = all(
+                _relation(event.get("actor"), event.get("victim"), player_key, inferred_opponents) == "enemy"
+                for event in player_kill_events
+            )
+            metrics["kills"] = len(player_kill_events)
             confidence["kills"] = _confidence(
                 "kills",
                 "medium" if kills_from_deaths else _event_confidence(kill_source_events, "actor", player_key),
@@ -71,6 +92,14 @@ def calculate_core_combat_metrics(
             )
             if kills_from_deaths:
                 caveats.append("Kills derived from player_death actor because player_kill events were unavailable.")
+            validation["kills"] = {
+                "status": "validated" if kills_relation_proven else "quarantined",
+                "reason_codes": [
+                    "accepted_phase_enemy_kill_events"
+                    if kills_relation_proven
+                    else "victim_team_relation_unproven"
+                ],
+            }
         else:
             caveats.append("Kill events unavailable; kills are omitted instead of filled as zero.")
 
@@ -82,17 +111,36 @@ def calculate_core_combat_metrics(
                 death_events,
                 reasons=["Deaths are counted from supported death events."],
             )
+            validation["deaths"] = {"status": "validated", "reason_codes": ["accepted_phase_victim_events"]}
         else:
             caveats.append("Death events unavailable; deaths are omitted instead of filled as zero.")
 
         if assists_available:
-            metrics["assists"] = sum(1 for event in kill_source_events if _player_key(_assister(event)) == player_key)
+            player_assists = [event for event in kill_source_events if _player_key(_assister(event)) == player_key]
+            assists_relation_proven = all(
+                _relation(_assister(event), event.get("victim"), player_key, inferred_opponents) == "enemy"
+                for event in player_assists
+            )
+            flash_assists = sum(1 for event in player_assists if _is_flash_assist(event))
+            metrics["ordinary_assists"] = len(player_assists) - flash_assists
+            metrics["flash_assists"] = flash_assists
+            metrics["combined_assists"] = len(player_assists)
+            metrics["assists"] = len(player_assists)
             confidence["assists"] = _confidence(
                 "assists",
                 _event_confidence(kill_source_events, "assister", player_key),
                 kill_source_events,
                 reasons=["Assists depend on source assister fields."],
             )
+            for key in ("ordinary_assists", "flash_assists", "combined_assists", "assists"):
+                validation[key] = {
+                    "status": "validated" if assists_relation_proven else "quarantined",
+                    "reason_codes": [
+                        "accepted_phase_assister_events"
+                        if assists_relation_proven
+                        else "assisted_victim_team_relation_unproven"
+                    ],
+                }
         else:
             caveats.append("Assist source unavailable; assists are omitted instead of filled as zero.")
 
@@ -113,13 +161,36 @@ def calculate_core_combat_metrics(
                     "Damage events for this player omitted health damage; damage and ADR-like metrics are omitted."
                 )
             else:
-                metrics["damage"] = sum(damage_values)
+                damage_classes: dict[str, int] = {}
+                for event in player_damage_events:
+                    value = _damage_health(event)
+                    if value is None:
+                        continue
+                    relation = _damage_relation(event, player_key)
+                    key = {
+                        "enemy": "raw_attempted_enemy_damage",
+                        "team": "team_damage",
+                        "self_world": "self_world_damage",
+                        "unknown": "unclassified_raw_attempted_damage",
+                    }[relation]
+                    damage_classes[key] = damage_classes.get(key, 0) + value
+                metrics.update(damage_classes)
+                for key in damage_classes:
+                    validation[key] = {
+                        "status": "quarantined" if key == "unclassified_raw_attempted_damage" else "validated",
+                        "reason_codes": [
+                            "victim_relation_missing"
+                            if key == "unclassified_raw_attempted_damage"
+                            else "explicit_victim_relation"
+                        ],
+                    }
             if missing_damage:
                 caveats.append("Some damage events omitted health damage; those rows were ignored.")
         else:
             caveats.append("Damage events unavailable; damage and ADR-like metrics are omitted.")
 
-        player_rounds = _player_rounds(player_key, survival_events, round_numbers)
+        player_rounds, participation_complete = player_participation_rounds(player_key, events, phase)
+        kast_ledger, kast_status = kast_round_ledger(player_key, events, phase)
         if player_rounds:
             metrics["rounds"] = len(player_rounds)
             confidence["rounds"] = _confidence(
@@ -136,19 +207,27 @@ def calculate_core_combat_metrics(
                 caveats.append(
                     "Round count inferred from combat event round numbers because round events were unavailable."
                 )
+            validation["rounds"] = {
+                "status": "validated" if participation_complete else "quarantined",
+                "reason_codes": [phase.participation_reason],
+            }
         else:
             caveats.append("Round events unavailable for this player; round count and ADR-like metrics are omitted.")
 
-        if "damage" in metrics and metrics.get("rounds"):
-            metrics["adr"] = round(metrics["damage"] / metrics["rounds"], 3)
-            confidence["adr"] = _confidence(
-                "adr",
-                "medium"
-                if confidence["damage"]["level"] != "low" and confidence["rounds"]["level"] != "low"
-                else "low",
-                player_damage_events,
-                reasons=["ADR is damage divided by available round count."],
+        validation["adr"] = {
+            "status": "quarantined",
+            "reason_codes": ["effective_enemy_damage_unproven", "participation_incomplete"],
+        }
+        validation["kast"] = {
+            "status": kast_status,
+            "reason_codes": ["trade_evidence_incomplete", "participation_incomplete"],
+        }
+        if kast_status == "validated" and kast_ledger:
+            metrics["kast"] = round(
+                sum(1 for row in kast_ledger if row["kast"] is True) / len(kast_ledger) * 100,
+                3,
             )
+            validation["kast"]["reason_codes"] = ["complete_per_round_kast_ledger"]
 
         player_survival = [event for event in survival_events if _player_key(event.get("actor")) == player_key]
         survival_values = [event.get("context", {}).get("survived") for event in player_survival]
@@ -162,6 +241,10 @@ def calculate_core_combat_metrics(
                 player_survival,
                 reasons=["Survival rate is calculated from round_survival facts."],
             )
+            validation["survived_rounds"] = validation["survival_rate"] = {
+                "status": "quarantined",
+                "reason_codes": ["participation_incomplete"],
+            }
         else:
             caveats.append("Round survival events unavailable or incomplete; survival metrics are omitted.")
 
@@ -180,6 +263,31 @@ def calculate_core_combat_metrics(
             player_key=player_key,
             traded_death_events=traded_death_events,
         )
+
+        accepted_kills = metrics.get("kills")
+        accepted_deaths = metrics.get("deaths")
+        if isinstance(accepted_kills, int) and isinstance(accepted_deaths, int):
+            metrics["kd_ratio"] = None if accepted_deaths == 0 else round(accepted_kills / accepted_deaths, 3)
+            validation["kd_ratio"] = {
+                "status": validation["kills"]["status"],
+                "reason_codes": ["derived_from_same_version_accepted_counts", "zero_deaths_is_null"],
+            }
+        headshot_kills = sum(
+            1
+            for event in player_kill_events
+            if _is_headshot(event)
+        )
+        if kill_source_events:
+            metrics["headshot_kills"] = headshot_kills
+            metrics["headshot_kill_rate"] = (
+                round(headshot_kills / accepted_kills * 100, 3)
+                if isinstance(accepted_kills, int) and accepted_kills
+                else 0.0
+            )
+            validation["headshot_kills"] = validation["headshot_kill_rate"] = {
+                "status": validation["kills"]["status"],
+                "reason_codes": ["headshot_kills_divided_by_accepted_kills"],
+            }
 
         results.append(
             CoreCombatMetricsResult(
@@ -207,6 +315,14 @@ def calculate_core_combat_metrics(
                     "schema_version": CORE_COMBAT_METRICS_VERSION,
                     "input_event_schema": _input_schema(events),
                     "event_count": len(events),
+                    "input_event_hash": deterministic_input_hash(events),
+                    "accepted_phase": {
+                        "round_numbers": list(phase.round_numbers),
+                        "final_round_end_tick": phase.final_round_end_tick,
+                        "participation_complete": phase.participation_complete,
+                    },
+                    "metric_validation": validation,
+                    "kast_round_ledger": kast_ledger,
                 },
             )
         )
@@ -224,6 +340,8 @@ def calculate_and_store_core_combat_metrics(
     source_event_set_id: str | None = None,
 ) -> list[MetricSnapshot]:
     results = calculate_core_combat_metrics(normalized_events, players=players)
+    match = db.get(Match, match_id)
+    validated_snapshot = bool(match and match.user_id is not None and source_event_set_id)
     return [
         upsert_metric_snapshot(
             db,
@@ -238,6 +356,12 @@ def calculate_and_store_core_combat_metrics(
             confidence_baseline=result.confidence_baseline,
             caveats=result.caveats,
             metadata=result.metadata,
+            owner_user_id=match.user_id if match else None,
+            metric_domain="core_combat",
+            semantic_version=CORE_COMBAT_SEMANTIC_VERSION,
+            validation_status="validated" if validated_snapshot else "legacy_unverified",
+            implementation_version=CORE_COMBAT_METRICS_VERSION,
+            input_event_hash=result.metadata.get("input_event_hash"),
         )
         for result in results
     ]
@@ -441,6 +565,24 @@ def _assister(event: Mapping[str, Any]) -> Mapping[str, Any] | None:
     return {"name": name, "steamid": steamid}
 
 
+def _is_flash_assist(event: Mapping[str, Any]) -> bool:
+    context = event.get("context")
+    payload = event.get("payload")
+    value = context.get("assistedflash") if isinstance(context, Mapping) else None
+    if value is None and isinstance(payload, Mapping):
+        value = payload.get("assistedflash")
+    return value is True or value == 1 or str(value).lower() == "true"
+
+
+def _is_headshot(event: Mapping[str, Any]) -> bool:
+    context = event.get("context")
+    payload = event.get("payload")
+    value = context.get("headshot") if isinstance(context, Mapping) else None
+    if value is None and isinstance(payload, Mapping):
+        value = payload.get("headshot")
+    return value is True or value == 1 or str(value).lower() == "true"
+
+
 def _damage_health(event: Mapping[str, Any]) -> int | None:
     context = event.get("context")
     value = context.get("damage_health") if isinstance(context, Mapping) else None
@@ -458,6 +600,80 @@ def _damage_health(event: Mapping[str, Any]) -> int | None:
     except (TypeError, ValueError):
         return None
     return max(damage, 0)
+
+
+def _damage_relation(event: Mapping[str, Any], player_key: str) -> str:
+    victim = event.get("victim")
+    victim_key = _player_key(victim)
+    if victim_key is None or victim_key == player_key:
+        return "self_world"
+    actor = event.get("actor")
+    actor_team = _player_team(actor)
+    victim_team = _player_team(victim)
+    if actor_team and victim_team:
+        return "team" if actor_team == victim_team else "enemy"
+    return "unknown"
+
+
+def _player_team(player: Any) -> str | None:
+    if not isinstance(player, Mapping):
+        return None
+    value = player.get("team") or player.get("side") or player.get("team_name")
+    text = str(value).strip().lower() if value is not None else ""
+    return text or None
+
+
+def _relation(
+    actor: Any,
+    victim: Any,
+    actor_key: str,
+    inferred_opponents: Mapping[str, set[str]],
+) -> str:
+    victim_key = _player_key(victim)
+    if victim_key is None or victim_key == actor_key:
+        return "self_world"
+    actor_team = _player_team(actor)
+    victim_team = _player_team(victim)
+    if actor_team and victim_team:
+        return "team" if actor_team == victim_team else "enemy"
+    if victim_key in inferred_opponents.get(actor_key, set()):
+        return "enemy"
+    return "unknown"
+
+
+def _inferred_opponents(events: Sequence[Mapping[str, Any]]) -> dict[str, set[str]]:
+    graph: dict[str, set[str]] = {}
+    for event in events:
+        actor = _player_key(event.get("actor"))
+        victim = _player_key(event.get("victim"))
+        if actor and victim and actor != victim:
+            graph.setdefault(actor, set()).add(victim)
+            graph.setdefault(victim, set()).add(actor)
+    if len(graph) != 10:
+        return {}
+    colors: dict[str, int] = {}
+    for start in graph:
+        if start in colors:
+            continue
+        colors[start] = 0
+        pending = [start]
+        while pending:
+            player = pending.pop()
+            for opponent in graph[player]:
+                expected = 1 - colors[player]
+                if opponent in colors and colors[opponent] != expected:
+                    return {}
+                if opponent not in colors:
+                    colors[opponent] = expected
+                    pending.append(opponent)
+    if list(colors.values()).count(0) != 5 or list(colors.values()).count(1) != 5:
+        return {}
+    teams = ({player for player, color in colors.items() if color == value} for value in (0, 1))
+    first, second = teams
+    return {
+        player: (second if player in first else first)
+        for player in graph
+    }
 
 
 def _trade_status(event: Mapping[str, Any]) -> str | None:

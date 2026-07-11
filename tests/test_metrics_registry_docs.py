@@ -18,5 +18,39 @@ def test_disputed_metrics_do_not_claim_verified_ground_truth() -> None:
     registry = json.loads((ROOT / "docs/metrics/registry/metrics.json").read_text())
     by_key = {metric["metric_key"]: metric for metric in registry["metrics"]}
 
-    for key in ("kills", "deaths", "kd_ratio", "damage", "adr", "rounds", "kast", "survival_rate"):
+    for key in ("damage", "adr", "rounds", "kast", "survival_rate"):
         assert by_key[key]["ground_truth_status"] == "disputed"
+
+    for key in ("kills", "deaths", "kd_ratio", "ordinary_assists", "flash_assists", "combined_assists"):
+        assert by_key[key]["validation_status"] == "validated"
+
+
+def test_every_critical_metric_has_explicit_terminal_validation_and_identity() -> None:
+    registry = json.loads((ROOT / "docs/metrics/registry/metrics.json").read_text())
+    critical = [metric for metric in registry["metrics"] if metric["critical"]]
+
+    assert critical
+    assert all(
+        metric["validation_status"] in {"validated", "quarantined", "rejected", "unavailable"}
+        for metric in critical
+    )
+    assert all("owner_user_id" in metric["identity_keys"] for metric in critical)
+    assert all("semantic_version" in metric["identity_keys"] for metric in critical)
+    assert not any(
+        metric["ground_truth_status"] == "unknown" and metric["consumer_policy"] == "trusted"
+        for metric in critical
+    )
+
+
+def test_registry_implementation_paths_exist_and_deprecated_aliases_fail_closed() -> None:
+    registry = json.loads((ROOT / "docs/metrics/registry/metrics.json").read_text())
+    by_key = {metric["metric_key"]: metric for metric in registry["metrics"]}
+    for metric in registry["metrics"]:
+        for entrypoint in metric["implementation_entrypoints"]:
+            path = entrypoint.split("::", 1)[0]
+            assert (ROOT / path).exists(), f"missing implementation path for {metric['metric_key']}: {path}"
+
+    assert by_key["damage"]["validation_status"] == "rejected"
+    assert by_key["headshot_rate"]["validation_status"] == "rejected"
+    assert by_key["damage"]["consumer_policy"] == "forbidden"
+    assert by_key["headshot_rate"]["consumer_policy"] == "forbidden"

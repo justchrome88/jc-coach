@@ -46,32 +46,47 @@ def test_core_combat_metrics_are_deterministic_for_fixture_events():
     assert by_player["steam:T1"].metrics == {
         "kills": 1,
         "deaths": 1,
+        "ordinary_assists": 0,
+        "flash_assists": 0,
+        "combined_assists": 0,
         "assists": 0,
-        "damage": 80,
+        "unclassified_raw_attempted_damage": 80,
         "rounds": 2,
-        "adr": 40.0,
         "survived_rounds": 1,
         "survival_rate": 0.5,
+        "kd_ratio": 1.0,
+        "headshot_kills": 0,
+        "headshot_kill_rate": 0.0,
     }
     assert by_player["steam:T2"].metrics == {
         "kills": 0,
         "deaths": 0,
+        "ordinary_assists": 1,
+        "flash_assists": 0,
+        "combined_assists": 1,
         "assists": 1,
-        "damage": 50,
+        "unclassified_raw_attempted_damage": 50,
         "rounds": 2,
-        "adr": 25.0,
         "survived_rounds": 2,
         "survival_rate": 1.0,
+        "kd_ratio": None,
+        "headshot_kills": 0,
+        "headshot_kill_rate": 0.0,
     }
     assert by_player["steam:CT1"].metrics == {
         "kills": 1,
         "deaths": 1,
+        "ordinary_assists": 0,
+        "flash_assists": 0,
+        "combined_assists": 0,
         "assists": 0,
-        "damage": 100,
+        "unclassified_raw_attempted_damage": 100,
         "rounds": 2,
-        "adr": 50.0,
         "survived_rounds": 1,
         "survival_rate": 0.5,
+        "kd_ratio": 1.0,
+        "headshot_kills": 0,
+        "headshot_kill_rate": 0.0,
     }
     assert by_player["steam:T1"].confidence_baseline["source"] == CORE_COMBAT_METRICS_VERSION
     kills_confidence = by_player["steam:T1"].confidence_baseline["metrics"]["kills"]
@@ -226,7 +241,9 @@ def test_core_combat_metrics_store_and_read_through_metric_snapshots(db):
     snapshot_payload = metric_snapshot_payload(alpha)
     assert snapshot_payload["source"] == "core_combat_metrics"
     assert snapshot_payload["source_event_set_id"] == "fixture:d02"
-    assert snapshot_payload["metrics"]["adr"] == 40.0
+    assert snapshot_payload["metrics"]["unclassified_raw_attempted_damage"] == 80
+    assert "adr" not in snapshot_payload["metrics"]
+    assert snapshot_payload["semantic_version"] == "2.0.0"
     assert snapshot_payload["confidence_baseline"]["source"] == CORE_COMBAT_METRICS_VERSION
     assert snapshot_payload["metadata"]["input_event_schema"] == "normalized-parser-events-v1"
 

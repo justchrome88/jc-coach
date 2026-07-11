@@ -4,13 +4,21 @@
       "id": "fh090_fh095_valid_advice_confidence_evidence_link",
       "expected_issue_codes": [],
       "evidence_payload": {
-        "available_metric_ids": ["entry_deaths"],
-        "metric_confidence": {"entry_deaths": "medium"},
+        "available_metric_ids": [
+          "entry_deaths"
+        ],
+        "metric_confidence": {
+          "entry_deaths": "medium"
+        },
         "required_evidence_links": [
           {
             "problem": "survival_opening_deaths",
             "metric_id": "entry_deaths",
-            "match_ids": [101, 102, 103],
+            "match_ids": [
+              101,
+              102,
+              103
+            ],
             "recommendation_id": "rec-survival-1"
           }
         ]
@@ -26,13 +34,19 @@
                 "value": 7,
                 "metric_confidence": "medium",
                 "problem": "survival_opening_deaths",
-                "match_ids": [101, 102, 103],
+                "match_ids": [
+                  101,
+                  102,
+                  103
+                ],
                 "recommendation_id": "rec-survival-1",
                 "description": "Entry deaths are elevated in the supplied match window."
               }
             ],
             "confidence": "medium",
-            "caveats": ["Opening duel detection depends on parser/source order."],
+            "caveats": [
+              "Opening duel detection depends on parser/source order."
+            ],
             "recommended_focus": "Use bounded review focus on first-contact spacing for the next five matches."
           }
         ],
@@ -41,9 +55,13 @@
             "category": "survival",
             "severity": "medium",
             "claim": "Entry deaths are elevated in the supplied match window.",
-            "evidence_metric_ids": ["entry_deaths"],
+            "evidence_metric_ids": [
+              "entry_deaths"
+            ],
             "confidence": "medium",
-            "caveats": ["Opening duel detection depends on parser/source order."]
+            "caveats": [
+              "Opening duel detection depends on parser/source order."
+            ]
           }
         ],
         "recommendations": [
@@ -51,21 +69,33 @@
             "category": "survival",
             "action": "Use bounded review focus on first-contact spacing for the next five matches.",
             "rationale": "The supplied entry-death evidence supports a medium-confidence survival review.",
-            "target_metric_ids": ["entry_deaths"],
+            "target_metric_ids": [
+              "entry_deaths"
+            ],
             "confidence": "medium",
-            "caveats": ["Review again after more exact-date demo evidence."]
+            "caveats": [
+              "Review again after more exact-date demo evidence."
+            ]
           }
         ],
-        "warnings": ["Do not infer exact playlist or trade quality from this evidence."],
+        "warnings": [
+          "Do not infer exact playlist or trade quality from this evidence."
+        ],
         "evidence": [
           {
             "metric_id": "entry_deaths",
             "value": 7,
             "metric_confidence": "medium",
             "problem": "survival_opening_deaths",
-            "match_ids": [101, 102, 103],
+            "match_ids": [
+              101,
+              102,
+              103
+            ],
             "recommendation_id": "rec-survival-1",
-            "caveats": ["Parser/source order caveat applies."]
+            "caveats": [
+              "Parser/source order caveat applies."
+            ]
           }
         ],
         "confidence": "medium"
@@ -73,10 +103,17 @@
     },
     {
       "id": "fh091_overclaim_unsupported_hard_claim",
-      "expected_issue_codes": ["unsupported_hard_claim", "advice_confidence_overstated"],
+      "expected_issue_codes": [
+        "unsupported_hard_claim",
+        "advice_confidence_overstated"
+      ],
       "evidence_payload": {
-        "available_metric_ids": ["entry_deaths"],
-        "metric_confidence": {"entry_deaths": "low"},
+        "available_metric_ids": [
+          "entry_deaths"
+        ],
+        "metric_confidence": {
+          "entry_deaths": "low"
+        },
         "required_evidence_links": [
           {
             "problem": "possible_survival_pattern",
@@ -93,9 +130,13 @@
             "category": "survival",
             "severity": "high",
             "claim": "Entry deaths prove the main issue and must drive the plan.",
-            "evidence_metric_ids": ["entry_deaths"],
+            "evidence_metric_ids": [
+              "entry_deaths"
+            ],
             "confidence": "high",
-            "caveats": ["Small sample."]
+            "caveats": [
+              "Small sample."
+            ]
           }
         ],
         "recommendations": [
@@ -103,12 +144,18 @@
             "category": "survival",
             "action": "Must stop taking opening duels immediately.",
             "rationale": "This is a hard recommendation from the current sample.",
-            "target_metric_ids": ["entry_deaths"],
+            "target_metric_ids": [
+              "entry_deaths"
+            ],
             "confidence": "high",
-            "caveats": ["Small sample."]
+            "caveats": [
+              "Small sample."
+            ]
           }
         ],
-        "warnings": ["Small sample."],
+        "warnings": [
+          "Small sample."
+        ],
         "evidence": [
           {
             "metric_id": "entry_deaths",
@@ -117,7 +164,9 @@
             "problem": "possible_survival_pattern",
             "sample_count": 2,
             "recommendation_id": "rec-survival-review",
-            "caveats": ["Only two matches."]
+            "caveats": [
+              "Only two matches."
+            ]
           }
         ],
         "confidence": "high"
@@ -125,10 +174,16 @@
     },
     {
       "id": "fh092_hallucinated_metric_absent_from_payload",
-      "expected_issue_codes": ["metric_not_in_supplied_evidence"],
+      "expected_issue_codes": [
+        "metric_not_in_supplied_evidence"
+      ],
       "evidence_payload": {
-        "available_metric_ids": ["entry_deaths"],
-        "metric_confidence": {"entry_deaths": "medium"}
+        "available_metric_ids": [
+          "entry_deaths"
+        ],
+        "metric_confidence": {
+          "entry_deaths": "medium"
+        }
       },
       "output": {
         "summary": "ADR is discussed even though it was not supplied.",
@@ -137,9 +192,13 @@
             "category": "damage",
             "severity": "medium",
             "claim": "ADR appears low in the evidence.",
-            "evidence_metric_ids": ["adr"],
+            "evidence_metric_ids": [
+              "adr"
+            ],
             "confidence": "medium",
-            "caveats": ["Would need supplied ADR evidence."]
+            "caveats": [
+              "Would need supplied ADR evidence."
+            ]
           }
         ],
         "recommendations": [
@@ -147,18 +206,26 @@
             "category": "damage",
             "action": "Review damage output.",
             "rationale": "ADR was treated as available.",
-            "target_metric_ids": ["adr"],
+            "target_metric_ids": [
+              "adr"
+            ],
             "confidence": "medium",
-            "caveats": ["Would need supplied ADR evidence."]
+            "caveats": [
+              "Would need supplied ADR evidence."
+            ]
           }
         ],
-        "warnings": ["ADR was not in the payload."],
+        "warnings": [
+          "ADR was not in the payload."
+        ],
         "evidence": [
           {
             "metric_id": "adr",
             "value": 62,
             "metric_confidence": "medium",
-            "caveats": ["Not supplied by the fixture."]
+            "caveats": [
+              "Not supplied by the fixture."
+            ]
           }
         ],
         "confidence": "medium"
@@ -166,10 +233,17 @@
     },
     {
       "id": "fh093_weak_metric_missing_caveat",
-      "expected_issue_codes": ["missing_weak_metric_caveat", "schema_metric_requires_caveat"],
+      "expected_issue_codes": [
+        "missing_weak_metric_caveat",
+        "schema_suppressed_metric_claim"
+      ],
       "evidence_payload": {
-        "available_metric_ids": ["kast"],
-        "metric_confidence": {"kast": "low"}
+        "available_metric_ids": [
+          "kast"
+        ],
+        "metric_confidence": {
+          "kast": "low"
+        }
       },
       "output": {
         "summary": "KAST context is used without a caveat.",
@@ -178,19 +252,25 @@
             "category": "survival",
             "severity": "medium",
             "claim": "KAST is below target.",
-            "evidence_metric_ids": ["kast"],
+            "evidence_metric_ids": [
+              "kast"
+            ],
             "confidence": "low",
             "caveats": []
           }
         ],
         "recommendations": [],
-        "warnings": ["KAST is approximate."],
+        "warnings": [
+          "KAST is approximate."
+        ],
         "evidence": [
           {
             "metric_id": "kast",
             "value": 67,
             "metric_confidence": "low",
-            "caveats": ["Trade component is approximate."]
+            "caveats": [
+              "Trade component is approximate."
+            ]
           }
         ],
         "confidence": "low"
@@ -198,7 +278,11 @@
     },
     {
       "id": "fh094_no_data_fallback_blocks_hard_advice",
-      "expected_issue_codes": ["no_data_confidence_not_low", "no_data_hard_advice", "no_data_gap_warning_missing"],
+      "expected_issue_codes": [
+        "no_data_confidence_not_low",
+        "no_data_hard_advice",
+        "no_data_gap_warning_missing"
+      ],
       "evidence_payload": {
         "no_data": true,
         "available_metric_ids": [],
@@ -211,7 +295,9 @@
             "category": "survival",
             "severity": "medium",
             "claim": "Survival is the main issue.",
-            "evidence_metric_ids": ["entry_deaths"],
+            "evidence_metric_ids": [
+              "entry_deaths"
+            ],
             "confidence": "medium",
             "caveats": []
           }
@@ -221,27 +307,42 @@
             "category": "survival",
             "action": "Stop taking first fights.",
             "rationale": "The report assumes an opening-duel problem.",
-            "target_metric_ids": ["entry_deaths"],
+            "target_metric_ids": [
+              "entry_deaths"
+            ],
             "confidence": "medium",
             "caveats": []
           }
         ],
-        "warnings": ["Ready to coach."],
+        "warnings": [
+          "Ready to coach."
+        ],
         "evidence": [],
         "confidence": "medium"
       }
     },
     {
       "id": "fh095_advice_confidence_missing_metric_confidence_and_link",
-      "expected_issue_codes": ["missing_metric_confidence", "missing_evidence_link"],
+      "expected_issue_codes": [
+        "missing_metric_confidence",
+        "missing_evidence_link"
+      ],
       "evidence_payload": {
-        "available_metric_ids": ["entry_deaths"],
-        "metric_confidence": {"entry_deaths": "medium"},
+        "available_metric_ids": [
+          "entry_deaths"
+        ],
+        "metric_confidence": {
+          "entry_deaths": "medium"
+        },
         "required_evidence_links": [
           {
             "problem": "survival_opening_deaths",
             "metric_id": "entry_deaths",
-            "match_ids": [201, 202, 203],
+            "match_ids": [
+              201,
+              202,
+              203
+            ],
             "recommendation_id": "rec-survival-1"
           }
         ]
@@ -253,9 +354,13 @@
             "category": "survival",
             "severity": "medium",
             "claim": "Entry deaths are elevated in this window.",
-            "evidence_metric_ids": ["entry_deaths"],
+            "evidence_metric_ids": [
+              "entry_deaths"
+            ],
             "confidence": "medium",
-            "caveats": ["Parser/source order caveat applies."]
+            "caveats": [
+              "Parser/source order caveat applies."
+            ]
           }
         ],
         "recommendations": [
@@ -263,17 +368,25 @@
             "category": "survival",
             "action": "Review first-contact spacing.",
             "rationale": "Entry-death evidence supports a bounded review.",
-            "target_metric_ids": ["entry_deaths"],
+            "target_metric_ids": [
+              "entry_deaths"
+            ],
             "confidence": "medium",
-            "caveats": ["Review after more exact-date demos."]
+            "caveats": [
+              "Review after more exact-date demos."
+            ]
           }
         ],
-        "warnings": ["Evidence link is intentionally incomplete for this negative case."],
+        "warnings": [
+          "Evidence link is intentionally incomplete for this negative case."
+        ],
         "evidence": [
           {
             "metric_id": "entry_deaths",
             "value": 5,
-            "caveats": ["Parser/source order caveat applies."]
+            "caveats": [
+              "Parser/source order caveat applies."
+            ]
           }
         ],
         "confidence": "medium"

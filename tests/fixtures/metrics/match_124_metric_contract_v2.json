@@ -1,0 +1,73 @@
+{
+  "fixture_version": "match-124-metric-contract-v2",
+  "demo_identity": {
+    "source_match_id": 123,
+    "demo_match_id": 124,
+    "demo_sha1": "fc3aac7a6176d1ec7b827762803fb4d333ecc6aa",
+    "parser_artifact_id": 91,
+    "parser": "demoparser2 0.41.3",
+    "event_set_id": "parser-artifact:91:events:8285d8fafd78be0f",
+    "owner_user_id": 17,
+    "owner_steam_id": "76561198056634139",
+    "ledger_sha256": "7613ce49785f4e9a28e759117da96fc0249e1e95db3d236797127b7457384fe3"
+  },
+  "phase": {
+    "accepted_round_numbers": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+    "activity_round_numbers": [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+    "quiet_round_numbers": [1, 5, 19],
+    "final_round_end_tick": 114168,
+    "post_match_event": {"round_number": 20, "tick": 115232, "kind": "world_self_death"}
+  },
+  "ledger_rows": [
+    {"r": 0, "k": 0, "d": 1, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 0, "team": 0, "utility_raw": 0},
+    {"r": 1, "k": 0, "d": 0, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 0, "team": 0, "utility_raw": 0},
+    {"r": 2, "k": 0, "d": 1, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 52, "team": 0, "utility_raw": 52},
+    {"r": 3, "k": 0, "d": 1, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 0, "team": 0, "utility_raw": 0},
+    {"r": 4, "k": 1, "d": 0, "oa": 1, "fa": 0, "hs": 1, "enemy_raw": 161, "team": 0, "utility_raw": 0},
+    {"r": 5, "k": 0, "d": 0, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 0, "team": 0, "utility_raw": 0},
+    {"r": 6, "k": 3, "d": 0, "oa": 0, "fa": 0, "hs": 3, "enemy_raw": 396, "team": 0, "utility_raw": 0},
+    {"r": 7, "k": 1, "d": 0, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 118, "team": 0, "utility_raw": 0},
+    {"r": 8, "k": 2, "d": 0, "oa": 0, "fa": 0, "hs": 2, "enemy_raw": 304, "team": 0, "utility_raw": 0},
+    {"r": 9, "k": 0, "d": 1, "oa": 2, "fa": 0, "hs": 0, "enemy_raw": 160, "team": 5, "utility_raw": 94},
+    {"r": 10, "k": 0, "d": 1, "oa": 0, "fa": 1, "hs": 0, "enemy_raw": 52, "team": 0, "utility_raw": 0},
+    {"r": 11, "k": 0, "d": 1, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 25, "team": 0, "utility_raw": 3},
+    {"r": 12, "k": 1, "d": 1, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 107, "team": 0, "utility_raw": 0},
+    {"r": 13, "k": 0, "d": 1, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 0, "team": 0, "utility_raw": 0},
+    {"r": 14, "k": 2, "d": 0, "oa": 0, "fa": 0, "hs": 1, "enemy_raw": 170, "team": 0, "utility_raw": 0},
+    {"r": 15, "k": 0, "d": 1, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 0, "team": 0, "utility_raw": 0},
+    {"r": 16, "k": 4, "d": 0, "oa": 0, "fa": 0, "hs": 1, "enemy_raw": 374, "team": 0, "utility_raw": 0},
+    {"r": 17, "k": 0, "d": 1, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 0, "team": 0, "utility_raw": 0},
+    {"r": 18, "k": 2, "d": 0, "oa": 0, "fa": 0, "hs": 2, "enemy_raw": 246, "team": 0, "utility_raw": 0},
+    {"r": 19, "k": 0, "d": 0, "oa": 0, "fa": 0, "hs": 0, "enemy_raw": 0, "team": 0, "utility_raw": 0}
+  ],
+  "independent_expected": {
+    "rounds": 20,
+    "kills": 16,
+    "deaths": 10,
+    "kd_ratio": 1.6,
+    "ordinary_assists": 3,
+    "flash_assists": 1,
+    "combined_assists": 4,
+    "headshot_kills": 10,
+    "headshot_kill_rate": 62.5,
+    "raw_attempted_enemy_damage": 2165,
+    "team_damage": 5,
+    "raw_utility_event_amount": 149
+  },
+  "semantic_versions": {
+    "core_combat": "2.0.0",
+    "utility": "2.0.0"
+  },
+  "quarantined_metric_keys": [
+    "effective_accepted_enemy_damage",
+    "adr",
+    "kast",
+    "rounds",
+    "survival_rate",
+    "utility_damage"
+  ],
+  "rounding": {
+    "kd_ratio": 3,
+    "headshot_kill_rate_percent": 1
+  }
+}

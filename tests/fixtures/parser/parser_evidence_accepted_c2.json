@@ -50,11 +50,7 @@
     "exact_playlist"
   ],
   "hard_claim_support": {
-    "diagnosis": [
-      "adr"
-    ],
-    "recommendation": [
-      "adr"
-    ]
+    "diagnosis": [],
+    "recommendation": []
   }
 }

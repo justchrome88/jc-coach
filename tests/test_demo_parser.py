@@ -38,12 +38,13 @@ def test_parse_demo_with_fake_demoparser(monkeypatch, tmp_path):
     assert parsed["match"]["deaths"] == 1
     assert parsed["match"]["entry_kills"] == 1
     assert parsed["match"]["entry_deaths"] == 1
-    assert parsed["match"]["adr"] == 33.33
+    assert parsed["match"]["adr"] is None
+    assert parsed["match"]["kast"] is None
     assert parsed["match"]["swing_score"] is not None
     assert parsed["swing_summary"]["formula"] == "jc_swing_v1"
     assert parsed["parser_confidence"] in {"low", "medium", "high"}
     assert parsed["event_counts"]["player_death"] == 3
-    assert parsed["metric_confidence"]["adr"] == "high"
+    assert parsed["metric_confidence"]["adr"] == "unavailable"
     assert parsed["warnings"]
     assert parsed["aim_summary"]["damage_per_death"] == 100
     assert parsed["aim_summary"]["multi_kill_rounds"] == 0

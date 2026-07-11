@@ -18,6 +18,8 @@
           "include_rules", "exclude_rules", "rounding_storage", "rounding_display", "semantic_version",
           "implementation_entrypoints", "persistence_targets", "ui_consumers", "coach_consumers",
           "validation_rules", "ground_truth_status", "status", "last_verified_evidence", "known_discrepancies"
+          , "critical", "classification", "round_phase_boundary", "validation_status",
+          "consumer_policy", "backfill_requirement"
         ],
         "properties": {
           "metric_key": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
@@ -45,6 +47,12 @@
           "status": {"enum": ["active", "experimental", "deprecated", "blocked"]},
           "last_verified_evidence": {"type": "array", "items": {"type": "string"}},
           "known_discrepancies": {"type": "array", "items": {"type": "string"}}
+          ,"critical": {"type": "boolean"},
+          "classification": {"enum": ["validated_candidate", "confirmed_defect", "semantic_difference", "disputed_missing_evidence", "experimental", "deprecated"]},
+          "round_phase_boundary": {"type": "string", "minLength": 1},
+          "validation_status": {"enum": ["validated", "quarantined", "rejected", "unavailable"]},
+          "consumer_policy": {"enum": ["trusted", "label_semantic_difference", "unavailable", "forbidden"]},
+          "backfill_requirement": {"type": "string", "minLength": 1}
         }
       }
     }

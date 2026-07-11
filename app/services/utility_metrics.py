@@ -6,11 +6,12 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.db.models import MetricSnapshot
+from app.db.models import Match, MetricSnapshot
 from app.services.metric_confidence import confidence_record
-from app.services.metric_snapshots import upsert_metric_snapshot
+from app.services.metric_snapshots import deterministic_input_hash, upsert_metric_snapshot
 
-UTILITY_METRICS_VERSION = "utility-metrics-v1"
+UTILITY_METRICS_VERSION = "utility-metrics-v2"
+UTILITY_SEMANTIC_VERSION = "2.0.0"
 UTILITY_SNAPSHOT_SOURCE = "utility_metrics"
 
 _FLASH_TYPES = {"flashbang"}
@@ -52,6 +53,7 @@ def calculate_utility_metrics(
         metrics: dict[str, Any] = {}
         confidence: dict[str, dict[str, Any]] = {}
         caveats = _event_caveats(data_gap_events)
+        validation: dict[str, dict[str, Any]] = {}
 
         player_damage_events = [
             event for event in utility_damage_events if _player_key(event.get("actor")) == player_key
@@ -61,7 +63,28 @@ def calculate_utility_metrics(
             by_type: dict[str, int] = {}
             for fact in damage_facts:
                 by_type[fact["utility_type"]] = by_type.get(fact["utility_type"], 0) + fact["damage"]
-            metrics["utility_damage"] = sum(by_type.values())
+            metrics["raw_utility_event_amount"] = sum(by_type.values())
+            validation["raw_utility_event_amount"] = {
+                "status": "validated",
+                "reason_codes": ["raw_positive_deduplicated_utility_events"],
+            }
+            relation_totals: dict[str, int] = {}
+            for fact in damage_facts:
+                relation = str(fact["relation"])
+                relation_totals[relation] = relation_totals.get(relation, 0) + int(fact["damage"])
+            for relation, value in relation_totals.items():
+                key = f"{relation}_utility_damage"
+                metrics[key] = value
+                validation[key] = {
+                    "status": "validated" if relation != "unknown" else "quarantined",
+                    "reason_codes": [
+                        "explicit_victim_relation" if relation != "unknown" else "victim_relation_missing"
+                    ],
+                }
+            validation["utility_damage"] = {
+                "status": "quarantined",
+                "reason_codes": ["legacy_ambiguous_enemy_team_semantics"],
+            }
             confidence["utility_damage"] = _confidence(
                 "utility_damage",
                 player_damage_events,
@@ -70,6 +93,10 @@ def calculate_utility_metrics(
             )
             if by_type.get("hegrenade") is not None:
                 metrics["he_damage"] = by_type["hegrenade"]
+                validation["he_damage"] = {
+                    "status": "quarantined",
+                    "reason_codes": ["legacy_ambiguous_enemy_team_semantics"],
+                }
                 confidence["he_damage"] = _confidence(
                     "he_damage",
                     [event for event in player_damage_events if _utility_type(event) == "hegrenade"],
@@ -79,6 +106,10 @@ def calculate_utility_metrics(
             molotov_damage = sum(value for utility_type, value in by_type.items() if utility_type in _MOLOTOV_TYPES)
             if molotov_damage:
                 metrics["molotov_damage"] = molotov_damage
+                validation["molotov_damage"] = {
+                    "status": "quarantined",
+                    "reason_codes": ["legacy_ambiguous_enemy_team_semantics"],
+                }
                 confidence["molotov_damage"] = _confidence(
                     "molotov_damage",
                     [event for event in player_damage_events if _utility_type(event) in _MOLOTOV_TYPES],
@@ -181,6 +212,8 @@ def calculate_utility_metrics(
                     "schema_version": UTILITY_METRICS_VERSION,
                     "input_event_schema": _input_schema(events),
                     "event_count": len(events),
+                    "input_event_hash": deterministic_input_hash(events),
+                    "metric_validation": validation,
                 },
             )
         )
@@ -198,6 +231,8 @@ def calculate_and_store_utility_metrics(
     source_event_set_id: str | None = None,
 ) -> list[MetricSnapshot]:
     results = calculate_utility_metrics(normalized_events, players=players)
+    match = db.get(Match, match_id)
+    validated_snapshot = bool(match and match.user_id is not None and source_event_set_id)
     return [
         upsert_metric_snapshot(
             db,
@@ -212,6 +247,12 @@ def calculate_and_store_utility_metrics(
             confidence_baseline=result.confidence_baseline,
             caveats=result.caveats,
             metadata=result.metadata,
+            owner_user_id=match.user_id if match else None,
+            metric_domain="utility",
+            semantic_version=UTILITY_SEMANTIC_VERSION,
+            validation_status="validated" if validated_snapshot else "legacy_unverified",
+            implementation_version=UTILITY_METRICS_VERSION,
+            input_event_hash=result.metadata.get("input_event_hash"),
         )
         for result in results
     ]
@@ -250,7 +291,12 @@ def _deduped_damage_facts(events: Sequence[Mapping[str, Any]]) -> list[dict[str,
         damage, utility_type, dedupe_key = _damage_parts(event)
         if damage is None or damage <= 0 or utility_type is None:
             continue
-        fact = {"damage": damage, "utility_type": utility_type, "source_event": event.get("source_event")}
+        fact = {
+            "damage": damage,
+            "utility_type": utility_type,
+            "source_event": event.get("source_event"),
+            "relation": _damage_relation(event),
+        }
         if event.get("source_event") == "player_hurt":
             facts.append(fact)
         elif dedupe_key not in player_hurt_keys:
@@ -272,6 +318,28 @@ def _damage_parts(event: Mapping[str, Any]) -> tuple[int | None, str | None, tup
             damage,
         ),
     )
+
+
+def _damage_relation(event: Mapping[str, Any]) -> str:
+        actor = event.get("actor")
+        victim = event.get("victim")
+        actor_key = _player_key(actor)
+        victim_key = _player_key(victim)
+        actor_team = _team(actor)
+        victim_team = _team(victim)
+        if actor_key and actor_key == victim_key:
+            return "self"
+        elif actor_team and victim_team:
+            return "team" if actor_team == victim_team else "enemy"
+        return "unknown"
+
+
+def _team(player: Any) -> str | None:
+    if not isinstance(player, Mapping):
+        return None
+    value = player.get("team") or player.get("side") or player.get("team_name")
+    text = str(value).strip().lower() if value is not None else ""
+    return text or None
 
 
 def _enemies_flashed(events: Sequence[Mapping[str, Any]]) -> int | None:

@@ -281,7 +281,7 @@ def test_approximate_metric_requires_caveat():
     result = validate_ai_coach_output(output)
 
     assert result.valid is False
-    assert any(issue.code == "metric_requires_caveat" for issue in result.issues)
+    assert any(issue.code == "suppressed_metric_claim" for issue in result.issues)
 
 
 def test_public_friends_and_v1_readiness_claims_are_rejected():

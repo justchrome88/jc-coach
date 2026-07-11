@@ -103,7 +103,7 @@ def test_parser_confidence_metadata_exposes_trade_kast_side_and_flash_limits():
     warnings = _parser_warnings(confidence)
 
     assert confidence["early_deaths"] == "low"
-    assert confidence["kast_trade_component"] == "low"
+    assert confidence["kast_trade_component"] == "unavailable"
     assert confidence["trade_kills"] == "low"
     assert confidence["traded_deaths"] == "unavailable"
     assert confidence["side_stats"] == "low"

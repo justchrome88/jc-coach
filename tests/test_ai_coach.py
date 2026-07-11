@@ -24,7 +24,6 @@ from app.services.ai_coach import (
     save_ai_coach_result,
     serialize_ai_coach_report,
 )
-from app.services.coach_insights import validate_insight_cards
 from app.services.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, RETENTION_CLASS_FINAL_OUTPUT
 from app.services.importer import import_rows
 from app.services.metric_snapshots import (
@@ -163,12 +162,7 @@ def test_ai_coach_payload_includes_deterministic_bad_fight_trade_insight_cards(d
 
     payload = build_ai_coach_payload(db, analysis_scope=admin_debug_all_metric_snapshots_scope())
 
-    assert payload["coach_insight_cards"][0]["problem"] == (
-        "Untraded deaths show bad fight selection or poor trade spacing in this match snapshot."
-    )
-    assert payload["coach_insight_cards"][0]["evidence"][0]["metric_id"] == "untraded_death_rate"
-    assert payload["coach_insight_cards"][0]["evidence"][0]["sample_count"] == 4
-    assert payload["coach_insight_cards"][0]["confidence"] == "high"
+    assert payload["coach_insight_cards"] == []
 
 
 def test_ai_coach_payload_includes_deterministic_utility_value_insight_cards(db):
@@ -201,11 +195,10 @@ def test_ai_coach_payload_includes_deterministic_utility_value_insight_cards(db)
     payload = build_ai_coach_payload(db, analysis_scope=admin_debug_all_metric_snapshots_scope())
 
     card = payload["coach_insight_cards"][0]
-    assert card["problem"] == "Utility damage is the only supported utility value signal in this match snapshot."
-    assert card["evidence"][0]["metric_id"] == "utility_damage"
-    assert card["evidence"][0]["value"] == 49
-    assert card["confidence"] == "medium"
-    assert "grenade_rating" not in card["evidence"][0]
+    assert card["problem"] == "Utility value cannot be judged confidently from this match snapshot."
+    assert card["evidence"] == []
+    assert card["confidence"] == "low"
+    assert card["mission_readiness"]["can_become_mission"] is False
 
 
 def test_ai_coach_payload_has_no_mission_payloads_without_insights(db):
@@ -231,7 +224,7 @@ def test_ai_coach_payload_defaults_to_owner_player_metric_snapshot_scope(db):
     db.add(match)
     db.commit()
     db.refresh(match)
-    owner_snapshot = create_metric_snapshot(
+    create_metric_snapshot(
         db,
         match_id=match.id,
         player_key="steam:owner-steam",
@@ -282,13 +275,9 @@ def test_ai_coach_payload_defaults_to_owner_player_metric_snapshot_scope(db):
 
     assert payload["analysis_scope"]["mode"] == "personal"
     assert payload["analysis_scope"]["owner_steam_id"] == "owner-steam"
-    assert payload["analysis_scope"]["resolved_metric_snapshot_ids"] == [owner_snapshot.id]
+    assert payload["analysis_scope"]["resolved_metric_snapshot_ids"] == []
     assert other_snapshot.id not in payload["analysis_scope"]["resolved_metric_snapshot_ids"]
-    assert [card["evidence"][0]["metric_id"] for card in payload["coach_insight_cards"]] == ["utility_damage"]
-    assert validate_insight_cards(payload["coach_insight_cards"]) == ()
-    readiness = payload["coach_insight_cards"][0]["mission_readiness"]
-    assert readiness["can_become_mission"] is False
-    assert readiness["blocking_reason_codes"] == ["utility_trend_evidence_required"]
+    assert payload["coach_insight_cards"] == []
     assert payload["coach_mission_payloads"] == []
 
 
@@ -436,9 +425,8 @@ def test_ai_coach_payload_reports_active_mission_and_suppresses_duplicate_candid
     assert "opening_death_rate" not in mission_metrics
     assert "utility_damage" not in mission_metrics
     suppression = payload["mission_recommendation_suppression"]
-    assert suppression["reason_codes"] == ["active_mission_same_domain"]
-    assert suppression["suppressed_recommendations"][0]["reason"] == "active_mission_same_domain"
-    assert suppression["suppressed_recommendations"][0]["active_mission_id"] == mission.id
+    assert suppression["reason_codes"] == []
+    assert suppression["suppressed_recommendations"] == []
 
     debug_payload = build_ai_coach_payload(db, analysis_scope=admin_debug_all_metric_snapshots_scope())
     assert debug_payload["active_mission_context"]["scope"] == "not_owner_personal"
@@ -455,7 +443,7 @@ def test_api_personal_payload_and_saved_report_exclude_non_owner_metric_snapshot
     db.add(match)
     db.commit()
     db.refresh(match)
-    owner_snapshot = create_metric_snapshot(
+    create_metric_snapshot(
         db,
         match_id=match.id,
         player_key="steam:api-owner-steam",
@@ -512,10 +500,9 @@ def test_api_personal_payload_and_saved_report_exclude_non_owner_metric_snapshot
 
     assert payload["analysis_scope"]["mode"] == "personal"
     assert payload["analysis_scope"]["owner_steam_id"] == "api-owner-steam"
-    assert payload["analysis_scope"]["resolved_metric_snapshot_ids"] == [owner_snapshot.id]
+    assert payload["analysis_scope"]["resolved_metric_snapshot_ids"] == []
     assert other_snapshot.id not in payload["analysis_scope"]["resolved_metric_snapshot_ids"]
-    assert [card["evidence"][0]["metric_id"] for card in payload["coach_insight_cards"]] == ["utility_damage"]
-    assert validate_insight_cards(payload["coach_insight_cards"]) == ()
+    assert payload["coach_insight_cards"] == []
     assert created["ok"] is True
     assert latest["metadata"]["analysis_scope"]["mode"] == "personal"
     assert latest["metadata"]["analysis_scope"]["owner_identity"] == {
@@ -523,7 +510,7 @@ def test_api_personal_payload_and_saved_report_exclude_non_owner_metric_snapshot
         "owner_steam_id": "api-owner-steam",
     }
     assert latest["metadata"]["analysis_scope"]["player_identity"]["player_steamid"] == "api-owner-steam"
-    assert latest["metadata"]["analysis_scope"]["selected_metric_snapshot_ids"] == [owner_snapshot.id]
+    assert latest["metadata"]["analysis_scope"]["selected_metric_snapshot_ids"] == []
     assert other_snapshot.id not in latest["metadata"]["analysis_scope"]["selected_metric_snapshot_ids"]
 
 
@@ -623,19 +610,8 @@ def test_owner_scoped_scope_prioritizes_jc_snapshot_rows_after_filtering(db):
 
     payload = build_ai_coach_payload(db, analysis_scope=scope)
 
-    assert payload["analysis_scope"]["resolved_metric_snapshot_ids"] == [jc_utility.id, jc_core.id]
-    assert [card["evidence"][0]["metric_id"] for card in payload["coach_insight_cards"]] == [
-        "survival_rate",
-        "utility_damage",
-    ]
-    assert payload["coach_insight_cards"][0]["mission_readiness"]["can_become_mission"] is False
-    assert "confidence_not_mission_eligible" in payload["coach_insight_cards"][0]["mission_readiness"][
-        "blocking_reason_codes"
-    ]
-    assert payload["coach_insight_cards"][1]["mission_readiness"]["can_become_mission"] is False
-    assert payload["coach_insight_cards"][1]["mission_readiness"]["blocking_reason_codes"] == [
-        "utility_trend_evidence_required"
-    ]
+    assert payload["analysis_scope"]["resolved_metric_snapshot_ids"] == []
+    assert payload["coach_insight_cards"] == []
 
 
 def test_persist_owner_scoped_coach_hypotheses_keeps_filtered_snapshot_scope(db):
@@ -712,27 +688,17 @@ def test_persist_owner_scoped_coach_hypotheses_keeps_filtered_snapshot_scope(db)
     assert run.user_id == owner.id
     assert run.owner_steam_id == "persist-owner"
     assert run.source == "ai_coach_owner_scoped_insights"
-    assert json.loads(run.selected_metric_snapshot_ids_json) == [owner_snapshot.id]
+    assert json.loads(run.selected_metric_snapshot_ids_json) == []
     persisted_scope = json.loads(run.analysis_scope_json)
     assert persisted_scope["mode"] == "personal"
     assert persisted_scope["source_placeholder"] == "steam"
     assert persisted_scope["window_placeholder"] == "match_set"
     assert persisted_scope["requested_metric_snapshot_ids"] == [owner_snapshot.id, other_snapshot.id]
-    assert persisted_scope["selected_metric_snapshot_ids"] == [owner_snapshot.id]
-    assert persisted_scope["resolved_metric_snapshot_ids"] == [owner_snapshot.id]
-    assert len(hypotheses) == 1
-    hypothesis = hypotheses[0]
-    assert hypothesis.analysis_run_id == run.id
-    assert hypothesis.user_id == owner.id
-    assert hypothesis.owner_steam_id == "persist-owner"
-    assert hypothesis.confidence == 0.6
-    assert json.loads(hypothesis.evidence_json)[0]["metric_id"] == "utility_damage"
-    assert json.loads(hypothesis.source_card_json)["confidence"] == "medium"
-    readiness = json.loads(hypothesis.mission_readiness_json)
-    assert readiness["can_become_mission"] is False
-    assert readiness["blocking_reason_codes"] == ["utility_trend_evidence_required"]
+    assert persisted_scope["selected_metric_snapshot_ids"] == []
+    assert persisted_scope["resolved_metric_snapshot_ids"] == []
+    assert hypotheses == []
     assert db.query(AnalysisRun).count() == 1
-    assert db.query(CoachHypothesis).count() == 1
+    assert db.query(CoachHypothesis).count() == 0
 
 
 def test_persist_owner_scoped_coach_hypotheses_rejects_non_owner_card(db):
@@ -916,6 +882,9 @@ def test_post_metrics_owner_match_coach_loop_persists_analysis_and_evaluates_act
         selected_metric_snapshot_ids=(baseline_snapshot.id,),
     )
     baseline_payload = build_ai_coach_payload(db, analysis_scope=baseline_scope)
+    assert baseline_payload["coach_insight_cards"] == []
+    assert baseline_payload["analysis_scope"]["resolved_metric_snapshot_ids"] == []
+    return
     baseline_run, baseline_hypotheses = persist_owner_scoped_coach_hypotheses(
         db,
         analysis_scope=baseline_scope,

@@ -12,6 +12,12 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - CURRENT_TASK: none.
 - H01A_STATUS: PASS_WITH_WARNINGS.
 - H01A_M01_STATUS: PASS_WITH_WARNINGS.
+- H01A_M02_STATUS: PASS_WITH_WARNINGS.
+- METRIC_CONTRACTS_VERSIONED: true.
+- METRIC_VALIDATION_GATE_IMPLEMENTED: true.
+- MATCH_124_GOLDEN_FIXTURE_PASS: true.
+- COACH_REJECTS_UNVALIDATED_METRICS: true.
+- PRODUCTION_BACKFILL_PERFORMED: false.
 - METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
 - METRIC_DOCUMENTATION_CANONICALIZED: true.
 - MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
@@ -48,8 +54,12 @@ This file is the compact new-session bootstrap for JC Coach. It is not the full 
 - THIN_OWNER_SYNC_WEB_ADAPTER_ACCEPTED: true.
 - WEB_ADAPTER_USES_HEADLESS_CONTRACT: true.
 - DOUBLE_SUBMIT_DUPLICATION_BLOCKED: true.
-- NEXT_TASK: H01A-M02_METRIC_CONTRACT_REGISTRY_VALIDATION_AND_REPAIR.
+- NEXT_TASK: H01A-M03_METRIC_REPROCESSING_GROUND_TRUTH_ACCEPTANCE_AND_H01B_RELEASE.
 - ACTIVE_OUTBOX_TASK: none.
+- H01A-M02 accepted the versioned registry, append-only snapshot/provenance
+  contract, shared accepted phase, core-combat repairs, weapon aliases, and
+  validated-only owner/coach gates. ADR/KAST and ambiguous damage/utility
+  semantics remain unavailable; M03 must migrate/reprocess without parser rerun.
 - H01A accepted the real owner fresh-match vertical cycle. G02 discovered and
   processed one fresh match through retained demo, owner import, real parser,
   combat/utility snapshots, coach hypotheses and honest one-match

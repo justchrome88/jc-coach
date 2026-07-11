@@ -35,6 +35,13 @@
       </nav>
     </header>
     <main class="page">
+      {% if current_user %}
+      <section class="panel metric-assurance-warning" role="status">
+        <strong>Metric assurance:</strong>
+        historical match performance values are legacy-unverified. ADR and KAST are quarantined and unavailable
+        for trusted coaching until versioned snapshots are accepted in H01A-M03.
+      </section>
+      {% endif %}
       {% block content %}{% endblock %}
     </main>
     {% block scripts %}{% endblock %}

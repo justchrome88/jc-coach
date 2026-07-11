@@ -183,11 +183,11 @@ def test_new_match_runs_accepted_phases_and_repeated_input_is_idempotent(db, mon
     assert lineage["parser_artifact"]["id"]
     assert lineage["event_set_ids"][0].startswith("parser-artifact:")
     assert lineage["metric_snapshot_ids"]["created"]
-    assert lineage["analysis_run"]["id"]
+    assert lineage["analysis_run"]["id"] is None
     assert second["run"]["status"] == "success_no_changes"
     assert second["matches"][0]["status"] == "reused"
-    assert second["matches"][0]["lineage"]["analysis_run"]["reused"] == lineage["analysis_run"]["id"]
-    assert second["matches"][0]["lineage"]["coach_hypothesis_ids"]["reused"] == lineage["coach_hypothesis_ids"]["all"]
+    assert second["matches"][0]["lineage"]["analysis_run"]["reused"] is None
+    assert second["matches"][0]["lineage"]["coach_hypothesis_ids"]["reused"] == []
     assert calls == ["acquire", "parse", "process"]
     assert _durable_counts(db) == after_first
 
@@ -331,7 +331,8 @@ def test_existing_artifact_and_snapshot_are_reused_while_missing_work_resumes(db
     assert lineage["parser_artifact"]["id"] == before_artifact_id
     assert lineage["metric_snapshot_ids"]["reused"]
     assert lineage["metric_snapshot_ids"]["created"]
-    assert lineage["analysis_run"]["created"] != first_processing["analysis_run"]["id"]
+    assert lineage["analysis_run"]["created"] is None
+    assert first_processing["analysis_run"]["id"] is None
 
 
 def test_retryable_failure_is_sanitized_releases_lock_and_can_retry(db, monkeypatch, tmp_path):
@@ -527,7 +528,7 @@ def test_deeper_fresh_identity_is_selected_past_stale_terminal_and_cooling_retry
     assert selected[0]["reason_codes"] == ["owner_match_cycle_completed"]
     assert selected[0]["lineage"]["parser_artifact"]["id"]
     assert selected[0]["lineage"]["metric_snapshot_ids"]["created"]
-    assert selected[0]["lineage"]["analysis_run"]["id"]
+    assert selected[0]["lineage"]["analysis_run"]["id"] is None
     assert result["discovery"]["internal_classifications"]["legacy_stale_pending"] == 1
     assert result["discovery"]["internal_classifications"]["unavailable_terminal"] == 1
     assert result["discovery"]["internal_classifications"]["unavailable_retryable"] == 1
@@ -836,9 +837,9 @@ def test_coach_output_includes_owner_mission_progress_and_suppression(db, tmp_pa
 
     assert result["run"]["status"] == "success"
     assert result["coach"]["active_missions"][0]["mission_id"] == mission.id
-    assert result["coach"]["latest_progress"][0]["evaluation_id"]
+    assert result["coach"]["latest_progress"][0]["evaluation_id"] is None
     assert result["coach"]["recommendation_suppression"]["suppressed_count"] >= 0
-    assert result["matches"][0]["lineage"]["mission_progress_evaluation_ids"]["all"]
+    assert result["matches"][0]["lineage"]["mission_progress_evaluation_ids"]["all"] == []
     assert result["mutations"]["reused"]["missions"]["ids"] == [mission.id]
     assert result["mutations"]["reused"]["criteria"]["count"] == 2
 

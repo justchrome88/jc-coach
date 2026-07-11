@@ -260,7 +260,7 @@ def process_owner_match_metric_snapshots_for_coach_loop(
     owner_snapshot_payloads = _metric_snapshot_payloads_for_scope(db, analysis_scope)
     selected_snapshot_ids = [payload["id"] for payload in owner_snapshot_payloads]
     coach_payload = build_ai_coach_payload(db, analysis_scope=analysis_scope)
-    insight_cards = coach_payload["coach_insight_cards"]
+    insight_cards = [card for card in coach_payload["coach_insight_cards"] if card.get("evidence")]
     analysis_run: AnalysisRun | None = None
     hypotheses: list[CoachHypothesis] = []
     reused_analysis_run = False
@@ -788,6 +788,16 @@ def build_ai_coach_payload(
     recent_matches = exact_recent_matches(matches, 10, context=context)
     scope = analysis_scope or default_owner_player_metric_snapshot_scope(db)
     metric_snapshot_payloads = _metric_snapshot_payloads_for_scope(db, scope)
+    summary = _trusted_consumer_summary(summary)
+    comparison = _trusted_consumer_comparison(comparison)
+    map_stats = _trusted_consumer_map_stats(map_stats)
+    weaknesses = []
+    structured_mistakes = []
+    focus = {
+        "primary_focus": "insufficient_validated_metric_data",
+        "reason": "Legacy match columns and quarantined snapshots cannot support a hard coach claim.",
+        "actions": [],
+    }
     active_mission_context = _active_mission_context_for_scope(db, scope)
     coach_insight_cards = coach_insights_with_mission_readiness_from_snapshots(metric_snapshot_payloads)
     coach_mission_payloads, suppressed_mission_recommendations = _coach_mission_payloads_from_insight_cards(
@@ -829,8 +839,8 @@ def build_ai_coach_payload(
         "contract_snapshot": _ai_coach_contract_snapshot(),
         **domain_contract,
         "summary": summary,
-        "dashboard_status": get_dashboard_status(matches, context=context),
-        "aim_profile": get_aim_profile(matches, context=context),
+        "dashboard_status": _redact_unvalidated_metrics(get_dashboard_status(matches, context=context)),
+        "aim_profile": _redact_unvalidated_metrics(get_aim_profile(matches, context=context)),
         "period_comparison": comparison,
         "map_stats": map_stats,
         "detected_weaknesses": weaknesses,
@@ -877,9 +887,14 @@ def build_ai_coach_payload(
             "confidence": confidence_metadata,
         },
         "metric_confidence": confidence_metadata,
-        "active_recommendation": _serialize_recommendation_progress(recommendation_progress),
-        "all_recommendations": [_serialize_recommendation_progress(item) for item in all_recommendation_progress],
-        "recent_matches": [_serialize_match(match) for match in recent_matches],
+        "active_recommendation": _redact_unvalidated_metrics(
+            _serialize_recommendation_progress(recommendation_progress)
+        ),
+        "all_recommendations": [
+            _redact_unvalidated_metrics(_serialize_recommendation_progress(item))
+            for item in all_recommendation_progress
+        ],
+        "recent_matches": [_redact_unvalidated_metrics(_serialize_match(match)) for match in recent_matches],
         "rules": {
             "do_not_invent_facts": True,
             "use_only_payload_data": True,
@@ -954,7 +969,86 @@ def _metric_snapshot_payloads_for_scope(
     limit: int = 50,
 ) -> list[dict[str, Any]]:
     snapshots = select_metric_snapshots_for_analysis_scope(db, scope, limit=limit)
-    return [metric_snapshot_payload(snapshot) for snapshot in snapshots]
+    return [metric_snapshot_payload(snapshot, trusted_only=True) for snapshot in snapshots]
+
+
+def _trusted_consumer_summary(summary: Mapping[str, Any]) -> dict[str, Any]:
+    trusted = dict(summary)
+    for key in (
+        "avg_kd", "avg_adr", "avg_kast", "avg_rating", "avg_swing_score",
+        "avg_headshot_percent", "avg_deaths", "avg_utility_damage", "avg_flash_assists",
+        "entry_kills", "entry_deaths", "entry_diff", "form_score",
+    ):
+        trusted[key] = None
+    trusted["consumer_gate"] = {
+        "status": "insufficient_validated_metric_data",
+        "reason_codes": ["legacy_match_columns_not_trusted", "validated_snapshot_required"],
+    }
+    return trusted
+
+
+def _trusted_consumer_comparison(comparison: Mapping[str, Any]) -> dict[str, Any]:
+    trusted = dict(comparison)
+    trusted["deltas"] = {}
+    trusted["worsened_metrics"] = []
+    trusted["trend"] = "insufficient_validated_metric_data"
+    return trusted
+
+
+def _trusted_consumer_map_stats(map_stats: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    result = []
+    for item in map_stats:
+        trusted = dict(item)
+        for key in (
+            "avg_kd",
+            "avg_adr",
+            "avg_kast",
+            "avg_rating",
+            "avg_swing_score",
+            "entry_diff",
+            "avg_utility_damage",
+        ):
+            trusted[key] = None
+        result.append(trusted)
+    return result
+
+
+_UNVALIDATED_CONSUMER_KEYS = {
+    "kills",
+    "deaths",
+    "assists",
+    "kd",
+    "avg_kd",
+    "adr",
+    "avg_adr",
+    "kast",
+    "avg_kast",
+    "rating",
+    "avg_rating",
+    "swing_score",
+    "avg_swing_score",
+    "headshot_percent",
+    "avg_headshot_percent",
+    "utility_damage",
+    "avg_utility_damage",
+    "flash_assists",
+    "avg_flash_assists",
+    "entry_kills",
+    "entry_deaths",
+    "early_deaths",
+    "damage_per_death",
+}
+
+
+def _redact_unvalidated_metrics(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {
+            str(key): None if str(key) in _UNVALIDATED_CONSUMER_KEYS else _redact_unvalidated_metrics(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_unvalidated_metrics(item) for item in value]
+    return value
 
 
 def _analysis_run_scope_metadata(

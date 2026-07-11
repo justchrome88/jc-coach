@@ -130,7 +130,7 @@ def test_metric_snapshot_records_parser_artifact_and_event_set_metadata(db):
     assert [item.id for item in snapshots] == [snapshot.id]
 
 
-def test_metric_snapshot_upsert_updates_existing_player_match_source_row(db):
+def test_metric_snapshot_upsert_appends_when_event_set_identity_changes(db):
     match = _persist_match(db)
 
     first = upsert_metric_snapshot(
@@ -151,8 +151,8 @@ def test_metric_snapshot_upsert_updates_existing_player_match_source_row(db):
         source_event_set_id="events:updated",
     )
 
-    assert second.id == first.id
-    assert db.query(MetricSnapshot).count() == 1
+    assert second.id != first.id
+    assert db.query(MetricSnapshot).count() == 2
     payload = metric_snapshot_payload(second)
     assert payload["metrics"] == {"kills": 11}
     assert payload["confidence_baseline"] == {"metrics": {"kills": "trusted"}}
@@ -214,7 +214,7 @@ def test_analysis_scope_selects_only_requested_owner_player_snapshots(db):
 
     selected = select_metric_snapshots_for_analysis_scope(db, scope)
 
-    assert {snapshot.id for snapshot in selected} == {owner_core.id, owner_utility.id}
+    assert selected == []
 
 
 def test_admin_debug_scope_preserves_all_snapshot_selection_for_explicit_use(db):
@@ -294,7 +294,7 @@ def test_process_persisted_match_metric_snapshots_invokes_owner_coach_loop_after
             "db": db,
             "user_id": owner.id,
             "match_id": match.id,
-            "metric_snapshot_ids": [owner_snapshot.id, other_snapshot.id],
+                "metric_snapshot_ids": [],
             "evaluation_window_start": None,
             "evaluation_window_end": None,
         }

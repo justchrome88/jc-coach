@@ -1,5 +1,15 @@
 # Ground Truth Policy
 
+Passing a formula test proves implementation consistency, not independent
+truth. Validation requires source evidence independent of the calculation under
+test. External comparator values are evidence only and must not be fitted.
+
+Match 124 independently accepts rounds, kills, deaths, K/D, ordinary/flash/
+combined assists, headshot kills, and headshot-kill rate. Effective enemy damage,
+ADR, KAST trade state, and three quiet-round participation states remain
+disputed. Their values are quarantined, unavailable to trusted owner UI, and
+removed from coach/hypothesis/mission inputs until evidence closure.
+
 Evidence priority for demo-derived metrics:
 
 1. retained demo identity/hash plus a reproducible, versioned parser event ledger;

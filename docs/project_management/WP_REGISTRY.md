@@ -56,11 +56,15 @@ Allowed statuses: `planned`, `not_started`, `active`, `in_progress`, `done`,
 | H01A-R02_AUTHENTICATED_OWNER_STEAM_LINEAGE_RECONCILIATION | blocked | PM blocked report/artifact | Identity equivalence and migration were proven, then restored because remote preview and persisted dry-run were incorrectly treated as contradictory. |
 | H01A-R02A_FRESH_MATCH_DISCOVERY_EVIDENCE_CONTRACT_RECONCILIATION | accepted_with_warnings | Product discovery/reconciliation services and tests; PM H01A-R02A report/artifact | Contract A accepted; owner 17 reconciled; fresh remote identity remains unconsumed; known Starlette warning only. |
 | H01A-M01_METRIC_SOURCE_OF_TRUTH_AND_REAL_MATCH_FORENSIC_AUDIT | accepted_with_warnings | Canonical `docs/metrics/`, deterministic match-124 ledger/test, PM report/artifact | Metric lineage and discrepancies localized; metric correctness/coach inputs remain unaccepted; H01B blocked pending M02. |
+| H01A-M02_METRIC_CONTRACT_REGISTRY_VALIDATION_AND_REPAIR | accepted_with_warnings | Versioned registry/snapshots, shared phase/core repair, consumer gates, match-124 golden, isolated migration tests | Validated-only selection enforced; ADR/KAST and ambiguous damage/utility remain quarantined; H01B blocked pending M03. |
 
 CURRENT_LANE: METRICS_ASSURANCE. CURRENT_TASK: none. Mission backend status:
 ACCEPTED_FOR_UI_API. H01A_STATUS: PASS_WITH_WARNINGS.
 H01A_R02_STATUS: BLOCKED. H01A_R02A_STATUS: PASS_WITH_WARNINGS.
 H01A_M01_STATUS: PASS_WITH_WARNINGS. METRIC_SOURCE_OF_TRUTH_INVENTORIED: true.
+H01A_M02_STATUS: PASS_WITH_WARNINGS. METRIC_CONTRACTS_VERSIONED: true.
+METRIC_VALIDATION_GATE_IMPLEMENTED: true. MATCH_124_GOLDEN_FIXTURE_PASS: true.
+COACH_REJECTS_UNVALIDATED_METRICS: true. PRODUCTION_BACKFILL_PERFORMED: false.
 METRIC_DOCUMENTATION_CANONICALIZED: true. MATCH_124_FORENSIC_AUDIT_COMPLETE: true.
 METRIC_CORRECTNESS_ACCEPTED: false. COACH_INPUTS_TRUSTED: false.
 H01B_STATUS: BLOCKED_PENDING_METRIC_ASSURANCE.
@@ -76,7 +80,7 @@ ORDINARY_BASELINE_NO_OP_RESTORED: true.
 FRESH_MATCH_DISCOVERY_PRESERVED: true.
 DEEPER_HISTORY_TRAVERSAL_PRESERVED: true.
 BATCH_31_COMPATIBILITY_PRESERVED: true. NEXT_TASK:
-H01A-M02_METRIC_CONTRACT_REGISTRY_VALIDATION_AND_REPAIR.
+H01A-M03_METRIC_REPROCESSING_GROUND_TRUTH_ACCEPTANCE_AND_H01B_RELEASE.
 Owner-only personal scope, fail-closed weak evidence, no public/friends
 readiness and no v1.0 claim remain mandatory.
 
