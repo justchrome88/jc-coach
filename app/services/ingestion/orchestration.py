@@ -39,7 +39,7 @@ from app.services.ingestion.jobs import (
     queue_import_job,
     start_import_job,
 )
-from app.services.ownership import assert_match_owner, attach_match_owner_from_import_job, resolve_owner_ids
+from app.services.owner.scope import assert_match_owner, attach_match_owner_from_import_job, resolve_owner_ids
 from app.services.shared.demo_retention import (
     ARTIFACT_CATEGORY_RAW_DEMO,
     RETENTION_CLASS_RETAINED_RAW,

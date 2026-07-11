@@ -10,9 +10,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.api.routes import router as api_router
 from app.config import BASE_DIR, get_settings
 from app.db.session import SessionLocal, init_db
-from app.services.auth import current_user_from_session
-from app.services.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, normalize_locale, translate
-from app.services.security import (
+from app.services.owner.auth import current_user_from_session
+from app.services.owner.security import (
     csrf_token,
     has_valid_api_token,
     has_valid_csrf,
@@ -21,6 +20,7 @@ from app.services.security import (
     rate_limit_key,
     rate_limiter,
 )
+from app.services.shared.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, normalize_locale, translate
 
 
 def _template_context(request: Request) -> dict[str, object]:

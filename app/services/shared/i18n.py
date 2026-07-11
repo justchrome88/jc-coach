@@ -1,3 +1,5 @@
+"""Small immutable localization boundary."""
+
 from __future__ import annotations
 
 SUPPORTED_LOCALES = ("ru", "en")

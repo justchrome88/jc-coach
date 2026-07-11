@@ -46,7 +46,7 @@ def _app_user_count() -> int:
 
 def test_register_route_rejects_test_smoke_email_outside_test_env(monkeypatch):
     monkeypatch.setattr(
-        "app.services.auth.get_settings",
+        "app.services.owner.auth.get_settings",
         lambda: Settings(app_env="local", database_url="sqlite:///:memory:"),
     )
 

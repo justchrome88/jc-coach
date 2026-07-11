@@ -34,15 +34,11 @@ from app.services.metrics.coach_pack import (
     store_coach_metric_pack,
     write_coach_metric_evidence_artifact,
 )
-from app.services.mission_domain import (
-    activate_coach_mission,
-    active_mission_context_for_owner,
-    create_analysis_run,
-    create_coach_hypothesis,
-    evaluate_mission_progress,
-    generate_rolling_mission_candidates,
-    reconcile_noncanonical_active_missions,
-)
+from app.services.missions.hypotheses import generate_rolling_mission_candidates
+from app.services.missions.lifecycle import activate_coach_mission, reconcile_noncanonical_active_missions
+from app.services.missions.presentation import active_mission_context_for_owner
+from app.services.missions.progress import evaluate_mission_progress
+from app.services.missions.repository import create_analysis_run, create_coach_hypothesis
 
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCTION_DB = (ROOT / "data/cs2_coach.db").resolve()

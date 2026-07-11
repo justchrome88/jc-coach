@@ -47,21 +47,22 @@ from app.services.metrics.snapshots import (
     owner_player_metric_snapshot_scope,
     select_metric_snapshots_for_analysis_scope,
 )
-from app.services.mission_domain import (
+from app.services.missions.payloads import mission_payload_from_insight_card, serialize_mission_payload
+from app.services.missions.presentation import (
     active_mission_context_for_owner,
+    mission_suppression_decision_for_payload,
+    mission_suppression_key_from_payload,
+    serialize_mission_progress_evaluation,
+)
+from app.services.missions.progress import evaluate_mission_progress
+from app.services.missions.repository import (
     create_analysis_run,
     create_coach_hypothesis,
-    evaluate_mission_progress,
     list_active_coach_missions,
     list_coach_missions,
     list_mission_criteria,
-    mission_payload_from_insight_card,
-    mission_suppression_decision_for_payload,
-    mission_suppression_key_from_payload,
-    serialize_mission_payload,
-    serialize_mission_progress_evaluation,
 )
-from app.services.ownership import get_owned_metric_snapshot
+from app.services.owner.scope import get_owned_metric_snapshot
 from app.services.shared.demo_retention import ARTIFACT_CATEGORY_COACH_OUTPUT, artifact_retention_metadata
 from app.services.shared.match_queries import playable_match_select
 from app.services.shared.metric_policy import (

@@ -45,7 +45,7 @@ os.environ.setdefault("STEAM_IMPORT_UNKNOWN_DEMO_RESERVE_BYTES", str(1024 * 1024
 from app.config import assert_test_database_not_production
 from app.db.models import Match
 from app.db.session import Base, engine
-from app.services.security import rate_limiter
+from app.services.owner.security import rate_limiter
 
 assert_test_database_not_production(os.environ["DATABASE_URL"], context="pytest configuration")
 

@@ -2,7 +2,7 @@ import pytest
 
 from app.config import Settings
 from app.db.models import User
-from app.services.auth import authenticate_user, register_user, verify_password
+from app.services.owner.auth import authenticate_user, register_user, verify_password
 
 
 def _settings(app_env: str, database_url: str = "sqlite:///:memory:") -> Settings:
@@ -32,7 +32,7 @@ def test_register_user_rejects_duplicate_email(db):
 
 @pytest.mark.parametrize("email", ("test-abc@example.test", "smoke-abc@example.test"))
 def test_register_user_rejects_test_smoke_email_outside_test_env(db, monkeypatch, email):
-    monkeypatch.setattr("app.services.auth.get_settings", lambda: _settings("local"))
+    monkeypatch.setattr("app.services.owner.auth.get_settings", lambda: _settings("local"))
 
     with pytest.raises(ValueError, match="Refusing to register test/smoke email outside APP_ENV=test"):
         register_user(db, email, "strong-password")
@@ -41,7 +41,7 @@ def test_register_user_rejects_test_smoke_email_outside_test_env(db, monkeypatch
 
 
 def test_register_user_allows_normal_owner_email_outside_test_env(db, monkeypatch):
-    monkeypatch.setattr("app.services.auth.get_settings", lambda: _settings("local"))
+    monkeypatch.setattr("app.services.owner.auth.get_settings", lambda: _settings("local"))
 
     user = register_user(db, "owner@example.com", "strong-password", display_name="Owner")
 
@@ -51,7 +51,7 @@ def test_register_user_allows_normal_owner_email_outside_test_env(db, monkeypatc
 @pytest.mark.parametrize("email", ("test-abc@example.test", "smoke-abc@example.test"))
 def test_register_user_allows_test_smoke_email_only_in_test_env(db, monkeypatch, tmp_path, email):
     test_db_url = f"sqlite:///{tmp_path / 'test.db'}"
-    monkeypatch.setattr("app.services.auth.get_settings", lambda: _settings("test", test_db_url))
+    monkeypatch.setattr("app.services.owner.auth.get_settings", lambda: _settings("test", test_db_url))
 
     user = register_user(db, email, "strong-password")
 

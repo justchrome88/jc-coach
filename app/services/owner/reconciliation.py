@@ -1,3 +1,5 @@
+"""Explicit owner identity reconciliation support."""
+
 from __future__ import annotations
 
 import json

@@ -1,3 +1,5 @@
+"""Owner-scoped persistence access helpers."""
+
 from __future__ import annotations
 
 from sqlalchemy import select

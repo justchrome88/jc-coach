@@ -28,7 +28,9 @@ from app.db.models import (
 from app.services.coach.provider import configured_model_route_identity, invoke_configured_structured_model
 from app.services.coach_domain_model import CANONICAL_COACH_DOMAINS, require_canonical_domain
 from app.services.metrics.snapshots import upsert_metric_snapshot
-from app.services.mission_domain import list_active_coach_missions, mission_domain_key, serialize_coach_mission
+from app.services.missions.payloads import mission_domain_key
+from app.services.missions.presentation import serialize_coach_mission
+from app.services.missions.repository import list_active_coach_missions
 from app.services.shared.runtime_contracts import metric_registry_contract
 
 BASELINE_VERSION = "coach-domain-baseline-v1"

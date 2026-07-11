@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from app.db.models import AppSetting
-from app.services import owner_coach_sync_batch as batch_service
+from app.services.owner import sync_batch as batch_service
 
 
 def test_successful_target_stops_exactly_at_31_and_skips_32nd_success(db, monkeypatch):

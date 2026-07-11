@@ -24,7 +24,6 @@ from app.db.models import (
 )
 from app.db.session import SessionLocal, get_db
 from app.main import templates
-from app.services.auth import authenticate_user, current_user_from_session, login_user, logout_user, register_user
 from app.services.coach.ai import (
     latest_ai_coach_report,
     latest_ai_handoff,
@@ -56,7 +55,6 @@ from app.services.coach.recommendations import (
 )
 from app.services.coach.reports import generate_report, latest_report, markdown_to_html
 from app.services.coach.rules import build_coach_focus
-from app.services.i18n import normalize_locale
 from app.services.ingestion.demo_downloader import steam_demo_downloader_configured
 from app.services.ingestion.demo_storage import demo_storage_report, write_demo_storage_manifest
 from app.services.ingestion.jobs import (
@@ -102,7 +100,8 @@ from app.services.metrics.confidence import (
     metric_context,
     sort_matches,
 )
-from app.services.owner_coach_sync_batch import (
+from app.services.owner.auth import authenticate_user, current_user_from_session, login_user, logout_user, register_user
+from app.services.owner.sync_batch import (
     MAX_SUCCESSFUL_TARGET,
     get_owner_coach_sync_batch,
     latest_owner_coach_sync_batch,
@@ -110,6 +109,7 @@ from app.services.owner_coach_sync_batch import (
     start_owner_coach_sync_batch,
 )
 from app.services.parsing.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
+from app.services.shared.i18n import normalize_locale
 from app.services.shared.match_queries import is_playable_match, playable_match_select
 from app.services.shared.metric_policy import metric_definition, metric_warning, usage_decision
 

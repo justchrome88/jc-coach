@@ -1,4 +1,4 @@
-from app.services.i18n import DEFAULT_LOCALE, normalize_locale, translate
+from app.services.shared.i18n import DEFAULT_LOCALE, normalize_locale, translate
 
 
 def test_normalize_locale_defaults_to_russian():

@@ -1,3 +1,5 @@
+"""HTTP security, CSRF, and rate-limit boundary."""
+
 from __future__ import annotations
 
 import hmac

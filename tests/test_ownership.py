@@ -5,15 +5,15 @@ from fastapi.testclient import TestClient
 from app.db.models import CoachReport, DemoParseArtifact, ImportJob, Match, SteamAccount, User
 from app.db.session import SessionLocal
 from app.main import app, create_app
-from app.services.auth import (
+from app.services.metrics.snapshots import create_metric_snapshot
+from app.services.owner.auth import (
     active_credentialed_test_smoke_users,
     current_user_from_session,
     hash_password,
     owner_user,
     register_user,
 )
-from app.services.metrics.snapshots import create_metric_snapshot
-from app.services.ownership import (
+from app.services.owner.scope import (
     get_owned_coach_report,
     get_owned_import_job,
     get_owned_match,

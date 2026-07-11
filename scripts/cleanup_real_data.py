@@ -39,7 +39,7 @@ from app.services.ingestion.steam import (
     queue_match_history_sync,
     sync_match_history_job,
 )
-from app.services.mission_domain import cancel_coach_mission
+from app.services.missions.lifecycle import cancel_coach_mission
 from app.services.owner.match_processing import process_owner_match_after_parser_artifact
 from app.services.parsing.demo_parser import DemoParseError, import_demo_file
 

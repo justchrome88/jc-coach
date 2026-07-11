@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ImportJob, Match
 from app.db.session import get_db
-from app.services.auth import current_user_from_session
 from app.services.coach.ai import (
     build_ai_coach_payload,
     latest_ai_coach_report,
@@ -65,7 +64,8 @@ from app.services.ingestion.steam import (
 from app.services.ingestion.structured_import import import_csv, import_json
 from app.services.metrics.aim import get_aim_profile
 from app.services.metrics.analytics import compare_periods, get_map_stats, get_summary
-from app.services.ownership import get_owned_import_job
+from app.services.owner.auth import current_user_from_session
+from app.services.owner.scope import get_owned_import_job
 from app.services.parsing.demo_parser import DemoParseError, import_demo_file, import_inbox_demo, list_inbox_demos
 from app.services.shared.match_queries import playable_match_select
 

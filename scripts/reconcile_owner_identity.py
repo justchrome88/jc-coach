@@ -8,7 +8,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 
 from app.config import get_settings
-from app.services.owner_identity_reconciliation import OwnerReconciliationError, reconcile_owner_identity
+from app.services.owner.reconciliation import OwnerReconciliationError, reconcile_owner_identity
 
 
 def main() -> int:

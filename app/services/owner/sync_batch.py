@@ -18,7 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import AppSetting
-from app.services.owner_coach_sync import run_owner_coach_sync
+from app.services.owner.sync import run_owner_coach_sync
 
 OWNER_COACH_SYNC_BATCH_RESULT_SCHEMA_VERSION = "owner-coach-sync-batch-result-v1"
 OWNER_COACH_SYNC_BATCH_OPERATION = "owner_coach_sync_batch"

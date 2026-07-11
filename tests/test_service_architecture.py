@@ -27,9 +27,13 @@ def test_temporary_compatibility_facades_import_canonical_public_symbols():
     for legacy, canonical in COMPATIBILITY_FACADES.items():
         legacy_module = importlib.import_module(legacy)
         canonical_module = importlib.import_module(canonical)
-        canonical_public = {
-            name for name in vars(canonical_module) if not name.startswith("_") and name not in {"annotations"}
-        }
+        canonical_public = set(
+            getattr(
+                canonical_module,
+                "__all__",
+                {name for name in vars(canonical_module) if not name.startswith("_") and name != "annotations"},
+            )
+        )
         assert canonical_public <= set(vars(legacy_module))
 
 

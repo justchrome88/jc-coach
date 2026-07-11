@@ -15,7 +15,7 @@ if VENV_PYTHON.exists() and sys.prefix == sys.base_prefix:
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.db.session import SessionLocal  # noqa: E402
-from app.services.owner_coach_sync import (  # noqa: E402
+from app.services.owner.sync import (  # noqa: E402
     DEFAULT_MAX_NEW_MATCHES,
     run_owner_coach_sync,
 )

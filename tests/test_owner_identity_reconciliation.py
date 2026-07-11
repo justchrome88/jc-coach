@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import create_engine, text
 
 from app.db.models import Base
-from app.services.owner_identity_reconciliation import OwnerReconciliationError, reconcile_owner_identity
+from app.services.owner.reconciliation import OwnerReconciliationError, reconcile_owner_identity
 
 EVIDENCE = [
     "legacy_created_by_pre_auth_steam_bootstrap",

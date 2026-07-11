@@ -12,7 +12,7 @@ from app.services.ingestion.discovery import (
     persisted_dry_run_evidence,
     preview_owner_fresh_matches,
 )
-from app.services.owner_coach_sync import run_owner_coach_sync
+from app.services.owner.sync import run_owner_coach_sync
 
 CURSOR = "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL"
 FRESH = "CSGO-cAQhC-XL4SM-wWoxt-NNdVO-anUaK"

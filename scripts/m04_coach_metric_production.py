@@ -21,14 +21,10 @@ from app.services.metrics.coach_pack import (
     store_coach_metric_pack,
     write_coach_metric_evidence_artifact,
 )
-from app.services.mission_domain import (
-    EFFECTIVE_UTILITY_METRIC,
-    add_mission_criteria,
-    build_rolling_mission_window,
-    evaluate_mission_progress,
-    generate_rolling_mission_candidates,
-    list_mission_criteria,
-)
+from app.services.missions.hypotheses import build_rolling_mission_window, generate_rolling_mission_candidates
+from app.services.missions.progress import evaluate_mission_progress
+from app.services.missions.repository import add_mission_criteria, list_mission_criteria
+from app.services.missions.types import EFFECTIVE_UTILITY_METRIC
 
 OWNER_USER_ID = 17
 OWNER_STEAM_ID = "76561198056634139"

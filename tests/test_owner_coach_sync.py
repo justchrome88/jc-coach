@@ -23,14 +23,33 @@ from app.db.models import (
     SteamAccount,
     User,
 )
-from app.services import owner_coach_sync, steam_integration
+from app.services.ingestion import steam as steam_integration
 from app.services.mission_domain import activate_coach_mission, create_analysis_run, create_coach_hypothesis
+from app.services.owner import (
+    sync as sync_service,
+)
+from app.services.owner import (
+    sync_discovery,
+    sync_execution,
+    sync_locks,
+    sync_serialization,
+    sync_support,
+    sync_types,
+)
 from app.services.owner.match_processing import process_owner_match_after_parser_artifact
-from app.services.owner_coach_sync import OWNER_COACH_SYNC_RESULT_SCHEMA_VERSION, run_owner_coach_sync
+from app.services.owner.sync import run_owner_coach_sync
+from app.services.owner.sync_types import OWNER_COACH_SYNC_RESULT_SCHEMA_VERSION
 
 OWNER_STEAM_ID = "76561198000000101"
 OTHER_STEAM_ID = "76561198000000202"
 SHARE_CODE = "CSGO-bS48b-h4SZr-OM6Pi-ZAr9N-2aUeL"
+SYNC_MODULES = (sync_service, sync_discovery, sync_execution, sync_locks, sync_serialization, sync_support)
+
+
+def _patch_sync(monkeypatch, name: str, value) -> None:
+    for module in SYNC_MODULES:
+        if hasattr(module, name):
+            monkeypatch.setattr(module, name, value)
 
 
 def test_owner_resolution_is_explicit_and_unknown_owner_fails_closed(db):
@@ -165,9 +184,9 @@ def test_new_match_runs_accepted_phases_and_repeated_input_is_idempotent(db, mon
         assert calls == ["acquire", "parse", "process"]
         return process_owner_match_after_parser_artifact(*args, **kwargs)
 
-    monkeypatch.setattr(owner_coach_sync, "run_demo_import_orchestration", acquire)
-    monkeypatch.setattr(owner_coach_sync, "import_demo_file", parse)
-    monkeypatch.setattr(owner_coach_sync, "process_owner_match_after_parser_artifact", process)
+    _patch_sync(monkeypatch, "run_demo_import_orchestration", acquire)
+    _patch_sync(monkeypatch, "import_demo_file", parse)
+    _patch_sync(monkeypatch, "process_owner_match_after_parser_artifact", process)
 
     first = run_owner_coach_sync(db, owner_user_id=owner.id)
     after_first = _durable_counts(db)
@@ -226,8 +245,8 @@ def test_real_sync_rediscovers_preview_identity_and_processes_exactly_one_withou
         db.commit()
         return job
 
-    monkeypatch.setattr(owner_coach_sync, "run_demo_import_orchestration", acquire)
-    monkeypatch.setattr(owner_coach_sync, "import_demo_file", _fake_parser(db, owner, account, retained))
+    _patch_sync(monkeypatch, "run_demo_import_orchestration", acquire)
+    _patch_sync(monkeypatch, "import_demo_file", _fake_parser(db, owner, account, retained))
 
     first = run_owner_coach_sync(db, owner_user_id=owner.id)
     counts = _durable_counts(db)
@@ -295,12 +314,12 @@ def test_existing_retained_import_resumes_at_parser_without_reacquisition(db, mo
         _artifact(db, match)
         return {"match_id": match.id, "imported": 1, "skipped_duplicates": 0}
 
-    monkeypatch.setattr(
-        owner_coach_sync,
+    _patch_sync(
+        monkeypatch,
         "run_demo_import_orchestration",
         lambda *args, **kwargs: pytest.fail("retained import must not reacquire"),
     )
-    monkeypatch.setattr(owner_coach_sync, "import_demo_file", parse)
+    _patch_sync(monkeypatch, "import_demo_file", parse)
 
     result = run_owner_coach_sync(db, owner_user_id=owner.id)
 
@@ -339,12 +358,12 @@ def test_retryable_failure_is_sanitized_releases_lock_and_can_retry(db, monkeypa
     owner, account = _owner(db)
     history = _history_match(db, owner=owner, account=account, sharecode=SHARE_CODE)
     clock = {"now": datetime(2026, 7, 10, 12, 0)}
-    monkeypatch.setattr(owner_coach_sync, "_utcnow", lambda: clock["now"])
+    _patch_sync(monkeypatch, "_utcnow", lambda: clock["now"])
 
     def fail_acquisition(*args, **kwargs):
         raise RuntimeError("https://steam.invalid/replay?token=super-secret")
 
-    monkeypatch.setattr(owner_coach_sync, "run_demo_import_orchestration", fail_acquisition)
+    _patch_sync(monkeypatch, "run_demo_import_orchestration", fail_acquisition)
     failed = run_owner_coach_sync(db, owner_user_id=owner.id)
 
     assert failed["run"]["status"] == "failed"
@@ -374,9 +393,9 @@ def test_retryable_failure_is_sanitized_releases_lock_and_can_retry(db, monkeypa
         db.commit()
         return job
 
-    monkeypatch.setattr(owner_coach_sync, "run_demo_import_orchestration", acquire)
-    monkeypatch.setattr(owner_coach_sync, "import_demo_file", _fake_parser(db, owner, account, retained))
-    clock["now"] += owner_coach_sync.RETRY_COOLDOWN + timedelta(seconds=1)
+    _patch_sync(monkeypatch, "run_demo_import_orchestration", acquire)
+    _patch_sync(monkeypatch, "import_demo_file", _fake_parser(db, owner, account, retained))
+    clock["now"] += sync_types.RETRY_COOLDOWN + timedelta(seconds=1)
 
     retried = run_owner_coach_sync(db, owner_user_id=owner.id)
 
@@ -442,7 +461,7 @@ def test_deeper_fresh_identity_is_selected_past_stale_terminal_and_cooling_retry
     now = datetime(2026, 7, 10, 18, 0)
     retry_time = now - timedelta(hours=6)
     next_eligible_at = now + timedelta(hours=18)
-    monkeypatch.setattr(owner_coach_sync, "_utcnow", lambda: now)
+    _patch_sync(monkeypatch, "_utcnow", lambda: now)
     retryable = _history_match(
         db,
         owner=owner,
@@ -518,8 +537,8 @@ def test_deeper_fresh_identity_is_selected_past_stale_terminal_and_cooling_retry
         db.commit()
         return job
 
-    monkeypatch.setattr(owner_coach_sync, "run_demo_import_orchestration", acquire)
-    monkeypatch.setattr(owner_coach_sync, "import_demo_file", _fake_parser(db, owner, account, retained))
+    _patch_sync(monkeypatch, "run_demo_import_orchestration", acquire)
+    _patch_sync(monkeypatch, "import_demo_file", _fake_parser(db, owner, account, retained))
 
     result = run_owner_coach_sync(db, owner_user_id=owner.id)
 
@@ -620,7 +639,7 @@ def test_temporary_unavailable_is_cooled_down_and_becomes_terminal_after_bounded
     _history_match(db, owner=owner, account=account, sharecode=SHARE_CODE)
     clock = {"now": datetime(2026, 7, 10, 12, 0)}
     calls = 0
-    monkeypatch.setattr(owner_coach_sync, "_utcnow", lambda: clock["now"])
+    _patch_sync(monkeypatch, "_utcnow", lambda: clock["now"])
 
     def unavailable(*args, **kwargs):
         nonlocal calls
@@ -639,11 +658,11 @@ def test_temporary_unavailable_is_cooled_down_and_becomes_terminal_after_bounded
         db.refresh(job)
         return job
 
-    monkeypatch.setattr(owner_coach_sync, "run_demo_import_orchestration", unavailable)
+    _patch_sync(monkeypatch, "run_demo_import_orchestration", unavailable)
 
     first = run_owner_coach_sync(db, owner_user_id=owner.id)
     cooling = run_owner_coach_sync(db, owner_user_id=owner.id)
-    clock["now"] += owner_coach_sync.RETRY_COOLDOWN + timedelta(seconds=1)
+    clock["now"] += sync_types.RETRY_COOLDOWN + timedelta(seconds=1)
     exhausted = run_owner_coach_sync(db, owner_user_id=owner.id)
     repeated = run_owner_coach_sync(db, owner_user_id=owner.id)
 
@@ -675,8 +694,8 @@ def test_terminal_or_unavailable_demo_is_not_retried(db, monkeypatch, raw_status
         sharecode=SHARE_CODE,
         raw_extra={"status": raw_status, "error": raw_error},
     )
-    monkeypatch.setattr(
-        owner_coach_sync,
+    _patch_sync(
+        monkeypatch,
         "run_demo_import_orchestration",
         lambda *args, **kwargs: pytest.fail("terminal candidates must not run acquisition"),
     )
@@ -710,7 +729,7 @@ def test_acquisition_unavailable_result_becomes_durable_terminal_state(db, monke
         db.refresh(job)
         return job
 
-    monkeypatch.setattr(owner_coach_sync, "run_demo_import_orchestration", unavailable)
+    _patch_sync(monkeypatch, "run_demo_import_orchestration", unavailable)
 
     first = run_owner_coach_sync(db, owner_user_id=owner.id)
     second = run_owner_coach_sync(db, owner_user_id=owner.id)
@@ -740,7 +759,7 @@ def test_max_bound_and_continue_mode_produce_deterministic_partial_success(db, m
             raise RuntimeError("deterministic parser consumer failure")
         return process_owner_match_after_parser_artifact(*args, **kwargs)
 
-    monkeypatch.setattr(owner_coach_sync, "process_owner_match_after_parser_artifact", process)
+    _patch_sync(monkeypatch, "process_owner_match_after_parser_artifact", process)
 
     bounded = run_owner_coach_sync(db, owner_user_id=owner.id, max_new_matches=2)
 
@@ -764,7 +783,7 @@ def test_strict_mode_stops_after_failure_without_touching_later_match(db, monkey
             raise RuntimeError("strict deterministic failure")
         return process_owner_match_after_parser_artifact(*args, **kwargs)
 
-    monkeypatch.setattr(owner_coach_sync, "process_owner_match_after_parser_artifact", process)
+    _patch_sync(monkeypatch, "process_owner_match_after_parser_artifact", process)
     result = run_owner_coach_sync(
         db,
         owner_user_id=owner.id,
@@ -784,8 +803,8 @@ def test_owner_keyed_lock_blocks_same_owner_allows_other_owner_and_recovers_stal
     owner, _ = _owner(db)
     other, _ = _owner(db, steam_id=OTHER_STEAM_ID, email="lock-other@example.test")
     now = datetime(2026, 7, 10, 18, 0)
-    monkeypatch.setattr(owner_coach_sync, "_utcnow", lambda: now)
-    live = owner_coach_sync._acquire_owner_sync_lock(db, owner_user_id=owner.id)
+    _patch_sync(monkeypatch, "_utcnow", lambda: now)
+    live = sync_locks._acquire_owner_sync_lock(db, owner_user_id=owner.id)
     assert live is not None
 
     blocked = run_owner_coach_sync(db, owner_user_id=owner.id)
@@ -793,7 +812,7 @@ def test_owner_keyed_lock_blocks_same_owner_allows_other_owner_and_recovers_stal
 
     assert blocked["run"]["status"] == "already_running"
     assert other_result["run"]["status"] == "success_no_changes"
-    assert owner_coach_sync._release_owner_sync_lock(db, live) is True
+    assert sync_locks._release_owner_sync_lock(db, live) is True
 
     stale_value = json.dumps(
         {
@@ -821,7 +840,7 @@ def test_lock_releases_after_unexpected_exception(db, monkeypatch):
     def explode(*args, **kwargs):
         raise RuntimeError("deterministic discovery exception")
 
-    monkeypatch.setattr(owner_coach_sync, "_discover_candidates", explode)
+    _patch_sync(monkeypatch, "_discover_candidates", explode)
 
     result = run_owner_coach_sync(db, owner_user_id=owner.id)
 
